@@ -1,3 +1,5 @@
+import { safeLog } from '../utils/logger.backend.js';
+
 export function getFirstDefinedValue(source, keys) {
     for (const key of keys) {
         if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
@@ -15,6 +17,80 @@ export function normalizePipelineEntryPayload(payload = {}) {
         clientId: getFirstDefinedValue(payload, ['clientId', 'client_id']),
         stage: getFirstDefinedValue(payload, ['stage', 'Stage']),
         notes: getFirstDefinedValue(payload, ['notes', 'Notes'])
+    };
+}
+
+export function buildPipelineEntryCreatePayload(payload = {}) {
+    const normalized = normalizePipelineEntryPayload(payload);
+    return {
+        resumeId: normalized.resumeId,
+        missionId: normalized.missionId || null,
+        clientId: normalized.clientId || null,
+        stage: normalized.stage || 'new',
+        notes: normalized.notes
+    };
+}
+
+export function buildInterviewSchedulePayload(payload = {}, pipelineId, createdBy) {
+    const {
+        title,
+        description,
+        interviewType,
+        scheduledAt,
+        durationMinutes,
+        location,
+        meetingLink,
+        attendees,
+        calendarEventId,
+        calendarProvider
+    } = payload;
+
+    return {
+        pipelineId,
+        title,
+        description,
+        interviewType,
+        scheduledAt,
+        durationMinutes,
+        location,
+        meetingLink,
+        attendees,
+        calendarEventId,
+        calendarProvider,
+        createdBy
+    };
+}
+
+export function buildInterviewCompletionPayload(payload = {}, interviewId, changedBy) {
+    return {
+        interviewId,
+        outcome: payload.outcome,
+        outcomeNotes: payload.outcomeNotes,
+        changedBy
+    };
+}
+
+export function parseNonNegativeIntegerQuery(value, defaultValue = null) {
+    if (value === undefined || value === null || value === '') {
+        return defaultValue;
+    }
+
+    const parsed = Number.parseInt(value, 10);
+    return Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
+}
+
+export function isValidPipelineStage(stage, pipelineStages = []) {
+    return pipelineStages.some((item) => item.id === stage);
+}
+
+export function createPipelineRouteHandler(logMessage, errorMessage, handler) {
+    return async (req, res) => {
+        try {
+            await handler(req, res);
+        } catch (error) {
+            safeLog('error', logMessage, { error: error.message });
+            res.status(500).json({ error: errorMessage });
+        }
     };
 }
 

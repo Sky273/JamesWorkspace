@@ -92,10 +92,11 @@ describe('pdfOcrIo.service', () => {
     it('returns empty python variants when preparation fails', async () => {
         execFileAsync.mockResolvedValueOnce({ stdout: 'Python 3.11' }).mockRejectedValueOnce(new Error('fail'));
 
-        await expect(service.preparePythonOcrVariants('/tmp/image.png', 2)).resolves.toEqual({
+        await expect(service.preparePythonOcrVariants('/tmp/image.png', 2)).resolves.toEqual(expect.objectContaining({
             variants: [],
-            blocks: []
-        });
+            blocks: [],
+            outputDir: expect.stringContaining('/tmp/resume-ocr-variants-')
+        }));
     });
 
     it('recognizes with advanced OCR and normalizes the result', async () => {

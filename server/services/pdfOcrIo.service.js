@@ -136,11 +136,12 @@ export function createPdfOcrIoService({
                 '--output-dir', outputDir
             ]);
             return {
+                outputDir,
                 variants: result?.variants || [],
                 blocks: result?.blocks || []
             };
         } catch {
-            return { variants: [], blocks: [] };
+            return { outputDir, variants: [], blocks: [] };
         }
     }
 

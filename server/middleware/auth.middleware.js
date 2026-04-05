@@ -3,9 +3,8 @@ import { findUserById } from '../services/users.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getUserFirmIdFromUser, getUserFirmNameFromUser } from '../utils/firmHelpers.js';
 
-const AUTH_USER_CACHE_TTL_MS = Math.max(1000, Number.parseInt(process.env.AUTH_USER_CACHE_TTL_MS || '15000', 10) || 15000);
+const AUTH_USER_CACHE_TTL_MS = Math.max(1000, Number.parseInt(process.env.AUTH_USER_CACHE_TTL_MS || '2000', 10) || 2000);
 const authUserCache = new Map();
-const authUserIdCache = new Map();
 
 function getCachedAuthenticatedUser(cacheKey) {
     if (!cacheKey) {
@@ -25,24 +24,6 @@ function getCachedAuthenticatedUser(cacheKey) {
     return cached.user;
 }
 
-function getCachedAuthenticatedUserById(userId) {
-    if (!userId) {
-        return null;
-    }
-
-    const cached = authUserIdCache.get(userId);
-    if (!cached) {
-        return null;
-    }
-
-    if (cached.expiresAt <= Date.now()) {
-        authUserIdCache.delete(userId);
-        return null;
-    }
-
-    return cached.user;
-}
-
 function setCachedAuthenticatedUser(cacheKey, user) {
     if (!cacheKey || !user?.id) {
         return;
@@ -54,7 +35,6 @@ function setCachedAuthenticatedUser(cacheKey, user) {
     };
 
     authUserCache.set(cacheKey, cacheEntry);
-    authUserIdCache.set(user.id, cacheEntry);
 }
 
 function buildAuthenticatedRequestUser(decoded, currentUser) {
@@ -74,7 +54,6 @@ function buildAuthenticatedRequestUser(decoded, currentUser) {
 
 export function resetAuthUserCacheForTests() {
     authUserCache.clear();
-    authUserIdCache.clear();
 }
 
 export function getAuthUserCacheSizeForTests() {
@@ -111,7 +90,7 @@ export async function authenticateToken(req, res, next) {
         });
     }
     
-    const decoded = verifyToken(token);
+    const decoded = await verifyToken(token);
     
     if (!decoded) {
         safeLog('warn', 'Token verification failed - token is invalid, expired, or blacklisted');
@@ -160,7 +139,7 @@ export async function authenticateToken(req, res, next) {
         return res.status(403).json({ error: 'Invalid token payload' });
     }
     
-    let currentUser = getCachedAuthenticatedUser(token) || getCachedAuthenticatedUserById(decoded.id);
+    let currentUser = getCachedAuthenticatedUser(token);
     if (!currentUser) {
         currentUser = await findUserById(decoded.id);
     }

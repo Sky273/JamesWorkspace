@@ -19,8 +19,9 @@ import { startBlacklistCleanup, destroyBlacklist } from '../services/tokenBlackl
 import { cleanupFactsCache, destroyFactsCache, startFactsCacheCleanup } from '../services/marketFacts.service.js';
 import { cleanupTrendsCache, destroyTrendsCache, startTrendsCacheCleanup } from '../services/marketTrends.service.js';
 import { cleanupMetiersCache, destroyMetiersCache } from '../services/rome.service.js';
-import { invalidateTagsCache, destroyTagsCache, startTagsCacheCleanup } from '../routes/tags.routes.js';
+import { invalidateTagsCache, destroyTagsCache, startTagsCacheCleanup } from '../services/tagsCache.service.js';
 import { destroyEscoCache, startEscoCacheCleanup } from '../services/escoService.js';
+import { registerCacheCleanupFunctions, startMemoryMonitor, stopMemoryMonitor } from '../services/memoryMonitor.service.js';
 import { initializeDatabase, closePool } from '../services/database.service.js';
 import { startScheduler, stopScheduler } from '../services/scheduler.service.js';
 import { initBackupScheduler, stopBackupScheduler } from '../services/backup-scheduler.service.js';
@@ -39,78 +40,9 @@ import { initializeLLMAvailabilityState } from '../services/llmAvailability.serv
 // MEMORY MONITORING
 // ============================================
 
-let memoryMonitorInterval = null;
-let marketRadarCleanupInterval = null;
-
 function getPositiveTimeout(envName, defaultValue) {
     const parsed = Number.parseInt(process.env[envName] || '', 10);
     return Number.isInteger(parsed) && parsed > 0 ? parsed : defaultValue;
-}
-
-function startMemoryMonitor() {
-    memoryMonitorInterval = setInterval(() => {
-        const memUsage = process.memoryUsage();
-        const memMB = {
-            rss: Math.round(memUsage.rss / 1024 / 1024),
-            heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
-            heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
-            external: Math.round(memUsage.external / 1024 / 1024)
-        };
-        
-        // Log memory at info level every 5 minutes for monitoring
-        safeLog('info', 'Memory usage', memMB);
-        
-        if (memMB.heapUsed > 500) {
-            safeLog('warn', 'High memory usage detected', { heapUsedMB: memMB.heapUsed });
-            // Trigger garbage collection if available (requires --expose-gc flag)
-            if (global.gc) {
-                safeLog('info', 'Triggering garbage collection');
-                global.gc();
-            }
-            // Clear Market Radar caches if memory is high
-            cleanupFactsCache();
-            cleanupTrendsCache();
-            cleanupMetiersCache();
-            safeLog('info', 'Market Radar caches cleared due to high memory');
-        }
-    }, 300000); // Every 5 minutes
-}
-
-function cleanupMemoryMonitor() {
-    if (memoryMonitorInterval) {
-        clearInterval(memoryMonitorInterval);
-        memoryMonitorInterval = null;
-    }
-    stopMarketRadarCacheCleanup();
-}
-
-// ============================================
-// MARKET RADAR CACHE CLEANUP
-// ============================================
-
-function startMarketRadarCacheCleanup() {
-    // Clear caches every 15 minutes to prevent memory buildup
-    marketRadarCleanupInterval = setInterval(() => {
-        const memUsage = process.memoryUsage();
-        const heapUsedMB = Math.round(memUsage.heapUsed / 1024 / 1024);
-        
-        // Only clear if memory usage is above 300MB
-        if (heapUsedMB > 300) {
-            safeLog('info', 'Periodic Market Radar cache cleanup', { heapUsedMB });
-            cleanupFactsCache();
-            cleanupTrendsCache();
-            cleanupMetiersCache();
-        }
-    }, 15 * 60 * 1000); // 15 minutes
-    
-    safeLog('info', 'Market Radar cache cleanup scheduled (every 15 min if memory > 300MB)');
-}
-
-function stopMarketRadarCacheCleanup() {
-    if (marketRadarCleanupInterval) {
-        clearInterval(marketRadarCleanupInterval);
-        marketRadarCleanupInterval = null;
-    }
 }
 
 // ============================================
@@ -137,6 +69,12 @@ async function onServerStart(server, protocol, port) {
     } catch (error) {
         safeLog('error', 'Error cleaning caches on startup', { error: error.message });
     }
+
+    registerCacheCleanupFunctions([
+        cleanupFactsCache,
+        cleanupTrendsCache,
+        cleanupMetiersCache
+    ]);
     
     // Keep request timeout configurable for long-running collection jobs, but keep idle connection
     // timeouts short to reduce socket retention and slow-client exposure.
@@ -206,8 +144,6 @@ async function onServerStart(server, protocol, port) {
         startBlacklistCleanup(60 * 60 * 1000); // Every hour
     }
     
-    // Start periodic cleanup of Market Radar caches (every 15 minutes)
-    startMarketRadarCacheCleanup();
     startFactsCacheCleanup();
     startTrendsCacheCleanup();
     startTagsCacheCleanup();
@@ -320,12 +256,11 @@ export function startServer(app, serverDir) {
             safeLog('info', 'HTTP server closed');
             
             // Cleanup intervals and caches
-            cleanupMemoryMonitor();
+            stopMemoryMonitor();
             cleanupRateLimitStore();
             await cleanupAllCaches();
             destroyBlacklist();
             stopPeriodicCleanup();
-            stopMarketRadarCacheCleanup();
             metrics.stopPeriodicSave();
             
             // Destroy all caches (clears data AND intervals)

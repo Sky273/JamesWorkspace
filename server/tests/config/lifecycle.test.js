@@ -20,6 +20,9 @@ const mockDestroyTagsCache = vi.fn();
 const mockStartTagsCacheCleanup = vi.fn();
 const mockDestroyEscoCache = vi.fn();
 const mockStartEscoCacheCleanup = vi.fn();
+const mockRegisterCacheCleanupFunctions = vi.fn();
+const mockStartMemoryMonitor = vi.fn();
+const mockStopMemoryMonitor = vi.fn();
 const mockInitializeDatabase = vi.fn();
 const mockClosePool = vi.fn(async () => {});
 const mockStartScheduler = vi.fn();
@@ -94,7 +97,7 @@ vi.mock('../../services/rome.service.js', () => ({
     destroyMetiersCache: (...args) => mockDestroyMetiersCache(...args)
 }));
 
-vi.mock('../../routes/tags.routes.js', () => ({
+vi.mock('../../services/tagsCache.service.js', () => ({
     invalidateTagsCache: (...args) => mockInvalidateTagsCache(...args),
     destroyTagsCache: (...args) => mockDestroyTagsCache(...args),
     startTagsCacheCleanup: (...args) => mockStartTagsCacheCleanup(...args)
@@ -161,6 +164,12 @@ vi.mock('../../services/llmAvailability.service.js', () => ({
     initializeLLMAvailabilityState: (...args) => mockInitializeLLMAvailabilityState(...args)
 }));
 
+vi.mock('../../services/memoryMonitor.service.js', () => ({
+    registerCacheCleanupFunctions: (...args) => mockRegisterCacheCleanupFunctions(...args),
+    startMemoryMonitor: (...args) => mockStartMemoryMonitor(...args),
+    stopMemoryMonitor: (...args) => mockStopMemoryMonitor(...args)
+}));
+
 vi.mock('../../services/metrics.service.js', () => ({
     metrics: {
         stopPeriodicSave: vi.fn()
@@ -214,6 +223,12 @@ describe('Lifecycle config', () => {
         expect(mockStartTagsCacheCleanup).toHaveBeenCalled();
         expect(mockStartEscoCacheCleanup).toHaveBeenCalled();
         expect(mockStartGdprMailStatesCleanup).toHaveBeenCalled();
+        expect(mockRegisterCacheCleanupFunctions).toHaveBeenCalledWith([
+            expect.any(Function),
+            expect.any(Function),
+            expect.any(Function)
+        ]);
+        expect(mockStartMemoryMonitor).toHaveBeenCalled();
         expect(mockStartPeriodicCleanup).toHaveBeenCalledWith(
             60 * 60 * 1000,
             60 * 60 * 1000,

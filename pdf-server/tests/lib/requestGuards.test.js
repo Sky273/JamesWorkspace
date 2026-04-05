@@ -35,6 +35,13 @@ describe('requestGuards', () => {
       status: 500,
       body: { error: 'Failed to generate PDF' }
     });
+    const abortError = new Error('Document generation timed out.');
+    abortError.name = 'AbortError';
+    abortError.code = 'ABORT_ERR';
+    expect(buildGenerationFailureBody('PDF', abortError)).toEqual({
+      status: 504,
+      body: { error: 'PDF generation timed out. Try with simpler content.' }
+    });
     expect(buildGenerationFailureBody('DOCX', new Error('Navigation timeout exceeded'))).toEqual({
       status: 504,
       body: { error: 'DOCX generation timed out. Try with simpler content.' }

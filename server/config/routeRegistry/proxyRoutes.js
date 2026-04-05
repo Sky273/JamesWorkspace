@@ -6,6 +6,7 @@ import { userRateLimit } from '../../middleware/rateLimit.middleware.js';
 import { validateBody, generatePdfProxySchema, generateDocxProxySchema } from '../../utils/validation.js';
 import { getPdfServerAuthHeaders } from '../../utils/pdfServerAuth.js';
 import { applySafeBinaryHeaders } from '../../utils/fileResponseSecurity.js';
+import { assertTrustedInternalServiceUrl } from '../../utils/networkHostSecurity.js';
 
 const DEFAULT_PDF_PROXY_TIMEOUT_MS = 60_000;
 
@@ -70,6 +71,9 @@ function isAbortError(error) {
 export function registerProxyRoutes(app) {
     const PDF_SERVER_URL = process.env.PDF_SERVER_URL || 'http://localhost:3002';
     const proxyTimeoutMs = getProxyTimeoutMs();
+    const pdfServerUrlValidation = assertTrustedInternalServiceUrl(PDF_SERVER_URL)
+        .then(() => null)
+        .catch((error) => error);
     const proxyGuards = [
         authenticateToken,
         userRateLimit(20, 15 * 60 * 1000)
@@ -77,6 +81,15 @@ export function registerProxyRoutes(app) {
 
     app.post('/generate-pdf', ...proxyGuards, validateBody(generatePdfProxySchema), async (req, res) => {
         try {
+            const pdfServerUrlError = await pdfServerUrlValidation;
+            if (pdfServerUrlError) {
+                safeLog('error', 'Rejected PDF proxy target', {
+                    url: PDF_SERVER_URL,
+                    error: pdfServerUrlError.message
+                });
+                return res.status(503).json({ error: 'PDF generation service is unavailable' });
+            }
+
             safeLog('info', 'Proxying PDF generation request to PDF server');
 
             const response = await fetchWithTimeout(`${PDF_SERVER_URL}/generate-pdf`, {
@@ -110,6 +123,15 @@ export function registerProxyRoutes(app) {
 
     app.post('/generate-docx', ...proxyGuards, validateBody(generateDocxProxySchema), async (req, res) => {
         try {
+            const pdfServerUrlError = await pdfServerUrlValidation;
+            if (pdfServerUrlError) {
+                safeLog('error', 'Rejected DOCX proxy target', {
+                    url: PDF_SERVER_URL,
+                    error: pdfServerUrlError.message
+                });
+                return res.status(503).json({ error: 'DOCX generation service is unavailable' });
+            }
+
             safeLog('info', 'Proxying DOCX generation request to PDF server');
 
             const response = await fetchWithTimeout(`${PDF_SERVER_URL}/generate-docx`, {

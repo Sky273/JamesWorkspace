@@ -45,9 +45,9 @@ describe('JWT Service', () => {
       expect(token.split('.')).toHaveLength(3); // JWT has 3 parts
     });
 
-    it('should include user data in token payload', () => {
+    it('should include user data in token payload', async () => {
       const token = generateAccessToken(mockUser);
-      const decoded = verifyToken(token);
+      const decoded = await verifyToken(token);
       
       expect(decoded.id).toBe(mockUser.id);
       expect(decoded.email).toBe(mockUser.email);
@@ -64,10 +64,10 @@ describe('JWT Service', () => {
       expect(token.split('.')).toHaveLength(3);
     });
 
-    it('should include minimal user data', () => {
+    it('should include minimal user data', async () => {
       const token = generateRefreshToken(mockUser);
       // Use verifyRefreshToken since refresh tokens use a different secret
-      const decoded = verifyRefreshToken(token);
+      const decoded = await verifyRefreshToken(token);
       
       expect(decoded.id).toBe(mockUser.id);
       expect(decoded.email).toBe(mockUser.email);
@@ -77,30 +77,28 @@ describe('JWT Service', () => {
   });
 
   describe('verifyToken', () => {
-    it('should verify a valid token', () => {
+    it('should verify a valid token', async () => {
       const token = generateAccessToken(mockUser);
-      const decoded = verifyToken(token);
+      const decoded = await verifyToken(token);
       
       expect(decoded).not.toBeNull();
       expect(decoded.id).toBe(mockUser.id);
     });
 
-    it('should return null for invalid token', () => {
-      const result = verifyToken('invalid.token.here');
-      expect(result).toBeNull();
+    it('should return null for invalid token', async () => {
+      await expect(verifyToken('invalid.token.here')).resolves.toBeNull();
     });
 
-    it('should return null for empty token', () => {
-      expect(verifyToken('')).toBeNull();
-      expect(verifyToken(null)).toBeNull();
-      expect(verifyToken(undefined)).toBeNull();
+    it('should return null for empty token', async () => {
+      await expect(verifyToken('')).resolves.toBeNull();
+      await expect(verifyToken(null)).resolves.toBeNull();
+      await expect(verifyToken(undefined)).resolves.toBeNull();
     });
 
-    it('should return null for tampered token', () => {
+    it('should return null for tampered token', async () => {
       const token = generateAccessToken(mockUser);
       const tamperedToken = token.slice(0, -5) + 'xxxxx';
-      const result = verifyToken(tamperedToken);
-      expect(result).toBeNull();
+      await expect(verifyToken(tamperedToken)).resolves.toBeNull();
     });
   });
 

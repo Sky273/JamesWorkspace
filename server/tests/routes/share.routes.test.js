@@ -150,6 +150,39 @@ describe('Share Routes', () => {
         expect(res.body.token).toBe('pdf-token');
     });
 
+    it('adds an abort signal to the PDF server request', async () => {
+        mockFetch.mockResolvedValueOnce({ ok: true, arrayBuffer: () => Promise.resolve(Buffer.from('pdf').buffer) });
+        mockStoreSharedPdf.mockResolvedValueOnce({ token: 'pdf-token', expiresAt: new Date(Date.now() + 60_000) });
+
+        const res = await request(app)
+            .post('/api/share/resume/res-1/generate')
+            .set(AUTH)
+            .send({ htmlContent: '<h1>CV</h1>' });
+
+        expect(res.status).toBe(200);
+        expect(mockFetch).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.objectContaining({
+                signal: expect.any(Object)
+            })
+        );
+    });
+
+    it('returns 504 when the PDF server request times out', async () => {
+        const timeoutError = new Error('The operation was aborted');
+        timeoutError.name = 'AbortError';
+        mockFetch.mockRejectedValueOnce(timeoutError);
+
+        const res = await request(app)
+            .post('/api/share/resume/res-1/generate')
+            .set(AUTH)
+            .send({ htmlContent: '<h1>CV</h1>' });
+
+        expect(res.status).toBe(504);
+        expect(res.body.error).toBe('PDF generation timed out');
+        expect(mockStoreSharedPdf).not.toHaveBeenCalled();
+    });
+
     it('returns detailed share status with separate PDF and file tokens', async () => {
         mockGetShareStatus.mockResolvedValueOnce({
             hasSharedPdf: true,

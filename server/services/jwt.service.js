@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { JWT_SECRET, REFRESH_TOKEN_SECRET, JWT_EXPIRES_IN, REFRESH_TOKEN_EXPIRES_IN } from '../config/constants.js';
 import { safeLog } from '../utils/logger.backend.js';
-import { isTokenBlacklisted, blacklistToken } from './tokenBlacklist.service.js';
+import { isTokenBlacklistedAsync, blacklistToken } from './tokenBlacklist.service.js';
 
 // ============================================
 // JWT TOKEN SERVICES
@@ -10,6 +10,25 @@ import { isTokenBlacklisted, blacklistToken } from './tokenBlacklist.service.js'
 
 // Security: Always specify the algorithm to prevent algorithm confusion attacks
 const JWT_ALGORITHM = 'HS256';
+
+function verifyRevocableToken(token) {
+    if (!token || typeof token !== 'string') {
+        return null;
+    }
+
+    const verificationOptions = { algorithms: [JWT_ALGORITHM], ignoreExpiration: true };
+    const secrets = [JWT_SECRET, REFRESH_TOKEN_SECRET];
+
+    for (const secret of secrets) {
+        try {
+            return jwt.verify(token, secret, verificationOptions);
+        } catch {
+            // Try the next known signing secret.
+        }
+    }
+
+    return null;
+}
 
 function buildAccessTokenPayload(user) {
     const firmId = user?.firm_id || user?.firmId || null;
@@ -65,13 +84,13 @@ export function generateRefreshToken(user) {
  * Verify access token
  * Also checks if the token has been blacklisted
  */
-export function verifyToken(token) {
+export async function verifyToken(token) {
     try {
         // Security: Explicitly specify allowed algorithms to prevent algorithm confusion attacks
         const decoded = jwt.verify(token, JWT_SECRET, { algorithms: [JWT_ALGORITHM] });
         
         // Check if token or user is blacklisted
-        if (isTokenBlacklisted(decoded.jti, decoded.id, decoded.iat)) {
+        if (await isTokenBlacklistedAsync(decoded.jti, decoded.id, decoded.iat)) {
             safeLog('warn', 'Token is blacklisted', { 
                 jti: decoded.jti,
                 userId: decoded.id 
@@ -96,7 +115,7 @@ export function verifyToken(token) {
  * Uses separate secret from access tokens for enhanced security
  * Also checks if the token has been blacklisted
  */
-export function verifyRefreshToken(token) {
+export async function verifyRefreshToken(token) {
     try {
         const decoded = jwt.verify(token, REFRESH_TOKEN_SECRET, { algorithms: [JWT_ALGORITHM] });
         
@@ -109,7 +128,7 @@ export function verifyRefreshToken(token) {
         }
         
         // Check if token or user is blacklisted
-        if (isTokenBlacklisted(decoded.jti, decoded.id, decoded.iat)) {
+        if (await isTokenBlacklistedAsync(decoded.jti, decoded.id, decoded.iat)) {
             safeLog('warn', 'Refresh token is blacklisted', { 
                 jti: decoded.jti,
                 userId: decoded.id 
@@ -138,10 +157,9 @@ export function verifyRefreshToken(token) {
  */
 export async function revokeToken(token) {
     try {
-        // Decode without verification to get the payload
-        const decoded = jwt.decode(token);
+        const decoded = verifyRevocableToken(token);
         if (!decoded) {
-            safeLog('warn', 'Cannot revoke invalid token');
+            safeLog('warn', 'Cannot revoke unverified token');
             return false;
         }
         

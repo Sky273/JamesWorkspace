@@ -15,11 +15,12 @@ function createTempArtifactPaths({ tempDir, prefix, outputs }) {
   return { tempId, files };
 }
 
-async function runExternalCommand({ command, args = [], cwd, timeout, failureMessage, log, logContext }) {
+async function runExternalCommand({ command, args = [], cwd, timeout, failureMessage, log, logContext, signal }) {
   try {
     await execFileAsync(command, args, {
       cwd,
       timeout,
+      signal,
       windowsHide: true,
       maxBuffer: 10 * 1024 * 1024
     });

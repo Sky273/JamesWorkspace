@@ -1,4 +1,5 @@
 import fs from 'fs';
+import fsPromises from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { buildHistorySnapshot, buildPersistedMetricsData } from './snapshot.js';
@@ -16,6 +17,7 @@ export const MAX_HISTORY_ENTRIES = 24 * 30;
 
 let historyLinesCache = null;
 let historyLinesCacheFile = null;
+let persistenceQueue = Promise.resolve();
 
 function getHistoryCacheFile() {
     return process.env.METRICS_HISTORY_FILE || METRICS_HISTORY_FILE;
@@ -60,6 +62,16 @@ export function ensureMetricsDirectory(log) {
     } catch (err) {
         log.error('Failed to create metrics directory', { error: err.message });
     }
+}
+
+function queuePersistenceTask(task, log, errorMessage) {
+    const nextTask = persistenceQueue.then(task);
+    persistenceQueue = nextTask
+        .catch((err) => {
+            log.error(errorMessage, { error: err.message });
+        })
+        .then(() => undefined);
+    return persistenceQueue;
 }
 
 export function loadMetricsFromDisk(collector, { log, normalizeLLMProviderKey, pruneLLMProviderStats }) {
@@ -159,34 +171,40 @@ export function loadMetricsFromDisk(collector, { log, normalizeLLMProviderKey, p
 }
 
 export function saveMetricsToDisk(collector, log) {
-    try {
-        const data = buildPersistedMetricsData(collector);
-        fs.writeFileSync(METRICS_FILE, JSON.stringify(data, null, 2), 'utf8');
-    } catch (err) {
-        log.error('Failed to save metrics', { error: err.message });
-    }
+    return queuePersistenceTask(async () => {
+        try {
+            await fsPromises.mkdir(METRICS_DIR, { recursive: true });
+            const data = buildPersistedMetricsData(collector);
+            await fsPromises.writeFile(METRICS_FILE, JSON.stringify(data, null, 2), 'utf8');
+        } catch (err) {
+            log.error('Failed to save metrics', { error: err.message });
+        }
+    }, log, 'Failed to save metrics');
 }
 
 export function appendMetricsHistory(collector, log) {
-    try {
-        ensureMetricsDirectory(log);
-        const snapshot = buildHistorySnapshot(collector);
-        const nextLine = JSON.stringify(snapshot);
-        const currentHistoryFile = getHistoryCacheFile();
-        const lines = loadHistoryLines(log);
+    return queuePersistenceTask(async () => {
+        try {
+            await fsPromises.mkdir(METRICS_DIR, { recursive: true });
+            const snapshot = buildHistorySnapshot(collector);
+            const nextLine = JSON.stringify(snapshot);
+            const currentHistoryFile = getHistoryCacheFile();
+            const lines = loadHistoryLines(log);
 
-        if (lines.length < MAX_HISTORY_ENTRIES) {
+            if (lines.length < MAX_HISTORY_ENTRIES) {
+                lines.push(nextLine);
+                historyLinesCache = lines;
+                await fsPromises.appendFile(currentHistoryFile, `${nextLine}\n`, 'utf8');
+                return;
+            }
+
             lines.push(nextLine);
-            fs.appendFileSync(currentHistoryFile, `${nextLine}\n`, 'utf8');
-            return;
+            historyLinesCache = lines.slice(-MAX_HISTORY_ENTRIES);
+            await fsPromises.writeFile(currentHistoryFile, `${historyLinesCache.join('\n')}\n`, 'utf8');
+        } catch (err) {
+            log.error('Failed to append metrics history', { error: err.message });
         }
-
-        lines.push(nextLine);
-        historyLinesCache = lines.slice(-MAX_HISTORY_ENTRIES);
-        fs.writeFileSync(currentHistoryFile, `${historyLinesCache.join('\n')}\n`, 'utf8');
-    } catch (err) {
-        log.error('Failed to append metrics history', { error: err.message });
-    }
+    }, log, 'Failed to append metrics history');
 }
 
 export function readMetricsHistory(limit, log) {

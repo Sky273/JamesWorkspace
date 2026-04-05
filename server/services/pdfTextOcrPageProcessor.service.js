@@ -4,6 +4,14 @@ import {
     createAdvancedFallback
 } from './pdfTextOcrPageProcessor.helpers.js';
 
+async function cleanupOcrTempDirectory(fs, directoryPath) {
+    if (!directoryPath) {
+        return;
+    }
+
+    await fs.rm(directoryPath, { recursive: true, force: true }).catch(() => {});
+}
+
 export function createPdfOcrPageProcessor({
     settings,
     workerRef,
@@ -219,6 +227,7 @@ export function createPdfOcrPageProcessor({
                         }
                     } finally {
                         await unlinkMany(fs, preparedEmbeddedAssets.blocks);
+                        await cleanupOcrTempDirectory(fs, preparedEmbeddedAssets.outputDir);
                     }
                 }
             }
@@ -308,6 +317,7 @@ export function createPdfOcrPageProcessor({
                     const prepared = await preparePythonOcrVariants(renderedImagePath, pageNum);
                     preparedAssets.variants = prepared.variants;
                     preparedAssets.blocks = prepared.blocks;
+                    preparedAssets.outputDir = prepared.outputDir;
 
                     for (const variant of preparedAssets.variants) {
                         if (variant?.path) {
@@ -352,6 +362,7 @@ export function createPdfOcrPageProcessor({
             } finally {
                 await unlinkMany(fs, candidateImages.slice(1));
                 await unlinkMany(fs, preparedAssets.blocks);
+                await cleanupOcrTempDirectory(fs, preparedAssets.outputDir);
             }
         } finally {
             await unlinkQuietly(fs, renderedImagePath);

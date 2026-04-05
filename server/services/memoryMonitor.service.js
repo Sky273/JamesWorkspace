@@ -52,7 +52,7 @@ export function getMemoryUsage() {
  */
 function triggerGC() {
     if (global.gc) {
-        safeLog('info', 'Memory monitor: triggering garbage collection');
+        safeLog('info', 'Triggering garbage collection');
         global.gc();
     }
 }
@@ -83,7 +83,7 @@ function checkMemory() {
         safeLog('warn', 'Critical memory usage detected', { heapUsedMB: memMB.heapUsed });
         triggerGC();
         cleanupCaches();
-        safeLog('info', 'Memory cleanup completed due to critical usage');
+        safeLog('info', 'Market Radar caches cleared due to high memory');
     } else if (memMB.heapUsed > MEMORY_WARNING_THRESHOLD) {
         safeLog('warn', 'High memory usage detected', { heapUsedMB: memMB.heapUsed });
     }
@@ -97,7 +97,7 @@ function periodicCacheCleanup() {
     
     // Only clear if memory usage is above warning threshold
     if (memMB.heapUsed > MEMORY_WARNING_THRESHOLD) {
-        safeLog('info', 'Periodic cache cleanup triggered', { heapUsedMB: memMB.heapUsed });
+        safeLog('info', 'Periodic Market Radar cache cleanup', { heapUsedMB: memMB.heapUsed });
         cleanupCaches();
     }
 }
@@ -106,12 +106,17 @@ function periodicCacheCleanup() {
  * Start memory monitoring
  */
 export function startMemoryMonitor() {
+    if (memoryMonitorInterval || cacheCleanupInterval) {
+        stopMemoryMonitor();
+    }
+
     // Memory check every 5 minutes
     memoryMonitorInterval = setInterval(checkMemory, MONITOR_INTERVAL_MS);
     
     // Cache cleanup every 15 minutes (if memory is high)
     cacheCleanupInterval = setInterval(periodicCacheCleanup, CACHE_CLEANUP_INTERVAL_MS);
-    
+
+    safeLog('info', 'Market Radar cache cleanup scheduled (every 15 min if memory > 300MB)');
     safeLog('info', 'Memory monitor started', {
         monitorIntervalMs: MONITOR_INTERVAL_MS,
         cacheCleanupIntervalMs: CACHE_CLEANUP_INTERVAL_MS,

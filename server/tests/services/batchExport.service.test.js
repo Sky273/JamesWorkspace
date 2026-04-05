@@ -13,6 +13,7 @@ import { query } from '../../config/database.js';
 import {
     getTemplateById,
     getResumeById,
+    getResumesByIdsForExport,
     getTemplateByIdForExport,
     getResumeByIdForExport
 } from '../../services/batchExport.service.js';
@@ -67,6 +68,29 @@ describe('Batch Export Service', () => {
         it('should reject cross-firm resume access', async () => {
             query.mockResolvedValueOnce({ rows: [{ id: 'r1', firm_id: 'firm-other' }] });
             expect(await getResumeByIdForExport('r1', { isAdmin: false, userFirmId: 'firm-123' })).toBeNull();
+        });
+    });
+
+    describe('getResumesByIdsForExport', () => {
+        it('should fetch grouped resumes for admins', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'r1' }, { id: 'r2' }] });
+
+            const result = await getResumesByIdsForExport(['r1', 'r2'], { isAdmin: true, userFirmId: null });
+
+            expect(result).toHaveLength(2);
+            expect(query).toHaveBeenCalledWith(expect.stringContaining('WHERE id = ANY($1::uuid[])'), [['r1', 'r2']]);
+        });
+
+        it('should scope grouped resumes to the user firm', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'r1', firm_id: 'firm-123' }] });
+
+            const result = await getResumesByIdsForExport(['r1', 'r2'], { isAdmin: false, userFirmId: 'firm-123' });
+
+            expect(result).toEqual([{ id: 'r1', firm_id: 'firm-123' }]);
+            expect(query).toHaveBeenCalledWith(
+                expect.stringContaining('AND firm_id = $2'),
+                [['r1', 'r2'], 'firm-123']
+            );
         });
     });
 });

@@ -11,6 +11,36 @@ const { buildPuppeteerHtml, buildPuppeteerFooter } = require('./htmlBuilder.cjs'
 let browserInstance = null;
 let browserLaunchPromise = null;
 
+function createAbortError(message) {
+  const error = new Error(message);
+  error.name = 'AbortError';
+  error.code = 'ABORT_ERR';
+  return error;
+}
+
+function shouldAllowChromiumNoSandbox() {
+  return String(process.env.PDF_CHROMIUM_ALLOW_NO_SANDBOX || '').toLowerCase() === 'true';
+}
+
+function shouldAllowRequest(url) {
+  return url.startsWith('about:') || url.startsWith('data:');
+}
+
+function removeListener(emitter, eventName, handler) {
+  if (!emitter || !handler) {
+    return;
+  }
+
+  if (typeof emitter.off === 'function') {
+    emitter.off(eventName, handler);
+    return;
+  }
+
+  if (typeof emitter.removeListener === 'function') {
+    emitter.removeListener(eventName, handler);
+  }
+}
+
 /**
  * Get or create a browser instance
  * @returns {Promise<Browser>} Puppeteer browser instance
@@ -29,13 +59,15 @@ async function getBrowser() {
   const launchOptions = {
     headless: 'new',
     args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
       '--disable-software-rasterizer'
     ]
   };
+
+  if (shouldAllowChromiumNoSandbox()) {
+    launchOptions.args.push('--no-sandbox', '--disable-setuid-sandbox');
+  }
 
   if (configuredExecutablePath) {
     launchOptions.executablePath = configuredExecutablePath;
@@ -73,8 +105,50 @@ async function getBrowser() {
  * @param {number} options.footerHeight - Custom footer height in mm
  * @returns {Promise<Buffer>} PDF buffer
  */
-async function generatePdf({ htmlContent, stylesheet, headerContent, footerContent, footerHeight }) {
+async function generatePdf({ htmlContent, stylesheet, headerContent, footerContent, footerHeight, signal } = {}) {
   let page = null;
+  let requestHandler = null;
+  let abortHandler = null;
+  let aborted = false;
+
+  const abortError = () => {
+    const reason = signal?.reason;
+    if (reason instanceof Error) {
+      return reason;
+    }
+
+    if (typeof reason === 'string' && reason.length > 0) {
+      return createAbortError(reason);
+    }
+
+    return createAbortError('PDF generation aborted.');
+  };
+
+  const closePageOnAbort = async () => {
+    aborted = true;
+    if (!page) {
+      return;
+    }
+
+    try {
+      await page.close();
+      page = null;
+    } catch (closeError) {
+      log('debug', 'Failed to close page during abort', { error: closeError.message });
+    }
+  };
+
+  if (signal?.aborted) {
+    throw abortError();
+  }
+
+  abortHandler = () => {
+    void closePageOnAbort();
+  };
+
+  if (signal) {
+    signal.addEventListener('abort', abortHandler, { once: true });
+  }
   
   try {
     const hasFooterContent = footerContent && footerContent.trim() !== '';
@@ -99,11 +173,37 @@ async function generatePdf({ htmlContent, stylesheet, headerContent, footerConte
     const browser = await getBrowser();
     page = await browser.newPage();
 
+    if (aborted) {
+      await closePageOnAbort();
+      throw abortError();
+    }
+
+    await page.setRequestInterception(true);
+    if (aborted) {
+      await closePageOnAbort();
+      throw abortError();
+    }
+
+    requestHandler = (request) => {
+      const url = request.url();
+      if (shouldAllowRequest(url)) {
+        request.continue().catch(() => {});
+        return;
+      }
+
+      request.abort('blockedbyclient').catch(() => {});
+    };
+    page.on('request', requestHandler);
+
     // Set content and wait for resources to load
     await page.setContent(wrappedHtmlContent, { 
       waitUntil: 'networkidle0',
       timeout: 30000
     });
+
+    if (aborted) {
+      throw abortError();
+    }
 
     // Calculate footer height for margins
     // The margin-bottom must be at least equal to the footer height + padding
@@ -130,18 +230,33 @@ async function generatePdf({ htmlContent, stylesheet, headerContent, footerConte
     }
 
     const pdfBuffer = await page.pdf(pdfOptions);
+    if (aborted) {
+      throw abortError();
+    }
     
     log('debug', 'PDF generated', { size: `${Math.round(pdfBuffer.length / 1024)}KB` });
     
     return pdfBuffer;
   } catch (error) {
+    if (error?.name === 'AbortError' || error?.code === 'ABORT_ERR' || aborted) {
+      throw abortError();
+    }
     log('error', 'Puppeteer PDF generation failed', { error: error.message });
     throw new Error(`PDF generation failed: ${error.message}`);
   } finally {
+    if (signal && abortHandler) {
+      signal.removeEventListener('abort', abortHandler);
+    }
+
+    if (page && requestHandler) {
+      removeListener(page, 'request', requestHandler);
+    }
+
     // Close the page but keep the browser
     if (page) {
       try {
         await page.close();
+        page = null;
       } catch (closeError) {
         log('warn', 'Failed to close page', { error: closeError.message });
       }
@@ -170,6 +285,8 @@ module.exports = {
   closeBrowser,
   _internal: {
     getBrowser,
+    shouldAllowChromiumNoSandbox,
+    shouldAllowRequest,
     resetBrowserState() {
       browserInstance = null;
       browserLaunchPromise = null;

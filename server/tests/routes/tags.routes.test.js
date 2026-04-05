@@ -72,7 +72,8 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
     }
 }));
 
-import tagsRoutes, { invalidateTagsCache } from '../../routes/tags.routes.js';
+import tagsRoutes from '../../routes/tags.routes.js';
+import { invalidateTagsCache } from '../../services/tagsCache.service.js';
 
 function createTestApp() {
     const app = express();

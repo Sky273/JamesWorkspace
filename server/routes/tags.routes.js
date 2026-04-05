@@ -10,96 +10,18 @@ import { safeLog } from '../utils/logger.backend.js';
 import { aggregateRawTags, aggregateCleanedTags, aggregateEscoTags, fetchResumeBatch, updateResumeTags, renameTag } from '../services/tags.service.js';
 import { processCleanedTagsToEsco } from '../services/escoService.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
+import {
+    destroyTagsCache,
+    getCachedCleanedTags,
+    getCachedEscoTags,
+    getTagsCacheStats,
+    invalidateTagsCache,
+    setCachedCleanedTags,
+    setCachedEscoTags,
+    startTagsCacheCleanup
+} from '../services/tagsCache.service.js';
 
 const router = express.Router();
-
-// Cache configuration
-const TAGS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
-
-// In-memory cache for cleaned tags (per-firm cache: Map<firm_id|'admin', result>)
-const cleanedTagsCache = new Map();
-const cleanedTagsCacheTime = new Map();
-// In-memory cache for ESCO tags
-let escoTagsCache = null;
-let escoTagsCacheTime = 0;
-
-// Maximum cache entries to prevent memory leaks
-const MAX_TAGS_CACHE_ENTRIES = 100;
-let tagsCacheCleanupInterval = null;
-
-function runTagsCacheCleanup() {
-    const now = Date.now();
-    let expiredCount = 0;
-    // Clean up per-firm cleaned tags cache
-    for (const [key, timestamp] of cleanedTagsCacheTime.entries()) {
-        if (now - timestamp > TAGS_CACHE_TTL * 2) {
-            cleanedTagsCache.delete(key);
-            cleanedTagsCacheTime.delete(key);
-            expiredCount++;
-        }
-    }
-    if (expiredCount > 0) {
-        safeLog('debug', `Tags: Cleaned tags cache auto-expired`, { expiredCount });
-    }
-    if (escoTagsCacheTime && now - escoTagsCacheTime > TAGS_CACHE_TTL * 2) {
-        escoTagsCache = null;
-        escoTagsCacheTime = 0;
-        safeLog('debug', 'Tags: ESCO tags cache auto-expired');
-    }
-}
-
-function startTagsCacheCleanup(intervalMs = TAGS_CACHE_TTL) {
-    if (tagsCacheCleanupInterval) {
-        return tagsCacheCleanupInterval;
-    }
-
-    tagsCacheCleanupInterval = setInterval(runTagsCacheCleanup, intervalMs);
-    return tagsCacheCleanupInterval;
-}
-
-/**
- * Invalidate tags cache
- */
-function invalidateTagsCache() {
-    cleanedTagsCache.clear();
-    cleanedTagsCacheTime.clear();
-    escoTagsCache = null;
-    escoTagsCacheTime = 0;
-    safeLog('debug', 'Tags: Cache invalidated');
-}
-
-/**
- * Destroy tags cache and cleanup interval (for graceful shutdown)
- */
-function destroyTagsCache() {
-    if (tagsCacheCleanupInterval) {
-        clearInterval(tagsCacheCleanupInterval);
-        tagsCacheCleanupInterval = null;
-    }
-    cleanedTagsCache.clear();
-    cleanedTagsCacheTime.clear();
-    escoTagsCache = null;
-    escoTagsCacheTime = 0;
-    safeLog('info', 'Tags: Cache destroyed');
-}
-
-/**
- * Get tags cache statistics
- */
-function getTagsCacheStats() {
-    return {
-        cleanedTags: {
-            size: cleanedTagsCache.size,
-            maxSize: MAX_TAGS_CACHE_ENTRIES,
-            keys: [...cleanedTagsCache.keys()]
-        },
-        escoTags: {
-            hasData: !!escoTagsCache,
-            ageMs: escoTagsCacheTime ? Date.now() - escoTagsCacheTime : null
-        },
-        ttlMinutes: TAGS_CACHE_TTL / (60 * 1000)
-    };
-}
 
 /**
  * Parse JSON field from database
@@ -124,16 +46,6 @@ function buildStandardTagsResponse(row = {}) {
         'Tools': row.tools || [],
         'Soft Skills': row.soft_skills || []
     };
-}
-
-function clearCleanedTagsCache() {
-    cleanedTagsCache.clear();
-    cleanedTagsCacheTime.clear();
-}
-
-function clearEscoTagsCache() {
-    escoTagsCache = null;
-    escoTagsCacheTime = 0;
 }
 
 async function resolveTagsAccess(req, res, { requireFirmForNonAdmin = true } = {}) {
@@ -185,9 +97,8 @@ router.get('/cleaned', authenticateToken, async (req, res) => {
             : `firm_${access.userFirmId}_${scope}`;
         
         // Return cached cleaned tags if available and not expired (per-firm cache)
-        const cachedResult = cleanedTagsCache.get(cacheKey);
-        const cachedTime = cleanedTagsCacheTime.get(cacheKey);
-        if (cachedResult && cachedTime && (Date.now() - cachedTime) < TAGS_CACHE_TTL) {
+        const cachedResult = getCachedCleanedTags(cacheKey);
+        if (cachedResult) {
             return res.json(cachedResult);
         }
         
@@ -195,14 +106,7 @@ router.get('/cleaned', authenticateToken, async (req, res) => {
         const result = buildStandardTagsResponse(row);
         
         // Update per-firm cache with timestamp (enforce max size)
-        if (cleanedTagsCache.size >= MAX_TAGS_CACHE_ENTRIES) {
-            // Remove oldest entry
-            const oldestKey = cleanedTagsCache.keys().next().value;
-            cleanedTagsCache.delete(oldestKey);
-            cleanedTagsCacheTime.delete(oldestKey);
-        }
-        cleanedTagsCache.set(cacheKey, result);
-        cleanedTagsCacheTime.set(cacheKey, Date.now());
+        setCachedCleanedTags(cacheKey, result);
         
         res.json(result);
     } catch (error) {
@@ -278,7 +182,7 @@ router.post('/cleaned/recalculate', authenticateToken, requireAdmin, async (req,
         }
         
         // Clear cache to force refresh
-        clearCleanedTagsCache();
+        invalidateTagsCache();
         
         safeLog('info', 'Cleaned tags recalculated', { 
             totalResumes: totalProcessed,
@@ -308,8 +212,11 @@ router.get('/esco', authenticateToken, async (req, res) => {
         }
 
         // Return cached ESCO tags if available and not expired
-        if (access.isAdmin && escoTagsCache && escoTagsCacheTime && (Date.now() - escoTagsCacheTime) < TAGS_CACHE_TTL) {
-            return res.json(escoTagsCache);
+        if (access.isAdmin) {
+            const cachedEscoTags = getCachedEscoTags();
+            if (cachedEscoTags) {
+                return res.json(cachedEscoTags);
+            }
         }
         
         // Use PostgreSQL to aggregate ESCO tags directly in the database
@@ -326,8 +233,7 @@ router.get('/esco', authenticateToken, async (req, res) => {
         
         // Update cache with timestamp
         if (access.isAdmin) {
-            escoTagsCache = result;
-            escoTagsCacheTime = Date.now();
+            setCachedEscoTags(result);
         }
         
         res.json(result);
@@ -404,7 +310,7 @@ router.post('/esco/recalculate', authenticateToken, requireAdmin, validateBody(e
         }
         
         // Clear cache to force refresh
-        clearEscoTagsCache();
+        invalidateTagsCache();
         
         safeLog('info', 'ESCO tags recalculated', { 
             totalResumes: totalProcessed,
@@ -451,8 +357,7 @@ router.put('/rename', authenticateToken, requireAdmin, validateBody(renameTagSch
         const updatedCount = result.length;
 
         // Clear caches
-        clearCleanedTagsCache();
-        clearEscoTagsCache();
+        invalidateTagsCache();
 
         safeLog('info', 'Tag renamed via SQL', { 
             category, 

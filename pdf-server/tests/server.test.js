@@ -52,6 +52,7 @@ describe('PDF Server', () => {
     logger.log = origLog;
     delete process.env.PDF_MAX_OUTPUT_SIZE;
     delete process.env.PDF_MAX_CONCURRENT;
+    delete process.env.PDF_SERVER_HEALTH_VERBOSE;
     delete require.cache[require.resolve('../server.cjs')];
   });
 
@@ -68,22 +69,23 @@ describe('PDF Server', () => {
       expect(res.body.uptime).toMatch(/\d+h \d+m/);
     });
 
-    it('should include memory info', async () => {
+    it('should stay minimal by default', async () => {
       const res = await request(app).get('/health');
-      expect(res.body.memory).toBeDefined();
-      expect(res.body.memory.rss).toMatch(/MB$/);
-      expect(res.body.memory.heapUsed).toMatch(/MB$/);
-      expect(res.body.memory.heapTotal).toMatch(/MB$/);
+      expect(res.body.memory).toBeUndefined();
+      expect(res.body.config).toBeUndefined();
+      expect(res.body.rateLimitEntries).toBeUndefined();
+      expect(res.body.activeGenerationJobs).toBeUndefined();
     });
 
-    it('should include config', async () => {
-      const res = await request(app).get('/health');
+    it('should expose diagnostics only when verbose health is enabled', async () => {
+      process.env.PDF_SERVER_HEALTH_VERBOSE = 'true';
+      const verboseApp = resetServerModule();
+      const res = await request(verboseApp).get('/health');
+
+      expect(res.body.memory).toBeDefined();
       expect(res.body.config).toBeDefined();
-      expect(res.body.config.timeout).toBeDefined();
-      expect(res.body.config.rateLimit).toBeDefined();
-      expect(res.body.config.maxHtmlSize).toBeDefined();
-      expect(res.body.config.maxConcurrentJobs).toBeDefined();
-      expect(res.body.config.maxOutputSize).toBeDefined();
+      expect(res.body.rateLimitEntries).toBeDefined();
+      expect(res.body.activeGenerationJobs).toBeDefined();
     });
   });
 
@@ -169,6 +171,15 @@ describe('PDF Server', () => {
         .send({ htmlContent: '<img src=x onerror=alert(1)>', filename: 'test.pdf' });
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('unsupported');
+    });
+
+    it('should reject external resources in htmlContent', async () => {
+      const res = await request(app)
+        .post('/generate-pdf')
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
+        .send({ htmlContent: '<img src="https://evil.test/a.png">', filename: 'test.pdf' });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('external resources');
     });
 
     it('should reject dangerous stylesheet', async () => {

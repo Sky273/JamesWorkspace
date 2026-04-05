@@ -9,6 +9,33 @@ import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import { Readable } from 'stream';
 
+const mockPipeline = vi.fn();
+
+function resetMockPipeline() {
+    mockPipeline.mockImplementation((source, destination) => new Promise((resolve, reject) => {
+        const cleanup = () => {
+            source.removeListener('error', onError);
+            destination.removeListener('error', onError);
+            destination.removeListener('finish', onFinish);
+        };
+
+        const onError = (error) => {
+            cleanup();
+            reject(error);
+        };
+
+        const onFinish = () => {
+            cleanup();
+            resolve();
+        };
+
+        source.once('error', onError);
+        destination.once('error', onError);
+        destination.once('finish', onFinish);
+        source.pipe(destination);
+    }));
+}
+
 function _getImportFileBuffer(filename) {
     if (filename.endsWith('.pdf')) {
         return Buffer.from('%PDF-1.7 import');
@@ -53,6 +80,10 @@ vi.mock('fs', () => ({
     unlink: vi.fn()
 }));
 
+vi.mock('stream/promises', () => ({
+    pipeline: (...args) => mockPipeline(...args)
+}));
+
 // Mock multer (used for file uploads in POST /)
 vi.mock('multer', () => {
     const multerMock = (options = {}) => ({
@@ -71,6 +102,17 @@ vi.mock('multer', () => {
                     buffer: Buffer.from('not-a-pdf'),
                     size: 9
                 }];
+            } else if (req.headers['x-test-invalid-relative-path'] === 'true') {
+                req.files = [{
+                    originalname: 'resume.pdf',
+                    mimetype: 'application/pdf',
+                    buffer: Buffer.from('%PDF-1.7 import'),
+                    size: 15
+                }];
+                req.body = {
+                    ...(req.body || {}),
+                    relativePaths: ['../escape/resume.pdf']
+                };
             } else if (req.headers['x-test-total-too-large'] === 'true') {
                 req.files = [
                     {
@@ -238,6 +280,7 @@ describe('Batch Jobs Routes - GET /api/batch-jobs', () => {
 
     beforeEach(() => {
         vi.resetAllMocks();
+        resetMockPipeline();
         mockGetResumeForAccessCheck.mockResolvedValue({ id: '123e4567-e89b-12d3-a456-426614174000', firm_id: 'firm-123', name: 'Resume 1' });
         app = createTestApp();
     });
@@ -335,6 +378,7 @@ describe('Batch Jobs Routes - GET /api/batch-jobs/:id', () => {
 
     beforeEach(() => {
         vi.resetAllMocks();
+        resetMockPipeline();
         app = createTestApp();
     });
 
@@ -396,6 +440,7 @@ describe('Batch Jobs Routes - POST /api/batch-jobs', () => {
 
     beforeEach(() => {
         vi.resetAllMocks();
+        resetMockPipeline();
         app = createTestApp();
     });
 
@@ -480,6 +525,16 @@ describe('Batch Jobs Routes - POST /api/batch-jobs', () => {
         expect(res.status).toBe(413);
         expect(res.body.error).toContain('250MB');
     });
+
+    it('should reject unsafe relative paths for uploaded archive entries', async () => {
+        const res = await request(app)
+            .post('/api/batch-jobs')
+            .set('Authorization', 'Bearer valid-token')
+            .set('x-test-invalid-relative-path', 'true');
+
+        expect(res.status).toBe(400);
+        expect(res.body.error).toContain('relative path');
+    });
 });
 
 describe('Batch Jobs Routes - DELETE /api/batch-jobs/:id', () => {
@@ -487,6 +542,7 @@ describe('Batch Jobs Routes - DELETE /api/batch-jobs/:id', () => {
 
     beforeEach(async () => {
         vi.resetAllMocks();
+        resetMockPipeline();
         app = createTestApp();
         const fsModule = await import('fs');
         vi.mocked(fsModule.default.unlink).mockImplementation((_path, callback) => callback(null));
@@ -525,7 +581,8 @@ describe('Batch Jobs Routes - DELETE /api/batch-jobs/:id', () => {
 
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
-        expect(mockClearJobExportFile).toHaveBeenCalledWith('job-123');
+        expect(mockDeleteJob).toHaveBeenCalledWith('job-123');
+        expect(mockClearJobExportFile).not.toHaveBeenCalled();
     });
 
     it('should reject deleting pending job', async () => {
@@ -562,6 +619,7 @@ describe('Batch Jobs Routes - POST /api/batch-jobs/:id/cancel', () => {
 
     beforeEach(() => {
         vi.resetAllMocks();
+        resetMockPipeline();
         app = createTestApp();
     });
 
@@ -631,6 +689,7 @@ describe('Batch Jobs Routes - pending names', () => {
 
     beforeEach(() => {
         vi.resetAllMocks();
+        resetMockPipeline();
         app = createTestApp();
     });
 
@@ -674,6 +733,7 @@ describe('Batch Jobs Routes - POST /api/batch-jobs/improve', () => {
 
     beforeEach(() => {
         vi.resetAllMocks();
+        resetMockPipeline();
         app = createTestApp();
     });
 
@@ -703,6 +763,7 @@ describe('Batch Jobs Routes - GET /api/batch-jobs/:id/download', () => {
 
     beforeEach(async () => {
         vi.resetAllMocks();
+        resetMockPipeline();
         app = createTestApp();
         const fsModule = await import('fs');
         vi.mocked(fsModule.default.existsSync).mockReturnValue(true);
@@ -711,6 +772,9 @@ describe('Batch Jobs Routes - GET /api/batch-jobs/:id/download', () => {
     });
 
     it('should download an available export with safe headers', async () => {
+        mockPipeline.mockImplementationOnce(async (_source, destination) => {
+            destination.end('zip-content');
+        });
         mockGetJob.mockResolvedValueOnce({
             id: 'job-123',
             firm_id: 'firm-123',
@@ -730,6 +794,23 @@ describe('Batch Jobs Routes - GET /api/batch-jobs/:id/download', () => {
         expect(res.headers['cache-control']).toBe('private, no-store, max-age=0');
         expect(mockClearJobExportFile).toHaveBeenCalledWith('job-123');
     });
+
+    it('should not delete the export if the download pipeline fails', async () => {
+        mockPipeline.mockRejectedValueOnce(new Error('stream aborted'));
+        mockGetJob.mockResolvedValueOnce({
+            id: 'job-123',
+            firm_id: 'firm-123',
+            export_file_path: 'C:/tmp/export.zip',
+            export_file_name: 'batch export.zip'
+        });
+
+        const res = await request(app)
+            .get('/api/batch-jobs/job-123/download')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(500);
+        expect(mockClearJobExportFile).not.toHaveBeenCalled();
+    });
 });
 
 describe('Batch Jobs Routes - POST /api/batch-jobs/adapt', () => {
@@ -737,6 +818,7 @@ describe('Batch Jobs Routes - POST /api/batch-jobs/adapt', () => {
 
     beforeEach(() => {
         vi.resetAllMocks();
+        resetMockPipeline();
         app = createTestApp();
     });
 
@@ -783,6 +865,7 @@ describe('Batch Jobs Routes - POST /api/batch-jobs/match', () => {
 
     beforeEach(() => {
         vi.resetAllMocks();
+        resetMockPipeline();
         app = createTestApp();
     });
 
@@ -829,6 +912,7 @@ describe('Batch Jobs Routes - POST /api/batch-jobs/profile-search', () => {
 
     beforeEach(() => {
         vi.resetAllMocks();
+        resetMockPipeline();
         app = createTestApp();
     });
 
@@ -879,6 +963,7 @@ describe('Batch Jobs Routes - POST /api/batch-jobs/profile-analysis', () => {
 
     beforeEach(() => {
         vi.resetAllMocks();
+        resetMockPipeline();
         app = createTestApp();
     });
 
@@ -942,6 +1027,7 @@ describe('Batch Jobs Routes - POST /api/batch-jobs/deal-export', () => {
 
     beforeEach(() => {
         vi.resetAllMocks();
+        resetMockPipeline();
         app = createTestApp();
     });
 

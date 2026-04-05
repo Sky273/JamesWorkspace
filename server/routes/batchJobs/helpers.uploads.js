@@ -6,6 +6,7 @@ import { inferMimeTypeFromFilename, resolveUploadMimeType } from '../../utils/up
 import { UPLOAD_DIR } from '../../config/constants.js';
 import { getRequiredSignatureBytes, isValidDocxArchive, isValidFileSignature } from '../../utils/fileSignature.js';
 import { safeLog } from '../../utils/logger.backend.js';
+import { normalizeArchiveRelativePath } from '../../utils/archiveRelativePath.js';
 import {
     buildImportJobOptions,
     ensureFirmId,
@@ -56,6 +57,18 @@ export async function normalizeAndValidateUploadedFiles(files, relativePaths, al
     const uploadedFiles = [];
 
     for (const [index, file] of (files || []).entries()) {
+        let normalizedRelativePath = null;
+        try {
+            normalizedRelativePath = normalizeArchiveRelativePath(relativePaths[index] || null);
+        } catch {
+            await cleanupUploadedFiles(files);
+            return {
+                ok: false,
+                status: 400,
+                error: `Invalid relative path for ${file.originalname}`
+            };
+        }
+
         const resolvedMimeType = resolveUploadMimeType(file.originalname, file.mimetype, allowedMimeTypes);
         const hasValidContents = file.buffer
             ? (
@@ -77,7 +90,7 @@ export async function normalizeAndValidateUploadedFiles(files, relativePaths, al
         uploadedFiles.push({
             ...file,
             fileMimeType: resolvedMimeType,
-            relativePath: relativePaths[index] || null
+            relativePath: normalizedRelativePath
         });
     }
 
@@ -137,7 +150,16 @@ export async function validateImportRequest({
     }
 
     const options = buildImportJobOptions(normalizedPayload, req.body);
-    const relativePaths = parseArrayInput(normalizedPayload.relativePaths, []);
+    let relativePaths;
+    try {
+        relativePaths = parseArrayInput(normalizedPayload.relativePaths, []).map((relativePath) => (
+            normalizeArchiveRelativePath(relativePath)
+        ));
+    } catch {
+        await cleanupUploadedFiles(req.files || []);
+        res.status(400).json({ error: 'Invalid relative path payload' });
+        return { ok: false };
+    }
     const uploadedRequestFiles = req.files || [];
     const totalUploadBytes = uploadedRequestFiles.reduce((sum, file) => sum + (file?.size || 0), 0);
 

@@ -66,7 +66,7 @@ describe('metrics persistence', () => {
         } = await import('../../services/metrics/persistence.js'));
 
         for (let index = 0; index < maxHistoryEntries + 25; index += 1) {
-            appendMetricsHistory(createCollector(index + 1), log);
+            await appendMetricsHistory(createCollector(index + 1), log);
         }
 
         const history = readMetricsHistory(maxHistoryEntries + 100, log);

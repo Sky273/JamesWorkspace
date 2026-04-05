@@ -15,16 +15,47 @@ import { SHARE_LINK_TTL_MS } from '../services/shareResume.service.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const BATCH_EXPORT_RETENTION_DAYS = 7;
+const RESOLVED_UPLOAD_DIR = path.resolve(UPLOAD_DIR);
+const MANAGED_CLEANUP_ROOTS = Object.freeze([
+    RESOLVED_UPLOAD_DIR,
+    path.join(os.tmpdir(), 'batch-exports'),
+    path.resolve(path.join(__dirname, '..', 'temp'))
+]);
+
+function isPathWithinRoot(candidatePath, rootPath) {
+    const relativePath = path.relative(rootPath, candidatePath);
+    return relativePath === '' || (!relativePath.startsWith('..') && !path.isAbsolute(relativePath));
+}
+
+function isManagedCleanupPath(candidatePath) {
+    const resolvedPath = path.resolve(candidatePath);
+    return MANAGED_CLEANUP_ROOTS.some((rootPath) => isPathWithinRoot(resolvedPath, rootPath));
+}
+
+function resolveManagedCleanupPath(candidatePath) {
+    const resolvedPath = path.resolve(candidatePath);
+    if (!isManagedCleanupPath(resolvedPath)) {
+        return {
+            ok: false,
+            resolvedPath
+        };
+    }
+
+    return {
+        ok: true,
+        resolvedPath
+    };
+}
 
 // Directory configurations with TTL (time-to-live)
 const CLEANUP_DIRS = {
     uploads: {
-        path: UPLOAD_DIR,
+        path: RESOLVED_UPLOAD_DIR,
         maxAgeMs: 60 * 60 * 1000,  // 1 hour
         description: 'Uploaded files'
     },
     batchJobsUploads: {
-        path: path.join(UPLOAD_DIR, 'batch-jobs'),
+        path: path.join(RESOLVED_UPLOAD_DIR, 'batch-jobs'),
         maxAgeMs: 24 * 60 * 60 * 1000,  // 24 hours
         description: 'Batch job uploaded files'
     },
@@ -39,7 +70,7 @@ const CLEANUP_DIRS = {
         description: 'Server temp files'
     },
     sharedPdfs: {
-        path: path.join(UPLOAD_DIR, 'shared'),
+        path: path.join(RESOLVED_UPLOAD_DIR, 'shared'),
         maxAgeMs: SHARE_LINK_TTL_MS,
         description: 'Shared PDF files'
     }
@@ -160,23 +191,33 @@ export async function getStorageStats() {
  */
 export async function cleanupOldFiles(directory, maxAgeMs = 60 * 60 * 1000) {
     try {
+        const managedPath = resolveManagedCleanupPath(directory);
+        if (!managedPath.ok) {
+            safeLog('warn', 'Skipping cleanup for unmanaged directory', {
+                directory,
+                resolvedPath: managedPath.resolvedPath
+            });
+            return 0;
+        }
+
+        const directoryPath = managedPath.resolvedPath;
         const now = Date.now();
         let deletedCount = 0;
 
         // Ensure directory exists
         try {
-            await fs.access(directory);
+            await fs.access(directoryPath);
         } catch {
-            safeLog('info', 'Upload directory does not exist, creating it', { directory });
-            await fs.mkdir(directory, { recursive: true });
+            safeLog('info', 'Upload directory does not exist, creating it', { directory: directoryPath });
+            await fs.mkdir(directoryPath, { recursive: true });
             return 0;
         }
 
-        const files = await fs.readdir(directory);
+        const files = await fs.readdir(directoryPath);
 
         for (const file of files) {
             try {
-                const filePath = path.join(directory, file);
+                const filePath = path.join(directoryPath, file);
                 const stats = await fs.stat(filePath);
 
                 // Skip directories
@@ -208,7 +249,7 @@ export async function cleanupOldFiles(directory, maxAgeMs = 60 * 60 * 1000) {
         if (deletedCount > 0) {
             safeLog('info', 'Temporary file cleanup completed', {
                 deletedCount,
-                directory
+                directory: directoryPath
             });
         }
 
@@ -496,12 +537,22 @@ export function startPeriodicCleanup(intervalMs = 60 * 60 * 1000, _maxAgeMs = 60
  */
 export async function cleanupAllFiles() {
     try {
-        const files = await fs.readdir(UPLOAD_DIR);
+        const managedUploadDir = resolveManagedCleanupPath(UPLOAD_DIR);
+        if (!managedUploadDir.ok) {
+            safeLog('error', 'Upload directory is outside managed cleanup roots', {
+                directory: UPLOAD_DIR,
+                resolvedPath: managedUploadDir.resolvedPath
+            });
+            return 0;
+        }
+
+        const uploadDir = managedUploadDir.resolvedPath;
+        const files = await fs.readdir(uploadDir);
         let deletedCount = 0;
 
         for (const file of files) {
             try {
-                const filePath = path.join(UPLOAD_DIR, file);
+                const filePath = path.join(uploadDir, file);
                 const stats = await fs.stat(filePath);
 
                 // Skip directories

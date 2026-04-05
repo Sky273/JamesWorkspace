@@ -2,6 +2,7 @@ import multer from 'multer';
 import fs from 'fs/promises';
 import path from 'path';
 import { MAX_FILE_SIZE, UPLOAD_DIR } from '../../../config/constants.js';
+import { safeLog } from '../../../utils/logger.backend.js';
 
 const GENERIC_FILE_MIME_TYPES = new Set(['', 'application/octet-stream']);
 const PDF_ALLOWED_EXTENSIONS = new Set(['.pdf']);
@@ -19,6 +20,7 @@ const parsedPdfExtractionMaxConcurrency = Number.parseInt(process.env.PDF_EXTRAC
 const PDF_EXTRACTION_MAX_CONCURRENCY = Number.isInteger(parsedPdfExtractionMaxConcurrency) && parsedPdfExtractionMaxConcurrency > 0
     ? parsedPdfExtractionMaxConcurrency
     : DEFAULT_PDF_EXTRACTION_MAX_CONCURRENCY;
+const RESOLVED_UPLOAD_DIR = path.resolve(UPLOAD_DIR);
 
 const activePdfExtractionCountsByUser = new Map();
 
@@ -98,7 +100,17 @@ async function cleanupTempFile(filePath) {
     if (!filePath) {
         return;
     }
-    await fs.unlink(filePath).catch(() => {});
+
+    const resolvedFilePath = path.resolve(filePath);
+    const relativePath = path.relative(RESOLVED_UPLOAD_DIR, resolvedFilePath);
+    if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+        safeLog('warn', 'Skipping temp file cleanup outside upload directory', {
+            filePath: resolvedFilePath
+        });
+        return;
+    }
+
+    await fs.unlink(resolvedFilePath).catch(() => {});
 }
 
 const pdfExtractionUpload = createDiskUpload(PDF_ALLOWED_EXTENSIONS, PDF_ALLOWED_MIME_TYPES);

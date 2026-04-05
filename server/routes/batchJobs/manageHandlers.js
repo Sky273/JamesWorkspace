@@ -22,7 +22,7 @@ const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 const DEFAULT_OFFSET = 0;
 
-async function cleanupExportArtifact(jobId, exportFilePath, exportFileName) {
+async function cleanupExportArtifact(jobId, exportFilePath, exportFileName, { clearMetadata = true } = {}) {
     if (!exportFilePath) {
         return false;
     }
@@ -51,15 +51,17 @@ async function cleanupExportArtifact(jobId, exportFilePath, exportFileName) {
         }
     }
 
-    try {
-        await clearJobExportFile(jobId);
-    } catch (error) {
-        safeLog('warn', 'Failed to clear export file metadata', {
-            jobId,
-            filePath: exportFilePath,
-            fileName: exportFileName,
-            error: error.message
-        });
+    if (clearMetadata) {
+        try {
+            await clearJobExportFile(jobId);
+        } catch (error) {
+            safeLog('warn', 'Failed to clear export file metadata', {
+                jobId,
+                filePath: exportFilePath,
+                fileName: exportFileName,
+                error: error.message
+            });
+        }
     }
 
     return deleted;
@@ -187,8 +189,8 @@ export async function deleteJobHandler(req, res) {
             return res.status(400).json({ error: "Annulez d'abord le job avant de le supprimer" });
         }
 
-        await cleanupExportArtifact(job.id, job.export_file_path, job.export_file_name);
         await deleteJob(id);
+        await cleanupExportArtifact(job.id, job.export_file_path, job.export_file_name, { clearMetadata: false });
         res.json({ success: true, message: 'Job supprimé' });
     } catch (error) {
         safeLog('error', 'Failed to delete batch job', { error: error.message });
@@ -218,16 +220,20 @@ export async function downloadJobExport(req, res) {
         });
 
         const fileStream = fs.createReadStream(job.export_file_path);
+        let downloadCompleted = false;
         try {
             await pipeline(fileStream, res);
+            downloadCompleted = true;
             safeLog('info', 'Export file downloaded', { jobId: id, fileName: job.export_file_name });
         } finally {
-            const deleted = await cleanupExportArtifact(id, job.export_file_path, job.export_file_name);
-            if (deleted) {
-                safeLog('debug', 'Export file deleted after download', {
-                    jobId: id,
-                    filePath: job.export_file_path
-                });
+            if (downloadCompleted) {
+                const deleted = await cleanupExportArtifact(id, job.export_file_path, job.export_file_name);
+                if (deleted) {
+                    safeLog('debug', 'Export file deleted after download', {
+                        jobId: id,
+                        filePath: job.export_file_path
+                    });
+                }
             }
         }
     } catch (error) {

@@ -15,12 +15,6 @@ const {
   runExternalCommand
 } = require('./docxRuntime.cjs');
 const {
-  attachDocumentPart,
-  loadDocxZip,
-  registerEmbeddedImages,
-  updateContentTypes
-} = require('./docxPackage.cjs');
-const {
   escapeXml,
   decodeHtmlEntities,
   HTML_ENTITIES,
@@ -43,6 +37,10 @@ const {
   convertBlocksToOoxml,
   htmlToOoxml
 } = require('./docxOoxml.cjs');
+const {
+  getDefaultOoxmlContextFromStylesheet,
+  injectHtmlPartIntoDocx
+} = require('./docxPartInjection.cjs');
 
 let JSZip = null;
 async function getJSZip() {
@@ -50,6 +48,22 @@ async function getJSZip() {
     JSZip = (await import('jszip')).default;
   }
   return JSZip;
+}
+
+function throwIfAborted(signal) {
+  if (!signal?.aborted) {
+    return;
+  }
+
+  const reason = signal.reason;
+  if (reason instanceof Error) {
+    throw reason;
+  }
+
+  const error = new Error(typeof reason === 'string' && reason.length > 0 ? reason : 'DOCX generation aborted.');
+  error.name = 'AbortError';
+  error.code = 'ABORT_ERR';
+  throw error;
 }
 
 function buildPandocHtml({ htmlContent, stylesheet }) {
@@ -71,104 +85,37 @@ function buildPandocHtml({ htmlContent, stylesheet }) {
 </html>`;
 }
 
-function getDefaultOoxmlContextFromStylesheet(stylesheet) {
-  let defaultAlign;
-  let defaultStyle = '';
-  if (!stylesheet) {
-    return { defaultAlign, defaultStyle };
-  }
-
-  const alignMatch = stylesheet.match(/text-align:\s*(left|right|center|justify)/i);
-  if (alignMatch) defaultAlign = alignMatch[1].toLowerCase();
-
-  const cssParts = [];
-  const fzMatch = stylesheet.match(/font-size:\s*([^;}"]+)/i);
-  if (fzMatch) cssParts.push(`font-size: ${fzMatch[1].trim()}`);
-  const clMatch = stylesheet.match(/(?<![\w-])color:\s*([^;}"]+)/i);
-  if (clMatch) cssParts.push(`color: ${clMatch[1].trim()}`);
-  const ffMatch = stylesheet.match(/font-family:\s*([^;}"]+)/i);
-  if (ffMatch) cssParts.push(`font-family: ${ffMatch[1].trim()}`);
-  const lhMatch = stylesheet.match(/line-height:\s*([^;}"]+)/i);
-  if (lhMatch) cssParts.push(`line-height: ${lhMatch[1].trim()}`);
-
-  defaultStyle = cssParts.join('; ');
-  return { defaultAlign, defaultStyle };
-}
-
 async function injectFooterIntoDocx(docxBuffer, footerContent, stylesheet) {
-  const zip = await loadDocxZip(getJSZip, docxBuffer);
-  const { defaultAlign, defaultStyle } = getDefaultOoxmlContextFromStylesheet(stylesheet);
-  const { html: processedFooter, images } = extractImagesFromHtml(footerContent);
-  const hasImages = images.length > 0;
-  const wpNs = hasImages
-    ? '\n       xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"'
-    : '';
-
-  const footerXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"${wpNs}>
-  ${htmlToOoxml(processedFooter, defaultAlign, defaultStyle)}
-</w:ftr>`;
-
-  zip.file('word/footer1.xml', footerXml);
-  registerEmbeddedImages(zip, images, 'word/_rels/footer1.xml.rels');
-
-  await updateContentTypes(zip, {
-    partName: '/word/footer1.xml',
-    contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml',
-    images
-  });
-
-  await attachDocumentPart(zip, {
+  return injectHtmlPartIntoDocx(getJSZip, docxBuffer, {
+    rootTag: 'w:ftr',
+    htmlContent: footerContent,
+    stylesheet,
     partFileName: 'footer1.xml',
     relationshipType: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer',
     referenceXml: '<w:footerReference w:type="default" r:id="__RID__"/>',
-    marginAttr: 'w:footer'
+    marginAttr: 'w:footer',
+    contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml',
+    relsPath: 'word/_rels/footer1.xml.rels'
   });
-
-  return zip.generateAsync({ type: 'nodebuffer' });
 }
 
 async function injectHeaderIntoDocx(docxBuffer, headerContent, stylesheet) {
-  const zip = await loadDocxZip(getJSZip, docxBuffer);
-  const { html: processedHeader, images } = extractImagesFromHtml(headerContent);
-  const hasImages = images.length > 0;
-  const wpNs = hasImages
-    ? '\n       xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"'
-    : '';
-
-  let headerOoxml = htmlToOoxml(processedHeader);
-  const border = extractHeaderBorder(stylesheet);
-  if (border) {
-    headerOoxml += `<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="${border.size}" w:space="1" w:color="${border.color}"/></w:pBdr><w:spacing w:after="120"/></w:pPr></w:p>`;
-  }
-
-  const headerXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"${wpNs}>
-  ${headerOoxml}
-</w:hdr>`;
-
-  zip.file('word/header1.xml', headerXml);
-  registerEmbeddedImages(zip, images, 'word/_rels/header1.xml.rels');
-
-  await updateContentTypes(zip, {
-    partName: '/word/header1.xml',
-    contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml',
-    images
-  });
-
-  await attachDocumentPart(zip, {
+  return injectHtmlPartIntoDocx(getJSZip, docxBuffer, {
+    rootTag: 'w:hdr',
+    htmlContent: headerContent,
+    stylesheet,
     partFileName: 'header1.xml',
     relationshipType: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/header',
     referenceXml: '<w:headerReference w:type="default" r:id="__RID__"/>',
-    marginAttr: 'w:header'
+    marginAttr: 'w:header',
+    contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml',
+    relsPath: 'word/_rels/header1.xml.rels',
+    includeBorder: true,
+    applyStylesheetContext: false
   });
-
-  return zip.generateAsync({ type: 'nodebuffer' });
 }
 
-async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, footerContent }) {
+async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, footerContent, signal }) {
   const tempDir = os.tmpdir();
   const { files } = createTempArtifactPaths({
     tempDir,
@@ -179,6 +126,7 @@ async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, f
   const docxFilePath = files.docx;
 
   try {
+    throwIfAborted(signal);
     const hasHeader = headerContent && headerContent.trim();
     const hasFooter = footerContent && footerContent.trim();
     const wrappedHtmlContent = buildPandocHtml({ htmlContent, stylesheet });
@@ -190,6 +138,7 @@ async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, f
     });
 
     await fsPromises.writeFile(htmlFilePath, wrappedHtmlContent, 'utf8');
+    throwIfAborted(signal);
 
     try {
       await runExternalCommand({
@@ -197,12 +146,14 @@ async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, f
         args: [htmlFilePath, '-f', 'html', '-t', 'docx', '-o', docxFilePath, '--standalone'],
         log,
         timeout: 30000,
-        failureMessage: 'Pandoc HTML to DOCX conversion failed'
+        failureMessage: 'Pandoc HTML to DOCX conversion failed',
+        signal
       });
     } catch (cmdError) {
       throw new Error(`Pandoc conversion failed: ${cmdError.message}`);
     }
 
+    throwIfAborted(signal);
     let docxBuffer;
     try {
       docxBuffer = await fsPromises.readFile(docxFilePath);
@@ -231,6 +182,7 @@ async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, f
       }
     }
 
+    throwIfAborted(signal);
     log('debug', 'DOCX generated via Pandoc', { size: `${Math.round(docxBuffer.length / 1024)}KB` });
     return docxBuffer;
   } finally {
@@ -242,7 +194,7 @@ async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, f
   }
 }
 
-async function generateDocViaPdf({ htmlContent, stylesheet, headerContent, footerContent, footerHeight, outputFormat = 'doc' }) {
+async function generateDocViaPdf({ htmlContent, stylesheet, headerContent, footerContent, footerHeight, outputFormat = 'doc', signal }) {
   const tempDir = os.tmpdir();
   const outputExt = outputFormat === 'docx' ? 'docx' : 'doc';
   const { files } = createTempArtifactPaths({
@@ -254,6 +206,7 @@ async function generateDocViaPdf({ htmlContent, stylesheet, headerContent, foote
   const outputFilePath = files.output;
 
   try {
+    throwIfAborted(signal);
     log('info', `${outputFormat.toUpperCase()} generation via Puppeteer PDF + LibreOffice`, {
       hasHeader: !!headerContent,
       hasFooter: !!(footerContent && footerContent.trim())
@@ -264,11 +217,13 @@ async function generateDocViaPdf({ htmlContent, stylesheet, headerContent, foote
       stylesheet,
       headerContent,
       footerContent,
-      footerHeight
+      footerHeight,
+      signal
     });
 
     await fsPromises.writeFile(pdfFilePath, pdfBuffer);
     pdfBuffer = null;
+    throwIfAborted(signal);
 
     const outputFilter = outputFormat === 'docx' ? 'docx:"Office Open XML Text"' : 'doc:"MS Word 97"';
     const libreOfficeArgs = [
@@ -292,12 +247,14 @@ async function generateDocViaPdf({ htmlContent, stylesheet, headerContent, foote
         args: libreOfficeArgs,
         log,
         timeout: 60000,
-        failureMessage: `LibreOffice PDF to ${outputFormat.toUpperCase()} conversion failed`
+        failureMessage: `LibreOffice PDF to ${outputFormat.toUpperCase()} conversion failed`,
+        signal
       });
     } catch (cmdError) {
       throw new Error(`LibreOffice conversion failed: ${cmdError.message}`);
     }
 
+    throwIfAborted(signal);
     let outputBuffer;
     try {
       outputBuffer = await fsPromises.readFile(outputFilePath);
@@ -308,6 +265,7 @@ async function generateDocViaPdf({ htmlContent, stylesheet, headerContent, foote
       throw error;
     }
 
+    throwIfAborted(signal);
     log('debug', `${outputFormat.toUpperCase()} generated via PDF`, { size: `${Math.round(outputBuffer.length / 1024)}KB` });
     return outputBuffer;
   } finally {
@@ -319,7 +277,7 @@ async function generateDocViaPdf({ htmlContent, stylesheet, headerContent, foote
   }
 }
 
-async function generateDocx({ htmlContent, stylesheet, headerContent, footerContent, footerHeight, format = 'docx' }) {
+async function generateDocx({ htmlContent, stylesheet, headerContent, footerContent, footerHeight, format = 'docx', signal }) {
   if (format === 'doc') {
     return generateDocViaPdf({
       htmlContent,
@@ -327,11 +285,12 @@ async function generateDocx({ htmlContent, stylesheet, headerContent, footerCont
       headerContent,
       footerContent,
       footerHeight,
-      outputFormat: 'doc'
+      outputFormat: 'doc',
+      signal
     });
   }
 
-  return generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, footerContent });
+  return generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, footerContent, signal });
 }
 
 function getDocMimeType(format) {
@@ -376,9 +335,7 @@ module.exports = {
     cleanupTempFiles,
     createTempArtifactPaths,
     runExternalCommand,
-    loadDocxZip,
-    registerEmbeddedImages,
-    updateContentTypes,
-    attachDocumentPart
+    getDefaultOoxmlContextFromStylesheet,
+    injectHtmlPartIntoDocx
   }
 };

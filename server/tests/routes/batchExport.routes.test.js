@@ -6,20 +6,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
+import { Readable } from 'stream';
 
 process.env.PDF_SERVER_INTERNAL_TOKEN = 'test-pdf-server-internal-token-minimum-32-chars';
 
 // Mock batchExport service
 const mockGetTemplateByIdForExport = vi.fn();
-const mockGetResumeByIdForExport = vi.fn();
+const mockGetResumesByIdsForExport = vi.fn();
 vi.mock('../../services/batchExport.service.js', () => ({
     getTemplateByIdForExport: (...args) => mockGetTemplateByIdForExport(...args),
-    getResumeByIdForExport: (...args) => mockGetResumeByIdForExport(...args)
+    getResumesByIdsForExport: (...args) => mockGetResumesByIdsForExport(...args)
 }));
 
 // Mock JSZip
 const mockFile = vi.fn();
-const mockGenerateAsync = vi.fn();
+const mockGenerateNodeStream = vi.fn();
 vi.mock('jszip', () => ({
     default: class MockJSZip {
         constructor() {
@@ -29,7 +30,10 @@ vi.mock('jszip', () => ({
             this.files[name] = data;
             mockFile(name, data);
         }
-        generateAsync(opts) { return mockGenerateAsync(opts); }
+        generateNodeStream(opts) { return mockGenerateNodeStream(opts); }
+        generateAsync(opts) {
+            return Promise.resolve(Buffer.from('fallback-zip'));
+        }
     }
 }));
 
@@ -88,7 +92,11 @@ describe('Batch Export Routes', () => {
     const originalPdfToken = process.env.PDF_SERVER_INTERNAL_TOKEN;
 
     beforeEach(() => {
-        vi.clearAllMocks();
+        mockGetTemplateByIdForExport.mockReset();
+        mockGetResumesByIdsForExport.mockReset();
+        mockFile.mockReset();
+        mockGenerateNodeStream.mockReset();
+        mockFetch.mockReset();
         process.env.PDF_SERVER_INTERNAL_TOKEN = 't'.repeat(32);
         mockGetUserFirmId.mockResolvedValue('00000000-0000-0000-0000-000000000010');
         app = createTestApp();
@@ -126,7 +134,7 @@ describe('Batch Export Routes', () => {
         it('should accept snake_case batch export payload', async () => {
             mockFetch.mockResolvedValueOnce({ ok: true });
             mockGetTemplateByIdForExport.mockResolvedValueOnce({ id: TEMPLATE_UUID, template_content: '<div></div>' });
-            mockGetResumeByIdForExport.mockResolvedValueOnce(null);
+            mockGetResumesByIdsForExport.mockResolvedValueOnce([]);
 
             const res = await request(app)
                 .post('/api/batch-export')
@@ -159,6 +167,7 @@ describe('Batch Export Routes', () => {
         });
 
         it('should return 503 if PDF server is not reachable', async () => {
+            mockGetTemplateByIdForExport.mockResolvedValueOnce({ id: TEMPLATE_UUID, template_content: '<div></div>' });
             mockFetch.mockRejectedValueOnce(new Error('Connection refused'));
 
             const res = await request(app)
@@ -190,8 +199,7 @@ describe('Batch Export Routes', () => {
             mockGetTemplateByIdForExport.mockResolvedValueOnce(
                 { id: TEMPLATE_UUID, template_content: '<div>-content-</div>', header_content: '', footer_content: '', stylesheet: '', footer_height: 25 }
             );
-            // Resume
-            mockGetResumeByIdForExport.mockResolvedValueOnce(
+            mockGetResumesByIdsForExport.mockResolvedValueOnce([
                 {
                     id: RESUME_UUID,
                     name: 'John Doe',
@@ -199,14 +207,14 @@ describe('Batch Export Routes', () => {
                     improved_text: 'CV content',
                     firm_id: '00000000-0000-0000-0000-000000000010'
                 }
-            );
+            ]);
             // PDF generation
             mockFetch.mockResolvedValueOnce({
                 ok: true,
-                arrayBuffer: () => Promise.resolve(new ArrayBuffer(100))
+                body: Readable.from([Buffer.from('pdf-content')])
             });
             // ZIP generation
-            mockGenerateAsync.mockResolvedValueOnce(Buffer.from('fake-zip'));
+            mockGenerateNodeStream.mockReturnValueOnce(Readable.from([Buffer.from('fake-zip')]));
 
             const res = await request(app)
                 .post('/api/batch-export')
@@ -218,6 +226,10 @@ describe('Batch Export Routes', () => {
             expect(res.headers['content-disposition']).toContain('attachment');
             expect(res.headers['x-content-type-options']).toBe('nosniff');
             expect(res.headers['cache-control']).toBe('private, no-store, max-age=0');
+            expect(mockGenerateNodeStream).toHaveBeenCalledWith(expect.objectContaining({
+                streamFiles: true,
+                compression: 'DEFLATE'
+            }));
         });
 
         it('should return 500 if no files generated', async () => {
@@ -225,8 +237,7 @@ describe('Batch Export Routes', () => {
             mockGetTemplateByIdForExport.mockResolvedValueOnce(
                 { id: TEMPLATE_UUID, template_content: '<div></div>' }
             );
-            // Resume not found
-            mockGetResumeByIdForExport.mockResolvedValueOnce(null);
+            mockGetResumesByIdsForExport.mockResolvedValueOnce([]);
             // ZIP has no files - mockFile is never called, so files is empty
 
             const res = await request(app)
@@ -243,8 +254,7 @@ describe('Batch Export Routes', () => {
             mockGetTemplateByIdForExport.mockResolvedValueOnce(
                 { id: TEMPLATE_UUID, template_content: '<div>-content-</div>' }
             );
-            // Resume found
-            mockGetResumeByIdForExport.mockResolvedValueOnce(
+            mockGetResumesByIdsForExport.mockResolvedValueOnce([
                 {
                     id: RESUME_UUID,
                     name: 'John',
@@ -252,7 +262,7 @@ describe('Batch Export Routes', () => {
                     improved_text: 'text',
                     firm_id: '00000000-0000-0000-0000-000000000010'
                 }
-            );
+            ]);
             // PDF generation fails
             mockFetch.mockResolvedValueOnce({
                 ok: false,
@@ -282,9 +292,11 @@ describe('Batch Export Routes', () => {
                 isAdmin: false,
                 userFirmId: '00000000-0000-0000-0000-000000000010'
             });
+            expect(mockGetResumesByIdsForExport).not.toHaveBeenCalled();
         });
 
         it('should not leak PDF server URL when unreachable', async () => {
+            mockGetTemplateByIdForExport.mockResolvedValueOnce({ id: TEMPLATE_UUID, template_content: '<div></div>' });
             mockFetch.mockRejectedValueOnce(new Error('Connection refused'));
 
             const res = await request(app)
@@ -295,6 +307,22 @@ describe('Batch Export Routes', () => {
             expect(res.status).toBe(503);
             expect(JSON.stringify(res.body)).not.toContain('127.0.0.1:3002');
             expect(res.body.details).toBeUndefined();
+        });
+
+        it('should pass firm access context to grouped resume export lookups', async () => {
+            mockFetch.mockResolvedValueOnce({ ok: true });
+            mockGetTemplateByIdForExport.mockResolvedValueOnce({ id: TEMPLATE_UUID, template_content: '<div>-content-</div>' });
+            mockGetResumesByIdsForExport.mockResolvedValueOnce([]);
+
+            await request(app)
+                .post('/api/batch-export')
+                .set(AUTH)
+                .send({ resumeIds: [RESUME_UUID], templateId: TEMPLATE_UUID });
+
+            expect(mockGetResumesByIdsForExport).toHaveBeenCalledWith([RESUME_UUID], {
+                isAdmin: false,
+                userFirmId: '00000000-0000-0000-0000-000000000010'
+            });
         });
     });
 });

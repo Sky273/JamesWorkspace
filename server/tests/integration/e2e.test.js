@@ -167,7 +167,7 @@ describe('E2E: Authentication Flow', () => {
             expect(typeof refreshToken).toBe('string');
             
             // 4. Verify access token can be decoded
-            const decoded = verifyToken(accessToken);
+            const decoded = await verifyToken(accessToken);
             expect(decoded).not.toBeNull();
             expect(decoded.id).toBe(mockUser.id);
             expect(decoded.email).toBe(mockUser.email);
@@ -217,7 +217,7 @@ describe('E2E: Authentication Flow', () => {
             const newAccessToken = generateAccessToken(mockUser);
             
             expect(newAccessToken).toBeDefined();
-            const decoded = verifyToken(newAccessToken);
+            const decoded = await verifyToken(newAccessToken);
             expect(decoded.id).toBe(mockUser.id);
         });
 
@@ -235,7 +235,7 @@ describe('E2E: Authentication Flow', () => {
             const accessToken = generateAccessToken(mockUser);
             
             // Before logout, token should be valid
-            const decodedBefore = verifyToken(accessToken);
+            const decodedBefore = await verifyToken(accessToken);
             expect(decodedBefore).not.toBeNull();
             
             // After logout, token should be blacklisted

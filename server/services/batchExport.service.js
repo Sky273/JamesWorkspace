@@ -67,3 +67,23 @@ export async function getResumeByIdForExport(resumeId, { isAdmin, userFirmId }) 
 
     return resume;
 }
+
+export async function getResumesByIdsForExport(resumeIds, { isAdmin, userFirmId }) {
+    if (!Array.isArray(resumeIds) || resumeIds.length === 0) {
+        return [];
+    }
+
+    const params = [resumeIds];
+    let sql = 'SELECT * FROM resumes WHERE id = ANY($1::uuid[])';
+
+    if (!isAdmin) {
+        if (!userFirmId) {
+            return [];
+        }
+        params.push(userFirmId);
+        sql += ' AND firm_id = $2';
+    }
+
+    const result = await query(sql, params);
+    return result.rows;
+}

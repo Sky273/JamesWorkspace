@@ -14,8 +14,10 @@ import { getPdfServerAuthHeaders } from '../utils/pdfServerAuth.js';
 import { getResumeForAccessCheck } from '../services/resumes.service.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
 import { setSafeFileResponseHeaders } from '../utils/fileResponseSecurity.js';
+import { assertTrustedInternalServiceUrl } from '../utils/networkHostSecurity.js';
 
 const router = Router();
+const PDF_SERVER_TIMEOUT_MS = 45_000;
 
 // JSON parsing for this router
 router.use(json());
@@ -83,6 +85,24 @@ function buildShareStatusResponse(status) {
     };
 }
 
+function createAbortablePdfRequest(req, res) {
+    const controller = new AbortController();
+    const abortRequest = () => controller.abort(new Error('PDF generation request aborted'));
+    const timeoutId = setTimeout(() => controller.abort(new Error('PDF generation request timed out')), PDF_SERVER_TIMEOUT_MS);
+
+    req.once('close', abortRequest);
+    res.once('close', abortRequest);
+
+    return {
+        signal: controller.signal,
+        cleanup() {
+            clearTimeout(timeoutId);
+            req.removeListener('close', abortRequest);
+            res.removeListener('close', abortRequest);
+        }
+    };
+}
+
 async function serveSharedPdfByToken(res, token) {
     const pdfInfo = await shareResumeService.getSharedPdfByToken(token);
     if (!pdfInfo) {
@@ -140,6 +160,7 @@ async function serveOriginalFileByToken(res, token) {
  * Requires authentication
  */
 router.post('/resume/:resumeId/generate', authenticateToken, validateParams('resumeId'), validateBody(sharePdfSchema), async (req, res) => {
+    const pdfServerRequest = createAbortablePdfRequest(req, res);
     try {
         const { resumeId } = req.params;
         const { htmlContent, filename, stylesheet, headerContent, footerContent, footerHeight } = req.body;
@@ -157,13 +178,27 @@ router.post('/resume/:resumeId/generate', authenticateToken, validateParams('res
         }
 
         const pdfServerUrl = process.env.PDF_SERVER_URL || 'http://localhost:3002';
+        try {
+            await assertTrustedInternalServiceUrl(pdfServerUrl);
+        } catch (guardError) {
+            safeLog('warn', 'PDF server URL rejected by network guard', {
+                resumeId,
+                error: guardError.message
+            });
+            return res.status(503).json({
+                success: false,
+                error: 'PDF server endpoint is not configured for internal access.'
+            });
+        }
+
         const pdfServerHeaders = getPdfServerAuthHeaders({ 'Content-Type': 'application/json' });
         const pdfResponse = await fetch(`${pdfServerUrl}/generate-pdf`, {
             method: 'POST',
             headers: pdfServerHeaders,
+            signal: pdfServerRequest.signal,
             body: JSON.stringify({
                 htmlContent,
-                filename: filename || 'cv.pdf',
+                filename: filename || 'cv',
                 stylesheet: stylesheet || '',
                 headerContent,
                 footerContent,
@@ -192,6 +227,12 @@ router.post('/resume/:resumeId/generate', authenticateToken, validateParams('res
             resumeId: req.params.resumeId,
             error: error.message
         });
+        if (error?.name === 'AbortError' || /timed out/i.test(error?.message || '')) {
+            return res.status(504).json({
+                success: false,
+                error: 'PDF generation timed out'
+            });
+        }
         if (error?.code === 'PDF_SERVER_AUTH_NOT_CONFIGURED') {
             return res.status(503).json({
                 success: false,
@@ -202,6 +243,8 @@ router.post('/resume/:resumeId/generate', authenticateToken, validateParams('res
             success: false,
             error: 'Failed to generate shareable PDF'
         });
+    } finally {
+        pdfServerRequest.cleanup();
     }
 });
 

@@ -75,7 +75,7 @@ vi.mock('../../services/rome.service.js', () => ({
 vi.mock('../../services/escoService.js', () => ({
     getEscoCacheStats: vi.fn(() => ({ size: 0 }))
 }));
-vi.mock('../../routes/tags.routes.js', () => ({
+vi.mock('../../services/tagsCache.service.js', () => ({
     getTagsCacheStats: vi.fn(() => ({}))
 }));
 vi.mock('../../services/tokenBlacklist.service.js', () => ({

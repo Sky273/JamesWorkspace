@@ -259,6 +259,10 @@ describe('Deals Service', () => {
             expect(result.data).toHaveLength(2);
             expect(result.pagination.totalCount).toBe(5);
             expect(result.pagination.page).toBe(1);
+            expect(query.mock.calls[1][0]).toContain('WITH dr_counts AS');
+            expect(query.mock.calls[1][0]).toContain('LEFT JOIN dr_counts ON dr_counts.deal_id = d.id');
+            expect(query.mock.calls[1][0]).toContain('LEFT JOIN m_counts ON m_counts.deal_id = d.id');
+            expect(query.mock.calls[1][0]).not.toContain('(SELECT COUNT(*) FROM deal_resumes');
         });
 
         it('should apply client filter', async () => {

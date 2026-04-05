@@ -38,7 +38,16 @@ describe('Token Blacklist Service', () => {
 
     describe('blacklistToken', () => {
         it('should blacklist a token and update cache', async () => {
-            query.mockResolvedValueOnce({ rows: [] });
+            query.mockResolvedValueOnce({
+                rowCount: 1,
+                rows: [{
+                    token_jti: 'jti-123',
+                    user_id: 'user-1',
+                    reason: 'logout',
+                    expires_at: new Date(Date.now() + 3600000),
+                    created_at: new Date()
+                }]
+            });
 
             const result = await blacklistToken('jti-123', Date.now() + 3600000, 'logout', 'user-1');
 
@@ -48,6 +57,15 @@ describe('Token Blacklist Service', () => {
                 expect.arrayContaining(['jti-123', 'user-1', 'logout'])
             );
             expect(_internals.tokenCache.has('jti-123')).toBe(true);
+        });
+
+        it('should return false when the token was already blacklisted', async () => {
+            query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+
+            const result = await blacklistToken('jti-123', Date.now() + 3600000, 'logout', 'user-1');
+
+            expect(result).toBe(false);
+            expect(_internals.tokenCache.has('jti-123')).toBe(false);
         });
 
         it('should return false for null tokenId', async () => {

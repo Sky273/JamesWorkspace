@@ -6,6 +6,7 @@
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 import { safeLog } from '../../utils/logger.backend.js';
 import { query } from '../../config/database.js';
@@ -18,6 +19,46 @@ import {
 } from '../batchJobs.service.js';
 import { removeSuggestionMarkers } from './helpers.js';
 import { getPdfServerAuthHeaders } from '../../utils/pdfServerAuth.js';
+import { normalizeArchiveRelativePath } from '../../utils/archiveRelativePath.js';
+
+const DEFAULT_EXPORT_REQUEST_TIMEOUT_MS = 60_000;
+
+function getExportRequestTimeoutMs() {
+    const parsedTimeout = Number.parseInt(process.env.BATCH_EXPORT_PDF_TIMEOUT_MS || '', 10);
+    return Number.isInteger(parsedTimeout) && parsedTimeout > 0
+        ? parsedTimeout
+        : DEFAULT_EXPORT_REQUEST_TIMEOUT_MS;
+}
+
+function buildSafeArchiveFilePath(relativePath, generatedFileName) {
+    const normalizedRelativePath = normalizeArchiveRelativePath(relativePath);
+    if (!normalizedRelativePath) {
+        return generatedFileName;
+    }
+
+    const archiveDirectory = path.posix.dirname(normalizedRelativePath);
+    if (!archiveDirectory || archiveDirectory === '.') {
+        return generatedFileName;
+    }
+
+    return `${archiveDirectory}/${generatedFileName}`;
+}
+
+function getNodeReadableStream(body) {
+    if (!body) {
+        return null;
+    }
+
+    if (typeof body.pipe === 'function') {
+        return body;
+    }
+
+    if (typeof Readable.fromWeb === 'function' && typeof body.getReader === 'function') {
+        return Readable.fromWeb(body);
+    }
+
+    return null;
+}
 
 /**
  * Generate export ZIP for a completed job
@@ -111,14 +152,20 @@ export async function generateJobExport(jobId, options) {
         const endpoint = format === 'pdf' ? '/generate-pdf' : '/generate-docx';
         const fileExtension = format === 'pdf' ? 'pdf' : format;
         const MAX_RETRIES = 3;
+        const requestTimeoutMs = getExportRequestTimeoutMs();
         let lastError = null;
         
         for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
             try {
                 const headers = getPdfServerAuthHeaders({ 'Content-Type': 'application/json' });
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => {
+                    controller.abort(new Error(`PDF server timeout after ${requestTimeoutMs}ms`));
+                }, requestTimeoutMs);
                 const response = await fetch(`${PDF_SERVER_URL}${endpoint}`, {
                     method: 'POST',
                     headers,
+                    signal: controller.signal,
                     body: JSON.stringify({
                         htmlContent: processedBody,
                         filename: `${candidateName.replace(/\s+/g, '_')}.${fileExtension}`,
@@ -128,6 +175,8 @@ export async function generateJobExport(jobId, options) {
                         footerHeight: template.footer_height || 25,
                         format: format
                     })
+                }).finally(() => {
+                    clearTimeout(timeoutId);
                 });
                 
                 if (!response.ok) {
@@ -140,8 +189,13 @@ export async function generateJobExport(jobId, options) {
                     return { success: false, error: lastError };
                 }
                 
+                const nodeReadableStream = getNodeReadableStream(response.body);
+                if (nodeReadableStream) {
+                    return { success: true, content: nodeReadableStream, streaming: true };
+                }
+
                 const buffer = await response.arrayBuffer();
-                return { success: true, buffer };
+                return { success: true, content: buffer, streaming: false };
             } catch (fetchErr) {
                 if (fetchErr?.code === 'PDF_SERVER_AUTH_NOT_CONFIGURED') {
                     return { success: false, error: 'PDF server authentication is not configured on the backend.' };
@@ -225,17 +279,15 @@ export async function generateJobExport(jobId, options) {
                 ? `${trigram}_${sanitizedItemName}_${templateName}.${fileExtension}`
                 : `${trigram}_${templateName}.${fileExtension}`;
             
-            return { success: true, itemId: item.id, fileName, buffer: result.buffer, resumeId: item.resume_id, format, relativePath: item.relative_path, sourceType };
+            return { success: true, itemId: item.id, fileName, content: result.content, streaming: result.streaming, resumeId: item.resume_id, format, relativePath: item.relative_path, sourceType };
         } catch (err) {
             safeLog('error', `Error processing ${sourceType} for ${format.toUpperCase()} export`, { resumeId: item.resume_id, adaptationId: item.adaptation_id, error: err.message });
             return { success: false, itemId: item.id, error: err.message, resumeId: item.resume_id, format, sourceType };
         }
     };
     
-    // Process items sequentially to avoid rate limiting (429 errors)
-    // The PDF server has rate limiting, so we process with small batches and delays
-    const PDF_BATCH_SIZE = 3; // Process 3 documents at a time
-    const BATCH_DELAY_MS = 500; // Wait 500ms between batches
+    // Process items in small, bounded batches to keep upstream load controlled.
+    const PDF_BATCH_SIZE = 4;
     
     // Calculate total operations: items × formats
     const totalOperations = successfulItems.length * exportFormats.length;
@@ -264,33 +316,24 @@ export async function generateJobExport(jobId, options) {
             for (const result of batchResults) {
                 if (result.success) {
                     const itemResult = itemResults.get(result.itemId);
+                    let filePath;
+                    try {
+                        filePath = buildSafeArchiveFilePath(result.relativePath, result.fileName);
+                    } catch (pathError) {
+                        exportErrorCount++;
+                        exportErrors.push({
+                            itemId: result.itemId,
+                            resumeId: result.resumeId,
+                            format: result.format,
+                            error: pathError.message
+                        });
+                        if (itemResult) {
+                            itemResult.failures.push(`${result.format.toUpperCase()}: ${pathError.message}`);
+                        }
+                        continue;
+                    }
                     if (itemResult) {
                         itemResult.successCount++;
-                    }
-                    // Determine the file path in the ZIP
-                    let filePath = result.fileName;
-                    
-                    // Log relativePath for debugging
-                    safeLog('debug', 'Processing export result', { 
-                        fileName: result.fileName, 
-                        relativePath: result.relativePath,
-                        hasRelativePath: !!result.relativePath
-                    });
-                    
-                    // If relativePath exists, use it to preserve folder structure
-                    if (result.relativePath) {
-                        // relativePath is like "folder/subfolder/filename.pdf"
-                        // Extract the directory part and replace the filename with the generated one
-                        const pathParts = result.relativePath.split('/');
-                        if (pathParts.length > 1) {
-                            // Remove the original filename and use the directory structure
-                            pathParts.pop();
-                            filePath = pathParts.join('/') + '/' + result.fileName;
-                        }
-                        safeLog('debug', 'Using relative path structure', { 
-                            originalRelativePath: result.relativePath,
-                            finalFilePath: filePath 
-                        });
                     }
                     
                     // Handle duplicate file paths by adding a suffix
@@ -307,7 +350,11 @@ export async function generateJobExport(jobId, options) {
                     
                     // Add to the format-specific folder
                     safeLog('debug', 'Adding file to ZIP', { format, filePath, sourceType: result.sourceType });
-                    formatFolders[format].root.file(filePath, result.buffer);
+                    if (result.streaming) {
+                        formatFolders[format].root.file(filePath, result.content, { binary: true });
+                    } else {
+                        formatFolders[format].root.file(filePath, result.content);
+                    }
                     exportSuccessCount++;
                 } else {
                     exportErrorCount++;
@@ -318,11 +365,6 @@ export async function generateJobExport(jobId, options) {
                     }
                 }
             }
-            
-            // Add delay between batches to avoid rate limiting
-            if (i + PDF_BATCH_SIZE < successfulItems.length) {
-                await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
-            }
         }
         
         // Log duplicates for this format
@@ -331,11 +373,6 @@ export async function generateJobExport(jobId, options) {
             safeLog('debug', `Duplicates in ${format.toUpperCase()} folder`, { 
                 duplicates: duplicatesDetected.map(([name, count]) => `${name} (x${count})`) 
             });
-        }
-        
-        // Add delay between formats
-        if (exportFormats.indexOf(format) < exportFormats.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
         }
     }
     

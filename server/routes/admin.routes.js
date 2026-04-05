@@ -11,7 +11,7 @@ import { getSettingsCacheStats } from '../services/settings.service.js';
 import { getFactsCacheStats } from '../services/marketFacts.service.js';
 import { getTrendsCacheStats } from '../services/marketTrends.service.js';
 import { getMetiersCacheStats } from '../services/rome.service.js';
-import { getTagsCacheStats } from './tags.routes.js';
+import { getTagsCacheStats } from '../services/tagsCache.service.js';
 import { getEscoCacheStats } from '../services/escoService.js';
 import { getStatsCacheStats } from './resumes/stats.routes.js';
 

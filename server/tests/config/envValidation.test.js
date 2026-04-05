@@ -62,6 +62,26 @@ describe('envValidation', () => {
             expect(result.warnings.some(w => w.includes('REFRESH_TOKEN_SECRET'))).toBe(true);
         });
 
+        it('should fail in production when PDF_SERVER_INTERNAL_TOKEN is missing', () => {
+            process.env.NODE_ENV = 'production';
+            delete process.env.PDF_SERVER_INTERNAL_TOKEN;
+
+            const result = validateEnvironment();
+
+            expect(result.valid).toBe(false);
+            expect(result.errors.some(e => e.includes('PDF_SERVER_INTERNAL_TOKEN'))).toBe(true);
+        });
+
+        it('should warn in non-production when PDF_SERVER_INTERNAL_TOKEN is missing', () => {
+            process.env.NODE_ENV = 'development';
+            delete process.env.PDF_SERVER_INTERNAL_TOKEN;
+
+            const result = validateEnvironment();
+
+            expect(result.valid).toBe(true);
+            expect(result.warnings.some(w => w.includes('PDF_SERVER_INTERNAL_TOKEN'))).toBe(true);
+        });
+
         it('should report multiple errors for multiple missing vars', () => {
             delete process.env.JWT_SECRET;
             delete process.env.POSTGRES_HOST;

@@ -74,11 +74,29 @@ const JSON_BODY_LIMIT_BYTES = Number.parseInt(process.env.JSON_BODY_LIMIT_BYTES 
 const URLENCODED_BODY_LIMIT_BYTES = Number.parseInt(process.env.URLENCODED_BODY_LIMIT_BYTES || '', 10) || (1024 * 1024);
 const METHODS_WITH_BODIES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
-// Trust proxy - required when running behind reverse proxy (Docker, Nginx, etc.)
-// This enables correct IP detection for rate limiting and logging
-// 'loopback' trusts the local loopback interface (127.0.0.1, ::1)
-// In production behind a known proxy, you can use 1 or the proxy's IP
-app.set('trust proxy', 'loopback');
+function resolveTrustProxySetting() {
+    const rawValue = (process.env.TRUST_PROXY || '').trim();
+    if (!rawValue) {
+        return process.env.NODE_ENV === 'production' ? 1 : 'loopback';
+    }
+
+    const normalizedValue = rawValue.toLowerCase();
+    if (normalizedValue === 'true') {
+        return true;
+    }
+    if (normalizedValue === 'false') {
+        return false;
+    }
+    if (/^\d+$/.test(rawValue)) {
+        return Number.parseInt(rawValue, 10);
+    }
+
+    return rawValue;
+}
+
+const trustProxySetting = resolveTrustProxySetting();
+app.set('trust proxy', trustProxySetting);
+safeLog('info', 'Configured trust proxy setting', { trustProxySetting });
 
 // Configure axios with connection pooling
 configureAxios();
@@ -104,6 +122,48 @@ function getBodyLimitBytes(contentType) {
     return contentType.includes('application/x-www-form-urlencoded')
         ? URLENCODED_BODY_LIMIT_BYTES
         : JSON_BODY_LIMIT_BYTES;
+}
+
+function summarizeBadRequestBody(body) {
+    if (body === null) {
+        return { type: 'null' };
+    }
+
+    if (body === undefined) {
+        return { type: 'undefined' };
+    }
+
+    if (Array.isArray(body)) {
+        return { type: 'array', length: body.length };
+    }
+
+    if (typeof body === 'string') {
+        return { type: 'string', length: body.length };
+    }
+
+    if (typeof body === 'object') {
+        const keys = Object.keys(body);
+        const summary = {
+            type: 'object',
+            keys: keys.slice(0, 10),
+            keyCount: keys.length
+        };
+
+        if (typeof body.error === 'string') {
+            summary.errorType = 'string';
+        } else if (body.error && typeof body.error === 'object') {
+            summary.errorType = 'object';
+            summary.errorKeys = Object.keys(body.error).slice(0, 5);
+        }
+
+        if (Array.isArray(body.details)) {
+            summary.detailCount = body.details.length;
+        }
+
+        return summary;
+    }
+
+    return { type: typeof body };
 }
 
 // Reject oversized requests before parsing so large bodies do not reach the JSON parser.
@@ -163,7 +223,7 @@ app.use((req, res, next) => {
                 hasAccessToken: !!req.cookies?.accessToken,
                 hasCsrfCookie: !!req.cookies?.['x-csrf-token'],
                 contentType: req.headers['content-type'],
-                responseBody: JSON.stringify(body).substring(0, 500)
+                responseSummary: summarizeBadRequestBody(body)
             });
         }
         return originalJson(body);

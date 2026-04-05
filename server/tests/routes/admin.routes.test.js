@@ -51,7 +51,7 @@ vi.mock('../../services/marketTrends.service.js', () => ({
 vi.mock('../../services/rome.service.js', () => ({
     getMetiersCacheStats: () => ({ entries: 50 })
 }));
-vi.mock('./../../routes/tags.routes.js', () => ({
+vi.mock('./../../services/tagsCache.service.js', () => ({
     getTagsCacheStats: () => ({ entries: 30 })
 }));
 vi.mock('../../services/escoService.js', () => ({

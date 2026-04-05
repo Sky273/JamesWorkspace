@@ -4,6 +4,12 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import path from 'path';
+
+const { TEST_UPLOAD_DIR } = vi.hoisted(() => ({
+    TEST_UPLOAD_DIR: '/tmp/test-uploads'
+}));
+const RESOLVED_TEST_UPLOAD_DIR = path.resolve(TEST_UPLOAD_DIR);
 
 // Mock fs/promises (async API used by fileCleanup.js)
 vi.mock('fs/promises', () => ({
@@ -31,7 +37,7 @@ vi.mock('../../utils/logger.backend.js', () => ({
 
 // Mock constants
 vi.mock('../../config/constants.js', () => ({
-    UPLOAD_DIR: '/tmp/test-uploads'
+    UPLOAD_DIR: TEST_UPLOAD_DIR
 }));
 
 vi.mock('../../services/metrics.service.js', () => ({
@@ -93,10 +99,10 @@ describe('File Cleanup Utilities', () => {
             fs.access.mockRejectedValue(new Error('ENOENT'));
             fs.mkdir.mockResolvedValue(undefined);
 
-            const result = await cleanupOldFiles('/tmp/nonexistent', 3600000);
+            const result = await cleanupOldFiles(path.join(TEST_UPLOAD_DIR, 'nonexistent'), 3600000);
 
             expect(result).toBe(0);
-            expect(fs.mkdir).toHaveBeenCalledWith('/tmp/nonexistent', { recursive: true });
+            expect(fs.mkdir).toHaveBeenCalledWith(path.join(RESOLVED_TEST_UPLOAD_DIR, 'nonexistent'), { recursive: true });
         });
 
         it('should delete files older than maxAge', async () => {
@@ -111,7 +117,7 @@ describe('File Cleanup Utilities', () => {
             });
             fs.unlink.mockResolvedValue(undefined);
 
-            const result = await cleanupOldFiles('/tmp/uploads', 3600000); // 1 hour max age
+            const result = await cleanupOldFiles(TEST_UPLOAD_DIR, 3600000); // 1 hour max age
 
             expect(result).toBe(1);
             expect(fs.unlink).toHaveBeenCalledTimes(1);
@@ -124,7 +130,7 @@ describe('File Cleanup Utilities', () => {
             fs.readdir.mockResolvedValue(['new-file.txt']);
             fs.stat.mockResolvedValue({ mtimeMs: now - 1800000, isDirectory: () => false });
 
-            const result = await cleanupOldFiles('/tmp/uploads', 3600000);
+            const result = await cleanupOldFiles(TEST_UPLOAD_DIR, 3600000);
 
             expect(result).toBe(0);
             expect(fs.unlink).not.toHaveBeenCalled();
@@ -142,7 +148,7 @@ describe('File Cleanup Utilities', () => {
             });
             fs.unlink.mockResolvedValue(undefined);
 
-            const result = await cleanupOldFiles('/tmp/uploads', 3600000);
+            const result = await cleanupOldFiles(TEST_UPLOAD_DIR, 3600000);
 
             expect(result).toBe(1);
             // Only old-file.txt should be deleted, not subdir
@@ -153,7 +159,7 @@ describe('File Cleanup Utilities', () => {
             fs.access.mockResolvedValue(undefined);
             fs.readdir.mockResolvedValue([]);
 
-            const result = await cleanupOldFiles('/tmp/uploads', 3600000);
+            const result = await cleanupOldFiles(TEST_UPLOAD_DIR, 3600000);
 
             expect(result).toBe(0);
         });
@@ -165,7 +171,7 @@ describe('File Cleanup Utilities', () => {
             fs.stat.mockResolvedValue({ mtimeMs: now - 7200000, isDirectory: () => false });
             fs.unlink.mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
 
-            const result = await cleanupOldFiles('/tmp/uploads', 3600000);
+            const result = await cleanupOldFiles(TEST_UPLOAD_DIR, 3600000);
 
             // ENOENT errors are silently ignored
             expect(result).toBe(0);
@@ -178,7 +184,7 @@ describe('File Cleanup Utilities', () => {
             fs.stat.mockResolvedValue({ mtimeMs: now - 7200000, isDirectory: () => false });
             fs.unlink.mockRejectedValue(Object.assign(new Error('Permission denied'), { code: 'EPERM' }));
 
-            const result = await cleanupOldFiles('/tmp/uploads', 3600000);
+            const result = await cleanupOldFiles(TEST_UPLOAD_DIR, 3600000);
 
             expect(result).toBe(0);
         });
@@ -187,7 +193,7 @@ describe('File Cleanup Utilities', () => {
             fs.access.mockResolvedValue(undefined);
             fs.readdir.mockRejectedValue(new Error('I/O error'));
 
-            const result = await cleanupOldFiles('/tmp/uploads', 3600000);
+            const result = await cleanupOldFiles(TEST_UPLOAD_DIR, 3600000);
 
             expect(result).toBe(0);
         });
@@ -198,9 +204,19 @@ describe('File Cleanup Utilities', () => {
             fs.readdir.mockResolvedValue(['file.txt']);
             fs.stat.mockResolvedValue({ mtimeMs: now - 30 * 60 * 1000, isDirectory: () => false }); // 30 min old
 
-            const result = await cleanupOldFiles('/tmp/uploads');
+            const result = await cleanupOldFiles(TEST_UPLOAD_DIR);
 
             expect(result).toBe(0); // 30 min < 1 hour default, should not be deleted
+        });
+
+        it('should refuse unmanaged cleanup paths', async () => {
+            const unmanagedPath = path.resolve('/tmp/unmanaged-cleanup');
+
+            const result = await cleanupOldFiles(unmanagedPath, 3600000);
+
+            expect(result).toBe(0);
+            expect(fs.mkdir).not.toHaveBeenCalled();
+            expect(fs.unlink).not.toHaveBeenCalled();
         });
     });
 
@@ -399,7 +415,7 @@ describe('File Cleanup Utilities', () => {
             fs.stat.mockResolvedValue({ mtimeMs: now - 7200000, isDirectory: () => false });
             fs.unlink.mockResolvedValue(undefined);
 
-            await cleanupOldFiles('/tmp/test', 3600000);
+            await cleanupOldFiles(TEST_UPLOAD_DIR, 3600000);
 
             const stats = getFileCleanupStats();
             expect(stats.totalFilesDeleted).toBe(1);
@@ -536,7 +552,7 @@ describe('File Cleanup Utilities', () => {
             fs.unlink.mockResolvedValue(undefined);
 
             // Generate some stats
-            await cleanupOldFiles('/tmp/test', 3600000);
+            await cleanupOldFiles(TEST_UPLOAD_DIR, 3600000);
 
             let stats = getFileCleanupStats();
             expect(stats.totalFilesDeleted).toBe(1);

@@ -1,3 +1,5 @@
+import path from 'path';
+
 // Environment variables and constants
 export const PORT = process.env.PROXY_PORT || 3001;
 
@@ -91,7 +93,10 @@ export const MAX_FILE_SIZE = 50 * 1024 * 1024;
 export const MAX_TEXT_LENGTH = 50000;
 export const MAX_PROMPT_LENGTH = 100000;
 export const MAX_STRING_FIELD_LENGTH = 1000;
-export const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads';
+export const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || './uploads');
+if (UPLOAD_DIR === path.parse(UPLOAD_DIR).root) {
+    throw new Error('CRITICAL: UPLOAD_DIR cannot be the filesystem root.');
+}
 
 // Security configuration
 export const MAX_LOGS = 1000;

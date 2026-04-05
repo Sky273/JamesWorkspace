@@ -37,6 +37,7 @@ const MAX_OUTPUT_SIZE = parseInt(process.env.PDF_MAX_OUTPUT_SIZE || '20971520', 
 const MAX_ACTIVE_JOBS = parseInt(process.env.PDF_MAX_CONCURRENT || '4', 10);
 const RATE_LIMIT_WINDOW = 60000;
 const RATE_LIMIT_MAX = parseInt(process.env.PDF_RATE_LIMIT || '300', 10);
+const HEALTH_VERBOSE = String(process.env.PDF_SERVER_HEALTH_VERBOSE || '').toLowerCase() === 'true';
 const parsedMaxRequestBodyBytes = parseInt(
   process.env.PDF_MAX_REQUEST_BODY_BYTES || `${MAX_HTML_SIZE + MAX_STYLESHEET_SIZE + (2 * MAX_FRAGMENT_SIZE) + (256 * 1024)}`,
   10
@@ -115,9 +116,27 @@ function ensureOutputWithinLimit(buffer, formatLabel) {
   }
 }
 
+function isAbortError(error) {
+  return error?.name === 'AbortError' || error?.code === 'ABORT_ERR';
+}
+
+function isClientDisconnectAbort(signal) {
+  const reason = signal?.reason;
+  const message = String(reason?.message || '').toLowerCase();
+  return message.includes('client disconnected') || message.includes('client aborted');
+}
+
+function isTimeoutAbort(signal, error) {
+  const reason = signal?.reason;
+  const message = reason?.message || error?.message || '';
+  return message.toLowerCase().includes('timed out');
+}
+
 app.post('/generate-pdf', internalServiceAuthMiddleware, requestTimeoutMiddleware, rateLimitMiddleware, generationCapacityMiddleware, validatePdfRequest, async (req, res) => {
   const { htmlContent, filename, stylesheet, headerContent, footerContent, footerHeight } = req.body;
   const startTime = Date.now();
+  const abortSignal = req.generationAbortSignal;
+  const cleanupAbortContext = req.generationAbortCleanup;
 
   try {
     const pdfBuffer = await requestCoordinator.withGenerationSlot(() => pdfGen.generatePdf({
@@ -125,7 +144,8 @@ app.post('/generate-pdf', internalServiceAuthMiddleware, requestTimeoutMiddlewar
       stylesheet,
       headerContent,
       footerContent,
-      footerHeight
+      footerHeight,
+      signal: abortSignal
     }));
 
     ensureOutputWithinLimit(pdfBuffer, 'PDF');
@@ -144,6 +164,23 @@ app.post('/generate-pdf', internalServiceAuthMiddleware, requestTimeoutMiddlewar
       size: `${Math.round(pdfBuffer.length / 1024)}KB`
     });
   } catch (error) {
+    if (isClientDisconnectAbort(abortSignal)) {
+      return;
+    }
+
+    if (isAbortError(error) || isTimeoutAbort(abortSignal, error)) {
+      const duration = Date.now() - startTime;
+      logger.log('warn', 'PDF generation aborted', {
+        filename,
+        duration: `${duration}ms`,
+        reason: abortSignal?.reason?.message || error.message
+      });
+      if (!res.headersSent) {
+        res.status(504).json({ error: 'PDF generation timed out.' });
+      }
+      return;
+    }
+
     const duration = Date.now() - startTime;
     logger.log('error', 'Error generating PDF', {
       error: error.message,
@@ -154,12 +191,16 @@ app.post('/generate-pdf', internalServiceAuthMiddleware, requestTimeoutMiddlewar
 
     const failure = buildGenerationFailureBody('PDF', error);
     res.status(failure.status).json(failure.body);
+  } finally {
+    cleanupAbortContext?.();
   }
 });
 
 app.post('/generate-docx', internalServiceAuthMiddleware, requestTimeoutMiddleware, rateLimitMiddleware, generationCapacityMiddleware, validateDocxRequest, async (req, res) => {
   const { htmlContent, filename, stylesheet, headerContent, footerContent, footerHeight, format } = req.body;
   const startTime = Date.now();
+  const abortSignal = req.generationAbortSignal;
+  const cleanupAbortContext = req.generationAbortCleanup;
 
   try {
     const outputFormat = format === 'doc' ? 'doc' : 'docx';
@@ -170,7 +211,8 @@ app.post('/generate-docx', internalServiceAuthMiddleware, requestTimeoutMiddlewa
       headerContent,
       footerContent,
       footerHeight,
-      format: outputFormat
+      format: outputFormat,
+      signal: abortSignal
     }));
 
     ensureOutputWithinLimit(docxBuffer, outputFormat.toUpperCase());
@@ -191,6 +233,23 @@ app.post('/generate-docx', internalServiceAuthMiddleware, requestTimeoutMiddlewa
       size: `${Math.round(docxBuffer.length / 1024)}KB`
     });
   } catch (error) {
+    if (isClientDisconnectAbort(abortSignal)) {
+      return;
+    }
+
+    if (isAbortError(error) || isTimeoutAbort(abortSignal, error)) {
+      const duration = Date.now() - startTime;
+      logger.log('warn', 'DOCX generation aborted', {
+        filename,
+        duration: `${duration}ms`,
+        reason: abortSignal?.reason?.message || error.message
+      });
+      if (!res.headersSent) {
+        res.status(504).json({ error: 'Document generation timed out.' });
+      }
+      return;
+    }
+
     const duration = Date.now() - startTime;
     logger.log('error', 'Error generating DOCX', {
       error: error.message,
@@ -201,25 +260,30 @@ app.post('/generate-docx', internalServiceAuthMiddleware, requestTimeoutMiddlewa
 
     const failure = buildGenerationFailureBody('DOCX', error);
     res.status(failure.status).json(failure.body);
+  } finally {
+    cleanupAbortContext?.();
   }
 });
 
 app.get('/health', (req, res) => {
-  const memUsage = process.memoryUsage();
   const uptime = process.uptime();
-  const metrics = requestCoordinator.getMetrics();
-
-  res.json({
+  const payload = {
     status: 'ok',
     uptime: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
-    memory: {
+  };
+
+  if (HEALTH_VERBOSE) {
+    const memUsage = process.memoryUsage();
+    const metrics = requestCoordinator.getMetrics();
+
+    payload.memory = {
       rss: Math.round(memUsage.rss / 1024 / 1024) + 'MB',
       heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024) + 'MB',
       heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024) + 'MB'
-    },
-    rateLimitEntries: metrics.rateLimitEntries,
-    activeGenerationJobs: metrics.activeGenerationJobs,
-    config: {
+    };
+    payload.rateLimitEntries = metrics.rateLimitEntries;
+    payload.activeGenerationJobs = metrics.activeGenerationJobs;
+    payload.config = {
       timeout: PDF_GENERATION_TIMEOUT,
       rateLimit: RATE_LIMIT_MAX,
       maxHtmlSize: MAX_HTML_SIZE,
@@ -227,8 +291,10 @@ app.get('/health', (req, res) => {
       maxFragmentSize: MAX_FRAGMENT_SIZE,
       maxOutputSize: MAX_OUTPUT_SIZE,
       maxConcurrentJobs: MAX_ACTIVE_JOBS
-    }
-  });
+    };
+  }
+
+  res.json(payload);
 });
 
 app.use((error, req, res, next) => {

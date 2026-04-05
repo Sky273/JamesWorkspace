@@ -11,6 +11,11 @@ const BACKUP_FILENAME_PATTERN = /^backup-(daily|weekly|monthly|manual)-[A-Za-z0-
 const DOCUMENT_PROXY_MAX_HTML_SIZE = 5 * 1024 * 1024;
 const DOCUMENT_PROXY_MAX_SECTION_SIZE = 256 * 1024;
 const DOCUMENT_PROXY_MAX_STYLESHEET_SIZE = 200 * 1024;
+const REMOTE_IMAGE_SOURCE_PATTERN = /<img\b[^>]*\bsrc\s*=\s*(["']?)(?:https?:|file:|ftp:|blob:|javascript:|vbscript:|\/\/)/i;
+
+function hasRemoteImageSource(value) {
+  return typeof value === 'string' && REMOTE_IMAGE_SOURCE_PATTERN.test(value);
+}
 
 const footerHeightSchema = z.preprocess(
   (value) => {
@@ -29,11 +34,17 @@ const documentHtmlSchema = z.string()
   .transform((value) => sanitizeDocumentHtmlContent(value))
   .refine((value) => value.trim().length > 0, {
     message: 'htmlContent cannot be empty after sanitization'
+  })
+  .refine((value) => !hasRemoteImageSource(value), {
+    message: 'htmlContent contains remote image sources'
   });
 
 const optionalDocumentSectionSchema = z.string()
   .max(DOCUMENT_PROXY_MAX_SECTION_SIZE)
   .transform((value) => sanitizeDocumentHtmlContent(value))
+  .refine((value) => !hasRemoteImageSource(value), {
+    message: 'document section contains remote image sources'
+  })
   .optional();
 
 const documentStylesheetSchema = z.string()
@@ -66,13 +77,20 @@ export const restoreBackupSchema = z.object({
 }).strip();
 
 export const sharePdfSchema = z.object({
-  htmlContent: z.string().min(1),
-  filename: z.string().max(500).optional(),
-  stylesheet: z.string().optional(),
-  headerContent: z.string().optional(),
-  footerContent: z.string().optional(),
-  footerHeight: z.union([z.string(), z.number()]).optional()
-}).strip();
+  htmlContent: documentHtmlSchema,
+  filename: z.string().min(1).max(255).optional(),
+  stylesheet: documentStylesheetSchema,
+  headerContent: optionalDocumentSectionSchema,
+  footerContent: optionalDocumentSectionSchema,
+  footerHeight: footerHeightSchema
+}).strict().transform((data) => ({
+  htmlContent: data.htmlContent,
+  filename: data.filename ? sanitizeDocumentFilename(data.filename, '') : undefined,
+  stylesheet: data.stylesheet,
+  headerContent: data.headerContent,
+  footerContent: data.footerContent,
+  footerHeight: data.footerHeight
+}));
 
 export const generatePdfProxySchema = z.object({
   htmlContent: documentHtmlSchema,

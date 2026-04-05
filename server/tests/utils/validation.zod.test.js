@@ -26,6 +26,7 @@ import {
     batchImproveSchema,
     batchDealExportSchema,
     batchExportSchema,
+    sharePdfSchema,
     createMailDraftSchema,
     initializeConsentSchema,
     escoRecalculateSchema,
@@ -328,6 +329,29 @@ describe('Zod Validation Schemas', () => {
                 resumeIds: tooManyResumeIds,
                 templateId: '123e4567-e89b-12d3-a456-426614174001',
                 format: 'pdf'
+            });
+
+            expect(result.success).toBe(false);
+        });
+    });
+
+    describe('sharePdfSchema', () => {
+        it('should sanitize document HTML and filename', () => {
+            const result = sharePdfSchema.safeParse({
+                htmlContent: '<p>Hello</p><script>alert(1)</script><img src="data:image/png;base64,AAAA">',
+                filename: '../resume.pdf',
+                stylesheet: 'body { color: red; }'
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.data.htmlContent).toContain('<p>Hello</p>');
+            expect(result.data.htmlContent).not.toContain('<script>');
+            expect(result.data.filename).toBe('resume');
+        });
+
+        it('should reject remote image sources in document HTML', () => {
+            const result = sharePdfSchema.safeParse({
+                htmlContent: '<p>Hello</p><img src="https://example.com/image.png">'
             });
 
             expect(result.success).toBe(false);

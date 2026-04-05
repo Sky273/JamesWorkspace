@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 
@@ -78,8 +78,15 @@ function createTestApp() {
 }
 
 describe('Proxy Routes', () => {
+    const originalPdfServerUrl = process.env.PDF_SERVER_URL;
+
     beforeEach(() => {
         vi.clearAllMocks();
+        process.env.PDF_SERVER_URL = 'http://127.0.0.1:3002';
+    });
+
+    afterEach(() => {
+        process.env.PDF_SERVER_URL = originalPdfServerUrl;
     });
 
     it('rejects generate-pdf without authentication', async () => {
@@ -248,6 +255,23 @@ describe('Proxy Routes', () => {
 
         expect(res.status).toBe(403);
         expect(res.body).toEqual({ error: 'DOCX generation is not authorized' });
+    });
+
+    it('fails closed when PDF_SERVER_URL is not an internal service', async () => {
+        process.env.PDF_SERVER_URL = 'https://example.com';
+        const app = createTestApp();
+
+        const res = await request(app)
+            .post('/generate-pdf')
+            .set('x-test-auth', 'ok')
+            .send({
+                htmlContent: '<p>blocked</p>',
+                filename: 'resume.pdf'
+            });
+
+        expect(res.status).toBe(503);
+        expect(res.body).toEqual({ error: 'PDF generation service is unavailable' });
+        expect(mockFetch).not.toHaveBeenCalled();
     });
 });
 

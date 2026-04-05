@@ -98,3 +98,39 @@ export async function assertSafeOutboundHost(host, {
 
     return true;
 }
+
+function isLoopbackOrLocalHostname(hostname) {
+    return hostname === 'localhost'
+        || hostname.endsWith('.localhost')
+        || hostname === 'localhost.localdomain';
+}
+
+export async function assertTrustedInternalServiceUrl(urlString, {
+    allowedProtocols = ['http:', 'https:'],
+    resolver = dns.lookup
+} = {}) {
+    const parsedUrl = new URL(String(urlString || ''));
+    if (!allowedProtocols.includes(parsedUrl.protocol)) {
+        throw new Error('Internal service URL must use http or https');
+    }
+
+    const hostname = parsedUrl.hostname.trim().toLowerCase();
+    if (!hostname) {
+        throw new Error('Internal service host is required');
+    }
+
+    if (isLoopbackOrLocalHostname(hostname) || isPrivateOrReservedIp(hostname)) {
+        return true;
+    }
+
+    const resolvedAddresses = await resolver(hostname, { all: true, verbatim: true });
+    if (!Array.isArray(resolvedAddresses) || resolvedAddresses.length === 0) {
+        throw new Error('Internal service host could not be resolved');
+    }
+
+    if (resolvedAddresses.some((entry) => isPrivateOrReservedIp(entry.address))) {
+        return true;
+    }
+
+    throw new Error('Internal service host must resolve to a private or loopback address');
+}

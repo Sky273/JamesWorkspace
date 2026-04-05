@@ -37,67 +37,90 @@ const MAX_USER_CACHE_SIZE = 1000;
 
 // Cleanup interval reference
 let cleanupInterval = null;
+let refreshPromise = null;
+
+function cacheActive(now = Date.now()) {
+    return now - lastCacheRefresh < CACHE_TTL;
+}
 
 /**
  * Refresh cache from database
  */
-async function refreshCache() {
+async function refreshCache({ force = false } = {}) {
     const now = Date.now();
-    if (now - lastCacheRefresh < CACHE_TTL) return;
-    
-    try {
-        // Load active blacklisted tokens
-        const tokenResult = await query(
-            'SELECT token_jti, user_id, reason, expires_at, created_at FROM token_blacklist WHERE expires_at > NOW()'
-        );
-        
-        tokenCache.clear();
-        // Limit to MAX_TOKEN_CACHE_SIZE most recent entries
-        const tokenRows = tokenResult.rows.slice(0, MAX_TOKEN_CACHE_SIZE);
-        for (const row of tokenRows) {
-            tokenCache.set(row.token_jti, {
-                expiresAt: new Date(row.expires_at).getTime(),
-                reason: row.reason,
-                userId: row.user_id,
-                blacklistedAt: new Date(row.created_at).getTime()
-            });
-        }
-        if (tokenResult.rows.length > MAX_TOKEN_CACHE_SIZE) {
-            safeLog('warn', 'Token blacklist cache truncated due to size limit', {
-                total: tokenResult.rows.length,
-                cached: MAX_TOKEN_CACHE_SIZE
-            });
-        }
-        
-        // Load blacklisted users
-        const userResult = await query(
-            'SELECT user_id, reason, created_at FROM user_blacklist'
-        );
-        
-        userCache.clear();
-        // Limit to MAX_USER_CACHE_SIZE entries
-        const userRows = userResult.rows.slice(0, MAX_USER_CACHE_SIZE);
-        for (const row of userRows) {
-            userCache.set(row.user_id, {
-                blacklistedAt: new Date(row.created_at).getTime(),
-                reason: row.reason
-            });
-        }
-        if (userResult.rows.length > MAX_USER_CACHE_SIZE) {
-            safeLog('warn', 'User blacklist cache truncated due to size limit', {
-                total: userResult.rows.length,
-                cached: MAX_USER_CACHE_SIZE
-            });
-        }
-        
-        lastCacheRefresh = now;
-        safeLog('debug', 'Token blacklist cache refreshed', { 
-            tokens: tokenCache.size, 
-            users: userCache.size 
-        });
-    } catch (error) {
-        safeLog('error', 'Failed to refresh blacklist cache', { error: error.message });
+    if (!force && cacheActive(now)) {
+        return;
     }
+
+    if (refreshPromise) {
+        return refreshPromise;
+    }
+    
+    refreshPromise = (async () => {
+        try {
+            const [tokenResult, userResult] = await Promise.all([
+                query(
+                    `SELECT token_jti, user_id, reason, expires_at, created_at
+                     FROM token_blacklist
+                     WHERE expires_at > NOW()
+                     ORDER BY created_at DESC
+                     LIMIT $1`,
+                    [MAX_TOKEN_CACHE_SIZE]
+                ),
+                query(
+                    `SELECT user_id, reason, created_at
+                     FROM user_blacklist
+                     ORDER BY created_at DESC
+                     LIMIT $1`,
+                    [MAX_USER_CACHE_SIZE]
+                )
+            ]);
+            
+            tokenCache.clear();
+            for (const row of tokenResult.rows) {
+                tokenCache.set(row.token_jti, {
+                    expiresAt: new Date(row.expires_at).getTime(),
+                    reason: row.reason,
+                    userId: row.user_id,
+                    blacklistedAt: new Date(row.created_at).getTime()
+                });
+            }
+            
+            if (tokenResult.rows.length > MAX_TOKEN_CACHE_SIZE) {
+                safeLog('warn', 'Token blacklist cache truncated due to size limit', {
+                    total: tokenResult.rows.length,
+                    cached: MAX_TOKEN_CACHE_SIZE
+                });
+            }
+            
+            userCache.clear();
+            for (const row of userResult.rows) {
+                userCache.set(row.user_id, {
+                    blacklistedAt: new Date(row.created_at).getTime(),
+                    reason: row.reason
+                });
+            }
+            
+            if (userResult.rows.length > MAX_USER_CACHE_SIZE) {
+                safeLog('warn', 'User blacklist cache truncated due to size limit', {
+                    total: userResult.rows.length,
+                    cached: MAX_USER_CACHE_SIZE
+                });
+            }
+            
+            lastCacheRefresh = Date.now();
+            safeLog('debug', 'Token blacklist cache refreshed', { 
+                tokens: tokenCache.size, 
+                users: userCache.size 
+            });
+        } catch (error) {
+            safeLog('error', 'Failed to refresh blacklist cache', { error: error.message });
+        } finally {
+            refreshPromise = null;
+        }
+    })();
+
+    return refreshPromise;
 }
 
 /**
@@ -114,20 +137,29 @@ export async function blacklistToken(tokenId, expiresAt, reason = 'logout', user
     }
 
     try {
-        // Insert into database
-        await query(
+        const result = await query(
             `INSERT INTO token_blacklist (token_jti, user_id, reason, expires_at) 
              VALUES ($1, $2, $3, $4) 
-             ON CONFLICT (token_jti) DO NOTHING`,
+             ON CONFLICT (token_jti) DO NOTHING
+             RETURNING token_jti, user_id, reason, expires_at, created_at`,
             [tokenId, userId, reason, new Date(expiresAt)]
         );
-        
-        // Update cache immediately
-        tokenCache.set(tokenId, {
-            expiresAt,
-            reason,
-            userId,
-            blacklistedAt: Date.now()
+
+        if (result.rowCount === 0) {
+            safeLog('warn', 'Token already blacklisted', {
+                tokenIdPreview: tokenId.substring(0, 20) + '...',
+                reason,
+                userId
+            });
+            return false;
+        }
+
+        const row = result.rows[0];
+        tokenCache.set(row.token_jti, {
+            expiresAt: new Date(row.expires_at).getTime(),
+            reason: row.reason,
+            userId: row.user_id,
+            blacklistedAt: new Date(row.created_at).getTime()
         });
 
         safeLog('info', 'Token blacklisted', { 
@@ -244,10 +276,70 @@ export function isTokenBlacklisted(tokenId, userId = null, tokenIssuedAt = null)
  * @returns {Promise<boolean>} - True if token is blacklisted
  */
 export async function isTokenBlacklistedAsync(tokenId, userId = null, tokenIssuedAt = null) {
-    // Refresh cache if needed
     await refreshCache();
-    
-    return isTokenBlacklisted(tokenId, userId, tokenIssuedAt);
+
+    if (isTokenBlacklisted(tokenId, userId, tokenIssuedAt)) {
+        return true;
+    }
+
+    try {
+        const checks = [];
+
+        if (tokenId) {
+            checks.push(
+                query(
+                    `SELECT token_jti, user_id, reason, expires_at, created_at
+                     FROM token_blacklist
+                     WHERE token_jti = $1 AND expires_at > NOW()
+                     LIMIT 1`,
+                    [tokenId]
+                )
+            );
+        } else {
+            checks.push(Promise.resolve({ rows: [] }));
+        }
+
+        if (userId) {
+            checks.push(
+                query(
+                    `SELECT user_id, reason, created_at
+                     FROM user_blacklist
+                     WHERE user_id = $1
+                     LIMIT 1`,
+                    [userId]
+                )
+            );
+        } else {
+            checks.push(Promise.resolve({ rows: [] }));
+        }
+
+        const [tokenResult, userResult] = await Promise.all(checks);
+
+        if (tokenResult.rows[0]) {
+            const row = tokenResult.rows[0];
+            tokenCache.set(row.token_jti, {
+                expiresAt: new Date(row.expires_at).getTime(),
+                reason: row.reason,
+                userId: row.user_id,
+                blacklistedAt: new Date(row.created_at).getTime()
+            });
+            return true;
+        }
+
+        if (userResult.rows[0]) {
+            const row = userResult.rows[0];
+            userCache.set(row.user_id, {
+                blacklistedAt: new Date(row.created_at).getTime(),
+                reason: row.reason
+            });
+            return isTokenBlacklisted(tokenId, userId, tokenIssuedAt);
+        }
+
+        return false;
+    } catch (error) {
+        safeLog('error', 'Failed targeted blacklist lookup', { error: error.message, tokenId, userId });
+        return isTokenBlacklisted(tokenId, userId, tokenIssuedAt);
+    }
 }
 
 /**
@@ -303,7 +395,7 @@ export function startBlacklistCleanup(intervalMs = 3600000) {
     }, intervalMs);
 
     // Initial cache load
-    refreshCache();
+    refreshCache({ force: true });
 
     safeLog('info', 'Token blacklist cleanup started', { intervalMs });
 }

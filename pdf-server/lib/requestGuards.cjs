@@ -13,6 +13,13 @@ const DANGEROUS_HTML_PATTERNS = [
   /\bon[a-z]+\s*=/i
 ];
 
+const DANGEROUS_RESOURCE_PATTERNS = [
+  /<(?:img|iframe|object|embed|source|audio|video|track)\b[^>]*(?:src|data|poster)\s*=\s*['"]?\s*(?:https?:|file:|ftp:|chrome:|blob:|\/\/)/i,
+  /<link\b[^>]*href\s*=\s*['"]?\s*(?:https?:|file:|ftp:|chrome:|blob:|\/\/)/i,
+  /<meta\b[^>]*http-equiv\s*=\s*['"]?refresh['"]?[^>]*content\s*=\s*['"][^"]*url\s*=\s*(?:https?:|file:|ftp:|chrome:|blob:|\/\/)/i,
+  /\b(?:src|href|data|poster|action|formaction|xlink:href)\s*=\s*['"]?\s*(?:https?:|file:|ftp:|chrome:|blob:|\/\/)/i
+];
+
 const DANGEROUS_CSS_PATTERNS = [
   /@import/i,
   /javascript\s*:/i,
@@ -21,6 +28,21 @@ const DANGEROUS_CSS_PATTERNS = [
   /-moz-binding/i,
   /url\s*\(\s*['"]?\s*(?!data:)/i
 ];
+
+function createAbortError(message) {
+  const error = new Error(message);
+  error.name = 'AbortError';
+  error.code = 'ABORT_ERR';
+  return error;
+}
+
+function containsDangerousResourceReference(content) {
+  if (!content) {
+    return false;
+  }
+
+  return DANGEROUS_RESOURCE_PATTERNS.some((pattern) => pattern.test(content));
+}
 
 function resolvePdfServerInternalToken({
   configuredToken = '',
@@ -41,6 +63,10 @@ function sanitizeFilename(filename, extension) {
 }
 
 function buildGenerationFailureBody(formatLabel, error) {
+  if (error?.name === 'AbortError' || error?.code === 'ABORT_ERR') {
+    return { status: 504, body: { error: `${formatLabel} generation timed out. Try with simpler content.` } };
+  }
+
   if (error.code === 'OUTPUT_TOO_LARGE') {
     return { status: 413, body: { error: `Generated ${formatLabel} too large.` } };
   }
@@ -134,6 +160,11 @@ function createRequestCoordinator({
       return res.status(400).json({ error: 'htmlContent contains unsupported content' });
     }
 
+    if (containsDangerousResourceReference(htmlContent)) {
+      logger.log('warn', 'External htmlContent resource rejected');
+      return res.status(400).json({ error: 'htmlContent contains unsupported external resources' });
+    }
+
     if (!validateOptionalStringField(stylesheet, 'stylesheet', maxStylesheetSize, DANGEROUS_CSS_PATTERNS, res)) {
       return;
     }
@@ -142,8 +173,18 @@ function createRequestCoordinator({
       return;
     }
 
+    if (headerContent && containsDangerousResourceReference(headerContent)) {
+      logger.log('warn', 'External headerContent resource rejected');
+      return res.status(400).json({ error: 'headerContent contains unsupported external resources' });
+    }
+
     if (!validateOptionalStringField(footerContent, 'footerContent', maxFragmentSize, DANGEROUS_HTML_PATTERNS, res)) {
       return;
+    }
+
+    if (footerContent && containsDangerousResourceReference(footerContent)) {
+      logger.log('warn', 'External footerContent resource rejected');
+      return res.status(400).json({ error: 'footerContent contains unsupported external resources' });
     }
 
     const normalizedFooterHeight = normalizeFooterHeight(footerHeight);
@@ -236,12 +277,57 @@ function createRequestCoordinator({
   }
 
   function requestTimeoutMiddleware(req, res, next) {
-    res.setTimeout(pdfGenerationTimeout + 5000, () => {
-      logger.log('warn', 'Request timed out at HTTP layer', { path: req.path });
-      if (!res.headersSent) {
-        res.status(504).json({ error: 'Document generation timed out.' });
+    const controller = new AbortController();
+    let cleanedUp = false;
+    let timeoutId = null;
+
+    const cleanup = () => {
+      if (cleanedUp) {
+        return;
       }
-    });
+
+      cleanedUp = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      req.removeListener('aborted', onAborted);
+      res.removeListener('finish', cleanup);
+      res.removeListener('close', onClose);
+    };
+
+    const abortWithReason = (reason) => {
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      controller.abort(reason);
+    };
+
+    const onAborted = () => {
+      abortWithReason(createAbortError('Client aborted request.'));
+      cleanup();
+    };
+
+    const onClose = () => {
+      if (!res.writableEnded) {
+        abortWithReason(createAbortError('Client disconnected.'));
+      }
+      cleanup();
+    };
+
+    timeoutId = setTimeout(() => {
+      logger.log('warn', 'Request timed out before generation completed', { path: req.path });
+      abortWithReason(createAbortError('Document generation timed out.'));
+    }, pdfGenerationTimeout);
+
+    req.generationAbortController = controller;
+    req.generationAbortSignal = controller.signal;
+    req.generationAbortCleanup = cleanup;
+
+    req.on('aborted', onAborted);
+    res.on('finish', cleanup);
+    res.on('close', onClose);
     next();
   }
 

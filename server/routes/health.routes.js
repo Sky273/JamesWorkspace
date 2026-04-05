@@ -6,7 +6,7 @@ import { getTrendsCacheStats } from '../services/marketTrends.service.js';
 import { getFactsCacheStats } from '../services/marketFacts.service.js';
 import { getMetiersCacheStats } from '../services/rome.service.js';
 import { getEscoCacheStats } from '../services/escoService.js';
-import { getTagsCacheStats } from './tags.routes.js';
+import { getTagsCacheStats } from '../services/tagsCache.service.js';
 import { getBlacklistStats } from '../services/tokenBlacklist.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getStorageStats, getFileCleanupStats } from '../utils/fileCleanup.js';
@@ -229,7 +229,7 @@ async function resolveAdminHealthAccess(req) {
 
     try {
         const { verifyToken } = await import('../services/jwt.service.js');
-        const decoded = verifyToken(accessToken);
+        const decoded = await verifyToken(accessToken);
         if (!decoded?.id) {
             return false;
         }

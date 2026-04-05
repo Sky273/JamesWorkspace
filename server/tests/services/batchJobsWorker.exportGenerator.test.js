@@ -184,6 +184,28 @@ describe('Batch Jobs Worker - Export Generator', () => {
         expect(mockUpdateJobExportFile).toHaveBeenCalledWith('j1', expect.any(String), expect.stringContaining('export_j1'));
     });
 
+    it('should prefer streamed PDF bodies over arrayBuffer buffering', async () => {
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce([
+            { id: 'i1', status: 'success', resume_id: 'r1', file_name: 'cv.pdf' }
+        ]);
+        mockQuery
+            .mockResolvedValueOnce({ rows: [template] })
+            .mockResolvedValueOnce({ rows: [{ id: 'r1', improved_text: '<p>CV</p>', name: 'Alice', title: 'Dev', trigram: 'ALI' }] });
+
+        const arrayBuffer = vi.fn(() => Promise.resolve(new ArrayBuffer(32)));
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            body: Readable.from([Buffer.from('pdf-content')]),
+            arrayBuffer
+        });
+
+        await generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] });
+
+        expect(arrayBuffer).not.toHaveBeenCalled();
+        expect(mockUpdateJobExportFile).toHaveBeenCalledWith('j1', expect.any(String), expect.stringContaining('export_j1'));
+    });
+
     it('should stream the final zip to disk without sync writes', async () => {
         mockGetJob.mockResolvedValueOnce({ id: 'j1' });
         mockGetJobItems.mockResolvedValueOnce([
@@ -273,5 +295,47 @@ describe('Batch Jobs Worker - Export Generator', () => {
         await generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] });
 
         expect(mockUpdateJobExportFile).toHaveBeenCalled();
+    });
+
+    it('should preserve only safe archive subdirectories in zip entries', async () => {
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce([
+            { id: 'i1', status: 'success', resume_id: 'r1', file_name: 'cv.pdf', relative_path: 'team/backend/original.pdf' }
+        ]);
+        mockQuery
+            .mockResolvedValueOnce({ rows: [template] })
+            .mockResolvedValueOnce({ rows: [{ id: 'r1', improved_text: '<p>CV</p>', name: 'Alice', title: 'Dev', trigram: 'ALI' }] });
+
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(32))
+        });
+
+        await generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] });
+
+        expect(Object.keys(_zipInstance.files)).toContain('team/backend/ALI_Modern_CV.pdf');
+    });
+
+    it('should reject traversal paths before adding files to the zip', async () => {
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce([
+            { id: 'i1', status: 'success', resume_id: 'r1', file_name: 'cv.pdf', relative_path: '../escape/original.pdf' }
+        ]);
+        mockQuery
+            .mockResolvedValueOnce({ rows: [template] })
+            .mockResolvedValueOnce({ rows: [{ id: 'r1', improved_text: '<p>CV</p>', name: 'Alice', title: 'Dev', trigram: 'ALI' }] });
+
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(32))
+        });
+
+        await expect(
+            generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] })
+        ).rejects.toThrow('No files generated');
+
+        expect(mockUpdateJobItemStatus).toHaveBeenCalledWith('i1', 'error', expect.objectContaining({
+            error_message: expect.stringContaining('Archive path')
+        }));
     });
 });

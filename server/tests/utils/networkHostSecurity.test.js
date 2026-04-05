@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { assertSafeOutboundHost, isPrivateOrReservedIp } from '../../utils/networkHostSecurity.js';
+import { assertSafeOutboundHost, assertTrustedInternalServiceUrl, isPrivateOrReservedIp } from '../../utils/networkHostSecurity.js';
 
 describe('networkHostSecurity', () => {
     it('detects private and loopback IP ranges', () => {
@@ -24,5 +24,17 @@ describe('networkHostSecurity', () => {
         await expect(assertSafeOutboundHost('public.example', {
             resolver: async () => [{ address: '8.8.8.8' }]
         })).resolves.toBe(true);
+    });
+
+    it('allows internal service urls that resolve to loopback or private addresses', async () => {
+        await expect(assertTrustedInternalServiceUrl('http://pdf-server:3002', {
+            resolver: async () => [{ address: '10.0.0.42' }]
+        })).resolves.toBe(true);
+    });
+
+    it('rejects public internal service urls', async () => {
+        await expect(assertTrustedInternalServiceUrl('https://example.com', {
+            resolver: async () => [{ address: '8.8.8.8' }]
+        })).rejects.toThrow('private or loopback address');
     });
 });

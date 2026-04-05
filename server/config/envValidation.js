@@ -42,20 +42,10 @@ function looksLikePlaceholder(value = '') {
     return PLACEHOLDER_PATTERNS.some(pattern => pattern.test(value));
 }
 
-function canDerivePdfServerToken() {
-    return !!(
-        process.env.JWT_SECRET &&
-        process.env.JWT_SECRET.length >= 32 &&
-        process.env.CSRF_SECRET &&
-        process.env.CSRF_SECRET.length >= 32
-    );
-}
-
 export function validateEnvironment() {
     const errors = [];
     const warnings = [];
     const isProduction = process.env.NODE_ENV === 'production';
-    const canDerivePdfToken = canDerivePdfServerToken();
 
     for (const varConfig of REQUIRED_VARS) {
         const value = process.env[varConfig.name];
@@ -86,25 +76,17 @@ export function validateEnvironment() {
     const pdfServerToken = process.env.PDF_SERVER_INTERNAL_TOKEN;
     if (!pdfServerToken) {
         const message = 'Missing required environment variable: PDF_SERVER_INTERNAL_TOKEN (Proxy to PDF server shared secret)';
-        if (isProduction && !canDerivePdfToken) {
+        if (isProduction) {
             errors.push(message);
         } else {
-            warnings.push(
-                isProduction
-                    ? `${message}. Falling back to a token derived from JWT_SECRET and CSRF_SECRET for backward compatibility; set an explicit dedicated secret.`
-                    : `${message}. Using the development/test fallback token outside production.`
-            );
+            warnings.push(`${message}. Internal PDF generation routes will stay unavailable until it is set.`);
         }
     } else if (pdfServerToken.length < 32) {
         const message = 'PDF_SERVER_INTERNAL_TOKEN must be at least 32 characters long';
-        if (isProduction && !canDerivePdfToken) {
+        if (isProduction) {
             errors.push(message);
         } else {
-            warnings.push(
-                isProduction
-                    ? `${message}. Falling back to a token derived from JWT_SECRET and CSRF_SECRET for backward compatibility; set an explicit dedicated secret.`
-                    : `${message}. Using the development/test fallback token outside production.`
-            );
+            warnings.push(`${message}. Internal PDF generation routes will stay unavailable until it is fixed.`);
         }
     } else if (looksLikePlaceholder(pdfServerToken)) {
         warnings.push('PDF_SERVER_INTERNAL_TOKEN appears to still use an example or placeholder value');

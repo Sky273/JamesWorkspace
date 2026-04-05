@@ -280,7 +280,7 @@ router.post('/refresh', authLimiter, async (req, res) => {
             return res.status(401).json({ error: 'Refresh token not found' });
         }
 
-        const decoded = verifyRefreshToken(refreshToken);
+        const decoded = await verifyRefreshToken(refreshToken);
         if (!decoded) {
             return res.status(401).json({ error: 'Invalid refresh token' });
         }
@@ -296,11 +296,13 @@ router.post('/refresh', authLimiter, async (req, res) => {
         }
 
         const userData = formatUserResponse(user);
-        const newAccessToken = generateAccessToken(userData);
+        const rotated = await revokeToken(refreshToken);
+        if (!rotated) {
+            return res.status(401).json({ error: 'Invalid refresh token' });
+        }
 
-        // Refresh token rotation: issue new refresh token and blacklist the old one
+        const newAccessToken = generateAccessToken(userData);
         const newRefreshToken = generateRefreshToken(userData);
-        await revokeToken(refreshToken);
 
         res.cookie('accessToken', newAccessToken, ACCESS_TOKEN_COOKIE);
         res.cookie('refreshToken', newRefreshToken, REFRESH_TOKEN_COOKIE);
@@ -312,13 +314,13 @@ router.post('/refresh', authLimiter, async (req, res) => {
     }
 });
 
-function resolveLogoutUser(accessToken, refreshToken) {
-    const decodedAccessToken = accessToken ? verifyToken(accessToken) : null;
+async function resolveLogoutUser(accessToken, refreshToken) {
+    const decodedAccessToken = accessToken ? await verifyToken(accessToken) : null;
     if (decodedAccessToken) {
         return decodedAccessToken;
     }
 
-    const decodedRefreshToken = refreshToken ? verifyRefreshToken(refreshToken) : null;
+    const decodedRefreshToken = refreshToken ? await verifyRefreshToken(refreshToken) : null;
     if (decodedRefreshToken) {
         return decodedRefreshToken;
     }
@@ -332,7 +334,7 @@ const logoutHandler = async (req, res) => {
         const metadata = getRequestMetadata(req);
         const accessToken = req.cookies.accessToken;
         const refreshToken = req.cookies.refreshToken;
-        const logoutUser = resolveLogoutUser(accessToken, refreshToken);
+        const logoutUser = await resolveLogoutUser(accessToken, refreshToken);
 
         if (accessToken) {
             await revokeToken(accessToken);

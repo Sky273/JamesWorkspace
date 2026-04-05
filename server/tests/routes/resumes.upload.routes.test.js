@@ -8,6 +8,10 @@ import express from 'express';
 import request from 'supertest';
 import JSZip from 'jszip';
 
+const { TEST_UPLOAD_DIR } = vi.hoisted(() => ({
+    TEST_UPLOAD_DIR: '/tmp/uploads'
+}));
+
 function getFileSignatureBuffer(mimetype) {
     switch (mimetype) {
         case 'application/pdf':
@@ -38,7 +42,7 @@ const { multerCallOptions, pdfDocuments, pendingReadFileResolvers } = vi.hoisted
 }));
 
 vi.mock('../../config/constants.js', () => ({
-    UPLOAD_DIR: '/tmp/uploads',
+    UPLOAD_DIR: TEST_UPLOAD_DIR,
     MAX_FILE_SIZE: 50 * 1024 * 1024
 }));
 
@@ -123,7 +127,7 @@ vi.mock('multer', () => {
                     req.file = null;
                 } else {
                     req.file = {
-                        path: '/tmp/uploads/test-file',
+                        path: `${TEST_UPLOAD_DIR}/test-file`,
                         originalname: req.headers['x-test-filename'] || 'resume.pdf',
                         size: 1024,
                         mimetype: req.headers['x-test-mimetype'] || 'application/pdf'

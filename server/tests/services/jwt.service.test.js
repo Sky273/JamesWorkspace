@@ -17,11 +17,11 @@ vi.mock('../../config/constants.js', () => ({
 }));
 
 vi.mock('../../services/tokenBlacklist.service.js', () => ({
-    isTokenBlacklisted: vi.fn(() => false),
+    isTokenBlacklistedAsync: vi.fn(() => Promise.resolve(false)),
     blacklistToken: vi.fn(() => Promise.resolve(true))
 }));
 
-import { isTokenBlacklisted, blacklistToken } from '../../services/tokenBlacklist.service.js';
+import { isTokenBlacklistedAsync, blacklistToken } from '../../services/tokenBlacklist.service.js';
 import {
     generateAccessToken,
     generateRefreshToken,
@@ -44,7 +44,7 @@ const testUser = {
 describe('JWT Service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        isTokenBlacklisted.mockReturnValue(false);
+        isTokenBlacklistedAsync.mockResolvedValue(false);
     });
 
     describe('generateAccessToken', () => {
@@ -56,17 +56,17 @@ describe('JWT Service', () => {
 
         it('should include user payload', () => {
             const token = generateAccessToken(testUser);
-            const decoded = verifyToken(token);
-
-            expect(decoded.id).toBe('u1');
-            expect(decoded.email).toBe('test@test.com');
-            expect(decoded.role).toBe('user');
-            expect(decoded.firmId).toBe('f1');
-            expect(decoded.firmName).toBe('Acme');
-            expect(decoded.firm).toBeUndefined();
-            expect(decoded.customer).toBeUndefined();
-            expect(decoded.customerName).toBeUndefined();
-            expect(decoded.jti).toBeDefined();
+            return verifyToken(token).then((decoded) => {
+                expect(decoded.id).toBe('u1');
+                expect(decoded.email).toBe('test@test.com');
+                expect(decoded.role).toBe('user');
+                expect(decoded.firmId).toBe('f1');
+                expect(decoded.firmName).toBe('Acme');
+                expect(decoded.firm).toBeUndefined();
+                expect(decoded.customer).toBeUndefined();
+                expect(decoded.customerName).toBeUndefined();
+                expect(decoded.jti).toBeDefined();
+            });
         });
     });
 
@@ -79,56 +79,56 @@ describe('JWT Service', () => {
 
         it('should include refresh type', () => {
             const token = generateRefreshToken(testUser);
-            const decoded = verifyRefreshToken(token);
-
-            expect(decoded.type).toBe('refresh');
-            expect(decoded.id).toBe('u1');
+            return verifyRefreshToken(token).then((decoded) => {
+                expect(decoded.type).toBe('refresh');
+                expect(decoded.id).toBe('u1');
+            });
         });
     });
 
     describe('verifyToken', () => {
-        it('should verify valid access token', () => {
+        it('should verify valid access token', async () => {
             const token = generateAccessToken(testUser);
-            const decoded = verifyToken(token);
+            const decoded = await verifyToken(token);
 
             expect(decoded).not.toBeNull();
             expect(decoded.id).toBe('u1');
         });
 
         it('should return null for invalid token', () => {
-            expect(verifyToken('invalid.token.here')).toBeNull();
+            return expect(verifyToken('invalid.token.here')).resolves.toBeNull();
         });
 
-        it('should return null for blacklisted token', () => {
-            isTokenBlacklisted.mockReturnValue(true);
+        it('should return null for blacklisted token', async () => {
+            isTokenBlacklistedAsync.mockResolvedValue(true);
             const token = generateAccessToken(testUser);
-            expect(verifyToken(token)).toBeNull();
+            await expect(verifyToken(token)).resolves.toBeNull();
         });
     });
 
     describe('verifyRefreshToken', () => {
-        it('should verify valid refresh token', () => {
+        it('should verify valid refresh token', async () => {
             const token = generateRefreshToken(testUser);
-            const decoded = verifyRefreshToken(token);
+            const decoded = await verifyRefreshToken(token);
 
             expect(decoded).not.toBeNull();
             expect(decoded.type).toBe('refresh');
         });
 
         it('should return null for invalid token', () => {
-            expect(verifyRefreshToken('bad.token')).toBeNull();
+            return expect(verifyRefreshToken('bad.token')).resolves.toBeNull();
         });
 
-        it('should return null for blacklisted refresh token', () => {
-            isTokenBlacklisted.mockReturnValue(true);
+        it('should return null for blacklisted refresh token', async () => {
+            isTokenBlacklistedAsync.mockResolvedValue(true);
             const token = generateRefreshToken(testUser);
-            expect(verifyRefreshToken(token)).toBeNull();
+            await expect(verifyRefreshToken(token)).resolves.toBeNull();
         });
 
-        it('should reject access token used as refresh token', () => {
+        it('should reject access token used as refresh token', async () => {
             const accessToken = generateAccessToken(testUser);
             // Access token signed with different secret should fail verification
-            expect(verifyRefreshToken(accessToken)).toBeNull();
+            await expect(verifyRefreshToken(accessToken)).resolves.toBeNull();
         });
     });
 
