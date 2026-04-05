@@ -266,47 +266,59 @@ describe('Batch Jobs Worker - Worker Lifecycle', () => {
         }, 10000);
 
         it('should handle unknown job type with error', async () => {
-            const job = { id: 'j5', status: 'pending', job_type: 'unknown', options: '{}', total_items: 1 };
-            const item = { id: 'i5', file_name: 'cv.pdf' };
+            vi.useFakeTimers();
+            try {
+                const job = { id: 'j5', status: 'pending', job_type: 'unknown', options: '{}', total_items: 1 };
+                const item = { id: 'i5', file_name: 'cv.pdf' };
 
-            getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
-            claimPendingItems.mockResolvedValueOnce([item]);
-            isJobComplete.mockResolvedValueOnce(true);
-            getJobStatus.mockResolvedValueOnce('processing');
+                vi.clearAllMocks();
+                getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
+                claimPendingItems.mockResolvedValueOnce([item]);
+                isJobComplete.mockResolvedValueOnce(true);
+                getJobStatus.mockResolvedValueOnce('processing');
 
-            await startWorker();
-            await new Promise(r => setTimeout(r, 6000));
-            await stopWorker();
+                await startWorker();
+                await vi.advanceTimersByTimeAsync(6000);
+                await stopWorker();
 
-            expect(updateJobItemStatus).toHaveBeenCalledWith('i5', 'processing', { progress: 10 });
-            expect(updateJobItemStatus).toHaveBeenCalledWith(
-                'i5',
-                'error',
-                expect.objectContaining({ error_message: expect.stringContaining('Unknown job type') })
-            );
+                expect(updateJobItemStatus).toHaveBeenCalledWith('i5', 'processing', { progress: 10 });
+                expect(updateJobItemStatus).toHaveBeenCalledWith(
+                    'i5',
+                    'error',
+                    expect.objectContaining({ error_message: expect.stringContaining('Unknown job type') })
+                );
+            } finally {
+                vi.useRealTimers();
+            }
         }, 10000);
 
         it('should preserve cancelled status when a processing error occurs after cancellation', async () => {
-            const job = { id: 'j-error-cancelled', status: 'processing', job_type: 'import', options: '{}', total_items: 1 };
-            const item = { id: 'i-error-cancelled', file_name: 'cv.pdf' };
+            vi.useFakeTimers();
+            try {
+                const job = { id: 'j-error-cancelled', status: 'processing', job_type: 'import', options: '{}', total_items: 1 };
+                const item = { id: 'i-error-cancelled', file_name: 'cv.pdf' };
 
-            getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
-            claimPendingItems.mockResolvedValueOnce([item]);
-            processImportItem.mockRejectedValueOnce(new Error('late failure'));
-            isJobComplete.mockResolvedValueOnce(false);
-            getJobStatus.mockResolvedValueOnce('cancelled');
+                vi.clearAllMocks();
+                getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
+                claimPendingItems.mockResolvedValueOnce([item]);
+                processImportItem.mockRejectedValueOnce(new Error('late failure'));
+                isJobComplete.mockResolvedValueOnce(false);
+                getJobStatus.mockResolvedValueOnce('cancelled');
 
-            await startWorker();
-            await new Promise(r => setTimeout(r, 6000));
-            await stopWorker();
+                await startWorker();
+                await vi.advanceTimersByTimeAsync(6000);
+                await stopWorker();
 
-            expect(updateJobItemStatus).toHaveBeenCalledWith('i-error-cancelled', 'processing', { progress: 10 });
-            expect(updateJobItemStatus).toHaveBeenCalledWith(
-                'i-error-cancelled',
-                'error',
-                expect.objectContaining({ error_message: 'late failure' })
-            );
-            expect(updateJobStatus).not.toHaveBeenCalledWith('j-error-cancelled', 'failed', expect.anything());
+                expect(updateJobItemStatus).toHaveBeenCalledWith('i-error-cancelled', 'processing', { progress: 10 });
+                expect(updateJobItemStatus).toHaveBeenCalledWith(
+                    'i-error-cancelled',
+                    'error',
+                    expect.objectContaining({ error_message: 'late failure' })
+                );
+                expect(updateJobStatus).not.toHaveBeenCalledWith('j-error-cancelled', 'failed', expect.anything());
+            } finally {
+                vi.useRealTimers();
+            }
         }, 10000);
 
     });
