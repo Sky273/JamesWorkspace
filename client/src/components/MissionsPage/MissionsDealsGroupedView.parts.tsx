@@ -1,114 +1,193 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
+  ArrowPathIcon,
   BriefcaseIcon,
+  BuildingOffice2Icon,
   ChevronDownIcon,
   ChevronRightIcon,
-  BuildingOfficeIcon,
-  UserIcon,
+  ClipboardDocumentListIcon,
   DocumentTextIcon,
   FolderOpenIcon,
-  ArrowPathIcon,
+  MagnifyingGlassIcon,
   PlusIcon,
+  SparklesIcon,
+  UserIcon,
   XMarkIcon,
-  ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline';
+
 import SearchField from '../page/SearchField';
 import { createSafeHtml } from '../../utils/sanitizer.frontend';
 import type { DealGroup, GroupedMission } from './MissionsDealsGroupedView.types';
 
 export const STATUS_COLORS: Record<string, string> = {
-  open: 'bg-[var(--cv-primary-soft)] text-[var(--cv-primary)]',
-  won: 'bg-[var(--cv-tertiary-soft)] text-[var(--cv-tertiary)]',
-  lost: 'bg-[var(--cv-danger-soft)] text-[var(--cv-danger)]',
-  on_hold: 'bg-[var(--cv-warning-soft)] text-[var(--cv-warning)]',
+  open: 'bg-[var(--cv-primary-soft)] text-[var(--cv-primary)] ring-1 ring-[var(--cv-primary)]/10',
+  won: 'bg-[var(--cv-tertiary-soft)] text-[var(--cv-tertiary)] ring-1 ring-[var(--cv-tertiary)]/10',
+  lost: 'bg-[var(--cv-danger-soft)] text-[var(--cv-danger)] ring-1 ring-[var(--cv-danger)]/10',
+  on_hold: 'bg-[var(--cv-warning-soft)] text-[var(--cv-warning)] ring-1 ring-[var(--cv-warning)]/10',
 };
 
 export const STATUS_LABELS: Record<string, string> = {
   open: 'En cours',
-  won: 'Gagnee',
+  won: 'Gagnée',
   lost: 'Perdue',
   on_hold: 'En attente',
 };
 
-export const PRIORITY_ICONS: Record<string, { icon: string; color: string }> = {
-  low: { icon: 'o', color: 'text-gray-400' },
-  medium: { icon: 'oo', color: 'text-blue-500' },
-  high: { icon: 'ooo', color: 'text-orange-500' },
-  urgent: { icon: '!!!!', color: 'text-red-500' },
+export const PRIORITY_META: Record<string, { translationKey: string; fallback: string; badge: string }> = {
+  low: {
+    translationKey: 'missions.grouped.priorityLow',
+    fallback: 'Faible',
+    badge: 'bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-white/5 dark:text-[var(--cv-muted)] dark:ring-white/10',
+  },
+  medium: {
+    translationKey: 'missions.grouped.priorityMedium',
+    fallback: 'Normale',
+    badge: 'bg-[var(--cv-primary-soft)] text-[var(--cv-primary)] ring-1 ring-[var(--cv-primary)]/10',
+  },
+  high: {
+    translationKey: 'missions.grouped.priorityHigh',
+    fallback: 'Haute',
+    badge: 'bg-[var(--cv-warning-soft)] text-[var(--cv-warning)] ring-1 ring-[var(--cv-warning)]/10',
+  },
+  urgent: {
+    translationKey: 'missions.grouped.priorityUrgent',
+    fallback: 'Urgente',
+    badge: 'bg-[var(--cv-danger-soft)] text-[var(--cv-danger)] ring-1 ring-[var(--cv-danger)]/10',
+  },
 };
 
 export const MISSION_STATUS_COLORS: Record<string, string> = {
-  Active: 'bg-[var(--cv-tertiary-soft)] text-[var(--cv-tertiary)]',
-  active: 'bg-[var(--cv-tertiary-soft)] text-[var(--cv-tertiary)]',
-  Draft: 'bg-[var(--cv-warning-soft)] text-[var(--cv-warning)]',
-  draft: 'bg-[var(--cv-warning-soft)] text-[var(--cv-warning)]',
-  Closed: 'bg-[var(--cv-danger-soft)] text-[var(--cv-danger)]',
-  closed: 'bg-[var(--cv-danger-soft)] text-[var(--cv-danger)]',
+  Active: 'bg-[var(--cv-tertiary-soft)] text-[var(--cv-tertiary)] ring-1 ring-[var(--cv-tertiary)]/10',
+  active: 'bg-[var(--cv-tertiary-soft)] text-[var(--cv-tertiary)] ring-1 ring-[var(--cv-tertiary)]/10',
+  Draft: 'bg-[var(--cv-warning-soft)] text-[var(--cv-warning)] ring-1 ring-[var(--cv-warning)]/10',
+  draft: 'bg-[var(--cv-warning-soft)] text-[var(--cv-warning)] ring-1 ring-[var(--cv-warning)]/10',
+  Closed: 'bg-[var(--cv-danger-soft)] text-[var(--cv-danger)] ring-1 ring-[var(--cv-danger)]/10',
+  closed: 'bg-[var(--cv-danger-soft)] text-[var(--cv-danger)] ring-1 ring-[var(--cv-danger)]/10',
 };
 
-export const INITIAL_MISSIONS_LIMIT = 8;
+export const INITIAL_MISSIONS_LIMIT = 6;
+
+function formatMissionDate(date?: string) {
+  if (!date) return null;
+
+  try {
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }).format(new Date(date));
+  } catch {
+    return null;
+  }
+}
 
 export function MissionCardInDeal({ mission, index }: { mission: GroupedMission; index: number }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const statusColor = MISSION_STATUS_COLORS[mission.status] || MISSION_STATUS_COLORS.active;
-  const stripingClass = index % 2 === 1 ? 'bg-white/70 dark:bg-[color:color-mix(in_srgb,var(--cv-panel-end)_86%,black)]' : 'bg-white/90 dark:bg-[color:color-mix(in_srgb,var(--cv-panel-start)_90%,black)]';
+  const updatedAt = formatMissionDate(mission.updated_at || mission.created_at);
+  const keywords = useMemo(
+    () => (mission.keywords || '')
+      .split(',')
+      .map((keyword) => keyword.trim())
+      .filter(Boolean)
+      .slice(0, 3),
+    [mission.keywords],
+  );
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
+    <motion.article
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.18, delay: index * 0.02 }}
       onClick={() => navigate(`/missions/${mission.id}`)}
-      className={`rounded-[1.6rem] border border-slate-200/70 overflow-hidden cursor-pointer transition-all group dark:border-white/6 ${stripingClass}`}
+      className="group relative cursor-pointer overflow-hidden rounded-[1.7rem] border border-slate-200/80 bg-white/85 p-4 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[var(--cv-primary)]/25 hover:shadow-[0_24px_50px_-28px_rgba(37,99,235,0.35)] dark:border-white/8 dark:bg-[linear-gradient(180deg,color-mix(in_srgb,var(--cv-panel-start)_88%,black),color-mix(in_srgb,var(--cv-panel-end)_94%,black))]"
     >
-      <div className="px-4 py-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl bg-[var(--cv-primary-soft)] text-[var(--cv-primary)]">
-                <BriefcaseIcon className="h-4 w-4" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--cv-primary)]/25 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,var(--cv-primary-soft),rgba(255,255,255,0.8))] text-[var(--cv-primary)] shadow-sm dark:bg-[linear-gradient(135deg,color-mix(in_srgb,var(--cv-primary)_24%,transparent),rgba(255,255,255,0.04))]">
+              <BriefcaseIcon className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${statusColor}`}>
+                  {t(`missions.status.${mission.status || 'Active'}`, mission.status)}
+                </span>
+                {updatedAt ? (
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-500 dark:bg-white/5 dark:text-[var(--cv-muted)]">
+                    {t('missions.grouped.updatedAt', { date: updatedAt })}
+                  </span>
+                ) : null}
               </div>
-              <h4 className="cv-display truncate font-medium text-slate-900 transition-colors group-hover:text-[var(--cv-primary)] dark:text-[var(--cv-text)]">
-                {mission.title}
+              <h4 className="cv-display line-clamp-2 text-base font-semibold text-slate-950 transition-colors group-hover:text-[var(--cv-primary)] dark:text-[var(--cv-text)] sm:text-lg">
+                {mission.title || t('missions.noTitle')}
               </h4>
             </div>
-            <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-              <span className={`rounded-full px-2 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${statusColor}`}>
-                {t(`missions.status.${mission.status || 'Active'}`, mission.status)}
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2.5 text-xs text-slate-600 dark:text-[var(--cv-muted)]">
+            {mission.client_name ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100/90 px-3 py-1.5 dark:bg-white/5">
+                <BuildingOffice2Icon className="h-3.5 w-3.5 text-[var(--cv-primary)]" />
+                <span className="font-medium">{mission.client_name}</span>
               </span>
-              {mission.client_name && (
-                <span className="flex items-center gap-1 text-xs text-[var(--cv-primary)]">
-                  <BuildingOfficeIcon className="w-3 h-3" />
-                  {mission.client_name}
-                </span>
-              )}
-              {mission.contact_name && (
-                <span className="flex items-center gap-1 text-xs text-[var(--cv-tertiary)]">
-                  <UserIcon className="w-3 h-3" />
-                  {mission.contact_name}
-                </span>
-              )}
-              {mission.adaptations_count > 0 && (
-                <span className="flex items-center gap-1 text-xs text-[var(--cv-cyan)]">
-                  <DocumentTextIcon className="w-3 h-3" />
-                  {mission.adaptations_count} {t('missions.adaptations')}
-                </span>
-              )}
-            </div>
+            ) : null}
+            {mission.contact_name ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100/90 px-3 py-1.5 dark:bg-white/5">
+                <UserIcon className="h-3.5 w-3.5 text-[var(--cv-tertiary)]" />
+                <span>{mission.contact_name}</span>
+              </span>
+            ) : null}
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100/90 px-3 py-1.5 dark:bg-white/5">
+              <DocumentTextIcon className="h-3.5 w-3.5 text-[var(--cv-cyan)]" />
+              <span>{mission.adaptations_count} {t('missions.adaptations')}</span>
+            </span>
           </div>
         </div>
-        {mission.content && (
-          <div
-            className="mt-2 line-clamp-2 max-w-none prose prose-sm text-xs text-slate-500 dark:prose-invert dark:text-[var(--cv-muted)]"
-            dangerouslySetInnerHTML={createSafeHtml(mission.content)}
-          />
-        )}
+
+        <div className="flex shrink-0 items-center gap-2 self-start lg:pl-3">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              navigate(`/missions/${mission.id}`);
+            }}
+            className="inline-flex min-h-10 items-center justify-center rounded-full bg-slate-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-[var(--cv-primary)] dark:bg-white dark:text-slate-950 dark:hover:bg-[var(--cv-primary)] dark:hover:text-white"
+          >
+            {t('missions.view')}
+          </button>
+        </div>
       </div>
-    </motion.div>
+
+      {mission.content ? (
+        <div
+          className="prose prose-sm mt-4 line-clamp-3 max-w-none text-sm text-slate-600 dark:prose-invert dark:text-[var(--cv-muted)]"
+          dangerouslySetInnerHTML={createSafeHtml(mission.content)}
+        />
+      ) : (
+        <p className="mt-4 text-sm text-slate-500 dark:text-[var(--cv-muted)]">{t('missions.noDescription')}</p>
+      )}
+
+      {keywords.length > 0 ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {keywords.map((keyword) => (
+            <span
+              key={`${mission.id}-${keyword}`}
+              className="rounded-full bg-[var(--cv-primary-soft)] px-2.5 py-1 text-[11px] font-medium text-[var(--cv-primary)]"
+            >
+              {keyword}
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </motion.article>
   );
 }
 
@@ -122,78 +201,115 @@ export function DealSection({
   onToggle: () => void;
 }) {
   const { t } = useTranslation();
-  const priorityInfo = PRIORITY_ICONS[deal.priority] || PRIORITY_ICONS.medium;
   const [showAll, setShowAll] = useState(false);
   const displayedMissions = showAll ? deal.missions : deal.missions.slice(0, INITIAL_MISSIONS_LIMIT);
-  const hiddenCount = deal.missions.length - INITIAL_MISSIONS_LIMIT;
+  const hiddenCount = Math.max(0, deal.missions.length - INITIAL_MISSIONS_LIMIT);
+  const priorityMeta = PRIORITY_META[deal.priority] || PRIORITY_META.medium;
+  const priorityLabel = t(priorityMeta.translationKey, priorityMeta.fallback);
+  const statusClassName = STATUS_COLORS[deal.status] || STATUS_COLORS.open;
 
   return (
-    <div className="cv-card overflow-hidden rounded-[2rem] transition-all duration-200">
-      <button onClick={onToggle} className="w-full flex flex-col items-start justify-between gap-4 px-5 py-4 transition-colors text-left hover:bg-slate-50 dark:hover:bg-[color:color-mix(in_srgb,var(--cv-panel-end)_86%,black)] sm:flex-row sm:items-center">
-        <div className="flex items-center gap-3 min-w-0">
-          {isExpanded ? <ChevronDownIcon className="w-5 h-5 text-slate-400 dark:text-[#7f8ab0] flex-shrink-0 mt-0.5" /> : <ChevronRightIcon className="w-5 h-5 text-slate-400 dark:text-[#7f8ab0] flex-shrink-0 mt-0.5" />}
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-[var(--cv-primary-soft)] text-[var(--cv-primary)]">
-            <BriefcaseIcon className="w-5 h-5 mt-0.5" />
+    <section className="cv-card overflow-hidden rounded-[2rem] border border-slate-200/70 bg-white/80 shadow-[0_24px_60px_-38px_rgba(15,23,42,0.35)] dark:border-white/8 dark:bg-[linear-gradient(180deg,color-mix(in_srgb,var(--cv-panel-start)_90%,black),color-mix(in_srgb,var(--cv-panel-end)_94%,black))]">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full flex-col items-start gap-4 px-5 py-5 text-left transition-colors hover:bg-slate-50/80 dark:hover:bg-white/[0.03] sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="mt-1 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-[#7f8ab0]">
+            {isExpanded ? <ChevronDownIcon className="h-5 w-5" /> : <ChevronRightIcon className="h-5 w-5" />}
           </div>
+
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-[1.35rem] bg-[linear-gradient(135deg,var(--cv-primary-soft),rgba(255,255,255,0.82))] text-[var(--cv-primary)] shadow-sm dark:bg-[linear-gradient(135deg,color-mix(in_srgb,var(--cv-primary)_24%,transparent),rgba(255,255,255,0.04))]">
+            <BriefcaseIcon className="h-6 w-6" />
+          </div>
+
           <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="cv-display truncate font-bold text-slate-900 dark:text-[var(--cv-text)]">{deal.title}</h3>
-              <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_COLORS[deal.status] || STATUS_COLORS.open}`}>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="cv-display truncate text-lg font-semibold text-slate-950 dark:text-[var(--cv-text)] sm:text-xl">
+                {deal.title}
+              </h3>
+              <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${statusClassName}`}>
                 {t(`crm.deals.statuses.${deal.status}`, STATUS_LABELS[deal.status] || deal.status)}
               </span>
-              <span className={`text-xs ${priorityInfo.color}`}>{priorityInfo.icon}</span>
+              <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${priorityMeta.badge}`}>
+                {t('missions.grouped.priority', { label: priorityLabel })}
+              </span>
             </div>
-            <div className="flex items-center gap-3 mt-0.5 text-xs text-slate-500 dark:text-[var(--cv-muted)]">
-              {deal.client_name && (
-                <span className="flex items-center gap-1">
-                  <BuildingOfficeIcon className="w-3 h-3" />
-                  {deal.client_name}
-                  {deal.client_type && <span className="text-gray-400">({deal.client_type})</span>}
+
+            <div className="mt-2 flex flex-wrap gap-2.5 text-xs text-slate-600 dark:text-[var(--cv-muted)]">
+              {deal.client_name ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100/90 px-3 py-1.5 dark:bg-white/5">
+                  <BuildingOffice2Icon className="h-3.5 w-3.5 text-[var(--cv-primary)]" />
+                  <span className="font-medium">{deal.client_name}</span>
+                  {deal.client_type ? <span className="text-slate-400">({deal.client_type})</span> : null}
                 </span>
-              )}
-              {deal.contact_name && (
-                <span className="flex items-center gap-1">
-                  <UserIcon className="w-3 h-3" />
-                  {deal.contact_name}
+              ) : null}
+              {deal.contact_name ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100/90 px-3 py-1.5 dark:bg-white/5">
+                  <UserIcon className="h-3.5 w-3.5 text-[var(--cv-tertiary)]" />
+                  <span>{deal.contact_name}</span>
                 </span>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 sm:ml-4 sm:flex-shrink-0 sm:justify-end">
-          {deal.resumes_count > 0 && <span className="rounded-full bg-[var(--cv-secondary-soft)] px-2.5 py-1 text-sm font-medium text-[var(--cv-secondary)]">{deal.resumes_count} CV{deal.resumes_count !== 1 ? 's' : ''}</span>}
-          <span className="rounded-full bg-[var(--cv-primary-soft)] px-2.5 py-1 text-sm font-medium text-[var(--cv-primary)]">{deal.missions_count} mission{deal.missions_count !== 1 ? 's' : ''}</span>
+
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+          {deal.resumes_count > 0 ? (
+            <span className="rounded-full bg-[var(--cv-secondary-soft)] px-3 py-1.5 text-sm font-semibold text-[var(--cv-secondary)]">
+              {deal.resumes_count} CV{deal.resumes_count !== 1 ? 's' : ''}
+            </span>
+          ) : null}
+          <span className="rounded-full bg-[var(--cv-primary-soft)] px-3 py-1.5 text-sm font-semibold text-[var(--cv-primary)]">
+            {deal.missions_count} mission{deal.missions_count !== 1 ? 's' : ''}
+          </span>
         </div>
       </button>
 
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
-            <div className="px-4 pb-4 border-t border-slate-200/70 dark:border-white/6">
+      <AnimatePresence initial={false}>
+        {isExpanded ? (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22 }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-slate-200/70 px-4 pb-4 pt-4 dark:border-white/8 sm:px-5 sm:pb-5">
               {deal.missions.length === 0 ? (
-                <p className="py-4 text-center text-sm text-slate-500 dark:text-[var(--cv-muted)]">{t('missions.grouped.noMissions')}</p>
+                <div className="rounded-[1.6rem] border border-dashed border-slate-200 bg-slate-50/70 px-6 py-10 text-center dark:border-white/10 dark:bg-white/[0.03]">
+                  <BriefcaseIcon className="mx-auto mb-3 h-10 w-10 text-slate-400 dark:text-[#7f8ab0]" />
+                  <p className="text-sm font-medium text-slate-700 dark:text-[var(--cv-text)]">{t('missions.grouped.noMissions')}</p>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-[var(--cv-muted)]">{t('missions.grouped.dealEmptyDescription')}</p>
+                </div>
               ) : (
-                <div className="space-y-2 pt-3">
+                <div className="space-y-3">
                   {displayedMissions.map((mission, missionIndex) => (
                     <MissionCardInDeal key={mission.id} mission={mission} index={missionIndex} />
                   ))}
-                  {!showAll && hiddenCount > 0 && (
-                    <button onClick={(e) => { e.stopPropagation(); setShowAll(true); }} className="w-full rounded-xl py-2 text-sm font-medium text-[var(--cv-primary)] transition-colors hover:bg-[var(--cv-primary-soft)]">
-                      {t('missions.grouped.showMore', { count: hiddenCount })}
-                    </button>
-                  )}
-                  {showAll && deal.missions.length > INITIAL_MISSIONS_LIMIT && (
-                    <button onClick={(e) => { e.stopPropagation(); setShowAll(false); }} className="w-full rounded-xl py-2 text-sm text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700 dark:text-[var(--cv-muted)] dark:hover:bg-[color:color-mix(in_srgb,var(--cv-panel-end)_86%,black)] dark:hover:text-[var(--cv-text)]">
-                      {t('missions.grouped.showLess')}
-                    </button>
-                  )}
+
+                  {hiddenCount > 0 ? (
+                    <div className="flex justify-center pt-1">
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setShowAll((prev) => !prev);
+                        }}
+                        className="inline-flex min-h-11 items-center justify-center rounded-full border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition-colors hover:border-[var(--cv-primary)]/25 hover:text-[var(--cv-primary)] dark:border-white/10 dark:bg-white/[0.03] dark:text-[var(--cv-text)]"
+                      >
+                        {showAll ? t('missions.grouped.showLess') : t('missions.grouped.showMore', { count: hiddenCount })}
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>
           </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
-    </div>
+    </section>
   );
 }
 
@@ -202,42 +318,95 @@ export function MissionsGroupedToolbar({
   onRefresh,
   searchQuery,
   setSearchQuery,
+  totalMissions,
+  dealCount,
+  visibleCount,
 }: {
   onAddMission: () => void;
   onRefresh: () => void;
   searchQuery: string;
   setSearchQuery: (value: string) => void;
+  totalMissions: number;
+  dealCount: number;
+  visibleCount: number;
 }) {
   const { t } = useTranslation();
+  const hasSearch = searchQuery.trim() !== '';
 
   return (
-    <div className="cv-search-shell rounded-[2rem] p-4 sm:p-5">
-      <div className="mb-4 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-        <div>
-          <div className="cv-kicker mb-2">{t('missions.title')}</div>
-          <div className="text-sm text-slate-600 dark:text-[var(--cv-muted)]">{searchQuery ? t('missions.searchPlaceholder') : t('missions.subtitle')}</div>
-        </div>
-        {searchQuery ? (
-          <button onClick={() => setSearchQuery('')} className="cv-ghost-button inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium transition-colors">
-            <XMarkIcon className="w-4 h-4" />
-            <span>{t('common.resetFilters')}</span>
-          </button>
-        ) : null}
-      </div>
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex-1">
-          <div className="flex flex-col gap-3 lg:flex-row">
-            <SearchField containerClassName="relative min-w-0 flex-1" placeholder={t('missions.searchPlaceholder')} value={searchQuery} onChange={setSearchQuery} />
-            <button onClick={onAddMission} className="cv-gradient-button inline-flex min-h-16 w-full items-center justify-center gap-2 rounded-[1.4rem] px-6 text-sm font-bold transition-all lg:w-auto">
-              <PlusIcon className="h-5 w-5" />
-              {t('missions.addMission')}
-            </button>
+    <div className="cv-search-shell overflow-hidden rounded-[2rem] p-5 sm:p-6">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="max-w-3xl space-y-3">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600 shadow-sm ring-1 ring-slate-200/70 dark:bg-white/5 dark:text-[var(--cv-muted)] dark:ring-white/10">
+            <SparklesIcon className="h-4 w-4 text-[var(--cv-primary)]" />
+            <span>{t('missions.grouped.heroBadge')}</span>
+          </div>
+          <div>
+            <div className="cv-kicker mb-2">{t('missions.title')}</div>
+            <h2 className="cv-display text-2xl font-semibold text-slate-950 dark:text-[var(--cv-text)] sm:text-[2rem]">
+              {t('missions.grouped.heroTitle')}
+            </h2>
+          </div>
+          <p className="max-w-2xl text-sm leading-6 text-slate-600 dark:text-[var(--cv-muted)] sm:text-[15px]">
+            {t('missions.grouped.heroDescription')}
+          </p>
+          <div className="flex flex-wrap gap-2.5 text-xs text-slate-600 dark:text-[var(--cv-muted)]">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1.5 shadow-sm ring-1 ring-slate-200/70 dark:bg-white/5 dark:ring-white/10">
+              <ClipboardDocumentListIcon className="h-4 w-4 text-[var(--cv-primary)]" />
+              {t('missions.grouped.visible', { count: visibleCount })}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1.5 shadow-sm ring-1 ring-slate-200/70 dark:bg-white/5 dark:ring-white/10">
+              <BriefcaseIcon className="h-4 w-4 text-[var(--cv-secondary)]" />
+              {dealCount} {t('missions.grouped.deals')}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1.5 shadow-sm ring-1 ring-slate-200/70 dark:bg-white/5 dark:ring-white/10">
+              <FolderOpenIcon className="h-4 w-4 text-[var(--cv-tertiary)]" />
+              {t('missions.grouped.total', { count: totalMissions })}
+            </span>
           </div>
         </div>
-        <div className="flex w-full items-center gap-3 md:w-auto">
-          <button onClick={onRefresh} className="cv-ghost-button inline-flex min-h-12 min-w-12 items-center justify-center rounded-[1.1rem] p-3 transition-colors" title={t('missions.refresh')}>
-            <ArrowPathIcon className="w-5 h-5" />
+
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          {hasSearch ? (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="cv-ghost-button inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors"
+            >
+              <XMarkIcon className="h-4 w-4" />
+              <span>{t('common.resetFilters')}</span>
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={onRefresh}
+            className="cv-ghost-button inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors"
+            title={t('missions.refresh')}
+          >
+            <ArrowPathIcon className="h-4 w-4" />
+            <span>{t('missions.refresh')}</span>
           </button>
+          <button
+            type="button"
+            onClick={onAddMission}
+            className="cv-gradient-button inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-2 text-sm font-bold transition-all"
+          >
+            <PlusIcon className="h-5 w-5" />
+            {t('missions.addMission')}
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <SearchField
+          containerClassName="relative min-w-0"
+          placeholder={t('missions.searchPlaceholder')}
+          value={searchQuery}
+          onChange={setSearchQuery}
+        />
+        <div className="inline-flex items-center gap-2 rounded-[1.2rem] bg-white/75 px-4 py-3 text-sm text-slate-600 shadow-sm ring-1 ring-slate-200/70 dark:bg-white/5 dark:text-[var(--cv-muted)] dark:ring-white/10">
+          <MagnifyingGlassIcon className="h-4 w-4 text-[var(--cv-primary)]" />
+          {hasSearch ? t('missions.grouped.resultsCount', { count: visibleCount }) : t('missions.subtitle')}
         </div>
       </div>
     </div>
@@ -255,29 +424,103 @@ export function MissionsGroupedSummary({
 }) {
   const { t } = useTranslation();
 
+  const items = [
+    {
+      key: 'missions',
+      label: 'missions.grouped.visibleMissions',
+      value: totalMissions,
+      helper: 'missions.grouped.visibleMissionsHelper',
+      icon: ClipboardDocumentListIcon,
+      iconClassName: 'bg-[var(--cv-primary-soft)] text-[var(--cv-primary)]',
+    },
+    {
+      key: 'deals',
+      label: 'missions.grouped.activeDeals',
+      value: dealCount,
+      helper: 'missions.grouped.activeDealsHelper',
+      icon: BriefcaseIcon,
+      iconClassName: 'bg-[var(--cv-secondary-soft)] text-[var(--cv-secondary)]',
+    },
+    {
+      key: 'unassigned',
+      label: 'missions.grouped.unassignedTitle',
+      value: unassignedCount,
+      helper: unassignedCount > 0 ? 'missions.grouped.unassignedHelper' : 'missions.grouped.unassignedHelperEmpty',
+      icon: FolderOpenIcon,
+      iconClassName: 'bg-[var(--cv-tertiary-soft)] text-[var(--cv-tertiary)]',
+    },
+  ];
+
   return (
-    <div className="cv-panel flex flex-wrap items-center gap-3 rounded-[1.6rem] px-4 py-3 text-sm">
-      <div className="flex items-center gap-1.5 text-slate-600 dark:text-[var(--cv-muted)]">
-        <ClipboardDocumentListIcon className="w-4 h-4 text-[var(--cv-primary)]" />
-        <span className="font-semibold text-slate-950 dark:text-[var(--cv-text)]">{totalMissions}</span>
-        <span>mission{totalMissions !== 1 ? 's' : ''}</span>
-      </div>
-      <div className="h-4 w-px bg-slate-200 dark:bg-white/8" />
-      <div className="flex items-center gap-1.5 text-slate-600 dark:text-[var(--cv-muted)]">
-        <BriefcaseIcon className="w-4 h-4 text-[var(--cv-secondary)]" />
-        <span className="font-semibold text-slate-950 dark:text-[var(--cv-text)]">{dealCount}</span>
-        <span>{t('missions.grouped.deals')}</span>
-      </div>
-      {unassignedCount > 0 && (
-        <>
-          <div className="h-4 w-px bg-slate-200 dark:bg-white/8" />
-          <div className="flex items-center gap-1.5 text-slate-600 dark:text-[var(--cv-muted)]">
-            <FolderOpenIcon className="w-4 h-4 text-[var(--cv-tertiary)]" />
-            <span className="font-semibold text-slate-950 dark:text-[var(--cv-text)]">{unassignedCount}</span>
-            <span>{t('missions.grouped.unassigned')}</span>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      {items.map((item) => {
+        const Icon = item.icon;
+        return (
+          <div
+            key={item.key}
+            className="cv-panel rounded-[1.75rem] border border-slate-200/70 p-4 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.35)] dark:border-white/8"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-slate-500 dark:text-[var(--cv-muted)]">{t(item.label)}</p>
+                <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 dark:text-[var(--cv-text)]">{item.value}</p>
+              </div>
+              <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${item.iconClassName}`}>
+                <Icon className="h-5 w-5" />
+              </div>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-[var(--cv-muted)]">{t(item.helper)}</p>
           </div>
-        </>
-      )}
+        );
+      })}
+    </div>
+  );
+}
+
+export function MissionsGroupedEmptyState({
+  hasSearch,
+  onAddMission,
+  onClearSearch,
+}: {
+  hasSearch: boolean;
+  onAddMission: () => void;
+  onClearSearch: () => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="cv-panel rounded-[2rem] border border-dashed border-slate-200/80 px-6 py-14 text-center dark:border-white/10">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[1.6rem] bg-[var(--cv-primary-soft)] text-[var(--cv-primary)]">
+        <BriefcaseIcon className="h-8 w-8" />
+      </div>
+      <h3 className="cv-display mt-5 text-2xl font-semibold text-slate-950 dark:text-[var(--cv-text)]">
+        {hasSearch ? t('missions.noResults') : t('missions.noMissions')}
+      </h3>
+      <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600 dark:text-[var(--cv-muted)] sm:text-[15px]">
+        {hasSearch
+          ? t('missions.grouped.noSearchResults')
+          : t('missions.grouped.emptyDescription')}
+      </p>
+      <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        {hasSearch ? (
+          <button
+            type="button"
+            onClick={onClearSearch}
+            className="cv-ghost-button inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium"
+          >
+            <XMarkIcon className="h-4 w-4" />
+            {t('common.resetFilters')}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={onAddMission}
+          className="cv-gradient-button inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-bold"
+        >
+          <PlusIcon className="h-5 w-5" />
+          {t('missions.addMission')}
+        </button>
+      </div>
     </div>
   );
 }
