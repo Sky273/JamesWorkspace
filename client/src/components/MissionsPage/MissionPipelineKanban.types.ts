@@ -11,3 +11,13 @@ export interface MissionPipelineKanbanProps {
   missionTitle: string;
   onClose?: () => void;
 }
+
+export interface InterviewFormValues {
+  title: string;
+  description: string;
+  interviewType: 'client' | 'partner' | 'technical' | 'hr';
+  scheduledAt: string;
+  durationMinutes: number;
+  location: string;
+  meetingLink: string;
+}

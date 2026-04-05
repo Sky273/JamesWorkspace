@@ -3,28 +3,22 @@
  * TypeScript version
  */
 
-import { ForwardRefExoticComponent, RefAttributes, SVGProps } from 'react';
-import { motion } from 'framer-motion';
-import { 
+import {
   ClipboardDocumentListIcon,
   BuildingOfficeIcon,
-  BriefcaseIcon
+  BriefcaseIcon,
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 
-type HeroIcon = ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, 'ref'> & { title?: string; titleId?: string } & RefAttributes<SVGSVGElement>>;
-
-interface StatCardProps {
-  icon: HeroIcon;
-  iconBgColor: string;
-  iconColor: string;
-  label: string;
-  value: string | number;
-  delay?: number;
-}
+import StatCardsGrid from '../page/StatCardsGrid';
 
 interface Stats {
   total: number;
   firms: number;
+  linkedDeals: number;
+  active: number;
+  draft: number;
+  closed: number;
 }
 
 interface StatsCardsProps {
@@ -33,53 +27,45 @@ interface StatsCardsProps {
   t: (key: string) => string;
 }
 
-const StatCard = ({ icon: Icon, iconBgColor, iconColor, label, value, delay = 0 }: StatCardProps): JSX.Element => (
-  <motion.div 
-    initial={{ opacity: 0, scale: 0.9 }} 
-    animate={{ opacity: 1, scale: 1 }} 
-    transition={{ delay }}
-    className="cv-card rounded-[1.75rem] p-5 transition-all"
-  >
-    <div className="flex items-start gap-4">
-      <div className={`rounded-2xl p-3 ${iconBgColor} flex items-center justify-center`}>
-        <Icon className={`w-5 h-5 ${iconColor}`} />
-      </div>
-      <div className="min-w-0">
-        <div className="cv-kicker mb-2">{label}</div>
-        <div className="cv-display text-3xl font-extrabold tracking-tight text-slate-950 dark:text-[var(--cv-text)]">{value}</div>
-      </div>
-    </div>
-  </motion.div>
-);
-
 const StatsCards = ({ stats, missionsCount, t }: StatsCardsProps): JSX.Element => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-      <StatCard
-        icon={ClipboardDocumentListIcon}
-        iconBgColor="bg-[var(--cv-primary-soft)]"
-        iconColor="text-[var(--cv-primary)]"
-        label={t('missions.stats.total')}
-        value={stats.total}
-        delay={0}
-      />
-      <StatCard
-        icon={BuildingOfficeIcon}
-        iconBgColor="bg-[var(--cv-tertiary-soft)]"
-        iconColor="text-[var(--cv-tertiary)]"
-        label={t('missions.stats.firms')}
-        value={stats.firms}
-        delay={0.1}
-      />
-      <StatCard
-        icon={BriefcaseIcon}
-        iconBgColor="bg-[var(--cv-secondary-soft)]"
-        iconColor="text-[var(--cv-secondary)]"
-        label={t('missions.stats.active')}
-        value={missionsCount}
-        delay={0.2}
-      />
-    </div>
+    <StatCardsGrid
+      className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4"
+      items={[
+        {
+          icon: ClipboardDocumentListIcon,
+          iconBgClassName: 'bg-[var(--cv-primary-soft)] text-[var(--cv-primary)]',
+          iconClassName: '',
+          label: t('missions.stats.total'),
+          value: stats.total,
+          helper: t('missions.subtitle'),
+        },
+        {
+          icon: BriefcaseIcon,
+          iconBgClassName: 'bg-[var(--cv-secondary-soft)] text-[var(--cv-secondary)]',
+          iconClassName: '',
+          label: t('missions.stats.active'),
+          value: stats.active,
+          helper: `${missionsCount} ${t('missions.results')}`,
+        },
+        {
+          icon: BuildingOfficeIcon,
+          iconBgClassName: 'bg-[var(--cv-tertiary-soft)] text-[var(--cv-tertiary)]',
+          iconClassName: '',
+          label: t('missions.stats.firms'),
+          value: stats.firms,
+          helper: t('navigation.crm', 'CRM'),
+        },
+        {
+          icon: DocumentTextIcon,
+          iconBgClassName: 'bg-[var(--cv-warning-soft)] text-[var(--cv-warning)]',
+          iconClassName: '',
+          label: t('missions.deal', 'Affaires liées'),
+          value: stats.linkedDeals,
+          helper: `${stats.draft} ${t('missions.status.Draft')} · ${stats.closed} ${t('missions.status.Closed')}`,
+        },
+      ]}
+    />
   );
 };
 

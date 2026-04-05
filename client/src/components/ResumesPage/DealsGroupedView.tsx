@@ -188,10 +188,10 @@ const DealsGroupedView = ({ allTags, stats }: DealsGroupedViewProps): JSX.Elemen
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <StatsCards stats={stats} t={t} variant="compact" />
 
-      <div>
+      <div className="space-y-4">
         <SearchAndActions
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -218,6 +218,8 @@ const DealsGroupedView = ({ allTags, stats }: DealsGroupedViewProps): JSX.Elemen
       </div>
 
       <SummaryBar t={t} visibleData={visibleData} />
+
+      <div className="space-y-4">
 
       <DealsSections
         autoExpandedDealIds={autoExpandedDealIds}
@@ -258,6 +260,7 @@ const DealsGroupedView = ({ allTags, stats }: DealsGroupedViewProps): JSX.Elemen
         unassignedExpanded={unassignedExpanded}
         visibleData={visibleData}
       />
+      </div>
 
       {/* Deal Export Modal */}
       {exportingDeal && (

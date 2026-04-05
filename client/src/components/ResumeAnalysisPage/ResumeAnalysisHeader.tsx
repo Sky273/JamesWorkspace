@@ -30,66 +30,74 @@ export default function ResumeAnalysisHeader({
       animate={{ opacity: 1, y: 0 }}
       className="mb-6"
     >
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 truncate max-w-[250px] sm:max-w-none">
-              {resumeName}
-            </h1>
-            {resume?.consent_status && (
-              <ConsentBadge
-                status={resume.consent_status as ConsentStatus}
-                candidateName={resume?.candidate_name as string | undefined}
-                candidateEmail={resume?.candidate_email as string | undefined}
-                consentTokenExpiresAt={resume?.consent_token_expires_at as string | null | undefined}
-                retentionUntil={resume?.retention_until as string | null | undefined}
-                compact={true}
-              />
-            )}
-          </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {t('resume.analysis.title')}
-          </p>
+      <div className="glass-panel-strong overflow-hidden rounded-[2rem] p-5 sm:p-6">
+        <div className="mb-4 flex items-center gap-3">
+          <span className="cv-kicker">{t('resumes.title')}</span>
+          <span className="text-slate-400 dark:text-slate-500">&gt;</span>
+          <span className="cv-kicker text-[var(--cv-primary)]">{t('resume.analysis.title')}</span>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          <button
-            onClick={onShare}
-            className="btn btn-secondary inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base"
-            title={t('share.button')}
-          >
-            <ShareIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="hidden sm:inline">{t('share.button')}</span>
-          </button>
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="cv-display max-w-full truncate text-2xl font-bold text-slate-950 dark:text-[var(--cv-text)] sm:text-3xl">
+                {resumeName}
+              </h1>
+              {resume?.consent_status && (
+                <ConsentBadge
+                  status={resume.consent_status as ConsentStatus}
+                  candidateName={resume?.candidate_name as string | undefined}
+                  candidateEmail={resume?.candidate_email as string | undefined}
+                  consentTokenExpiresAt={resume?.consent_token_expires_at as string | null | undefined}
+                  retentionUntil={resume?.retention_until as string | null | undefined}
+                  compact={true}
+                />
+              )}
+            </div>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-[var(--cv-muted)] sm:text-base">
+              {t('resume.analysis.title')}
+            </p>
+          </div>
 
-          {hasImprovedText ? (
-            <Link
-              to={`/resumes/${resumeId}/improve`}
-              className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 border border-green-600 dark:border-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/50 rounded-lg font-medium transition-colors text-sm sm:text-base"
-            >
-              <CheckCircleIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="hidden xs:inline">{t('resume.actions.viewImproved')}</span>
-              <span className="xs:hidden">{t('resume.actions.view')}</span>
-              <ArrowRightIcon className="w-4 h-4" />
-            </Link>
-          ) : (
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <button
-              onClick={onImprove}
-              className="btn btn-primary inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base"
+              onClick={onShare}
+              className="cv-ghost-button inline-flex min-h-12 items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold sm:text-base"
+              title={t('share.button')}
             >
-              <SparklesIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-              {t('resume.actions.improve')}
-              <ArrowRightIcon className="w-4 h-4" />
+              <ShareIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="hidden sm:inline">{t('share.button')}</span>
             </button>
-          )}
 
-          <Link
-            to={`/resumes/${resumeId}/export`}
-            className="btn btn-secondary inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base"
-          >
-            {t('resume.actions.export')}
-            <ArrowRightIcon className="w-4 h-4" />
-          </Link>
+            {hasImprovedText ? (
+              <Link
+                to={`/resumes/${resumeId}/improve`}
+                className="inline-flex min-h-12 items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/15 sm:text-base"
+              >
+                <CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="hidden xs:inline">{t('resume.actions.viewImproved')}</span>
+                <span className="xs:hidden">{t('resume.actions.view')}</span>
+                <ArrowRightIcon className="h-4 w-4" />
+              </Link>
+            ) : (
+              <button
+                onClick={onImprove}
+                className="cv-gradient-button inline-flex min-h-12 items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold sm:text-base"
+              >
+                <SparklesIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                {t('resume.actions.improve')}
+                <ArrowRightIcon className="h-4 w-4" />
+              </button>
+            )}
+
+            <Link
+              to={`/resumes/${resumeId}/export`}
+              className="cv-ghost-button inline-flex min-h-12 items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold sm:text-base"
+            >
+              {t('resume.actions.export')}
+              <ArrowRightIcon className="h-4 w-4" />
+            </Link>
+          </div>
         </div>
       </div>
     </motion.div>

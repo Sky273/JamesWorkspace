@@ -1,32 +1,28 @@
-/**
- * DealSection Component
- * Renders a single deal accordion section with header, missions, and resumes
- */
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
+  ArrowDownTrayIcon,
+  ArrowTopRightOnSquareIcon,
   BriefcaseIcon,
+  BuildingOfficeIcon,
+  ChartBarIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   DocumentTextIcon,
-  ArrowDownTrayIcon,
-  BuildingOfficeIcon,
+  FolderPlusIcon,
   UserIcon,
-  ChartBarIcon,
 } from '@heroicons/react/24/outline';
 import DealResumeCard from './DealResumeCard';
-import type {
-  ResumeBasic,
-  DealGroup,
-} from './dealsGrouped.types';
+import type { ResumeBasic, DealGroup } from './dealsGrouped.types';
 import {
   STATUS_COLORS,
   STATUS_LABELS,
   PRIORITY_ICONS,
   INITIAL_RESUMES_LIMIT,
+  MISSION_STATUS_COLORS,
+  ADAPTATION_STATUS_COLORS,
 } from './dealsGrouped.types';
 
 interface DealSectionProps {
@@ -87,6 +83,12 @@ const DealSection = ({
   const [expandedResumeSections, setExpandedResumeSections] = useState<Set<string>>(new Set());
 
   const priorityInfo = PRIORITY_ICONS[deal.priority] || PRIORITY_ICONS.medium;
+  const adaptationCount = (deal.missions || []).reduce((sum, mission) => sum + (mission.adaptations?.length || 0), 0);
+  const clientTypeLabel = deal.client_type
+    ? deal.client_type === 'prospect'
+      ? t('clients.prospect', 'Prospect')
+      : t('clients.client', 'Client')
+    : null;
 
   const renderResumeCard = (resume: ResumeBasic, index: number) => (
     <DealResumeCard
@@ -123,90 +125,117 @@ const DealSection = ({
       onDragOver={onDragOver}
       onDrop={(e) => onDrop(e, deal.id)}
     >
-      {/* Deal header */}
       <button
         onClick={onToggle}
         aria-expanded={isExpanded}
         aria-controls={`deal-content-${deal.id}`}
         aria-label={`${isExpanded ? t('common.collapse') : t('common.expand')} ${deal.title}`}
-        className={`group flex w-full flex-col items-start gap-4 px-5 py-4 text-left transition-colors sm:flex-row sm:items-center sm:justify-between ${
+        className={`group flex w-full flex-col items-start gap-4 px-4 py-4 text-left transition-colors sm:px-5 xl:flex-row xl:items-center xl:justify-between ${
           isDragOver
             ? 'bg-[var(--cv-primary-soft)]'
             : 'hover:bg-slate-50 dark:hover:bg-[color:color-mix(in_srgb,var(--cv-panel-end)_86%,black)]'
         }`}
       >
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex w-full min-w-0 items-start gap-3">
           {isExpanded ? (
-            <ChevronDownIcon className="icon-lg text-slate-400 dark:text-[#7f8ab0]" />
+            <ChevronDownIcon className="mt-2 h-5 w-5 flex-shrink-0 text-slate-400 dark:text-[#7f8ab0]" />
           ) : (
-            <ChevronRightIcon className="icon-lg text-slate-400 dark:text-[#7f8ab0]" />
+            <ChevronRightIcon className="mt-2 h-5 w-5 flex-shrink-0 text-slate-400 dark:text-[#7f8ab0]" />
           )}
-          <span className="rounded-2xl bg-[var(--cv-primary-soft)] p-2 transition-colors group-hover:bg-[color:color-mix(in_srgb,var(--cv-primary-soft)_84%,white)]">
-            <BriefcaseIcon className="icon-lg text-[var(--cv-primary)]" />
+
+          <span className="mt-0.5 flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-[1.25rem] bg-[var(--cv-primary-soft)] text-[var(--cv-primary)] transition-colors group-hover:bg-[color:color-mix(in_srgb,var(--cv-primary-soft)_84%,white)]">
+            <BriefcaseIcon className="h-6 w-6" />
           </span>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="cv-display truncate text-lg font-bold text-slate-900 dark:text-[#dee5ff]">{deal.title}</h3>
+
+          <div className="min-w-0 flex-1 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="cv-display min-w-0 flex-1 text-lg font-bold text-slate-900 dark:text-[#dee5ff] xl:flex-none">
+                <span className="block truncate">{deal.title}</span>
+              </h3>
               <span className={`rounded-full px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] ${STATUS_COLORS[deal.status] || STATUS_COLORS.open}`}>
                 {t(`crm.deals.statuses.${deal.status}`, STATUS_LABELS[deal.status] || deal.status)}
               </span>
-              <span className={`text-xs ${priorityInfo.color}`}>{priorityInfo.icon}</span>
+              <span className={`inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:border-white/10 dark:text-[#a3aac4] ${priorityInfo.color}`}>
+                <span aria-hidden="true">{priorityInfo.icon}</span>
+                {priorityInfo.label}
+              </span>
             </div>
-            <div className="mt-0.5 flex items-center gap-3 text-xs text-slate-500 dark:text-[#8f99b8]">
-              {deal.client_name && (
-                <span className="flex items-center gap-1">
-                  <BuildingOfficeIcon className="icon-xs" />
-                  {deal.client_name}
-                  {deal.client_type && <span className="text-gray-400">({deal.client_type})</span>}
+
+            <div className="flex flex-wrap items-center gap-2.5 text-xs text-slate-500 dark:text-[#8f99b8]">
+              {deal.client_name ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1.5 dark:bg-white/[0.04]">
+                  <BuildingOfficeIcon className="h-3.5 w-3.5" />
+                  <span className="max-w-[220px] truncate">{deal.client_name}</span>
+                  {clientTypeLabel ? (
+                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:bg-white/8 dark:text-[#a3aac4]">
+                      {clientTypeLabel}
+                    </span>
+                  ) : null}
                 </span>
-              )}
-              {deal.contact_name && (
-                <span className="flex items-center gap-1">
-                  <UserIcon className="icon-xs" />
-                  {deal.contact_name}
+              ) : null}
+              {deal.contact_name ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1.5 dark:bg-white/[0.04]">
+                  <UserIcon className="h-3.5 w-3.5" />
+                  <span className="truncate max-w-[200px]">{deal.contact_name}</span>
                 </span>
-              )}
+              ) : null}
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-3 xl:max-w-[560px]">
+              <div className="rounded-[1rem] border border-slate-200/70 bg-white/70 px-3 py-2.5 dark:border-white/6 dark:bg-white/[0.03]">
+                <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-[#8f99b8]">{t('resumes.groupedView.cvs')}</div>
+                <div className="mt-1 text-base font-semibold text-slate-950 dark:text-[#dee5ff]">
+                  {hasActiveFilters && deal.resumes.length !== originalDeal.resumes.length
+                    ? `${deal.resumes.length} / ${originalDeal.resumes.length}`
+                    : deal.resumes.length}
+                </div>
+              </div>
+              <div className="rounded-[1rem] border border-slate-200/70 bg-white/70 px-3 py-2.5 dark:border-white/6 dark:bg-white/[0.03]">
+                <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-[#8f99b8]">{t('resumes.groupedView.missions')}</div>
+                <div className="mt-1 text-base font-semibold text-slate-950 dark:text-[#dee5ff]">{deal.missions?.length || 0}</div>
+              </div>
+              <div className="rounded-[1rem] border border-slate-200/70 bg-white/70 px-3 py-2.5 dark:border-white/6 dark:bg-white/[0.03]">
+                <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-[#8f99b8]">{t('resumes.groupedView.adaptations')}</div>
+                <div className="mt-1 text-base font-semibold text-slate-950 dark:text-[#dee5ff]">{adaptationCount}</div>
+              </div>
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 sm:ml-4 sm:flex-shrink-0 sm:justify-end">
-          {deal.missions && deal.missions.length > 0 && (
-            <span className="cv-count-pill cv-count-pill-primary rounded-full px-2.5 py-1 text-sm font-medium">
-              {deal.missions.length} mission{deal.missions.length !== 1 ? 's' : ''}
-            </span>
-          )}
-          <span className="cv-count-pill cv-count-pill-success rounded-full px-2.5 py-1 text-sm font-medium">
-            {hasActiveFilters && deal.resumes.length !== originalDeal.resumes.length
-              ? `${deal.resumes.length} / ${originalDeal.resumes.length} CV${originalDeal.resumes.length !== 1 ? 's' : ''}`
-              : `${deal.resumes.length} CV${deal.resumes.length !== 1 ? 's' : ''}`}
-          </span>
-          {/* Export button */}
-          <span
-            role="button"
-            tabIndex={0}
+
+        <div className="flex w-full flex-wrap items-center gap-2 xl:w-auto xl:justify-end">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              saveViewState();
+              navigate(`/deals/${deal.id}`);
+            }}
+            className="cv-ghost-button inline-flex min-h-11 items-center gap-2 rounded-[1rem] px-4 py-2 text-sm font-medium"
+          >
+            <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+            {t('common.open', { defaultValue: 'Ouvrir' })}
+          </button>
+          <button
+            type="button"
             title={t('dealExport.buttonTitle')}
             onClick={(e) => {
               e.stopPropagation();
               onExportDeal(originalDeal);
             }}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.currentTarget.click(); } }}
-            className="cv-inline-action rounded-2xl p-2 text-slate-400 transition-colors cursor-pointer dark:text-[#7f8ab0]"
+            className="cv-inline-action inline-flex min-h-11 items-center gap-2 rounded-[1rem] px-4 py-2 text-sm font-medium text-slate-700 transition-colors dark:text-[#dee5ff]"
           >
-            <ArrowDownTrayIcon className="icon-md" />
-          </span>
+            <ArrowDownTrayIcon className="h-4 w-4" />
+            {t('dealExport.title')}
+          </button>
         </div>
       </button>
 
-      {/* Drop indicator when dragging over collapsed deal */}
-      {isDragOver && !isExpanded && (
+      {isDragOver && !isExpanded ? (
         <div className="border-t border-[color:color-mix(in_srgb,var(--cv-primary)_20%,transparent)] bg-[var(--cv-primary-soft)] px-4 py-3">
-          <p className="text-center text-sm font-medium text-[var(--cv-primary)]">
-            ↓ {t('resumes.groupedView.dropHere')}
-          </p>
+          <p className="text-center text-sm font-medium text-[var(--cv-primary)]">↓ {t('resumes.groupedView.dropHere')}</p>
         </div>
-      )}
+      ) : null}
 
-      {/* Deal resumes */}
       <AnimatePresence>
         {isExpanded && (
           <motion.div
@@ -219,158 +248,166 @@ const DealSection = ({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className={`border-t px-4 py-5 ${isDragOver ? 'border-[color:color-mix(in_srgb,var(--cv-primary)_20%,transparent)]' : 'border-slate-200/70 dark:border-white/6'}`}>
-              {isDragOver && (
-                <div className="mb-2 mt-3 rounded-lg border-2 border-dashed border-[color:color-mix(in_srgb,var(--cv-primary)_35%,transparent)] bg-[var(--cv-primary-soft)] py-2">
-                  <p className="text-center text-sm text-[var(--cv-primary)]">
-                    ↓ {t('resumes.groupedView.dropHere')}
-                  </p>
+            <div className={`border-t px-4 py-5 sm:px-5 ${isDragOver ? 'border-[color:color-mix(in_srgb,var(--cv-primary)_20%,transparent)]' : 'border-slate-200/70 dark:border-white/6'}`}>
+              {isDragOver ? (
+                <div className="mb-4 rounded-[1.2rem] border-2 border-dashed border-[color:color-mix(in_srgb,var(--cv-primary)_35%,transparent)] bg-[var(--cv-primary-soft)] px-4 py-4">
+                  <p className="text-center text-sm font-medium text-[var(--cv-primary)]">↓ {t('resumes.groupedView.dropHere')}</p>
                 </div>
-              )}
-              {/* Missions section */}
-              {deal.missions && deal.missions.length > 0 && (
-                <div className="pt-4 mb-4">
-                  <h4 className="cv-subsection-title mb-3 flex items-center gap-1.5">
-                    <BriefcaseIcon className="icon-sm" />
-                    {t('resumes.groupedView.missions')} ({deal.missions.length})
-                  </h4>
+              ) : null}
+
+              {deal.missions && deal.missions.length > 0 ? (
+                <section>
+                  <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                      <h4 className="cv-subsection-title mb-1 flex items-center gap-1.5">
+                        <BriefcaseIcon className="h-4 w-4" />
+                        {t('resumes.groupedView.missions')} ({deal.missions.length})
+                      </h4>
+                      <p className="text-sm text-slate-500 dark:text-[#8f99b8]">
+                        {t('resumes.groupedView.missionsHint', { defaultValue: 'Les missions et adaptations associées à cette affaire restent accessibles en un coup d’œil.' })}
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="space-y-3">
-                    {deal.missions.map((mission, missionIndex) => (
-                      <div key={mission.id} className={`border border-indigo-100 dark:border-indigo-800/30 rounded-lg overflow-hidden ${
-                        missionIndex % 2 === 1 ? 'bg-indigo-50/50 dark:bg-indigo-900/5' : ''
-                      }`}>
-                        {/* Mission header */}
-                        <div
+                    {deal.missions.map((mission) => (
+                      <div key={mission.id} className="overflow-hidden rounded-[1.5rem] border border-slate-200/70 bg-white/70 dark:border-white/6 dark:bg-white/[0.03]">
+                        <button
+                          type="button"
                           onClick={() => navigate(`/missions/${mission.id}`)}
-                          className={`flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/20 transition-colors ${
-                            missionIndex % 2 === 1 ? 'bg-indigo-100/70 dark:bg-indigo-900/15' : 'bg-indigo-50 dark:bg-indigo-900/10'
-                          }`}
+                          className="flex w-full flex-col items-start justify-between gap-3 bg-[var(--cv-primary-soft)]/40 px-4 py-4 text-left transition-colors hover:bg-[var(--cv-primary-soft)]/70 sm:flex-row sm:items-center"
                         >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <BriefcaseIcon className="icon-md text-indigo-500" />
-                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{mission.title}</span>
-                            <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
-                              mission.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                              mission.status === 'closed' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                              'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                            }`}>
-                              {t(`missions.status.${mission.status || 'active'}`, mission.status)}
-                            </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-white/70 text-[var(--cv-primary)] dark:bg-white/[0.05]">
+                                <BriefcaseIcon className="h-4 w-4" />
+                              </span>
+                              <div className="min-w-0">
+                                <div className="truncate text-sm font-semibold text-slate-900 dark:text-[#dee5ff]">{mission.title}</div>
+                                <div className="mt-1 flex flex-wrap items-center gap-2">
+                                  <span className={`rounded-full px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] ${MISSION_STATUS_COLORS[mission.status] || MISSION_STATUS_COLORS.active}`}>
+                                    {t(`missions.status.${mission.status || 'active'}`, mission.status)}
+                                  </span>
+                                  <span className="text-xs text-slate-500 dark:text-[#8f99b8]">
+                                    {mission.adaptations_count || 0} {t('resumes.groupedView.adaptations')}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
-                            {mission.adaptations_count || 0} {t('resumes.groupedView.adaptations')}
-                          </span>
-                        </div>
-                        {/* Adaptations under this mission */}
-                        {mission.adaptations && mission.adaptations.length > 0 && (
-                          <div className="px-4 py-3 bg-white dark:bg-gray-800/50 space-y-2">
-                            {mission.adaptations.map((adaptation, adaptationIndex) => {
-                              const scoreColor = (adaptation.match_score || 0) >= 80
-                                ? 'text-green-600 dark:text-green-400'
-                                : (adaptation.match_score || 0) >= 60
-                                ? 'text-yellow-600 dark:text-yellow-400'
-                                : 'text-red-600 dark:text-red-400';
-                              const scoreBg = (adaptation.match_score || 0) >= 80
-                                ? 'bg-green-100 dark:bg-green-900/30'
-                                : (adaptation.match_score || 0) >= 60
-                                ? 'bg-yellow-100 dark:bg-yellow-900/30'
-                                : 'bg-red-100 dark:bg-red-900/30';
-                              const adaptationStriping = adaptationIndex % 2 === 1 
-                                ? 'bg-gray-100 dark:bg-gray-700/50' 
-                                : 'bg-gray-50 dark:bg-gray-700/30';
+                        </button>
+
+                        {mission.adaptations && mission.adaptations.length > 0 ? (
+                          <div className="space-y-2 border-t border-slate-200/70 px-4 py-4 dark:border-white/6">
+                            {mission.adaptations.map((adaptation) => {
+                              const matchScore = adaptation.match_score || 0;
+                              const scoreTone = matchScore >= 80
+                                ? 'text-[var(--cv-tertiary)] bg-[var(--cv-tertiary-soft)]'
+                                : matchScore >= 60
+                                  ? 'text-[var(--cv-warning)] bg-[var(--cv-warning-soft)]'
+                                  : 'text-[var(--cv-danger)] bg-[var(--cv-danger-soft)]';
+
                               return (
-                                <div
+                                <button
                                   key={adaptation.id}
-                                  onClick={(e) => { e.stopPropagation(); saveViewState(); navigate(`/adaptations/${adaptation.id}`, { state: { from: 'dealsGroupedView' } }); }}
-                                  className={`flex items-center justify-between px-4 py-3 ${adaptationStriping} border border-gray-100 dark:border-gray-700 rounded-md cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors`}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    saveViewState();
+                                    navigate(`/adaptations/${adaptation.id}`, { state: { from: 'dealsGroupedView' } });
+                                  }}
+                                  className="flex w-full flex-col items-start justify-between gap-3 rounded-[1rem] border border-slate-200/70 bg-slate-50/90 px-4 py-3 text-left transition-colors hover:bg-slate-100 dark:border-white/6 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] sm:flex-row sm:items-center"
                                 >
-                                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                                    <DocumentTextIcon className="icon-sm text-blue-500" />
-                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                                      {adaptation.resume_name || adaptation.candidate_name || t('adaptations.card.noName')}
-                                    </span>
-                                    {adaptation.adapted_title && (
-                                      <span className="text-xs text-blue-600 dark:text-blue-400 italic truncate max-w-[200px]">
-                                        {adaptation.adapted_title}
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <DocumentTextIcon className="h-4 w-4 flex-shrink-0 text-[var(--cv-secondary)]" />
+                                      <span className="truncate text-sm font-medium text-slate-900 dark:text-[#dee5ff]">
+                                        {adaptation.resume_name || adaptation.candidate_name || t('adaptations.card.noName')}
                                       </span>
-                                    )}
+                                    </div>
+                                    {adaptation.adapted_title ? (
+                                      <p className="mt-1 truncate pl-6 text-xs italic text-slate-500 dark:text-[#8f99b8]">{adaptation.adapted_title}</p>
+                                    ) : null}
                                   </div>
-                                  <div className="flex items-center gap-2 flex-shrink-0">
-                                    {adaptation.match_score != null && (
-                                      <span className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-semibold ${scoreBg} ${scoreColor}`}>
-                                        <ChartBarIcon className="icon-xs" />
+
+                                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                                    {adaptation.match_score != null ? (
+                                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${scoreTone}`}>
+                                        <ChartBarIcon className="h-3.5 w-3.5" />
                                         {adaptation.match_score}%
                                       </span>
-                                    )}
-                                    <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
-                                      adaptation.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                      adaptation.status === 'failed' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                                      'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                                    }`}>
+                                    ) : null}
+                                    <span className={`rounded-full px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] ${ADAPTATION_STATUS_COLORS[adaptation.status] || ADAPTATION_STATUS_COLORS.default}`}>
                                       {t(`adaptations.status.${adaptation.status || 'completed'}`, adaptation.status)}
                                     </span>
                                   </div>
-                                </div>
+                                </button>
                               );
                             })}
                           </div>
-                        )}
+                        ) : null}
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                </section>
+              ) : null}
 
-              {/* Resumes section */}
               {deal.resumes.length === 0 && !isDragOver && (!deal.missions || deal.missions.length === 0) ? (
-                <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-6">
-                  {t('resumes.groupedView.noResumes')}
-                </p>
+                <div className="rounded-[1.4rem] border border-dashed border-slate-300 px-4 py-10 text-center dark:border-white/10">
+                  <FolderPlusIcon className="mx-auto mb-3 h-10 w-10 text-slate-400 dark:text-[#7f8ab0]" />
+                  <p className="text-sm text-slate-500 dark:text-[#a3aac4]">{t('resumes.groupedView.noResumes')}</p>
+                </div>
               ) : deal.resumes.length > 0 ? (
-                <div className="space-y-3 pt-4">
-                  {deal.resumes.length > 0 && deal.missions && deal.missions.length > 0 && (
-                    <h4 className="cv-subsection-title cv-subsection-title-secondary mb-2 flex items-center gap-1.5">
-                      <DocumentTextIcon className="icon-sm" />
-                      {t('resumes.groupedView.cvs')} ({deal.resumes.length})
-                    </h4>
-                  )}
+                <section className={`${deal.missions && deal.missions.length > 0 ? 'mt-6' : ''}`}>
+                  <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                      <h4 className="cv-subsection-title cv-subsection-title-secondary mb-1 flex items-center gap-1.5">
+                        <DocumentTextIcon className="h-4 w-4" />
+                        {t('resumes.groupedView.cvs')} ({deal.resumes.length})
+                      </h4>
+                      <p className="text-sm text-slate-500 dark:text-[#8f99b8]">
+                        {t('resumes.groupedView.resumeHint', { defaultValue: 'Les profils rattachés à cette affaire restent manipulables, téléchargeables et prévisualisables sans quitter la vue.' })}
+                      </p>
+                    </div>
+                  </div>
+
                   {(() => {
                     const isFullyExpanded = expandedResumeSections.has(deal.id);
                     const displayedResumes = isFullyExpanded ? deal.resumes : deal.resumes.slice(0, INITIAL_RESUMES_LIMIT);
                     const hiddenCount = deal.resumes.length - INITIAL_RESUMES_LIMIT;
                     return (
-                      <>
+                      <div className="space-y-3">
                         {displayedResumes.map((resume, index) => renderResumeCard(resume, index))}
-                        {!isFullyExpanded && hiddenCount > 0 && (
+                        {!isFullyExpanded && hiddenCount > 0 ? (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              setExpandedResumeSections(prev => new Set([...prev, deal.id]));
+                              setExpandedResumeSections((prev) => new Set([...prev, deal.id]));
                             }}
-                            className="w-full py-3 mt-4 text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors font-medium"
+                            className="inline-flex w-full items-center justify-center gap-2 rounded-[1.1rem] border border-slate-200 bg-white/70 px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-white/8 dark:bg-white/[0.03] dark:text-[#dee5ff] dark:hover:bg-white/[0.05]"
                           >
                             {t('resumes.groupedView.showMore', { count: hiddenCount })}
                           </button>
-                        )}
-                        {isFullyExpanded && deal.resumes.length > INITIAL_RESUMES_LIMIT && (
+                        ) : null}
+                        {isFullyExpanded && deal.resumes.length > INITIAL_RESUMES_LIMIT ? (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              setExpandedResumeSections(prev => {
+                              setExpandedResumeSections((prev) => {
                                 const next = new Set(prev);
                                 next.delete(deal.id);
                                 return next;
                               });
                             }}
-                            className="w-full py-3 mt-4 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/30 rounded-lg transition-colors"
+                            className="inline-flex w-full items-center justify-center gap-2 rounded-[1.1rem] border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700 dark:border-white/10 dark:text-[#a3aac4] dark:hover:bg-white/[0.05] dark:hover:text-[#dee5ff]"
                           >
                             {t('resumes.groupedView.showLess')}
                           </button>
-                        )}
-                      </>
+                        ) : null}
+                      </div>
                     );
                   })()}
-                </div>
+                </section>
               ) : null}
             </div>
           </motion.div>
