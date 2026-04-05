@@ -63,4 +63,24 @@ describe('resumeDocumentPayload', () => {
       format: 'docx',
     });
   });
+
+  it('normalizes extracted full-document header and footer fragments before export', () => {
+    const extractedTemplate = {
+      TemplateContent: '<main>-content-</main>',
+      HeaderContent: '<html><head><style>.x{color:red}</style></head><body><div>noise</div><header><div>-name-</div></header></body></html>',
+      FooterContent: '<html><body><section>noise</section><footer><div>-title-</div></footer></body></html>',
+      FooterHeight: 25,
+      Stylesheet: '<style>body { color: red; }</style>',
+    };
+
+    expect(buildExportPayload(resume as never, extractedTemplate, 'pdf')).toEqual({
+      htmlContent: '<main>Improved profile</main>',
+      filename: 'Jane_Doe.pdf',
+      stylesheet: 'body { color: red; }',
+      headerContent: '<header><div>Jane Doe</div></header>',
+      footerContent: '<footer><div>Engineer</div></footer>',
+      footerHeight: 25,
+      format: 'pdf',
+    });
+  });
 });

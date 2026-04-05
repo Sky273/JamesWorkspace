@@ -8,6 +8,7 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
+const { randomUUID } = require('crypto');
 
 const logger = require('./lib/logger.cjs');
 const pdfGen = require('./lib/pdfGenerator.cjs');
@@ -139,11 +140,37 @@ function isTimeoutAbort(signal, error) {
   return message.toLowerCase().includes('timed out');
 }
 
+function getRequestDebugId(req) {
+  const headerValue = req.headers['x-request-id'];
+  if (typeof headerValue === 'string' && headerValue.trim()) {
+    return headerValue.trim();
+  }
+  if (Array.isArray(headerValue) && typeof headerValue[0] === 'string' && headerValue[0].trim()) {
+    return headerValue[0].trim();
+  }
+  return randomUUID();
+}
+
+function buildRequestDebugContext(req, filename) {
+  return {
+    requestId: getRequestDebugId(req),
+    filename,
+    htmlLength: typeof req.body?.htmlContent === 'string' ? req.body.htmlContent.length : 0,
+    stylesheetLength: typeof req.body?.stylesheet === 'string' ? req.body.stylesheet.length : 0,
+    headerLength: typeof req.body?.headerContent === 'string' ? req.body.headerContent.length : 0,
+    footerLength: typeof req.body?.footerContent === 'string' ? req.body.footerContent.length : 0,
+    hasFooter: Boolean(req.body?.footerContent && String(req.body.footerContent).trim()),
+    footerHeight: Number.isFinite(req.body?.footerHeight) ? req.body.footerHeight : null
+  };
+}
+
 app.post('/generate-pdf', internalServiceAuthMiddleware, requestTimeoutMiddleware, rateLimitMiddleware, generationCapacityMiddleware, validatePdfRequest, async (req, res) => {
   const { htmlContent, filename, stylesheet, headerContent, footerContent, footerHeight } = req.body;
   const startTime = Date.now();
   const abortSignal = req.generationAbortSignal;
   const cleanupAbortContext = req.generationAbortCleanup;
+  const debugContext = buildRequestDebugContext(req, filename);
+  res.setHeader('x-pdf-debug-id', debugContext.requestId);
 
   try {
     const pdfBuffer = await requestCoordinator.withGenerationSlot(() => pdfGen.generatePdf({
@@ -153,6 +180,7 @@ app.post('/generate-pdf', internalServiceAuthMiddleware, requestTimeoutMiddlewar
       footerContent,
       footerHeight,
       filename,
+      requestId: debugContext.requestId,
       signal: abortSignal
     }));
 
@@ -167,7 +195,7 @@ app.post('/generate-pdf', internalServiceAuthMiddleware, requestTimeoutMiddlewar
 
     const duration = Date.now() - startTime;
     logger.log('info', 'PDF generated successfully', {
-      filename,
+      ...debugContext,
       duration: `${duration}ms`,
       size: `${Math.round(pdfBuffer.length / 1024)}KB`
     });
@@ -179,7 +207,7 @@ app.post('/generate-pdf', internalServiceAuthMiddleware, requestTimeoutMiddlewar
     if (isAbortError(error) || isTimeoutAbort(abortSignal, error)) {
       const duration = Date.now() - startTime;
       logger.log('warn', 'PDF generation aborted', {
-        filename,
+        ...debugContext,
         duration: `${duration}ms`,
         reason: abortSignal?.reason?.message || error.message
       });
@@ -191,8 +219,8 @@ app.post('/generate-pdf', internalServiceAuthMiddleware, requestTimeoutMiddlewar
 
     const duration = Date.now() - startTime;
     logger.log('error', 'Error generating PDF', {
+      ...debugContext,
       error: error.message,
-      filename,
       duration: `${duration}ms`,
       stack: error.stack?.split('\n').slice(0, 3).join(' -> ')
     });
@@ -209,6 +237,8 @@ app.post('/generate-docx', internalServiceAuthMiddleware, requestTimeoutMiddlewa
   const startTime = Date.now();
   const abortSignal = req.generationAbortSignal;
   const cleanupAbortContext = req.generationAbortCleanup;
+  const debugContext = buildRequestDebugContext(req, filename);
+  res.setHeader('x-pdf-debug-id', debugContext.requestId);
 
   try {
     const outputFormat = format === 'doc' ? 'doc' : 'docx';
@@ -236,6 +266,7 @@ app.post('/generate-docx', internalServiceAuthMiddleware, requestTimeoutMiddlewa
 
     const duration = Date.now() - startTime;
     logger.log('info', `${outputFormat.toUpperCase()} generated successfully`, {
+      ...debugContext,
       filename: sanitizedFilename,
       duration: `${duration}ms`,
       size: `${Math.round(docxBuffer.length / 1024)}KB`
@@ -248,7 +279,7 @@ app.post('/generate-docx', internalServiceAuthMiddleware, requestTimeoutMiddlewa
     if (isAbortError(error) || isTimeoutAbort(abortSignal, error)) {
       const duration = Date.now() - startTime;
       logger.log('warn', 'DOCX generation aborted', {
-        filename,
+        ...debugContext,
         duration: `${duration}ms`,
         reason: abortSignal?.reason?.message || error.message
       });
@@ -260,8 +291,8 @@ app.post('/generate-docx', internalServiceAuthMiddleware, requestTimeoutMiddlewa
 
     const duration = Date.now() - startTime;
     logger.log('error', 'Error generating DOCX', {
+      ...debugContext,
       error: error.message,
-      filename,
       duration: `${duration}ms`,
       stack: error.stack?.split('\n').slice(0, 3).join(' -> ')
     });

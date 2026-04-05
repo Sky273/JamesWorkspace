@@ -13,6 +13,12 @@ import { createSafeHtml } from '../utils/sanitizer.frontend';
 import { useTranslation } from 'react-i18next';
 import { createAuthOptionsWithCsrf, fetchWithCsrfRetry } from '../utils/apiInterceptor';
 import { removeSuggestionMarkers } from './TiptapEditor';
+import {
+  applyTemplatePlaceholders,
+  normalizeTemplateFragment,
+  normalizeTemplateStylesheet,
+  summarizeTemplatePayload,
+} from '../utils/templateFragments';
 
 interface Template {
   id: string;
@@ -73,27 +79,26 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
       const title = candidateTitle || 'Titre Professionnel';
       const simplifiedFilename = name.replace(/[^a-zA-Z]/g, '_') + '_adapted.pdf';
 
-      const stylesheet = template.Stylesheet || '';
-      
-      // Process body content
-      let processedBody = template.TemplateContent || '';
-      processedBody = processedBody.replace(/-name-/g, name);
-      processedBody = processedBody.replace(/-title-/g, title);
-      processedBody = processedBody.replace(/-content-/g, content);
-      
-      // Process header content (if exists)
-      let processedHeader = template.HeaderContent || '';
-      if (processedHeader) {
-        processedHeader = processedHeader.replace(/-name-/g, name);
-        processedHeader = processedHeader.replace(/-title-/g, title);
-      }
-      
-      // Process footer content (if exists)
-      let processedFooter = template.FooterContent || '';
-      if (processedFooter) {
-        processedFooter = processedFooter.replace(/-name-/g, name);
-        processedFooter = processedFooter.replace(/-title-/g, title);
-      }
+      const stylesheet = normalizeTemplateStylesheet(template.Stylesheet);
+      const processedBody = applyTemplatePlaceholders(template.TemplateContent, {
+        name,
+        title,
+        content,
+      });
+      const processedHeader = applyTemplatePlaceholders(
+        normalizeTemplateFragment(template.HeaderContent, 'header'),
+        { name, title }
+      );
+      const processedFooter = applyTemplatePlaceholders(
+        normalizeTemplateFragment(template.FooterContent, 'footer'),
+        { name, title }
+      );
+      logger.warn('Adaptation PDF export payload normalized', {
+        templateId: template.id,
+        filename: simplifiedFilename,
+        htmlLength: processedBody.length,
+        ...summarizeTemplatePayload(template),
+      });
 
       const exportOptions = await createAuthOptionsWithCsrf({
         method: 'POST',

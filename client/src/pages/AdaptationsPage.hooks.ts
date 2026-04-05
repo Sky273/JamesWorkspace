@@ -10,6 +10,12 @@ import logger from '../utils/logger.frontend';
 import resumeAdaptationService from '../utils/resumeAdaptationService';
 import { templateService } from '../utils/templateService';
 import { removeSuggestionMarkers } from '../components/TiptapEditor';
+import {
+  applyTemplatePlaceholders,
+  normalizeTemplateFragment,
+  normalizeTemplateStylesheet,
+  summarizeTemplatePayload,
+} from '../utils/templateFragments';
 
 export interface Adaptation {
   id: string;
@@ -257,24 +263,26 @@ export function useAdaptationsDashboard() {
         : candidateName;
 
       const baseFilename = customerName ? `${exportName}_${customerName}` : exportName;
-      const stylesheet = template.Stylesheet || '';
-
-      let processedBody = template.TemplateContent || '';
-      processedBody = processedBody.replace(/-name-/g, candidateName);
-      processedBody = processedBody.replace(/-title-/g, candidateTitle);
-      processedBody = processedBody.replace(/-content-/g, content);
-
-      let processedHeader = template.HeaderContent || '';
-      if (processedHeader) {
-        processedHeader = processedHeader.replace(/-name-/g, candidateName);
-        processedHeader = processedHeader.replace(/-title-/g, candidateTitle);
-      }
-
-      let processedFooter = template.FooterContent || '';
-      if (processedFooter) {
-        processedFooter = processedFooter.replace(/-name-/g, candidateName);
-        processedFooter = processedFooter.replace(/-title-/g, candidateTitle);
-      }
+      const stylesheet = normalizeTemplateStylesheet(template.Stylesheet);
+      const processedBody = applyTemplatePlaceholders(template.TemplateContent, {
+        name: candidateName,
+        title: candidateTitle,
+        content,
+      });
+      const processedHeader = applyTemplatePlaceholders(
+        normalizeTemplateFragment(template.HeaderContent, 'header'),
+        { name: candidateName, title: candidateTitle }
+      );
+      const processedFooter = applyTemplatePlaceholders(
+        normalizeTemplateFragment(template.FooterContent, 'footer'),
+        { name: candidateName, title: candidateTitle }
+      );
+      logger.warn('PDF export payload normalized', {
+        templateId: template.id,
+        filename: `${baseFilename.replace(/[^a-zA-Z0-9_]/g, '')}.pdf`,
+        htmlLength: processedBody.length,
+        ...summarizeTemplatePayload(template),
+      });
 
       const exportOptions = await createAuthOptionsWithCsrf({
         method: 'POST',

@@ -19,7 +19,8 @@ const {
     parseBorderStyle, buildBorderXml,
     convertTableToOoxml, convertBlocksToOoxml, buildFlexParagraph,
     htmlToOoxml, buildPandocHtml,
-    extractHeaderBorder, injectHeaderIntoDocx
+    extractHeaderBorder, injectHeaderIntoDocx,
+    getLibreOfficeConvertFilter, buildLibreOfficeConvertArgs
   }
 } = require('../../lib/docxGenerator.cjs');
 
@@ -47,6 +48,32 @@ describe('DOCX Generator – Public API', () => {
       expect(getDocExtension('doc')).toBe('.doc');
     });
 
+  });
+});
+
+describe('LibreOffice DOC conversion args', () => {
+  it('builds an unquoted DOC filter for execFile/soffice', () => {
+    expect(getLibreOfficeConvertFilter('doc')).toBe('doc:MS Word 97');
+  });
+
+  it('builds an unquoted DOCX filter for execFile/soffice', () => {
+    expect(getLibreOfficeConvertFilter('docx')).toBe('docx:Office Open XML Text');
+  });
+
+  it('builds the expected soffice argument list for DOC conversion', () => {
+    expect(buildLibreOfficeConvertArgs({
+      outputFormat: 'doc',
+      tempDir: '/tmp/out',
+      inputFilePath: '/tmp/input.pdf'
+    })).toEqual([
+      '--headless',
+      '--infilter=writer_pdf_import',
+      '--convert-to',
+      'doc:MS Word 97',
+      '--outdir',
+      '/tmp/out',
+      '/tmp/input.pdf'
+    ]);
   });
 });
 

@@ -1,4 +1,9 @@
 import { formatDate } from '../utils/dateFormatter';
+import {
+  applyTemplatePlaceholders,
+  normalizeTemplateFragment,
+  normalizeTemplateStylesheet,
+} from '../utils/templateFragments';
 import type { Adaptation, Template } from './AdaptationViewPage.types';
 
 export function formatAdaptationDate(dateString: string | undefined, language: string): string {
@@ -28,22 +33,15 @@ export function buildTemplateHtml(
   const name = getAdaptationName(adaptation);
   const title = getAdaptationTitle(adaptation);
 
-  let processedBody = template.TemplateContent || '';
-  processedBody = processedBody.replace(/-name-/g, name);
-  processedBody = processedBody.replace(/-title-/g, title);
-  processedBody = processedBody.replace(/-content-/g, content);
-
-  let processedHeader = template.HeaderContent || '';
-  if (processedHeader) {
-    processedHeader = processedHeader.replace(/-name-/g, name);
-    processedHeader = processedHeader.replace(/-title-/g, title);
-  }
-
-  let processedFooter = template.FooterContent || '';
-  if (processedFooter) {
-    processedFooter = processedFooter.replace(/-name-/g, name);
-    processedFooter = processedFooter.replace(/-title-/g, title);
-  }
+  const processedBody = applyTemplatePlaceholders(template.TemplateContent, { name, title, content });
+  const processedHeader = applyTemplatePlaceholders(
+    normalizeTemplateFragment(template.HeaderContent, 'header'),
+    { name, title }
+  );
+  const processedFooter = applyTemplatePlaceholders(
+    normalizeTemplateFragment(template.FooterContent, 'footer'),
+    { name, title }
+  );
 
   return { processedBody, processedHeader, processedFooter, name, title };
 }
@@ -52,19 +50,19 @@ export function buildEmailAttachmentHtml(template: Template, adaptation: Adaptat
   htmlContent: string;
   filenameBase: string;
 } {
-  const { processedBody, name, title } = buildTemplateHtml(template, adaptation, content);
+  const { processedBody, processedHeader, processedFooter, name, title } = buildTemplateHtml(template, adaptation, content);
 
   const htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="UTF-8">
-      <style>${template.Stylesheet || ''}</style>
+      <style>${normalizeTemplateStylesheet(template.Stylesheet)}</style>
     </head>
     <body>
-      ${template.HeaderContent || ''}
+      ${processedHeader}
       ${processedBody}
-      ${template.FooterContent || ''}
+      ${processedFooter}
     </body>
     </html>
   `;

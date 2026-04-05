@@ -26,6 +26,12 @@ import ResumeComments from '../components/ResumeComments';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
 import { FRONTEND_LLM_AI_MODIFICATION_TIMEOUT_MS } from '../constants/llmTimeouts';
 import {
+  applyTemplatePlaceholders,
+  normalizeTemplateFragment,
+  normalizeTemplateStylesheet,
+  summarizeTemplatePayload,
+} from '../utils/templateFragments';
+import {
   DeferredTiptapEditor as TiptapEditor,
   parseSuggestions,
   removeSuggestionMarkers,
@@ -215,22 +221,25 @@ const ResumeImprovePage = (): JSX.Element => {
       const candidateName = localResume['Name'] || 'Candidat';
       const candidateTitle = localResume['Title'] || '';
       
-      let processedBody = template.TemplateContent || '';
-      processedBody = processedBody.replace(/-name-/g, candidateName);
-      processedBody = processedBody.replace(/-title-/g, candidateTitle);
-      processedBody = processedBody.replace(/-content-/g, content);
-      
-      let processedHeader = template.HeaderContent || '';
-      if (processedHeader) {
-        processedHeader = processedHeader.replace(/-name-/g, candidateName);
-        processedHeader = processedHeader.replace(/-title-/g, candidateTitle);
-      }
-      
-      let processedFooter = template.FooterContent || '';
-      if (processedFooter) {
-        processedFooter = processedFooter.replace(/-name-/g, candidateName);
-        processedFooter = processedFooter.replace(/-title-/g, candidateTitle);
-      }
+      const processedBody = applyTemplatePlaceholders(template.TemplateContent, {
+        name: candidateName,
+        title: candidateTitle,
+        content,
+      });
+      const processedHeader = applyTemplatePlaceholders(
+        normalizeTemplateFragment(template.HeaderContent, 'header'),
+        { name: candidateName, title: candidateTitle }
+      );
+      const processedFooter = applyTemplatePlaceholders(
+        normalizeTemplateFragment(template.FooterContent, 'footer'),
+        { name: candidateName, title: candidateTitle }
+      );
+      logger.warn('Resume share payload normalized', {
+        templateId: template.id,
+        filename: candidateName.replace(/\s+/g, '_'),
+        htmlLength: processedBody.length,
+        ...summarizeTemplatePayload(template),
+      });
       
       // Generate and store the PDF
       const options = await createAuthOptionsWithCsrf({
@@ -243,7 +252,7 @@ const ResumeImprovePage = (): JSX.Element => {
         body: JSON.stringify({
           htmlContent: processedBody,
           filename: candidateName.replace(/\s+/g, '_'),
-          stylesheet: template.Stylesheet || '',
+          stylesheet: normalizeTemplateStylesheet(template.Stylesheet),
           headerContent: processedHeader || undefined,
           footerContent: processedFooter || undefined,
           footerHeight: template.FooterHeight || 25

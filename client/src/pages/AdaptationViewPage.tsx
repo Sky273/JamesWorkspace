@@ -15,6 +15,7 @@ import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
 import i18n from '../i18n';
 import { removeSuggestionMarkers } from '../components/TiptapEditor';
+import { normalizeTemplateStylesheet, summarizeTemplatePayload } from '../utils/templateFragments';
 import AdaptationHeader from './AdaptationHeader';
 import AdaptationExportModal from './AdaptationExportModal';
 import {
@@ -204,6 +205,12 @@ const AdaptationViewPage = (): JSX.Element => {
         adaptation,
         content,
       );
+      logger.warn('Adaptation view PDF export payload normalized', {
+        templateId: template.id,
+        filename: `${name.replace(/[^a-zA-Z]/g, '_')}_adapted.pdf`,
+        htmlLength: processedBody.length,
+        ...summarizeTemplatePayload(template),
+      });
 
       const exportOptions = await createAuthOptionsWithCsrf({
         method: 'POST',
@@ -211,7 +218,7 @@ const AdaptationViewPage = (): JSX.Element => {
         body: JSON.stringify({
           htmlContent: processedBody,
           filename: `${name.replace(/[^a-zA-Z]/g, '_')}_adapted.pdf`,
-          stylesheet: template.Stylesheet || '',
+          stylesheet: normalizeTemplateStylesheet(template.Stylesheet),
           headerContent: processedHeader || undefined,
           footerContent: processedFooter || undefined,
           footerHeight: template.FooterHeight || 25,

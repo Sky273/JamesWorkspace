@@ -7,7 +7,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
-const { buildPuppeteerHtml, buildPuppeteerFooter } = require('../../lib/htmlBuilder.cjs');
+const {
+  buildPuppeteerHtml,
+  buildPuppeteerFooter,
+  normalizeInlineFooterContent,
+  normalizePuppeteerFooterContent
+} = require('../../lib/htmlBuilder.cjs');
 
 describe('HTML Builder', () => {
   describe('buildPuppeteerHtml()', () => {
@@ -77,6 +82,18 @@ describe('HTML Builder', () => {
       const html = buildPuppeteerHtml({ htmlContent: '<p>X</p>', stylesheet: '', hasFooter: false });
       expect(html).toContain('-webkit-print-color-adjust: exact');
     });
+
+    it('should inline footer content in the body when requested', () => {
+      const html = buildPuppeteerHtml({
+        htmlContent: '<p>X</p>',
+        stylesheet: '',
+        footerContent: '<p>Footer</p>',
+        hasFooter: true,
+        inlineFooter: true
+      });
+      expect(html).toContain('<footer class="pdf-footer"><p>Footer</p></footer>');
+      expect(html).toContain('margin-bottom: 0mm');
+    });
   });
 
   describe('buildPuppeteerFooter()', () => {
@@ -131,6 +148,27 @@ describe('HTML Builder', () => {
       expect(result).toContain('<table>');
       expect(result).toContain('Left');
       expect(result).toContain('Right');
+    });
+
+    it('should strip full-document wrappers before building the native footer template', () => {
+      const result = buildPuppeteerFooter('<html><head><style>.x{color:red}</style></head><body><footer><p>Footer</p></footer></body></html>');
+      expect(result).not.toContain('<html>');
+      expect(result).not.toContain('<style>.x{color:red}</style>');
+      expect(result).toContain('<footer><p>Footer</p></footer>');
+    });
+  });
+
+  describe('normalizeInlineFooterContent()', () => {
+    it('removes page counters for inline fallback rendering', () => {
+      expect(normalizeInlineFooterContent('<p>Page -pageNumber- / -totalPages-</p>'))
+        .toBe('<p>Page  / </p>');
+    });
+  });
+
+  describe('normalizePuppeteerFooterContent()', () => {
+    it('extracts body content from a full HTML footer fragment', () => {
+      expect(normalizePuppeteerFooterContent('<html><body><div>Footer</div></body></html>'))
+        .toBe('<div>Footer</div>');
     });
   });
 });

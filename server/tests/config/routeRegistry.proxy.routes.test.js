@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import express from 'express';
 import request from 'supertest';
+import { safeLog } from '../../utils/logger.backend.js';
 
 process.env.PDF_SERVER_INTERNAL_TOKEN = 'test-pdf-server-internal-token-minimum-32-chars';
 
@@ -105,7 +106,8 @@ describe('Proxy Routes', () => {
         mockFetch.mockResolvedValueOnce({
             ok: true,
             headers: new Headers({
-                'Content-Disposition': 'attachment; filename="test.pdf"'
+                'Content-Disposition': 'attachment; filename="test.pdf"',
+                'x-pdf-debug-id': 'pdf-debug-123'
             }),
             arrayBuffer: () => Promise.resolve(new TextEncoder().encode('pdf').buffer)
         });
@@ -127,6 +129,7 @@ describe('Proxy Routes', () => {
         expect(mockUserRateLimit).toHaveBeenCalledWith(20, 15 * 60 * 1000);
         expect(mockFetch).toHaveBeenCalledTimes(1);
         expect(mockFetch.mock.calls[0][1].headers['x-internal-service-token']).toBeDefined();
+        expect(mockFetch.mock.calls[0][1].headers['x-request-id']).toBeTruthy();
 
         const forwardedBody = JSON.parse(mockFetch.mock.calls[0][1].body);
         expect(forwardedBody.filename).toBe('my_evil_file.pdf');
@@ -141,6 +144,7 @@ describe('Proxy Routes', () => {
         expect(forwardedBody.footerHeight).toBe(25);
         expect(forwardedBody.format).toBeUndefined();
         expect(res.headers['content-type']).toContain('application/pdf');
+        expect(res.headers['x-pdf-debug-id']).toBe('pdf-debug-123');
         expect(res.headers['x-content-type-options']).toBe('nosniff');
         expect(res.headers['cache-control']).toBe('private, no-store, max-age=0');
     });
@@ -222,6 +226,9 @@ describe('Proxy Routes', () => {
         mockFetch.mockResolvedValueOnce({
             ok: false,
             status: 500,
+            headers: new Headers({
+                'x-pdf-debug-id': 'pdf-debug-500'
+            }),
             text: () => Promise.resolve('wkhtmltopdf failed on /srv/render/tmp/file.html')
         });
 
@@ -235,6 +242,13 @@ describe('Proxy Routes', () => {
 
         expect(res.status).toBe(500);
         expect(res.body).toEqual({ error: 'Failed to generate PDF' });
+        expect(res.headers['x-pdf-debug-id']).toBe('pdf-debug-500');
+        expect(safeLog).toHaveBeenCalledWith('error', 'PDF server error', expect.objectContaining({
+            requestId: expect.any(String),
+            upstreamDebugId: 'pdf-debug-500',
+            filename: 'resume.pdf',
+            htmlLength: '<p>boom</p>'.length
+        }));
     });
 
     it('sanitizes upstream DOCX authorization errors', async () => {
@@ -242,6 +256,7 @@ describe('Proxy Routes', () => {
         mockFetch.mockResolvedValueOnce({
             ok: false,
             status: 403,
+            headers: new Headers(),
             text: () => Promise.resolve('internal token mismatch')
         });
 

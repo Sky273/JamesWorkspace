@@ -246,9 +246,10 @@ describe('PDF Server', () => {
     it('should pass all options to generatePdf', async () => {
       pdfGen.generatePdf.mockResolvedValue(Buffer.from('fake'));
 
-      await request(app)
+      const res = await request(app)
         .post('/generate-pdf')
         .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
+        .set('x-request-id', 'proxy-request-123')
         .send({
           htmlContent: '<p>Body</p>',
           filename: 'test.pdf',
@@ -259,6 +260,7 @@ describe('PDF Server', () => {
         });
 
       expect(pdfGen.generatePdf).toHaveBeenCalledWith(expect.objectContaining({
+        requestId: 'proxy-request-123',
         htmlContent: '<p>Body</p>',
         filename: 'test.pdf',
         stylesheet: '.cls{color:red}',
@@ -266,6 +268,7 @@ describe('PDF Server', () => {
         footerContent: '<p>Footer</p>',
         footerHeight: 30
       }));
+      expect(res.headers['x-pdf-debug-id']).toBe('proxy-request-123');
     });
 
     it('should return 413 when generated PDF exceeds size limit', async () => {
@@ -292,6 +295,12 @@ describe('PDF Server', () => {
       expect(res.status).toBe(500);
       expect(res.body.error).toContain('Failed to generate PDF');
       expect(res.body.details).toBeUndefined();
+      expect(res.headers['x-pdf-debug-id']).toBeTruthy();
+      expect(logger.log).toHaveBeenCalledWith('error', 'Error generating PDF', expect.objectContaining({
+        requestId: expect.any(String),
+        filename: 'test.pdf',
+        htmlLength: '<p>X</p>'.length
+      }));
     });
 
     it('should return 504 on timeout error', async () => {

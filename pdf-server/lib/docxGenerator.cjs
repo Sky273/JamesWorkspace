@@ -225,16 +225,11 @@ async function generateDocViaPdf({ htmlContent, stylesheet, headerContent, foote
     pdfBuffer = null;
     throwIfAborted(signal);
 
-    const outputFilter = outputFormat === 'docx' ? 'docx:"Office Open XML Text"' : 'doc:"MS Word 97"';
-    const libreOfficeArgs = [
-      '--headless',
-      '--infilter=writer_pdf_import',
-      '--convert-to',
-      outputFilter,
-      '--outdir',
+    const libreOfficeArgs = buildLibreOfficeConvertArgs({
+      outputFormat,
       tempDir,
-      pdfFilePath
-    ];
+      inputFilePath: pdfFilePath
+    });
 
     log('debug', `LibreOffice PDF to ${outputFormat.toUpperCase()} conversion`, {
       command: 'soffice',
@@ -303,6 +298,24 @@ function getDocExtension(format) {
   return format === 'doc' ? '.doc' : '.docx';
 }
 
+function getLibreOfficeConvertFilter(outputFormat) {
+  return outputFormat === 'docx'
+    ? 'docx:Office Open XML Text'
+    : 'doc:MS Word 97';
+}
+
+function buildLibreOfficeConvertArgs({ outputFormat, tempDir, inputFilePath }) {
+  return [
+    '--headless',
+    '--infilter=writer_pdf_import',
+    '--convert-to',
+    getLibreOfficeConvertFilter(outputFormat),
+    '--outdir',
+    tempDir,
+    inputFilePath
+  ];
+}
+
 module.exports = {
   generateDocx,
   getDocMimeType,
@@ -335,6 +348,8 @@ module.exports = {
     cleanupTempFiles,
     createTempArtifactPaths,
     runExternalCommand,
+    getLibreOfficeConvertFilter,
+    buildLibreOfficeConvertArgs,
     getDefaultOoxmlContextFromStylesheet,
     injectHtmlPartIntoDocx
   }

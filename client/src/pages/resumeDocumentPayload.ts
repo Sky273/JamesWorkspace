@@ -1,6 +1,11 @@
 import { removeSuggestionMarkers } from '../components/TiptapEditor';
 import type { Resume } from '../types/entities';
 import type { ExportFormat } from '../components/ResumeAnalysis/ExportTab';
+import {
+  applyTemplatePlaceholders,
+  normalizeTemplateFragment,
+  normalizeTemplateStylesheet,
+} from '../utils/templateFragments';
 
 interface TemplateLike {
   TemplateContent?: string;
@@ -41,29 +46,26 @@ export function processResumeTemplate(
   const candidateName = (resume['Name'] as string) || 'Candidat';
   const candidateTitle = (resume['Title'] as string) || '';
 
-  let processedBody = String(template.TemplateContent || '');
-  processedBody = processedBody.replace(/-name-/g, candidateName);
-  processedBody = processedBody.replace(/-title-/g, candidateTitle);
-  processedBody = processedBody.replace(/-content-/g, content);
-
-  let processedHeader = String(template.HeaderContent || '');
-  if (processedHeader) {
-    processedHeader = processedHeader.replace(/-name-/g, candidateName);
-    processedHeader = processedHeader.replace(/-title-/g, candidateTitle);
-  }
-
-  let processedFooter = String(template.FooterContent || '');
-  if (processedFooter) {
-    processedFooter = processedFooter.replace(/-name-/g, candidateName);
-    processedFooter = processedFooter.replace(/-title-/g, candidateTitle);
-  }
+  const processedBody = applyTemplatePlaceholders(template.TemplateContent, {
+    name: candidateName,
+    title: candidateTitle,
+    content,
+  });
+  const processedHeader = applyTemplatePlaceholders(
+    normalizeTemplateFragment(template.HeaderContent, 'header'),
+    { name: candidateName, title: candidateTitle }
+  );
+  const processedFooter = applyTemplatePlaceholders(
+    normalizeTemplateFragment(template.FooterContent, 'footer'),
+    { name: candidateName, title: candidateTitle }
+  );
 
   return {
     body: processedBody,
     headerContent: processedHeader || undefined,
     footerContent: processedFooter || undefined,
     footerHeight: Number(template.FooterHeight || 25),
-    stylesheet: String(template.Stylesheet || ''),
+    stylesheet: normalizeTemplateStylesheet(template.Stylesheet),
     candidateName,
   };
 }

@@ -12,6 +12,11 @@ import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import logger from '../utils/logger.frontend';
 import AdminFirmSelector from '../components/AdminFirmSelector';
+import {
+  normalizeTemplateFragment,
+  normalizeTemplateStylesheet,
+  summarizeTemplatePayload,
+} from '../utils/templateFragments';
 
 import { DeferredTiptapEditor as TiptapEditor } from '../components/TiptapEditor';
 import type { TiptapEditorRef } from '../components/TiptapEditor';
@@ -69,17 +74,23 @@ const NewTemplatePage = (): JSX.Element => {
       if (extractedTemplateJson && !id) {
         try {
           const extractedTemplate = JSON.parse(extractedTemplateJson);
+          const normalizedExtractedTemplate = {
+            ...extractedTemplate,
+            headerContent: normalizeTemplateFragment(extractedTemplate.headerContent, 'header'),
+            footerContent: normalizeTemplateFragment(extractedTemplate.footerContent, 'footer'),
+            stylesheet: normalizeTemplateStylesheet(extractedTemplate.stylesheet),
+          };
           const newFormData = {
-            name: extractedTemplate.name || '',
-            description: extractedTemplate.description || '',
-            headerContent: extractedTemplate.headerContent || '',
-            templateContent: extractedTemplate.templateContent || '',
-            footerContent: extractedTemplate.footerContent || '',
-            footerHeight: extractedTemplate.footerHeight || 25,
-            stylesheet: extractedTemplate.stylesheet || '',
+            name: normalizedExtractedTemplate.name || '',
+            description: normalizedExtractedTemplate.description || '',
+            headerContent: normalizedExtractedTemplate.headerContent || '',
+            templateContent: normalizedExtractedTemplate.templateContent || '',
+            footerContent: normalizedExtractedTemplate.footerContent || '',
+            footerHeight: normalizedExtractedTemplate.footerHeight || 25,
+            stylesheet: normalizedExtractedTemplate.stylesheet || '',
             status: 'Active',
             popular: false,
-            tags: extractedTemplate.tags || [],
+            tags: normalizedExtractedTemplate.tags || [],
             firmId: ''
           };
           setFormData(newFormData);
@@ -99,14 +110,17 @@ const NewTemplatePage = (): JSX.Element => {
       try {
         setLoading(true);
         const template = await templateService.getTemplateById(id);
+        const normalizedHeaderContent = normalizeTemplateFragment(template.HeaderContent, 'header');
+        const normalizedFooterContent = normalizeTemplateFragment(template.FooterContent, 'footer');
+        const normalizedStylesheet = normalizeTemplateStylesheet(template.Stylesheet);
         const newFormData = {
           name: template.Name || '',
           description: template.Description || '',
-          headerContent: template.HeaderContent || '',
+          headerContent: normalizedHeaderContent,
           templateContent: template.TemplateContent || '',
-          footerContent: template.FooterContent || '',
+          footerContent: normalizedFooterContent,
           footerHeight: template.FooterHeight || 25,
-          stylesheet: template.Stylesheet || '',
+          stylesheet: normalizedStylesheet,
           status: template.Status?.charAt(0).toUpperCase() + template.Status?.slice(1).toLowerCase() || 'Active',
           popular: template.Popular || false,
           tags: template.Tags || [],
@@ -132,18 +146,29 @@ const NewTemplatePage = (): JSX.Element => {
     if (!formData.templateContent?.trim()) { toast.error(t('templates.editor.validation.contentRequired')); return; }
 
     try {
+      const normalizedHeaderContent = normalizeTemplateFragment(formData.headerContent, 'header');
+      const normalizedFooterContent = normalizeTemplateFragment(formData.footerContent, 'footer');
+      const normalizedStylesheet = normalizeTemplateStylesheet(formData.stylesheet);
       const templateData: TemplateData = {
         name: formData.name,
         description: formData.description,
-        headerContent: formData.headerContent,
+        headerContent: normalizedHeaderContent,
         templateContent: formData.templateContent,
-        footerContent: formData.footerContent,
+        footerContent: normalizedFooterContent,
         footerHeight: formData.footerHeight,
-        stylesheet: formData.stylesheet,
+        stylesheet: normalizedStylesheet,
         tags: Array.isArray(formData.tags) ? formData.tags : [],
         popular: Boolean(formData.popular),
         status: formData.status || 'Active'
       };
+      logger.warn('Saving normalized template fragments', {
+        templateId: id || 'new',
+        ...summarizeTemplatePayload({
+          HeaderContent: formData.headerContent,
+          FooterContent: formData.footerContent,
+          Stylesheet: formData.stylesheet,
+        }),
+      });
       
       // Always include firm_id for admin (empty string means global template)
       templateData.firm_id = formData.firmId || '';
