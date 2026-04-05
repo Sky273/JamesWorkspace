@@ -26,7 +26,7 @@ import { fetchWithAuth } from '../../utils/apiInterceptor';
 import logger from '../../utils/logger.frontend';
 import PipelineAddCandidateModal from './PipelineAddCandidateModal';
 import { KanbanBoard, KanbanHeader, LoadingState } from './MissionPipelineKanban.parts';
-import type { MissionPipelineKanbanProps, Resume } from './MissionPipelineKanban.types';
+import type { InterviewFormValues, MissionPipelineKanbanProps, Resume } from './MissionPipelineKanban.types';
 import PipelineNotesModal from './PipelineNotesModal';
 import { PipelineInterviewsListModal, PipelineScheduleInterviewModal } from './PipelineInterviewModals';
 
@@ -60,10 +60,10 @@ export default function MissionPipelineKanban({
   const [selectedEntryForInterview, setSelectedEntryForInterview] = useState<PipelineEntry | null>(null);
   const [entryInterviews, setEntryInterviews] = useState<Interview[]>([]);
   const [loadingInterviews, setLoadingInterviews] = useState(false);
-  const [newInterview, setNewInterview] = useState({
+  const [newInterview, setNewInterview] = useState<InterviewFormValues>({
     title: '',
     description: '',
-    interviewType: 'client' as 'client' | 'partner' | 'technical' | 'hr',
+    interviewType: 'client',
     scheduledAt: '',
     durationMinutes: 60,
     location: '',
@@ -314,7 +314,7 @@ export default function MissionPipelineKanban({
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+    <div className="cv-panel overflow-hidden rounded-[2rem] border border-white/10 shadow-[0_30px_80px_-40px_rgba(15,23,42,0.45)]">
       <KanbanHeader
         addCandidateLabel={t('pipeline.addCandidate')}
         candidateCount={entries.length}
