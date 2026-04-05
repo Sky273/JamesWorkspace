@@ -43,14 +43,14 @@ const OverviewTab = ({ resume, t }: OverviewTabProps): JSX.Element => {
 
   return (
     <div className="space-y-4">
-      <div className="flex space-x-2 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex flex-wrap gap-2 rounded-[1.5rem] bg-slate-50/90 p-2 ring-1 ring-slate-200/80 dark:bg-white/[0.03] dark:ring-white/10">
         <button
           type="button"
           onClick={() => setActiveSubTab('initial')}
-          className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+          className={`inline-flex min-h-11 items-center rounded-full px-4 py-2.5 text-sm font-semibold transition-colors ${
             activeSubTab === 'initial'
-              ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-b-2 border-indigo-500'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800'
+              ? 'bg-[var(--cv-primary-soft)] text-[var(--cv-primary)] ring-1 ring-[color:color-mix(in_srgb,var(--cv-primary)_16%,transparent)]'
+              : 'text-slate-500 hover:bg-white hover:text-slate-900 dark:text-[var(--cv-muted)] dark:hover:bg-white/[0.06] dark:hover:text-[var(--cv-text)]'
           }`}
         >
           {t('resume.analysis.tabs.initialAnalysis') || 'Analyse initiale'}
@@ -58,13 +58,13 @@ const OverviewTab = ({ resume, t }: OverviewTabProps): JSX.Element => {
         <button
           type="button"
           onClick={() => setActiveSubTab('postImprovement')}
-          className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+          className={`inline-flex min-h-11 items-center rounded-full px-4 py-2.5 text-sm font-semibold transition-colors ${
             activeSubTab === 'postImprovement'
-              ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-b-2 border-indigo-500'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800'
+              ? 'bg-[var(--cv-primary-soft)] text-[var(--cv-primary)] ring-1 ring-[color:color-mix(in_srgb,var(--cv-primary)_16%,transparent)]'
+              : 'text-slate-500 hover:bg-white hover:text-slate-900 dark:text-[var(--cv-muted)] dark:hover:bg-white/[0.06] dark:hover:text-[var(--cv-text)]'
           }`}
         >
-          {t('resume.analysis.tabs.postImprovementAnalysis') || 'Analyse post-amÃ©lioration'}
+          {t('resume.analysis.tabs.postImprovementAnalysis') || 'Analyse post-amélioration'}
         </button>
       </div>
 

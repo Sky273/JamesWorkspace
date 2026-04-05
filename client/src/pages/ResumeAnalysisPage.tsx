@@ -12,6 +12,9 @@ import ResumeAnalysisHeader from '../components/ResumeAnalysisPage/ResumeAnalysi
 import ResumeAnalysisStepIndicator from '../components/ResumeAnalysisPage/ResumeAnalysisStepIndicator';
 import { useResumeAnalysisPage } from './ResumeAnalysisPage.hooks';
 
+const ANALYSIS_TABS = ['overview', 'skills', 'original', 'pipeline'] as const;
+type AnalysisTabKey = (typeof ANALYSIS_TABS)[number];
+
 const ResumeAnalysisPage = (): JSX.Element => {
   const {
     id,
@@ -37,9 +40,9 @@ const ResumeAnalysisPage = (): JSX.Element => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          <SkeletonCard className="h-96" />
+      <div className="editorial-migrated-shell min-h-screen px-4 py-6 sm:px-6 sm:py-8">
+        <div className="cv-surface mx-auto max-w-7xl rounded-[2.5rem] p-6 sm:p-8">
+          <SkeletonCard className="h-96 rounded-[2rem]" />
         </div>
       </div>
     );
@@ -47,12 +50,14 @@ const ResumeAnalysisPage = (): JSX.Element => {
 
   if (error || !currentResume) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="text-red-500 dark:text-red-400">{error || t('errors.resumeNotFound')}</p>
-          <Link to="/resumes" className="text-blue-500 hover:underline mt-4 inline-block">
-            {t('common.backToList')}
-          </Link>
+      <div className="editorial-migrated-shell min-h-screen px-4 py-6 sm:px-6 sm:py-8">
+        <div className="cv-surface mx-auto max-w-7xl rounded-[2.5rem] p-6 sm:p-8">
+          <div className="cv-panel rounded-[2rem] p-10 text-center sm:p-12">
+            <p className="text-sm font-medium text-rose-600 dark:text-rose-300">{error || t('errors.resumeNotFound')}</p>
+            <Link to="/resumes" className="cv-ghost-button mt-6 inline-flex min-h-12 items-center justify-center rounded-full px-5 text-sm font-semibold">
+              {t('common.backToList')}
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -60,8 +65,8 @@ const ResumeAnalysisPage = (): JSX.Element => {
 
   if (isImproving) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-        <div className="max-w-7xl mx-auto px-4">
+      <div className="editorial-migrated-shell min-h-screen px-4 py-6 sm:px-6 sm:py-8">
+        <div className="cv-surface mx-auto max-w-7xl rounded-[2.5rem] p-6 sm:p-8">
           <ImprovementAnimation currentStep={processingStep || 'improving'} fullscreen={true} />
         </div>
       </div>
@@ -69,14 +74,14 @@ const ResumeAnalysisPage = (): JSX.Element => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-      <div className="max-w-7xl mx-auto px-4">
+    <div className="editorial-migrated-shell min-h-screen px-4 py-6 sm:px-6 sm:py-8">
+      <div className="cv-surface mx-auto max-w-7xl rounded-[2.5rem] p-6 sm:p-8">
         {fromDealsView && (
           <button
             onClick={handleBackToDealsView}
-            className="inline-flex items-center gap-2 px-3 py-1.5 mb-3 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+            className="cv-ghost-button mb-4 inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium"
           >
-            <ArrowLeftIcon className="w-4 h-4" />
+            <ArrowLeftIcon className="h-4 w-4" />
             {t('resumes.backToDealsView')}
           </button>
         )}
@@ -102,53 +107,35 @@ const ResumeAnalysisPage = (): JSX.Element => {
           />
         )}
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="border-b border-gray-200 dark:border-gray-700">
-            <nav className="flex -mb-px">
-              <button
-                onClick={() => setActiveTab('overview')}
-                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'overview'
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-              >
-                {t('resume.analysis.tabs.overview')}
-              </button>
-              <button
-                onClick={() => setActiveTab('skills')}
-                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'skills'
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-              >
-                {t('resume.analysis.tabs.skills')}
-              </button>
-              <button
-                onClick={() => setActiveTab('original')}
-                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'original'
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-              >
-                {t('resume.analysis.tabs.original')}
-              </button>
-              <button
-                onClick={() => setActiveTab('pipeline')}
-                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'pipeline'
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-              >
-                {t('resume.analysis.tabs.pipeline')}
-              </button>
+        <section className="cv-panel overflow-hidden rounded-[2rem]">
+          <div className="border-b border-slate-200/70 px-4 py-4 dark:border-white/10 sm:px-6">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <span className="cv-kicker">{t('resume.analysis.title')}</span>
+              <span className="text-xs font-medium text-slate-500 dark:text-[var(--cv-muted)]">
+                {t(`resume.analysis.tabs.${activeTab}`)}
+              </span>
+            </div>
+            <nav className="flex flex-wrap gap-2" aria-label={t('resume.analysis.title')}>
+              {ANALYSIS_TABS.map((tab) => {
+                const isActive = activeTab === tab;
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab as AnalysisTabKey)}
+                    className={`inline-flex min-h-11 items-center rounded-full px-4 py-2.5 text-sm font-semibold transition-all ${
+                      isActive
+                        ? 'bg-[var(--cv-primary-soft)] text-[var(--cv-primary)] ring-1 ring-[color:color-mix(in_srgb,var(--cv-primary)_16%,transparent)]'
+                        : 'bg-white/70 text-slate-500 ring-1 ring-slate-200/80 hover:bg-slate-50 hover:text-slate-900 dark:bg-white/[0.03] dark:text-[var(--cv-muted)] dark:ring-white/10 dark:hover:bg-white/[0.06] dark:hover:text-[var(--cv-text)]'
+                    }`}
+                  >
+                    {t(`resume.analysis.tabs.${tab}`)}
+                  </button>
+                );
+              })}
             </nav>
           </div>
 
-          <div className="p-6">
+          <div className="p-5 sm:p-6">
             {activeTab === 'overview' && <OverviewTab resume={currentResume} t={t} />}
             {activeTab === 'skills' && <SkillsTagsTab resume={currentResume} />}
             {activeTab === 'original' && <OriginalTextTab resume={currentResume} />}
@@ -159,7 +146,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
               />
             )}
           </div>
-        </div>
+        </section>
 
         {id && (
           <div className="mt-6">
