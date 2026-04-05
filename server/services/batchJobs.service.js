@@ -73,30 +73,36 @@ export async function getDealForExport(dealId) {
  */
 export async function getResumesForDeal(dealId) {
     const result = await query(`
-        SELECT r.id, r.name, r.title, r.file_name as source_file_name,
-               COALESCE(r.relative_path, latest_item.relative_path) as relative_path
-        FROM resumes r
-        INNER JOIN deal_resumes dr ON r.id = dr.resume_id
-        LEFT JOIN LATERAL (
-            SELECT bji.relative_path
+        WITH latest_import_by_resume AS (
+            SELECT DISTINCT ON (bji.resume_id)
+                bji.resume_id,
+                bji.relative_path
             FROM batch_job_items bji
             INNER JOIN batch_jobs bj ON bj.id = bji.job_id
             WHERE bji.relative_path IS NOT NULL
               AND bj.job_type = 'import'
-              AND (
-                  bji.resume_id = r.id
-                  OR (
-                      bji.resume_id IS NULL
-                      AND r.file_name IS NOT NULL
-                      AND bji.file_name = r.file_name
-                      AND bj.firm_id = r.firm_id
-                  )
-              )
-            ORDER BY
-                CASE WHEN bji.resume_id = r.id THEN 0 ELSE 1 END,
-                bji.created_at DESC
-            LIMIT 1
-        ) latest_item ON TRUE
+              AND bji.resume_id IS NOT NULL
+            ORDER BY bji.resume_id, bji.created_at DESC
+        ),
+        latest_import_by_file AS (
+            SELECT DISTINCT ON (bj.firm_id, bji.file_name)
+                bj.firm_id,
+                bji.file_name,
+                bji.relative_path
+            FROM batch_job_items bji
+            INNER JOIN batch_jobs bj ON bj.id = bji.job_id
+            WHERE bji.relative_path IS NOT NULL
+              AND bj.job_type = 'import'
+              AND bji.resume_id IS NULL
+              AND bji.file_name IS NOT NULL
+            ORDER BY bj.firm_id, bji.file_name, bji.created_at DESC
+        )
+        SELECT r.id, r.name, r.title, r.file_name as source_file_name,
+               COALESCE(r.relative_path, lir.relative_path, lif.relative_path) as relative_path
+        FROM resumes r
+        INNER JOIN deal_resumes dr ON r.id = dr.resume_id
+        LEFT JOIN latest_import_by_resume lir ON lir.resume_id = r.id
+        LEFT JOIN latest_import_by_file lif ON lif.file_name = r.file_name AND lif.firm_id = r.firm_id
         WHERE dr.deal_id = $1
         ORDER BY LOWER(r.name) ASC
     `, [dealId]);
@@ -110,33 +116,39 @@ export async function getResumesForDeal(dealId) {
  */
 export async function getAdaptationsForDeal(dealId) {
     const result = await query(`
+        WITH latest_import_by_resume AS (
+            SELECT DISTINCT ON (bji.resume_id)
+                bji.resume_id,
+                bji.relative_path
+            FROM batch_job_items bji
+            INNER JOIN batch_jobs bj ON bj.id = bji.job_id
+            WHERE bji.relative_path IS NOT NULL
+              AND bj.job_type = 'import'
+              AND bji.resume_id IS NOT NULL
+            ORDER BY bji.resume_id, bji.created_at DESC
+        ),
+        latest_import_by_file AS (
+            SELECT DISTINCT ON (bj.firm_id, bji.file_name)
+                bj.firm_id,
+                bji.file_name,
+                bji.relative_path
+            FROM batch_job_items bji
+            INNER JOIN batch_jobs bj ON bj.id = bji.job_id
+            WHERE bji.relative_path IS NOT NULL
+              AND bj.job_type = 'import'
+              AND bji.resume_id IS NULL
+              AND bji.file_name IS NOT NULL
+            ORDER BY bj.firm_id, bji.file_name, bji.created_at DESC
+        )
         SELECT ra.id, ra.resume_id, ra.candidate_name, ra.adapted_title, ra.mission_title,
-               COALESCE(r.relative_path, latest_item.relative_path) as relative_path,
+               COALESCE(r.relative_path, lir.relative_path, lif.relative_path) as relative_path,
                m.title as mission_name,
                r.file_name as source_file_name
         FROM resume_adaptations ra
         INNER JOIN missions m ON ra.mission_id = m.id
         INNER JOIN resumes r ON r.id = ra.resume_id
-        LEFT JOIN LATERAL (
-            SELECT bji.relative_path
-            FROM batch_job_items bji
-            INNER JOIN batch_jobs bj ON bj.id = bji.job_id
-            WHERE bji.relative_path IS NOT NULL
-              AND bj.job_type = 'import'
-              AND (
-                  bji.resume_id = ra.resume_id
-                  OR (
-                      bji.resume_id IS NULL
-                      AND r.file_name IS NOT NULL
-                      AND bji.file_name = r.file_name
-                      AND bj.firm_id = r.firm_id
-                  )
-              )
-            ORDER BY
-                CASE WHEN bji.resume_id = ra.resume_id THEN 0 ELSE 1 END,
-                bji.created_at DESC
-            LIMIT 1
-        ) latest_item ON TRUE
+        LEFT JOIN latest_import_by_resume lir ON lir.resume_id = ra.resume_id
+        LEFT JOIN latest_import_by_file lif ON lif.file_name = r.file_name AND lif.firm_id = r.firm_id
         WHERE m.deal_id = $1
         ORDER BY m.title ASC, ra.candidate_name ASC
     `, [dealId]);

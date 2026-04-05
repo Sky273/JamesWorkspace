@@ -211,7 +211,8 @@ describe('Batch Export Routes', () => {
             // PDF generation
             mockFetch.mockResolvedValueOnce({
                 ok: true,
-                body: Readable.from([Buffer.from('pdf-content')])
+                body: Readable.from([Buffer.from('pdf-content')]),
+                arrayBuffer: () => Promise.resolve(Buffer.from('pdf-content'))
             });
             // ZIP generation
             mockGenerateNodeStream.mockReturnValueOnce(Readable.from([Buffer.from('fake-zip')]));
@@ -277,6 +278,44 @@ describe('Batch Export Routes', () => {
 
             // No files generated -> 500
             expect(res.status).toBe(500);
+        });
+
+        it('should truncate oversized error detail payloads when no files are generated', async () => {
+            mockFetch.mockResolvedValueOnce({ ok: true });
+            mockGetTemplateByIdForExport.mockResolvedValueOnce(
+                { id: TEMPLATE_UUID, template_content: '<div>-content-</div>' }
+            );
+            mockGetResumesByIdsForExport.mockResolvedValueOnce(
+                Array.from({ length: 25 }, (_, index) => ({
+                    id: `00000000-0000-0000-0000-${String(index + 1).padStart(12, '0')}`,
+                    name: `John ${index}`,
+                    title: 'Dev',
+                    improved_text: 'text',
+                    firm_id: '00000000-0000-0000-0000-000000000010'
+                }))
+            );
+
+            for (let index = 0; index < 25; index++) {
+                mockFetch.mockResolvedValueOnce({
+                    ok: false,
+                    status: 500,
+                    text: () => Promise.resolve(`PDF error ${index}`)
+                });
+            }
+
+            const requestedResumeIds = Array.from({ length: 25 }, (_, index) => (
+                `00000000-0000-0000-0000-${String(index + 1).padStart(12, '0')}`
+            ));
+
+            const res = await request(app)
+                .post('/api/batch-export')
+                .set(AUTH)
+                .send({ resumeIds: requestedResumeIds, templateId: TEMPLATE_UUID });
+
+            expect(res.status).toBe(500);
+            expect(res.body.details).toHaveLength(20);
+            expect(res.body.totalErrors).toBe(25);
+            expect(res.body.truncated).toBe(true);
         });
 
         it('should pass firm access context to export lookups', async () => {

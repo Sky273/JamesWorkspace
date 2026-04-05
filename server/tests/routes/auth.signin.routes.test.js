@@ -85,10 +85,12 @@ vi.mock('../../services/totp.service.js', () => ({
 // Mock JWT service
 const mockGenerateAccessToken = vi.fn(() => 'mock-access-token');
 const mockGenerateRefreshToken = vi.fn(() => 'mock-refresh-token');
+const mockConsumeRefreshToken = vi.fn();
 const mockVerifyRefreshToken = vi.fn();
 const mockVerifyToken = vi.fn();
 const mockRevokeToken = vi.fn();
 vi.mock('../../services/jwt.service.js', () => ({
+    consumeRefreshToken: (...args) => mockConsumeRefreshToken(...args),
     generateAccessToken: (...args) => mockGenerateAccessToken(...args),
     generateRefreshToken: (...args) => mockGenerateRefreshToken(...args),
     verifyRefreshToken: (...args) => mockVerifyRefreshToken(...args),
@@ -373,7 +375,7 @@ describe('Auth Routes - POST /api/auth/refresh', () => {
     });
 
     it('should return 401 for invalid refresh token', async () => {
-        mockVerifyRefreshToken.mockReturnValueOnce(null);
+        mockConsumeRefreshToken.mockReturnValueOnce(null);
 
         const res = await request(app)
             .post('/api/auth/refresh')
@@ -384,7 +386,7 @@ describe('Auth Routes - POST /api/auth/refresh', () => {
     });
 
     it('should return 401 for inactive user', async () => {
-        mockVerifyRefreshToken.mockReturnValueOnce({ id: 'user-123' });
+        mockConsumeRefreshToken.mockReturnValueOnce({ id: 'user-123' });
         mockFindUserWithFirmById.mockResolvedValueOnce({ 
             id: 'user-123', 
             status: 'inactive' 
@@ -399,7 +401,7 @@ describe('Auth Routes - POST /api/auth/refresh', () => {
     });
 
     it('should return 403 when refreshed user has no firm assignment', async () => {
-        mockVerifyRefreshToken.mockReturnValueOnce({ id: 'user-123' });
+        mockConsumeRefreshToken.mockReturnValueOnce({ id: 'user-123' });
         mockFindUserWithFirmById.mockResolvedValueOnce({
             id: 'user-123',
             email: 'orphan@example.com',
@@ -418,8 +420,7 @@ describe('Auth Routes - POST /api/auth/refresh', () => {
     });
 
     it('should apply auth rate limiting to refresh', async () => {
-        mockVerifyRefreshToken.mockReturnValueOnce({ id: 'user-123' });
-        mockRevokeToken.mockResolvedValueOnce(true);
+        mockConsumeRefreshToken.mockReturnValueOnce({ id: 'user-123' });
         mockFindUserWithFirmById.mockResolvedValueOnce({ 
             id: 'user-123',
             email: 'test@example.com',
@@ -439,8 +440,7 @@ describe('Auth Routes - POST /api/auth/refresh', () => {
     });
 
     it('should issue new access token and rotate refresh token', async () => {
-        mockVerifyRefreshToken.mockReturnValueOnce({ id: 'user-123' });
-        mockRevokeToken.mockResolvedValueOnce(true);
+        mockConsumeRefreshToken.mockReturnValueOnce({ id: 'user-123' });
         mockFindUserWithFirmById.mockResolvedValueOnce({ 
             id: 'user-123',
             email: 'test@example.com',
@@ -463,11 +463,7 @@ describe('Auth Routes - POST /api/auth/refresh', () => {
         const cookies = res.headers['set-cookie'];
         expect(cookies.some(c => c.includes('accessToken'))).toBe(true);
         expect(cookies.some(c => c.includes('refreshToken'))).toBe(true);
-        
-        // Verify old refresh token was revoked
-        expect(mockRevokeToken).toHaveBeenCalledWith('valid-refresh-token');
-        
-        // Verify new refresh token was generated
+        expect(mockConsumeRefreshToken).toHaveBeenCalledWith('valid-refresh-token');
         expect(mockGenerateRefreshToken).toHaveBeenCalled();
     });
 });

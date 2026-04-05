@@ -37,11 +37,34 @@ function isPrivateIpv4(ip) {
     );
 }
 
+function isTrustedInternalIpv4(ip) {
+    return (
+        isIpv4InCidr(ip, '10.0.0.0', 8)
+        || isIpv4InCidr(ip, '127.0.0.0', 8)
+        || isIpv4InCidr(ip, '169.254.0.0', 16)
+        || isIpv4InCidr(ip, '172.16.0.0', 12)
+        || isIpv4InCidr(ip, '192.168.0.0', 16)
+    );
+}
+
 function isPrivateIpv6(ip) {
     const normalized = ip.toLowerCase();
     return (
         normalized === '::1'
         || normalized === '::'
+        || normalized.startsWith('fc')
+        || normalized.startsWith('fd')
+        || normalized.startsWith('fe8')
+        || normalized.startsWith('fe9')
+        || normalized.startsWith('fea')
+        || normalized.startsWith('feb')
+    );
+}
+
+function isTrustedInternalIpv6(ip) {
+    const normalized = ip.toLowerCase();
+    return (
+        normalized === '::1'
         || normalized.startsWith('fc')
         || normalized.startsWith('fd')
         || normalized.startsWith('fe8')
@@ -58,6 +81,17 @@ export function isPrivateOrReservedIp(ip) {
     }
     if (family === 6) {
         return isPrivateIpv6(ip);
+    }
+    return false;
+}
+
+function isTrustedInternalIp(ip) {
+    const family = net.isIP(ip);
+    if (family === 4) {
+        return isTrustedInternalIpv4(ip);
+    }
+    if (family === 6) {
+        return isTrustedInternalIpv6(ip);
     }
     return false;
 }
@@ -119,7 +153,7 @@ export async function assertTrustedInternalServiceUrl(urlString, {
         throw new Error('Internal service host is required');
     }
 
-    if (isLoopbackOrLocalHostname(hostname) || isPrivateOrReservedIp(hostname)) {
+    if (isLoopbackOrLocalHostname(hostname) || isTrustedInternalIp(hostname)) {
         return true;
     }
 
@@ -128,7 +162,7 @@ export async function assertTrustedInternalServiceUrl(urlString, {
         throw new Error('Internal service host could not be resolved');
     }
 
-    if (resolvedAddresses.some((entry) => isPrivateOrReservedIp(entry.address))) {
+    if (resolvedAddresses.some((entry) => isTrustedInternalIp(entry.address))) {
         return true;
     }
 

@@ -111,6 +111,7 @@ describe('Batch Jobs Worker - Export Generator', () => {
 
     afterEach(() => {
         process.env.PDF_SERVER_INTERNAL_TOKEN = originalPdfToken;
+        delete process.env.PDF_SERVER_URL;
     });
 
     const template = {
@@ -184,7 +185,7 @@ describe('Batch Jobs Worker - Export Generator', () => {
         expect(mockUpdateJobExportFile).toHaveBeenCalledWith('j1', expect.any(String), expect.stringContaining('export_j1'));
     });
 
-    it('should prefer streamed PDF bodies over arrayBuffer buffering', async () => {
+    it('should fully buffer PDF bodies before ZIP generation', async () => {
         mockGetJob.mockResolvedValueOnce({ id: 'j1' });
         mockGetJobItems.mockResolvedValueOnce([
             { id: 'i1', status: 'success', resume_id: 'r1', file_name: 'cv.pdf' }
@@ -202,7 +203,7 @@ describe('Batch Jobs Worker - Export Generator', () => {
 
         await generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] });
 
-        expect(arrayBuffer).not.toHaveBeenCalled();
+        expect(arrayBuffer).toHaveBeenCalled();
         expect(mockUpdateJobExportFile).toHaveBeenCalledWith('j1', expect.any(String), expect.stringContaining('export_j1'));
     });
 
@@ -337,5 +338,20 @@ describe('Batch Jobs Worker - Export Generator', () => {
         expect(mockUpdateJobItemStatus).toHaveBeenCalledWith('i1', 'error', expect.objectContaining({
             error_message: expect.stringContaining('Archive path')
         }));
+    });
+
+    it('should reject public PDF server URLs before generating exports', async () => {
+        process.env.PDF_SERVER_URL = 'https://example.com';
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce([
+            { id: 'i1', status: 'success', resume_id: 'r1', file_name: 'cv.pdf' }
+        ]);
+        mockQuery.mockResolvedValueOnce({ rows: [template] });
+
+        await expect(
+            generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] })
+        ).rejects.toThrow('private or loopback address');
+
+        expect(mockFetch).not.toHaveBeenCalled();
     });
 });

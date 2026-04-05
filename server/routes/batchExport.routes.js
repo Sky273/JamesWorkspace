@@ -5,7 +5,6 @@
 
 import express from 'express';
 import JSZip from 'jszip';
-import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 import { authenticateToken, isUserAdmin } from '../middleware/auth.middleware.js';
 import { validateBody, batchExportSchema } from '../utils/validation.js';
@@ -21,6 +20,7 @@ const MAX_BATCH_EXPORT_RESUMES = 100;
 const DEFAULT_BATCH_EXPORT_CONCURRENCY = 4;
 const MAX_BATCH_EXPORT_CONCURRENCY = 8;
 const DEFAULT_BATCH_EXPORT_BATCH_DELAY_MS = 0;
+const MAX_BATCH_EXPORT_ERROR_DETAILS = 20;
 
 function getFirstDefinedValue(source, keys) {
     for (const key of keys) {
@@ -84,22 +84,6 @@ function processTemplatePlaceholders(content, name, title) {
         .replace(/-title-/g, title);
 }
 
-function getNodeReadableStream(body) {
-    if (!body) {
-        return null;
-    }
-
-    if (typeof body.pipe === 'function') {
-        return body;
-    }
-
-    if (typeof Readable.fromWeb === 'function' && typeof body.getReader === 'function') {
-        return Readable.fromWeb(body);
-    }
-
-    return null;
-}
-
 function getBatchExportConcurrency() {
     const parsed = Number.parseInt(process.env.BATCH_EXPORT_CONCURRENCY || '', 10);
     if (!Number.isInteger(parsed) || parsed <= 0) {
@@ -121,8 +105,19 @@ function chunkArray(items, size) {
     return chunks;
 }
 
+function summarizeBatchExportErrors(errors) {
+    const safeErrors = Array.isArray(errors) ? errors : [];
+    const details = safeErrors.slice(0, MAX_BATCH_EXPORT_ERROR_DETAILS);
+    return {
+        details,
+        totalErrors: safeErrors.length,
+        truncated: safeErrors.length > details.length
+    };
+}
+
 // POST /api/batch-export - Generate ZIP with multiple PDFs/DOCXs
 router.post('/', authenticateToken, validateBody(batchExportSchema), async (req, res) => {
+    const startedAt = Date.now();
     try {
         const normalizedPayload = normalizeBatchExportPayload(req.body);
         const { resumeIds, templateId, format } = normalizedPayload;
@@ -193,6 +188,7 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
 
         const accessibleResumes = await batchExportService.getResumesByIdsForExport(resumeIds, { isAdmin, userFirmId });
         const resumesById = new Map(accessibleResumes.map((resume) => [resume.id, resume]));
+        const inaccessibleResumeCount = Math.max(0, resumeIds.length - resumesById.size);
         
         // Create ZIP archive
         const zip = new JSZip();
@@ -245,11 +241,6 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
                 }
 
                 const fileName = `${candidateName.replace(/[^a-zA-Z0-9\-_\s]/g, '').replace(/\s+/g, '_')}.${fileExtension}`;
-                const nodeReadableStream = getNodeReadableStream(pdfResponse.body);
-                if (nodeReadableStream) {
-                    return { ok: true, resumeId, fileName, data: nodeReadableStream, binary: true };
-                }
-
                 const buffer = await pdfResponse.arrayBuffer();
                 return { ok: true, resumeId, fileName, data: buffer };
             } catch (err) {
@@ -281,11 +272,7 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
                     continue;
                 }
 
-                if (result.binary) {
-                    zip.file(result.fileName, result.data, { binary: true });
-                } else {
-                    zip.file(result.fileName, result.data);
-                }
+                zip.file(result.fileName, result.data);
             }
 
             if (batchExportBatchDelayMs > 0 && batchIndex < resumeBatches.length - 1) {
@@ -295,9 +282,20 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
         
         // Check if any files were added
         if (Object.keys(zip.files).length === 0) {
+            const errorSummary = summarizeBatchExportErrors(errors);
+            safeLog('warn', 'Batch export generated no files', {
+                requestedResumeCount: resumeIds.length,
+                resolvedResumeCount: resumesById.size,
+                inaccessibleResumeCount,
+                totalErrors: errorSummary.totalErrors,
+                truncatedErrors: errorSummary.truncated,
+                durationMs: Date.now() - startedAt
+            });
             return res.status(500).json({ 
                 error: 'No files could be generated', 
-                details: errors 
+                details: errorSummary.details,
+                totalErrors: errorSummary.totalErrors,
+                truncated: errorSummary.truncated
             });
         }
         
@@ -313,9 +311,13 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
         if (zipStream) {
             await pipeline(zipStream, res);
             safeLog('info', 'Batch export completed', { 
+                requestedResumeCount: resumeIds.length,
+                resolvedResumeCount: resumesById.size,
+                inaccessibleResumeCount,
                 filesCount: Object.keys(zip.files).length,
                 errorsCount: errors.length,
-                streaming: true
+                streaming: true,
+                durationMs: Date.now() - startedAt
             });
             return;
         }
@@ -324,13 +326,17 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
         res.setHeader('Content-Length', zipBuffer.length);
         res.send(zipBuffer);
         safeLog('info', 'Batch export completed', { 
+            requestedResumeCount: resumeIds.length,
+            resolvedResumeCount: resumesById.size,
+            inaccessibleResumeCount,
             filesCount: Object.keys(zip.files).length,
             errorsCount: errors.length,
             streaming: false,
-            zipSize: zipBuffer.length
+            zipSize: zipBuffer.length,
+            durationMs: Date.now() - startedAt
         });
     } catch (error) {
-        safeLog('error', 'Batch export error', { error: error.message });
+        safeLog('error', 'Batch export error', { error: error.message, durationMs: Date.now() - startedAt });
         if (error?.code === 'PDF_SERVER_AUTH_NOT_CONFIGURED') {
             return res.status(503).json({
                 error: 'PDF server authentication is not configured on the backend.'

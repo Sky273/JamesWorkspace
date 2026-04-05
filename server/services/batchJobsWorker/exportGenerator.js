@@ -6,7 +6,6 @@
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 import { safeLog } from '../../utils/logger.backend.js';
 import { query } from '../../config/database.js';
@@ -20,8 +19,10 @@ import {
 import { removeSuggestionMarkers } from './helpers.js';
 import { getPdfServerAuthHeaders } from '../../utils/pdfServerAuth.js';
 import { normalizeArchiveRelativePath } from '../../utils/archiveRelativePath.js';
+import { assertTrustedInternalServiceUrl } from '../../utils/networkHostSecurity.js';
 
 const DEFAULT_EXPORT_REQUEST_TIMEOUT_MS = 60_000;
+const MAX_LOGGED_EXPORT_ERRORS = 10;
 
 function getExportRequestTimeoutMs() {
     const parsedTimeout = Number.parseInt(process.env.BATCH_EXPORT_PDF_TIMEOUT_MS || '', 10);
@@ -44,28 +45,13 @@ function buildSafeArchiveFilePath(relativePath, generatedFileName) {
     return `${archiveDirectory}/${generatedFileName}`;
 }
 
-function getNodeReadableStream(body) {
-    if (!body) {
-        return null;
-    }
-
-    if (typeof body.pipe === 'function') {
-        return body;
-    }
-
-    if (typeof Readable.fromWeb === 'function' && typeof body.getReader === 'function') {
-        return Readable.fromWeb(body);
-    }
-
-    return null;
-}
-
 /**
  * Generate export ZIP for a completed job
  * @param {string} jobId - Job ID
  * @param {Object} options - Export options (templateId, exportFormats)
  */
 export async function generateJobExport(jobId, options) {
+    const startedAt = Date.now();
     // Support both old exportFormat (single) and new exportFormats (array)
     let exportFormats = options.exportFormats || [options.exportFormat || 'pdf'];
     if (!Array.isArray(exportFormats)) {
@@ -125,6 +111,7 @@ export async function generateJobExport(jobId, options) {
     
     // PDF Server URL
     const PDF_SERVER_URL = process.env.PDF_SERVER_URL || 'http://127.0.0.1:3002';
+    await assertTrustedInternalServiceUrl(PDF_SERVER_URL);
     
     // Track export statistics
     let exportSuccessCount = 0;
@@ -189,13 +176,8 @@ export async function generateJobExport(jobId, options) {
                     return { success: false, error: lastError };
                 }
                 
-                const nodeReadableStream = getNodeReadableStream(response.body);
-                if (nodeReadableStream) {
-                    return { success: true, content: nodeReadableStream, streaming: true };
-                }
-
                 const buffer = await response.arrayBuffer();
-                return { success: true, content: buffer, streaming: false };
+                return { success: true, content: buffer };
             } catch (fetchErr) {
                 if (fetchErr?.code === 'PDF_SERVER_AUTH_NOT_CONFIGURED') {
                     return { success: false, error: 'PDF server authentication is not configured on the backend.' };
@@ -279,7 +261,7 @@ export async function generateJobExport(jobId, options) {
                 ? `${trigram}_${sanitizedItemName}_${templateName}.${fileExtension}`
                 : `${trigram}_${templateName}.${fileExtension}`;
             
-            return { success: true, itemId: item.id, fileName, content: result.content, streaming: result.streaming, resumeId: item.resume_id, format, relativePath: item.relative_path, sourceType };
+            return { success: true, itemId: item.id, fileName, content: result.content, resumeId: item.resume_id, format, relativePath: item.relative_path, sourceType };
         } catch (err) {
             safeLog('error', `Error processing ${sourceType} for ${format.toUpperCase()} export`, { resumeId: item.resume_id, adaptationId: item.adaptation_id, error: err.message });
             return { success: false, itemId: item.id, error: err.message, resumeId: item.resume_id, format, sourceType };
@@ -350,11 +332,7 @@ export async function generateJobExport(jobId, options) {
                     
                     // Add to the format-specific folder
                     safeLog('debug', 'Adding file to ZIP', { format, filePath, sourceType: result.sourceType });
-                    if (result.streaming) {
-                        formatFolders[format].root.file(filePath, result.content, { binary: true });
-                    } else {
-                        formatFolders[format].root.file(filePath, result.content);
-                    }
+                    formatFolders[format].root.file(filePath, result.content);
                     exportSuccessCount++;
                 } else {
                     exportErrorCount++;
@@ -386,7 +364,8 @@ export async function generateJobExport(jobId, options) {
         exportErrorCount,
         filesInZip: actualFilesInZip,
         totalZipEntries: Object.keys(zip.files).length,
-        errors: exportErrors.length > 0 ? exportErrors.slice(0, 5) : undefined
+        errors: exportErrors.length > 0 ? exportErrors.slice(0, MAX_LOGGED_EXPORT_ERRORS) : undefined,
+        durationMs: Date.now() - startedAt
     });
 
     for (const { item, failures, successCount } of itemResults.values()) {
@@ -434,6 +413,7 @@ export async function generateJobExport(jobId, options) {
         jobId, 
         fileName, 
         filesCount: Object.keys(zip.files).length,
-        size: exportedSize
+        size: exportedSize,
+        durationMs: Date.now() - startedAt
     });
 }

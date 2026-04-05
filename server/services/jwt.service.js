@@ -147,6 +147,45 @@ export async function verifyRefreshToken(token) {
     }
 }
 
+export async function consumeRefreshToken(token) {
+    try {
+        const decoded = jwt.verify(token, REFRESH_TOKEN_SECRET, { algorithms: [JWT_ALGORITHM] });
+
+        if (decoded.type && decoded.type !== 'refresh') {
+            safeLog('warn', 'Token type mismatch - expected refresh token', {
+                tokenType: decoded.type
+            });
+            return null;
+        }
+
+        const expiresAt = decoded.exp ? decoded.exp * 1000 : Date.now() + 3600000;
+        const consumed = await blacklistToken(decoded.jti || token, expiresAt, 'refresh_rotated', decoded.id);
+        if (!consumed) {
+            safeLog('warn', 'Refresh token replay detected or token already revoked', {
+                jti: decoded.jti,
+                userId: decoded.id
+            });
+            return null;
+        }
+
+        if (await isTokenBlacklistedAsync(null, decoded.id, decoded.iat)) {
+            safeLog('warn', 'Refresh token belongs to a blacklisted user', {
+                userId: decoded.id
+            });
+            return null;
+        }
+
+        return decoded;
+    } catch (error) {
+        safeLog('error', 'Refresh token consumption failed', {
+            error: error.message,
+            errorName: error.name,
+            tokenPreview: token ? token.substring(0, 20) + '...' : 'null'
+        });
+        return null;
+    }
+}
+
 /**
  * Extract role from user fields
  */

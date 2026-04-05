@@ -32,6 +32,13 @@ describe('networkHostSecurity', () => {
         })).resolves.toBe(true);
     });
 
+    it('rejects unspecified or multicast internal service addresses', async () => {
+        await expect(assertTrustedInternalServiceUrl('http://0.0.0.0:3002')).rejects.toThrow('private or loopback address');
+        await expect(assertTrustedInternalServiceUrl('http://multicast.internal:3002', {
+            resolver: async () => [{ address: '224.0.0.5' }]
+        })).rejects.toThrow('private or loopback address');
+    });
+
     it('rejects public internal service urls', async () => {
         await expect(assertTrustedInternalServiceUrl('https://example.com', {
             resolver: async () => [{ address: '8.8.8.8' }]

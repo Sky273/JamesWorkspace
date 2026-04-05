@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs';
 import { authenticateToken } from '../../middleware/auth.middleware.js';
 import { authLimiter } from '../../middleware/rateLimit.middleware.js';
 import { validateBody, signInSchema, registerSchema, isValidEmail } from '../../utils/validation.js';
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken, verifyToken, revokeToken } from '../../services/jwt.service.js';
+import { consumeRefreshToken, generateAccessToken, generateRefreshToken, verifyRefreshToken, verifyToken, revokeToken } from '../../services/jwt.service.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../services/security.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { is2FAEnabled, verifyTotpCode } from '../../services/totp.service.js';
@@ -280,7 +280,7 @@ router.post('/refresh', authLimiter, async (req, res) => {
             return res.status(401).json({ error: 'Refresh token not found' });
         }
 
-        const decoded = await verifyRefreshToken(refreshToken);
+        const decoded = await consumeRefreshToken(refreshToken);
         if (!decoded) {
             return res.status(401).json({ error: 'Invalid refresh token' });
         }
@@ -296,11 +296,6 @@ router.post('/refresh', authLimiter, async (req, res) => {
         }
 
         const userData = formatUserResponse(user);
-        const rotated = await revokeToken(refreshToken);
-        if (!rotated) {
-            return res.status(401).json({ error: 'Invalid refresh token' });
-        }
-
         const newAccessToken = generateAccessToken(userData);
         const newRefreshToken = generateRefreshToken(userData);
 

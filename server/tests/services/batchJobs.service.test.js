@@ -93,6 +93,8 @@ describe('Batch Jobs Service', () => {
 
             expect(result).toHaveLength(2);
             expect(query.mock.calls[0][0]).toContain('deal_resumes');
+            expect(query.mock.calls[0][0]).toContain('WITH latest_import_by_resume AS');
+            expect(query.mock.calls[0][0]).not.toContain('LEFT JOIN LATERAL');
         });
 
         it('should return empty array for deal with no resumes', async () => {
@@ -112,6 +114,8 @@ describe('Batch Jobs Service', () => {
             expect(result).toHaveLength(1);
             expect(query.mock.calls[0][0]).toContain('resume_adaptations');
             expect(query.mock.calls[0][0]).toContain('m.deal_id = $1');
+            expect(query.mock.calls[0][0]).toContain('WITH latest_import_by_resume AS');
+            expect(query.mock.calls[0][0]).not.toContain('LEFT JOIN LATERAL');
         });
     });
 });

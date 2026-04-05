@@ -136,6 +136,38 @@ describe('Auth Middleware', () => {
       expect(findUserById).toHaveBeenCalledTimes(1);
       expect(secondReq.user.firmId).toBe('firm-1');
     });
+
+    it('should evict old auth cache entries once the cache reaches its size cap', async () => {
+      const originalMaxAuthUserCacheSize = process.env.MAX_AUTH_USER_CACHE_SIZE;
+      process.env.MAX_AUTH_USER_CACHE_SIZE = '10';
+      resetAuthUserCacheForTests();
+
+      const makeUser = (suffix) => ({
+        id: `user-${suffix}`,
+        email: `user-${suffix}@example.com`,
+        name: `User ${suffix}`,
+        status: 'Active',
+        role: 'user'
+      });
+
+      findUserById.mockImplementation(async (userId) => ({
+        id: userId,
+        email: `${userId}@example.com`,
+        name: userId,
+        status: 'Active',
+        role: 'user',
+        firm_id: 'firm-1',
+        firm_name: 'Firm One'
+      }));
+
+      for (const suffix of ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k']) {
+        const token = generateAccessToken(makeUser(suffix));
+        await authenticateToken({ cookies: { accessToken: token }, user: null }, mockRes, nextFn);
+      }
+
+      expect(getAuthUserCacheSizeForTests()).toBeLessThanOrEqual(10);
+      process.env.MAX_AUTH_USER_CACHE_SIZE = originalMaxAuthUserCacheSize;
+    });
   });
 
   describe('requireAdmin', () => {

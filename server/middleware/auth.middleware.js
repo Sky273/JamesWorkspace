@@ -6,6 +6,10 @@ import { getUserFirmIdFromUser, getUserFirmNameFromUser } from '../utils/firmHel
 const AUTH_USER_CACHE_TTL_MS = Math.max(1000, Number.parseInt(process.env.AUTH_USER_CACHE_TTL_MS || '2000', 10) || 2000);
 const authUserCache = new Map();
 
+function getMaxAuthUserCacheSize() {
+    return Math.max(10, Number.parseInt(process.env.MAX_AUTH_USER_CACHE_SIZE || '1000', 10) || 1000);
+}
+
 function getCachedAuthenticatedUser(cacheKey) {
     if (!cacheKey) {
         return null;
@@ -27,6 +31,18 @@ function getCachedAuthenticatedUser(cacheKey) {
 function setCachedAuthenticatedUser(cacheKey, user) {
     if (!cacheKey || !user?.id) {
         return;
+    }
+
+    if (authUserCache.has(cacheKey)) {
+        authUserCache.delete(cacheKey);
+    }
+
+    while (authUserCache.size >= getMaxAuthUserCacheSize()) {
+        const oldestCacheKey = authUserCache.keys().next().value;
+        if (!oldestCacheKey) {
+            break;
+        }
+        authUserCache.delete(oldestCacheKey);
     }
 
     const cacheEntry = {
