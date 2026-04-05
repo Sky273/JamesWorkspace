@@ -136,12 +136,13 @@ async function getBrowser() {
  * @param {number} options.footerHeight - Custom footer height in mm
  * @returns {Promise<Buffer>} PDF buffer
  */
-async function generatePdf({ htmlContent, stylesheet, headerContent, footerContent, footerHeight, signal } = {}) {
-  async function runGenerationAttempt() {
+async function generatePdf({ htmlContent, stylesheet, headerContent, footerContent, footerHeight, signal, filename } = {}) {
+  async function runGenerationAttempt(attemptNumber) {
   let page = null;
   let requestHandler = null;
   let abortHandler = null;
   let aborted = false;
+  let stage = 'initializing';
 
   const abortError = () => {
     const reason = signal?.reason;
@@ -185,6 +186,7 @@ async function generatePdf({ htmlContent, stylesheet, headerContent, footerConte
   try {
     const hasFooterContent = footerContent && footerContent.trim() !== '';
     const customFooterHeight = footerHeight || 25;
+    stage = 'building-html';
     
     // Build the complete HTML document
     const wrappedHtmlContent = buildPuppeteerHtml({
@@ -203,6 +205,7 @@ async function generatePdf({ htmlContent, stylesheet, headerContent, footerConte
     });
 
     const browser = await getBrowser();
+    stage = 'opening-page';
     page = await browser.newPage();
 
     if (aborted) {
@@ -210,6 +213,7 @@ async function generatePdf({ htmlContent, stylesheet, headerContent, footerConte
       throw abortError();
     }
 
+    stage = 'configuring-interception';
     await page.setRequestInterception(true);
     if (aborted) {
       await closePageOnAbort();
@@ -228,6 +232,7 @@ async function generatePdf({ htmlContent, stylesheet, headerContent, footerConte
     page.on('request', requestHandler);
 
     // Set content and wait for resources to load
+    stage = 'setting-content';
     await page.setContent(wrappedHtmlContent, { 
       waitUntil: 'networkidle0',
       timeout: 30000
@@ -261,6 +266,7 @@ async function generatePdf({ htmlContent, stylesheet, headerContent, footerConte
       pdfOptions.footerTemplate = buildPuppeteerFooter(footerContent);
     }
 
+    stage = 'rendering-pdf';
     const pdfBuffer = await page.pdf(pdfOptions);
     if (aborted) {
       throw abortError();
@@ -273,7 +279,22 @@ async function generatePdf({ htmlContent, stylesheet, headerContent, footerConte
     if (error?.name === 'AbortError' || error?.code === 'ABORT_ERR' || aborted) {
       throw abortError();
     }
-    log('error', 'Puppeteer PDF generation failed', { error: error.message });
+    log('error', 'Puppeteer PDF generation failed', {
+      filename,
+      attempt: attemptNumber,
+      stage,
+      retriable: isRetriableBrowserError(error),
+      error: error.message,
+      errorName: error?.name,
+      errorCode: error?.code,
+      htmlLength: typeof htmlContent === 'string' ? htmlContent.length : 0,
+      stylesheetLength: typeof stylesheet === 'string' ? stylesheet.length : 0,
+      headerLength: typeof headerContent === 'string' ? headerContent.length : 0,
+      footerLength: typeof footerContent === 'string' ? footerContent.length : 0,
+      hasFooter: Boolean(footerContent && footerContent.trim()),
+      footerHeight: footerHeight || 25,
+      stackTop: error.stack?.split('\n').slice(0, 4).join(' -> ')
+    });
     throw new Error(`PDF generation failed: ${error.message}`);
   } finally {
     if (signal && abortHandler) {
@@ -297,7 +318,7 @@ async function generatePdf({ htmlContent, stylesheet, headerContent, footerConte
   }
 
   try {
-    return await runGenerationAttempt();
+    return await runGenerationAttempt(1);
   } catch (error) {
     if (signal?.aborted || error?.name === 'AbortError' || error?.code === 'ABORT_ERR') {
       throw error;
@@ -308,10 +329,11 @@ async function generatePdf({ htmlContent, stylesheet, headerContent, footerConte
     }
 
     log('warn', 'Retrying PDF generation with a fresh browser after retriable Puppeteer failure', {
+      filename,
       error: error.message
     });
     await discardBrowserInstance();
-    return runGenerationAttempt();
+    return runGenerationAttempt(2);
   }
 }
 

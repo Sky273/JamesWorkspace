@@ -260,6 +260,7 @@ describe('PDF Server', () => {
 
       expect(pdfGen.generatePdf).toHaveBeenCalledWith(expect.objectContaining({
         htmlContent: '<p>Body</p>',
+        filename: 'test.pdf',
         stylesheet: '.cls{color:red}',
         headerContent: '<h1>Header</h1>',
         footerContent: '<p>Footer</p>',

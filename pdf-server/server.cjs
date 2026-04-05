@@ -152,6 +152,7 @@ app.post('/generate-pdf', internalServiceAuthMiddleware, requestTimeoutMiddlewar
       headerContent,
       footerContent,
       footerHeight,
+      filename,
       signal: abortSignal
     }));
 
