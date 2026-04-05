@@ -19,8 +19,12 @@ export default function PaginationPair({
   totalCount,
   totalPages,
 }: PaginationPairProps) {
+  if (loading || totalCount === 0) {
+    return null;
+  }
+
   return (
-    <>
+    <div className="space-y-6">
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
@@ -39,6 +43,6 @@ export default function PaginationPair({
         loading={loading}
         itemName={itemName}
       />
-    </>
+    </div>
   );
 }

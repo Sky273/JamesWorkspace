@@ -77,6 +77,11 @@ export function MissionsListPanel({
       <StatsCards stats={stats} missionsCount={totalCount} t={t} />
       <SearchAndActions
         searchTerm={searchTerm}
+        resultsLabel={
+          searchTerm
+            ? `${totalCount} ${t('missions.results')} · “${searchTerm}”`
+            : `${totalCount} ${t('missions.results')}`
+        }
         onSearchChange={onSearchChange}
         onRefresh={() => {
           void onRefresh();
@@ -99,6 +104,7 @@ export function MissionsListPanel({
       <MissionsGrid
         loading={loading}
         missions={missions}
+        onAddMission={onAddMission}
         onDelete={onDelete}
         onEdit={onEdit}
         searchTerm={searchTerm}
@@ -110,12 +116,14 @@ export function MissionsListPanel({
 function MissionsGrid({
   loading,
   missions,
+  onAddMission,
   onDelete,
   onEdit,
   searchTerm,
 }: {
   loading: boolean;
   missions: Mission[];
+  onAddMission: () => void;
   onDelete: (id: string) => Promise<void>;
   onEdit: (mission: Mission) => void;
   searchTerm: string;
@@ -133,12 +141,20 @@ function MissionsGrid({
         title={t('missions.noMissions')}
         description={searchTerm ? t('missions.noResults') : t('missions.createFirst')}
         containerClassName="cv-panel rounded-[2rem] p-12 text-center"
+        action={
+          <button
+            onClick={onAddMission}
+            className="cv-gradient-button mt-6 inline-flex min-h-12 items-center justify-center rounded-full px-5 text-sm font-semibold"
+          >
+            {t('missions.addMission')}
+          </button>
+        }
       />
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 2xl:grid-cols-3">
       {missions.map((mission, index) => (
         <MissionCard
           key={mission.id}

@@ -60,6 +60,10 @@ export interface MissionFormData {
 export interface MissionStats {
   total: number;
   firms: number;
+  linkedDeals: number;
+  active: number;
+  draft: number;
+  closed: number;
 }
 
 export type MissionViewMode = 'list' | 'byDeal';
@@ -337,8 +341,12 @@ export function useMissionsDashboard() {
   }, [authDelete, fetchMissions, t]);
 
   const stats: MissionStats = {
-    total: missions.length,
+    total: totalCount,
     firms: [...new Set(missions.map((mission) => mission.Firm).filter(Boolean))].length,
+    linkedDeals: missions.filter((mission) => Boolean(mission['Deal ID'])).length,
+    active: missions.filter((mission) => mission.Status === 'Active').length,
+    draft: missions.filter((mission) => mission.Status === 'Draft').length,
+    closed: missions.filter((mission) => mission.Status === 'Closed').length,
   };
 
   return {

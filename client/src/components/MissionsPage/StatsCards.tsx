@@ -7,6 +7,7 @@ import {
   ClipboardDocumentListIcon,
   BuildingOfficeIcon,
   BriefcaseIcon,
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 
 import StatCardsGrid from '../page/StatCardsGrid';
@@ -14,6 +15,10 @@ import StatCardsGrid from '../page/StatCardsGrid';
 interface Stats {
   total: number;
   firms: number;
+  linkedDeals: number;
+  active: number;
+  draft: number;
+  closed: number;
 }
 
 interface StatsCardsProps {
@@ -25,7 +30,7 @@ interface StatsCardsProps {
 const StatsCards = ({ stats, missionsCount, t }: StatsCardsProps): JSX.Element => {
   return (
     <StatCardsGrid
-      className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3"
+      className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4"
       items={[
         {
           icon: ClipboardDocumentListIcon,
@@ -36,6 +41,14 @@ const StatsCards = ({ stats, missionsCount, t }: StatsCardsProps): JSX.Element =
           helper: t('missions.subtitle'),
         },
         {
+          icon: BriefcaseIcon,
+          iconBgClassName: 'bg-[var(--cv-secondary-soft)] text-[var(--cv-secondary)]',
+          iconClassName: '',
+          label: t('missions.stats.active'),
+          value: stats.active,
+          helper: `${missionsCount} ${t('missions.results')}`,
+        },
+        {
           icon: BuildingOfficeIcon,
           iconBgClassName: 'bg-[var(--cv-tertiary-soft)] text-[var(--cv-tertiary)]',
           iconClassName: '',
@@ -44,12 +57,12 @@ const StatsCards = ({ stats, missionsCount, t }: StatsCardsProps): JSX.Element =
           helper: t('navigation.crm', 'CRM'),
         },
         {
-          icon: BriefcaseIcon,
-          iconBgClassName: 'bg-[var(--cv-secondary-soft)] text-[var(--cv-secondary)]',
+          icon: DocumentTextIcon,
+          iconBgClassName: 'bg-[var(--cv-warning-soft)] text-[var(--cv-warning)]',
           iconClassName: '',
-          label: t('missions.stats.active'),
-          value: missionsCount,
-          helper: t('missions.viewList', 'Liste'),
+          label: t('missions.deal', 'Affaires liées'),
+          value: stats.linkedDeals,
+          helper: `${stats.draft} ${t('missions.status.Draft')} · ${stats.closed} ${t('missions.status.Closed')}`,
         },
       ]}
     />
