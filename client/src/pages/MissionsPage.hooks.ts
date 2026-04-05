@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
@@ -94,6 +94,8 @@ export function useMissionsDashboard() {
   const [, setHasMore] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingMission, setEditingMission] = useState<Mission | null>(null);
+  const [missionPendingDelete, setMissionPendingDelete] = useState<Mission | null>(null);
+  const [isDeletingMission, setIsDeletingMission] = useState(false);
   const [formData, setFormData] = useState<MissionFormData>(EMPTY_FORM);
   const [clients, setClients] = useState<Client[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -320,25 +322,56 @@ export function useMissionsDashboard() {
     }
   }, [authPost, authPut, editingMission, fetchMissions, formData, resetForm, t]);
 
-  const handleDelete = useCallback(async (id: string) => {
-    const confirmed = window.confirm(t('missions.messages.deleteConfirm', 'Etes-vous sur de vouloir supprimer cette mission ?'));
-    if (!confirmed) {
+  const requestDelete = useCallback((mission: Mission) => {
+    setMissionPendingDelete(mission);
+  }, []);
+
+  const cancelDelete = useCallback(() => {
+    if (isDeletingMission) {
+      return;
+    }
+
+    setMissionPendingDelete(null);
+  }, [isDeletingMission]);
+
+  const confirmDelete = useCallback(async () => {
+    if (!missionPendingDelete?.id || isDeletingMission) {
       return;
     }
 
     try {
-      const response = await authDelete(`/api/missions/${id}`);
+      setIsDeletingMission(true);
+      const response = await authDelete(`/api/missions/${missionPendingDelete.id}`);
       if (!response.ok) {
         throw new Error('Failed to delete mission');
       }
 
-      toast.success(t('missions.messages.deleteSuccess', 'Mission supprimee'));
+      toast.success(t('missions.messages.deleteSuccess', 'Mission supprimée'));
+      setMissionPendingDelete(null);
+
+      const isLastMissionOnPage = missions.length === 1;
+      if (isLastMissionOnPage && currentPage > 1) {
+        setCurrentPage((previousPage) => previousPage - 1);
+        return;
+      }
+
       await fetchMissions();
     } catch (error) {
       logger.error('Error deleting mission:', error);
       toast.error(t('missions.messages.deleteError', 'Erreur lors de la suppression'));
+    } finally {
+      setIsDeletingMission(false);
     }
-  }, [authDelete, fetchMissions, t]);
+  }, [authDelete, currentPage, fetchMissions, isDeletingMission, missionPendingDelete, missions.length, t]);
+
+  const deleteDialogDescription = useMemo(() => {
+    if (!missionPendingDelete) {
+      return '';
+    }
+
+    const missionTitle = missionPendingDelete.Title?.trim() || t('missions.untitled', 'Mission sans titre');
+    return t('missions.messages.deleteConfirmNamed', { defaultValue: 'Supprimer définitivement la mission « {{title}} » ?', title: missionTitle });
+  }, [missionPendingDelete, t]);
 
   const stats: MissionStats = {
     total: totalCount,
@@ -359,15 +392,20 @@ export function useMissionsDashboard() {
     fetchMissions,
     formData,
     goToPage,
-    handleDelete,
+    cancelDelete,
+    confirmDelete,
+    deleteDialogDescription,
     handleEdit,
     handleSubmit,
     loading,
     loadingClients,
     loadingContacts,
     loadingDeals,
+    isDeletingMission,
+    missionPendingDelete,
     missions,
     openCreateModal,
+    requestDelete,
     resetSearch: () => setSearchTerm(''),
     setEditorReady: (isReady: boolean) => {
       editorReadyRef.current = isReady;

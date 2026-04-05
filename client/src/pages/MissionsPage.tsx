@@ -1,6 +1,8 @@
 import { useRef } from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
+import ConfirmDialog from '../components/page/ConfirmDialog';
 import { DeferredTiptapEditor as TiptapEditor } from '../components/TiptapEditor';
 import type { TiptapEditorRef } from '../components/TiptapEditor';
 import MissionFormModal from './MissionFormModal';
@@ -13,26 +15,32 @@ import {
 import { useMissionsDashboard } from './MissionsPage.hooks';
 
 const MissionsPage = (): JSX.Element => {
+  const { t } = useTranslation();
   const editorRef = useRef<TiptapEditorRef | null>(null);
   const {
     clients,
     contacts,
+    cancelDelete,
     closeModal,
+    confirmDelete,
     currentPage,
     deals,
+    deleteDialogDescription,
     editingMission,
     fetchMissions,
     formData,
     goToPage,
-    handleDelete,
     handleEdit,
     handleSubmit,
     loading,
     loadingClients,
     loadingContacts,
     loadingDeals,
+    isDeletingMission,
+    missionPendingDelete,
     missions,
     openCreateModal,
+    requestDelete,
     resetSearch,
     setEditorReady,
     setFormData,
@@ -64,7 +72,7 @@ const MissionsPage = (): JSX.Element => {
           loading={loading}
           missions={missions}
           onAddMission={openCreateModal}
-          onDelete={handleDelete}
+          onDelete={requestDelete}
           onEdit={handleEdit}
           onPageChange={goToPage}
           onRefresh={fetchMissions}
@@ -76,6 +84,19 @@ const MissionsPage = (): JSX.Element => {
           totalPages={totalPages}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={Boolean(missionPendingDelete)}
+        title={t('missions.messages.deleteDialogTitle', 'Supprimer cette mission ?')}
+        content={deleteDialogDescription}
+        confirmLabel={isDeletingMission ? t('common.deleting', 'Suppression…') : t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        disabled={isDeletingMission}
+        onClose={cancelDelete}
+        onConfirm={() => {
+          void confirmDelete();
+        }}
+      />
 
       {showModal ? (
         <MissionFormModal

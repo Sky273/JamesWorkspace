@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 
 import EmptyStateCard from '../components/page/EmptyStateCard';
 import PageHeader from '../components/page/PageHeader';
-import PaginationPair from '../components/page/PaginationPair';
 import ViewModeToggle from '../components/page/ViewModeToggle';
+import Pagination from '../components/Pagination';
 import { MissionsDealsGroupedView, SearchAndActions, StatsCards } from '../components/MissionsPage';
 import { SkeletonMissionList } from '../components/ui/Skeleton';
 import MissionCard from './MissionCard';
@@ -59,7 +59,7 @@ export function MissionsListPanel({
   loading: boolean;
   missions: Mission[];
   onAddMission: () => void;
-  onDelete: (id: string) => Promise<void>;
+  onDelete: (mission: Mission) => void;
   onEdit: (mission: Mission) => void;
   onPageChange: (page: number) => void;
   onRefresh: () => Promise<void>;
@@ -91,7 +91,7 @@ export function MissionsListPanel({
         t={t}
       />
 
-      <PaginationPair
+      <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
         totalCount={totalCount}
@@ -109,6 +109,16 @@ export function MissionsListPanel({
         onEdit={onEdit}
         searchTerm={searchTerm}
       />
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        pageSize={MISSIONS_PAGE_SIZE}
+        onPageChange={onPageChange}
+        loading={loading}
+        itemName={t('missions.results')}
+      />
     </>
   );
 }
@@ -124,7 +134,7 @@ function MissionsGrid({
   loading: boolean;
   missions: Mission[];
   onAddMission: () => void;
-  onDelete: (id: string) => Promise<void>;
+  onDelete: (mission: Mission) => void;
   onEdit: (mission: Mission) => void;
   searchTerm: string;
 }) {
@@ -161,8 +171,8 @@ function MissionsGrid({
           mission={mission}
           index={index}
           onEdit={onEdit}
-          onDelete={(id) => {
-            void onDelete(id);
+          onDelete={() => {
+            onDelete(mission);
           }}
         />
       ))}

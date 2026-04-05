@@ -38,7 +38,7 @@ interface MissionCardProps {
   mission: MissionItem;
   index: number;
   onEdit: (mission: MissionItem) => void;
-  onDelete: (id: string) => void;
+  onDelete: () => void;
 }
 
 const statusClasses: Record<NonNullable<MissionItem['Status']>, string> = {
@@ -159,7 +159,7 @@ export default function MissionCard({ mission, index, onEdit, onDelete }: Missio
             <span className="sm:hidden">{t('common.edit')}</span>
           </button>
           <button
-            onClick={() => onDelete(mission.id)}
+            onClick={onDelete}
             title={t('common.delete')}
             className="cv-ghost-button inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium text-[var(--cv-danger)] transition-colors"
           >
