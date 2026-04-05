@@ -1,5 +1,6 @@
 import { MAX_LOGS } from '../config/constants.js';
 import fs from 'fs';
+import fsPromises from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createModuleLogger } from '../utils/logger.backend.js';
@@ -71,6 +72,7 @@ export const SECURITY_EVENTS = {
 const securityLogBuffer = new Array(MAX_LOGS).fill(null);
 let securityLogWriteIndex = 0;
 let securityLogCount = 0;
+let securityLogPersistenceQueue = Promise.resolve();
 
 /**
  * Get security logs as array (ordered by timestamp, newest first)
@@ -144,7 +146,7 @@ export function securityLog(level, event, details = {}) {
     
     // Persist critical security events to file
     if (shouldPersistLog(level, event)) {
-        persistLogToFile(logEntry);
+        queueSecurityLogPersistence(logEntry);
     }
 }
 
@@ -176,29 +178,28 @@ function shouldPersistLog(level, event) {
 /**
  * Persist log entry to file with rotation
  */
-function persistLogToFile(logEntry) {
-    try {
-        // Check if rotation is needed
-        rotateLogFileIfNeeded();
-        
-        // Format log line
-        const logLine = JSON.stringify(logEntry) + '\n';
-        
-        // Append to log file
-        fs.appendFileSync(SECURITY_LOG_FILE, logLine, 'utf8');
-    } catch (err) {
-        log.error('Failed to persist security log', { error: err.message });
-    }
+function queueSecurityLogPersistence(logEntry) {
+    securityLogPersistenceQueue = securityLogPersistenceQueue
+        .then(async () => {
+            await rotateLogFileIfNeeded();
+            const logLine = JSON.stringify(logEntry) + '\n';
+            await fsPromises.appendFile(SECURITY_LOG_FILE, logLine, 'utf8');
+        })
+        .catch((err) => {
+            log.error('Failed to persist security log', { error: err.message });
+        });
+
+    return securityLogPersistenceQueue;
 }
 
 /**
  * Rotate log file if it exceeds max size
  */
-function rotateLogFileIfNeeded() {
+async function rotateLogFileIfNeeded() {
     try {
         if (!fs.existsSync(SECURITY_LOG_FILE)) return;
         
-        const stats = fs.statSync(SECURITY_LOG_FILE);
+        const stats = await fsPromises.stat(SECURITY_LOG_FILE);
         if (stats.size < MAX_LOG_FILE_SIZE) return;
         
         // Rotate existing files
@@ -207,20 +208,24 @@ function rotateLogFileIfNeeded() {
             const newFile = `${SECURITY_LOG_FILE}.${i + 1}`;
             if (fs.existsSync(oldFile)) {
                 if (i === MAX_LOG_FILES - 1) {
-                    fs.unlinkSync(oldFile); // Delete oldest
+                    await fsPromises.unlink(oldFile); // Delete oldest
                 } else {
-                    fs.renameSync(oldFile, newFile);
+                    await fsPromises.rename(oldFile, newFile);
                 }
             }
         }
         
         // Rename current file to .1
-        fs.renameSync(SECURITY_LOG_FILE, `${SECURITY_LOG_FILE}.1`);
+        await fsPromises.rename(SECURITY_LOG_FILE, `${SECURITY_LOG_FILE}.1`);
         
         log.info('Security log file rotated');
     } catch (err) {
         log.error('Failed to rotate log file', { error: err.message });
     }
+}
+
+export function flushSecurityLogPersistenceForTests() {
+    return securityLogPersistenceQueue;
 }
 
 /**

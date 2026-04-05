@@ -26,13 +26,13 @@ vi.mock('../../services/batchJobs/jobCrud.js', () => ({
     }))
 }));
 vi.mock('../../services/batchJobs/itemCrud.js', () => ({
-    getPendingItems: vi.fn(() => []),
+    claimPendingItems: vi.fn(() => []),
     updateJobItemStatus: vi.fn()
 }));
 
 import { startWorker, stopWorker } from '../../services/batchJobs/worker.js';
 import { getPendingJobs, getJobStatus, updateJobStatus, updateJobCounters, isJobComplete } from '../../services/batchJobs/jobCrud.js';
-import { getPendingItems, updateJobItemStatus } from '../../services/batchJobs/itemCrud.js';
+import { claimPendingItems, updateJobItemStatus } from '../../services/batchJobs/itemCrud.js';
 
 describe('Batch Jobs Worker', () => {
     afterEach(() => {
@@ -64,7 +64,7 @@ describe('Batch Jobs Worker', () => {
             const item = { id: 'item-1', file_name: 'cv.pdf' };
 
             getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
-            getPendingItems.mockResolvedValueOnce([item]);
+            claimPendingItems.mockResolvedValueOnce([item]);
             isJobComplete.mockResolvedValueOnce(true);
 
             startWorker(processItem);
@@ -81,7 +81,7 @@ describe('Batch Jobs Worker', () => {
             const item = { id: 'item-1', file_name: 'cv.pdf' };
 
             getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
-            getPendingItems.mockResolvedValueOnce([item]);
+            claimPendingItems.mockResolvedValueOnce([item]);
             isJobComplete.mockResolvedValueOnce(true);
 
             startWorker(processItem);
@@ -96,7 +96,7 @@ describe('Batch Jobs Worker', () => {
             const job = { id: 'job-1', status: 'pending', total_items: 0 };
 
             getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
-            getPendingItems.mockResolvedValueOnce([]);
+            claimPendingItems.mockResolvedValueOnce([]);
             isJobComplete.mockResolvedValueOnce(true);
 
             startWorker(processItem);
@@ -113,7 +113,7 @@ describe('Batch Jobs Worker', () => {
             const item = { id: 'item-1', file_name: 'cv.pdf' };
 
             getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
-            getPendingItems.mockResolvedValueOnce([item]);
+            claimPendingItems.mockResolvedValueOnce([item]);
             isJobComplete.mockResolvedValueOnce(true);
             getJobStatus
                 .mockResolvedValueOnce('processing')
@@ -150,7 +150,7 @@ describe('Batch Jobs Worker', () => {
                 }));
 
                 getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
-                getPendingItems.mockResolvedValueOnce(items);
+                claimPendingItems.mockResolvedValueOnce(items);
                 isJobComplete.mockResolvedValueOnce(true);
 
                 startWorker(processItem);

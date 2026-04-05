@@ -7,6 +7,8 @@ import {
 } from './helpers.js';
 import { getAccessibleMissionRequestContext, getNormalizedRequestContext } from './missionTaskHelpers.js';
 
+const MAX_DEAL_EXPORT_ITEMS = 100;
+
 export async function getResumeIdsJobRequestContext(req, res) {
     const { userContext, normalizedPayload, firmId } = getNormalizedRequestContext(req);
     const { resumeIds, options: jobOptions = {} } = normalizedPayload;
@@ -72,6 +74,12 @@ export async function getDealExportRequestContext(
     const totalItems = dealResumes.length + dealAdaptations.length;
     if (totalItems === 0) {
         res.status(400).json({ error: 'Aucun CV ni adaptation à exporter pour cette affaire' });
+        return null;
+    }
+    if (totalItems > MAX_DEAL_EXPORT_ITEMS) {
+        res.status(400).json({
+            error: `L'export d'affaire est limité à ${MAX_DEAL_EXPORT_ITEMS} éléments par requête`
+        });
         return null;
     }
 

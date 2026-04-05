@@ -5,6 +5,9 @@
 
 import express from 'express';
 import JSZip from 'jszip';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { pipeline } from 'stream/promises';
 import { authenticateToken, isUserAdmin } from '../middleware/auth.middleware.js';
 import { validateBody, batchExportSchema } from '../utils/validation.js';
@@ -23,6 +26,16 @@ const DEFAULT_BATCH_EXPORT_CONCURRENCY = 4;
 const MAX_BATCH_EXPORT_CONCURRENCY = 8;
 const DEFAULT_BATCH_EXPORT_BATCH_DELAY_MS = 0;
 const MAX_BATCH_EXPORT_ERROR_DETAILS = 20;
+
+async function createTempBatchExportWorkspace() {
+    return fs.promises.mkdtemp(path.join(os.tmpdir(), 'batch-export-http-'));
+}
+
+async function persistBatchExportArtifact(tempDir, fileName, content) {
+    const artifactPath = path.join(tempDir, `${Date.now()}-${fileName}`);
+    await fs.promises.writeFile(artifactPath, Buffer.from(content));
+    return artifactPath;
+}
 
 function getFirstDefinedValue(source, keys) {
     for (const key of keys) {
@@ -120,6 +133,7 @@ function summarizeBatchExportErrors(errors) {
 // POST /api/batch-export - Generate ZIP with multiple PDFs/DOCXs
 router.post('/', authenticateToken, validateBody(batchExportSchema), async (req, res) => {
     const startedAt = Date.now();
+    let tempExportDir = null;
     const exportTimeoutMs = getBatchExportPdfTimeoutMs();
     const trackBatchExport = (payload = {}) => {
         metrics.trackBatchExportActivity({
@@ -217,6 +231,7 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
         
         // Create ZIP archive
         const zip = new JSZip();
+        tempExportDir = await createTempBatchExportWorkspace();
         const errors = [];
         const endpoint = exportFormat === 'pdf' ? '/generate-pdf' : '/generate-docx';
         const fileExtension = exportFormat === 'pdf' ? 'pdf' : exportFormat;
@@ -297,7 +312,8 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
                     continue;
                 }
 
-                zip.file(result.fileName, result.data);
+                const artifactPath = await persistBatchExportArtifact(tempExportDir, result.fileName, result.data);
+                zip.file(result.fileName, fs.createReadStream(artifactPath));
             }
 
             if (batchExportBatchDelayMs > 0 && batchIndex < resumeBatches.length - 1) {
@@ -406,6 +422,10 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
             return;
         }
         res.destroy(error);
+    } finally {
+        if (tempExportDir) {
+            await fs.promises.rm(tempExportDir, { recursive: true, force: true }).catch(() => {});
+        }
     }
 });
 

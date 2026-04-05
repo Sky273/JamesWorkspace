@@ -8,6 +8,7 @@ import { createReadStream } from 'fs';
 import fs from 'fs/promises';
 import { pipeline } from 'stream/promises';
 import { authenticateToken, isUserAdmin } from '../middleware/auth.middleware.js';
+import { userRateLimit } from '../middleware/rateLimit.middleware.js';
 import { validateBody, validateParams, sharePdfSchema } from '../utils/validation.js';
 import * as shareResumeService from '../services/shareResume.service.js';
 import { safeLog } from '../utils/logger.backend.js';
@@ -202,7 +203,7 @@ async function serveOriginalFileByToken(res, token) {
  * Generate a shareable PDF for an improved resume
  * Requires authentication
  */
-router.post('/resume/:resumeId/generate', authenticateToken, validateParams('resumeId'), validateBody(sharePdfSchema), async (req, res) => {
+router.post('/resume/:resumeId/generate', authenticateToken, validateParams('resumeId'), userRateLimit(10, 15 * 60 * 1000), validateBody(sharePdfSchema), async (req, res) => {
     const pdfServerRequest = createAbortablePdfRequest(req, res);
     try {
         const { resumeId } = req.params;

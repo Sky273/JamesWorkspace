@@ -241,23 +241,24 @@ export async function deleteJob(jobId) {
  */
 export async function getPendingJobs() {
     try {
+        const claimableStatuses = [JOB_STATUS.PENDING, JOB_STATUS.PROCESSING];
         const result = await query(`
             WITH claimed_jobs AS (
                 SELECT bj.id
                 FROM batch_jobs bj
-                WHERE bj.status = $1
-                AND bj.job_type NOT IN (${COLLECTION_JOB_TYPES.map((_, i) => `$${i + 2}`).join(', ')})
+                WHERE bj.status IN ($1, $2)
+                AND bj.job_type NOT IN (${COLLECTION_JOB_TYPES.map((_, i) => `$${i + 3}`).join(', ')})
                 ORDER BY bj.created_at ASC
                 LIMIT 5
                 FOR UPDATE SKIP LOCKED
             )
             UPDATE batch_jobs bj
-            SET status = $${COLLECTION_JOB_TYPES.length + 2},
+            SET status = $${COLLECTION_JOB_TYPES.length + 3},
                 started_at = COALESCE(bj.started_at, NOW())
             FROM claimed_jobs cj
             WHERE bj.id = cj.id
             RETURNING bj.*
-        `, [JOB_STATUS.PENDING, ...COLLECTION_JOB_TYPES, JOB_STATUS.PROCESSING]);
+        `, [...claimableStatuses, ...COLLECTION_JOB_TYPES, JOB_STATUS.PROCESSING]);
 
         if (result.rows.length === 0) {
             return [];

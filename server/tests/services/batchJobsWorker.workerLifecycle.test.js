@@ -15,11 +15,15 @@ vi.mock('../../config/database.js', () => ({
     ] }))
 }));
 vi.mock('../../services/batchJobs/constants.js', () => ({
-    JOB_STATUS: { PENDING: 'pending', PROCESSING: 'processing', COMPLETED: 'completed', FAILED: 'failed' },
-    ITEM_STATUS: { PENDING: 'pending', PROCESSING: 'processing', SUCCESS: 'success', ERROR: 'error' }
+    JOB_STATUS: { PENDING: 'pending', PROCESSING: 'processing', COMPLETED: 'completed', FAILED: 'failed', CANCELLED: 'cancelled' },
+    ITEM_STATUS: { PENDING: 'pending', PROCESSING: 'processing', SUCCESS: 'success', ERROR: 'error' },
+    BATCH_SIZE: 100,
+    WORKER_EXECUTION_CONCURRENCY: 2,
+    WORKER_INTERVAL: 10
 }));
 vi.mock('../../services/batchJobs/jobCrud.js', () => ({
     getPendingJobs: vi.fn(() => []),
+    getJobStatus: vi.fn(() => 'processing'),
     updateJobStatus: vi.fn(),
     updateJobCounters: vi.fn(),
     isJobComplete: vi.fn(() => false),
@@ -29,7 +33,7 @@ vi.mock('../../services/batchJobs/jobCrud.js', () => ({
     }))
 }));
 vi.mock('../../services/batchJobs/itemCrud.js', () => ({
-    getPendingItems: vi.fn(() => []),
+    claimPendingItems: vi.fn(() => []),
     updateJobItemStatus: vi.fn()
 }));
 vi.mock('../../services/batchJobsWorker/llmIntegration.js', () => ({
@@ -39,7 +43,9 @@ vi.mock('../../services/batchJobsWorker/itemProcessors.js', () => ({
     processImportItem: vi.fn(),
     processImproveItem: vi.fn(),
     processAdaptItem: vi.fn(),
-    processMatchItem: vi.fn()
+    processMatchItem: vi.fn(),
+    processProfileSearchItem: vi.fn(),
+    processProfileAnalysisItem: vi.fn()
 }));
 vi.mock('../../services/batchJobsWorker/exportGenerator.js', () => ({
     generateJobExport: vi.fn()
@@ -52,8 +58,8 @@ import {
 } from '../../services/batchJobsWorker/workerLifecycle.js';
 
 import { query } from '../../config/database.js';
-import { getPendingJobs, updateJobStatus, updateJobCounters, isJobComplete } from '../../services/batchJobs/jobCrud.js';
-import { getPendingItems, updateJobItemStatus } from '../../services/batchJobs/itemCrud.js';
+import { getPendingJobs, getJobStatus, updateJobStatus, updateJobCounters, isJobComplete } from '../../services/batchJobs/jobCrud.js';
+import { claimPendingItems, updateJobItemStatus } from '../../services/batchJobs/itemCrud.js';
 import { processImportItem, processImproveItem, processAdaptItem, processMatchItem } from '../../services/batchJobsWorker/itemProcessors.js';
 import { resetLLMQueue } from '../../services/batchJobsWorker/llmIntegration.js';
 
@@ -93,6 +99,41 @@ describe('Batch Jobs Worker - Worker Lifecycle', () => {
             await stopWorker();
             expect(resetLLMQueue).toHaveBeenCalled();
         });
+
+        it('should refuse restart while timed-out shutdown is still draining active items', async () => {
+            vi.useFakeTimers();
+            try {
+                const { safeLog } = await import('../../utils/logger.backend.js');
+                const job = { id: 'j-drain', status: 'pending', job_type: 'import', options: '{}', total_items: 1 };
+                const item = { id: 'i-drain', file_name: 'cv.pdf' };
+                let resolveProcessing;
+
+                getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
+                claimPendingItems.mockResolvedValueOnce([item]);
+                isJobComplete.mockResolvedValue(false);
+                processImportItem.mockImplementationOnce(() => new Promise((resolve) => {
+                    resolveProcessing = resolve;
+                }));
+
+                await startWorker();
+                await vi.advanceTimersByTimeAsync(5000);
+
+                const stopPromise = stopWorker();
+                await vi.advanceTimersByTimeAsync(30000);
+                await stopPromise;
+
+                await startWorker();
+
+                expect(safeLog).toHaveBeenCalledWith('warn', expect.stringContaining('cannot restart while previous processing is still draining'), expect.objectContaining({
+                    activeProcessingCount: 1
+                }));
+
+                resolveProcessing();
+                await vi.runAllTimersAsync();
+            } finally {
+                vi.useRealTimers();
+            }
+        }, 20000);
     });
 
     describe('processNextBatch (via worker interval)', () => {
@@ -101,7 +142,7 @@ describe('Batch Jobs Worker - Worker Lifecycle', () => {
             const item = { id: 'i1', file_name: 'cv.pdf' };
 
             getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
-            getPendingItems.mockResolvedValueOnce([item]);
+            claimPendingItems.mockResolvedValueOnce([item]);
             isJobComplete.mockResolvedValueOnce(true);
 
             await startWorker();
@@ -118,7 +159,7 @@ describe('Batch Jobs Worker - Worker Lifecycle', () => {
             const item = { id: 'i-adapt', file_name: 'cv.pdf', resume_id: 'r1' };
 
             getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
-            getPendingItems.mockResolvedValueOnce([item]);
+            claimPendingItems.mockResolvedValueOnce([item]);
             isJobComplete.mockResolvedValueOnce(true);
 
             await startWorker();
@@ -133,7 +174,7 @@ describe('Batch Jobs Worker - Worker Lifecycle', () => {
             const item = { id: 'i-match', file_name: 'cv.pdf', resume_id: 'r1' };
 
             getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
-            getPendingItems.mockResolvedValueOnce([item]);
+            claimPendingItems.mockResolvedValueOnce([item]);
             isJobComplete.mockResolvedValueOnce(true);
 
             await startWorker();
@@ -148,7 +189,7 @@ describe('Batch Jobs Worker - Worker Lifecycle', () => {
             const item = { id: 'i2', file_name: 'cv.pdf' };
 
             getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
-            getPendingItems.mockResolvedValueOnce([item]);
+            claimPendingItems.mockResolvedValueOnce([item]);
             isJobComplete.mockResolvedValueOnce(true);
 
             await startWorker();
@@ -163,7 +204,7 @@ describe('Batch Jobs Worker - Worker Lifecycle', () => {
             const item = { id: 'i3', file_name: 'cv.pdf' };
 
             getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
-            getPendingItems.mockResolvedValueOnce([item]);
+            claimPendingItems.mockResolvedValueOnce([item]);
             processImportItem.mockRejectedValueOnce(new Error('LLM error'));
             isJobComplete.mockResolvedValueOnce(true);
 
@@ -174,12 +215,30 @@ describe('Batch Jobs Worker - Worker Lifecycle', () => {
             expect(updateJobItemStatus).toHaveBeenCalledWith('i3', 'error', expect.objectContaining({ error_message: 'LLM error' }));
         }, 10000);
 
+        it('should fail the job cleanly when job options JSON is invalid', async () => {
+            const job = { id: 'j-invalid-options', status: 'pending', job_type: 'import', options: '{invalid-json', total_items: 1 };
+            const item = { id: 'i-invalid-options', file_name: 'cv.pdf' };
+
+            getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
+            claimPendingItems.mockResolvedValueOnce([item]);
+
+            await startWorker();
+            await new Promise(r => setTimeout(r, 6000));
+            await stopWorker();
+
+            expect(processImportItem).not.toHaveBeenCalled();
+            expect(updateJobStatus).toHaveBeenCalledWith('j-invalid-options', 'failed', expect.objectContaining({
+                error_message: expect.stringContaining('Invalid job options JSON')
+            }));
+        }, 10000);
+
         it('should complete job when no pending items remain', async () => {
             const job = { id: 'j4', status: 'processing', job_type: 'import', options: '{}', total_items: 0 };
 
             getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
-            getPendingItems.mockResolvedValueOnce([]);
+            claimPendingItems.mockResolvedValueOnce([]);
             isJobComplete.mockResolvedValueOnce(true);
+            getJobStatus.mockResolvedValueOnce('processing');
 
             await startWorker();
             await new Promise(r => setTimeout(r, 6000));
@@ -189,19 +248,66 @@ describe('Batch Jobs Worker - Worker Lifecycle', () => {
             expect(updateJobStatus).toHaveBeenLastCalledWith('j4', 'completed', expect.objectContaining({ processed_items: 0, success_count: 0, error_count: 0 }));
         }, 10000);
 
-        it('should handle unknown job type with error', async () => {
-            const job = { id: 'j5', status: 'pending', job_type: 'unknown', options: '{}', total_items: 1 };
-            const item = { id: 'i5', file_name: 'cv.pdf' };
+        it('should preserve cancelled status when a job completes after cancellation', async () => {
+            const job = { id: 'j-cancelled', status: 'processing', job_type: 'import', options: '{}', total_items: 0 };
 
             getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
-            getPendingItems.mockResolvedValueOnce([item]);
+            claimPendingItems.mockResolvedValueOnce([]);
             isJobComplete.mockResolvedValueOnce(true);
+            getJobStatus.mockResolvedValueOnce('cancelled');
 
             await startWorker();
             await new Promise(r => setTimeout(r, 6000));
             await stopWorker();
 
-            expect(updateJobItemStatus).toHaveBeenCalledWith('i5', 'error', expect.objectContaining({ error_message: expect.stringContaining('Unknown job type') }));
+            expect(updateJobCounters).toHaveBeenCalledWith('j-cancelled');
+            expect(updateJobStatus).not.toHaveBeenCalledWith('j-cancelled', 'completed', expect.anything());
+            expect(updateJobStatus).not.toHaveBeenCalledWith('j-cancelled', 'failed', expect.anything());
         }, 10000);
+
+        it('should handle unknown job type with error', async () => {
+            const job = { id: 'j5', status: 'pending', job_type: 'unknown', options: '{}', total_items: 1 };
+            const item = { id: 'i5', file_name: 'cv.pdf' };
+
+            getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
+            claimPendingItems.mockResolvedValueOnce([item]);
+            isJobComplete.mockResolvedValueOnce(true);
+            getJobStatus.mockResolvedValueOnce('processing');
+
+            await startWorker();
+            await new Promise(r => setTimeout(r, 6000));
+            await stopWorker();
+
+            expect(updateJobItemStatus).toHaveBeenCalledWith('i5', 'processing', { progress: 10 });
+            expect(updateJobItemStatus).toHaveBeenCalledWith(
+                'i5',
+                'error',
+                expect.objectContaining({ error_message: expect.stringContaining('Unknown job type') })
+            );
+        }, 10000);
+
+        it('should preserve cancelled status when a processing error occurs after cancellation', async () => {
+            const job = { id: 'j-error-cancelled', status: 'processing', job_type: 'import', options: '{}', total_items: 1 };
+            const item = { id: 'i-error-cancelled', file_name: 'cv.pdf' };
+
+            getPendingJobs.mockResolvedValueOnce([job]).mockResolvedValue([]);
+            claimPendingItems.mockResolvedValueOnce([item]);
+            processImportItem.mockRejectedValueOnce(new Error('late failure'));
+            isJobComplete.mockResolvedValueOnce(false);
+            getJobStatus.mockResolvedValueOnce('cancelled');
+
+            await startWorker();
+            await new Promise(r => setTimeout(r, 6000));
+            await stopWorker();
+
+            expect(updateJobItemStatus).toHaveBeenCalledWith('i-error-cancelled', 'processing', { progress: 10 });
+            expect(updateJobItemStatus).toHaveBeenCalledWith(
+                'i-error-cancelled',
+                'error',
+                expect.objectContaining({ error_message: 'late failure' })
+            );
+            expect(updateJobStatus).not.toHaveBeenCalledWith('j-error-cancelled', 'failed', expect.anything());
+        }, 10000);
+
     });
 });

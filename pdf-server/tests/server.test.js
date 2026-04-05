@@ -26,7 +26,7 @@ const origLog = logger.log;
 
 const resetServerModule = () => {
   delete require.cache[require.resolve('../server.cjs')];
-  return require('../server.cjs').app;
+  return require('../server.cjs');
 };
 
 describe('PDF Server', () => {
@@ -53,6 +53,8 @@ describe('PDF Server', () => {
     delete process.env.PDF_MAX_OUTPUT_SIZE;
     delete process.env.PDF_MAX_CONCURRENT;
     delete process.env.PDF_SERVER_HEALTH_VERBOSE;
+    delete process.env.PDF_SERVER_REQUEST_TIMEOUT_MS;
+    delete process.env.PDF_TIMEOUT;
     delete require.cache[require.resolve('../server.cjs')];
   });
 
@@ -79,7 +81,7 @@ describe('PDF Server', () => {
 
     it('should expose diagnostics only when verbose health is enabled', async () => {
       process.env.PDF_SERVER_HEALTH_VERBOSE = 'true';
-      const verboseApp = resetServerModule();
+      const { app: verboseApp } = resetServerModule();
       const res = await request(verboseApp).get('/health');
 
       expect(res.body.memory).toBeDefined();
@@ -268,7 +270,7 @@ describe('PDF Server', () => {
     it('should return 413 when generated PDF exceeds size limit', async () => {
       process.env.PDF_MAX_OUTPUT_SIZE = '3';
       pdfGen.generatePdf.mockResolvedValue(Buffer.from('fake-pdf'));
-      const reloadedApp = resetServerModule();
+      const { app: reloadedApp } = resetServerModule();
 
       const res = await request(reloadedApp)
         .post('/generate-pdf')
@@ -414,7 +416,7 @@ describe('PDF Server', () => {
     it('should return 413 when generated DOCX exceeds size limit', async () => {
       process.env.PDF_MAX_OUTPUT_SIZE = '3';
       docxGen.generateDocx.mockResolvedValue(Buffer.from('fake-docx'));
-      const reloadedApp = resetServerModule();
+      const { app: reloadedApp } = resetServerModule();
 
       const res = await request(reloadedApp)
         .post('/generate-docx')
@@ -477,6 +479,23 @@ describe('PDF Server', () => {
       expect(serverModule._internal.resolvePdfServerInternalToken({
         configuredToken: ''
       })).toBe('');
+    });
+
+    it('prefers PDF_SERVER_REQUEST_TIMEOUT_MS over legacy PDF_TIMEOUT', () => {
+      process.env.PDF_SERVER_REQUEST_TIMEOUT_MS = '45000';
+      process.env.PDF_TIMEOUT = '15000';
+
+      const reloadedServer = resetServerModule();
+
+      expect(reloadedServer._internal.PDF_GENERATION_TIMEOUT).toBe(45000);
+    });
+
+    it('falls back to legacy PDF_TIMEOUT when the canonical timeout is unset', () => {
+      process.env.PDF_TIMEOUT = '15000';
+
+      const reloadedServer = resetServerModule();
+
+      expect(reloadedServer._internal.PDF_GENERATION_TIMEOUT).toBe(15000);
     });
   });
 });

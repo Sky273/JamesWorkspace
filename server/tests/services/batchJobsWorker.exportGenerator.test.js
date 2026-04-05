@@ -75,23 +75,29 @@ vi.mock('fs', async () => {
         default: {
             ...actual,
             promises: {
+                mkdtemp: vi.fn(() => Promise.resolve('/tmp/batch-export-j1-123')),
                 mkdir: vi.fn(() => Promise.resolve()),
+                rm: vi.fn(() => Promise.resolve()),
                 writeFile: vi.fn(() => Promise.resolve()),
                 stat: vi.fn(() => Promise.resolve({ size: 7 }))
             },
             existsSync: vi.fn(() => true),
             mkdirSync: vi.fn(),
             writeFileSync: vi.fn(),
+            createReadStream: vi.fn(() => Readable.from(['artifact'])),
             createWriteStream: vi.fn(() => ({ on: vi.fn(), once: vi.fn(), destroy: vi.fn() }))
         },
         promises: {
+            mkdtemp: vi.fn(() => Promise.resolve('/tmp/batch-export-j1-123')),
             mkdir: vi.fn(() => Promise.resolve()),
+            rm: vi.fn(() => Promise.resolve()),
             writeFile: vi.fn(() => Promise.resolve()),
             stat: vi.fn(() => Promise.resolve({ size: 7 }))
         },
         existsSync: vi.fn(() => true),
         mkdirSync: vi.fn(),
         writeFileSync: vi.fn(),
+        createReadStream: vi.fn(() => Readable.from(['artifact'])),
         createWriteStream: vi.fn(() => ({ on: vi.fn(), once: vi.fn(), destroy: vi.fn() }))
     };
 });
@@ -202,7 +208,7 @@ describe('Batch Jobs Worker - Export Generator', () => {
         }));
     });
 
-    it('should fully buffer PDF bodies before ZIP generation', async () => {
+    it('should persist generated artifacts to temp files before ZIP generation', async () => {
         mockGetJob.mockResolvedValueOnce({ id: 'j1' });
         mockGetJobItems.mockResolvedValueOnce([
             { id: 'i1', status: 'success', resume_id: 'r1', file_name: 'cv.pdf' }
@@ -220,7 +226,10 @@ describe('Batch Jobs Worker - Export Generator', () => {
 
         await generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] });
 
+        const fsModule = await import('fs');
         expect(arrayBuffer).toHaveBeenCalled();
+        expect(fsModule.default.promises.writeFile).toHaveBeenCalled();
+        expect(fsModule.default.createReadStream).toHaveBeenCalled();
         expect(mockUpdateJobExportFile).toHaveBeenCalledWith('j1', expect.any(String), expect.stringContaining('export_j1'));
     });
 
@@ -246,6 +255,40 @@ describe('Batch Jobs Worker - Export Generator', () => {
         expect(mockZipGenerateNodeStream).toHaveBeenCalled();
         expect(pipeline).toHaveBeenCalled();
         expect(fsModule.default.writeFileSync).not.toHaveBeenCalled();
+        expect(fsModule.default.promises.rm).toHaveBeenCalled();
+    });
+
+    it('should mark generated items as error if final zip streaming fails', async () => {
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce([
+            { id: 'i1', status: 'success', resume_id: 'r1', file_name: 'cv.pdf' }
+        ]);
+        mockQuery
+            .mockResolvedValueOnce({ rows: [template] })
+            .mockResolvedValueOnce({ rows: [{ id: 'r1', improved_text: '<p>CV</p>', name: 'Alice', title: 'Dev', trigram: 'ALI' }] });
+
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(32))
+        });
+
+        const { pipeline } = await import('stream/promises');
+        pipeline.mockRejectedValueOnce(new Error('zip stream failed'));
+
+        await expect(
+            generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] })
+        ).rejects.toThrow('zip stream failed');
+
+        expect(mockUpdateJobExportFile).not.toHaveBeenCalled();
+        expect(mockUpdateJobItemStatus).toHaveBeenCalledWith('i1', 'error', expect.objectContaining({
+            error_message: 'Export archive generation failed'
+        }));
+
+        const fsModule = await import('fs');
+        expect(fsModule.default.promises.rm).toHaveBeenCalledWith('/tmp/batch-export-j1-123', expect.objectContaining({
+            recursive: true,
+            force: true
+        }));
     });
 
     it('should handle single exportFormat string', async () => {

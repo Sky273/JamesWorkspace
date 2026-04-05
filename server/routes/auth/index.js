@@ -6,7 +6,7 @@
 import express from 'express';
 import signinRoutes from './signin.routes.js';
 import usersRoutes from './users.routes.js';
-import googleRoutes, { destroyAuthOauthStates, startAuthOauthStatesCleanup } from './google.routes.js';
+import googleRoutes from './google.routes.js';
 import passwordResetRoutes from './passwordReset.routes.js';
 
 const router = express.Router();
@@ -16,8 +16,5 @@ router.use('/', signinRoutes);
 router.use('/', usersRoutes);
 router.use('/', googleRoutes);
 router.use('/', passwordResetRoutes);
-
-// Re-export cleanup function
-export { destroyAuthOauthStates, startAuthOauthStatesCleanup };
 
 export default router;

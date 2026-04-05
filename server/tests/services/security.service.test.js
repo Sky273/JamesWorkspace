@@ -19,17 +19,31 @@ vi.mock('fs', () => ({
     default: {
         existsSync: vi.fn(() => true),
         mkdirSync: vi.fn(),
-        appendFileSync: vi.fn(),
         statSync: vi.fn(() => ({ size: 0 })),
         renameSync: vi.fn(),
         unlinkSync: vi.fn()
     }
 }));
 
+vi.mock('fs/promises', () => ({
+    default: {
+        appendFile: vi.fn(() => Promise.resolve()),
+        stat: vi.fn(() => Promise.resolve({ size: 0 })),
+        rename: vi.fn(() => Promise.resolve()),
+        unlink: vi.fn(() => Promise.resolve())
+    },
+    appendFile: vi.fn(() => Promise.resolve()),
+    stat: vi.fn(() => Promise.resolve({ size: 0 })),
+    rename: vi.fn(() => Promise.resolve()),
+    unlink: vi.fn(() => Promise.resolve())
+}));
+
 import fs from 'fs';
+import fsPromises from 'fs/promises';
 import {
     LOG_LEVELS,
     SECURITY_EVENTS,
+    flushSecurityLogPersistenceForTests,
     getSecurityLogs,
     getSecurityLogsCount,
     securityLog,
@@ -115,44 +129,48 @@ describe('Security Service', () => {
     });
 
     describe('file persistence', () => {
-        it('should persist critical security events to file', () => {
-            fs.appendFileSync.mockClear();
+        it('should persist critical security events to file', async () => {
+            fsPromises.appendFile.mockClear();
 
             securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.AUTH_BLOCKED, {
                 ip: '5.5.5.5', email: 'hacker@evil.com'
             });
+            await flushSecurityLogPersistenceForTests();
 
-            expect(fs.appendFileSync).toHaveBeenCalled();
+            expect(fsPromises.appendFile).toHaveBeenCalled();
         });
 
-        it('should persist ERROR level to file', () => {
-            fs.appendFileSync.mockClear();
+        it('should persist ERROR level to file', async () => {
+            fsPromises.appendFile.mockClear();
 
             securityLog(LOG_LEVELS.ERROR, SECURITY_EVENTS.AUTH_FAILURE, {
                 ip: '6.6.6.6'
             });
+            await flushSecurityLogPersistenceForTests();
 
-            expect(fs.appendFileSync).toHaveBeenCalled();
+            expect(fsPromises.appendFile).toHaveBeenCalled();
         });
 
-        it('should persist RATE_LIMIT_HIT events to file', () => {
-            fs.appendFileSync.mockClear();
+        it('should persist RATE_LIMIT_HIT events to file', async () => {
+            fsPromises.appendFile.mockClear();
 
             securityLog(LOG_LEVELS.WARNING, SECURITY_EVENTS.RATE_LIMIT_HIT, {
                 ip: '7.7.7.7'
             });
+            await flushSecurityLogPersistenceForTests();
 
-            expect(fs.appendFileSync).toHaveBeenCalled();
+            expect(fsPromises.appendFile).toHaveBeenCalled();
         });
 
-        it('should not persist INFO level non-critical events to file', () => {
-            fs.appendFileSync.mockClear();
+        it('should not persist INFO level non-critical events to file', async () => {
+            fsPromises.appendFile.mockClear();
 
             securityLog(LOG_LEVELS.INFO, SECURITY_EVENTS.DATA_ACCESS, {
                 ip: '8.8.8.8'
             });
+            await flushSecurityLogPersistenceForTests();
 
-            expect(fs.appendFileSync).not.toHaveBeenCalled();
+            expect(fsPromises.appendFile).not.toHaveBeenCalled();
         });
     });
 

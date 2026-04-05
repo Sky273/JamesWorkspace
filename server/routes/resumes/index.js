@@ -21,6 +21,7 @@ import crudRouter from './crud.routes.js';
 import uploadRouter from './upload.routes.js';
 import statsRouter from './stats.routes.js';
 import versionsRouter from './versions.routes.js';
+import commentsRouter from '../resumeComments.routes.js';
 
 // Import LLM handlers
 import { aiModifyHandler } from './aiModify.handler.js';
@@ -44,6 +45,11 @@ router.post('/:id/ai-modify', authenticateToken, validateParams('id'), userRateL
 // VERSION ROUTES
 // ============================================
 router.use('/', versionsRouter);
+
+// ============================================
+// COMMENT ROUTES
+// ============================================
+router.use('/', commentsRouter);
 
 // ============================================
 // CRUD ROUTES (must be last due to /:id pattern)

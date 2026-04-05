@@ -14,9 +14,11 @@ export const METRICS_HISTORY_FILE = process.env.METRICS_HISTORY_FILE || path.joi
 export const SAVE_INTERVAL_MS = 5 * 60 * 1000;
 export const HISTORY_INTERVAL_MS = 60 * 60 * 1000;
 export const MAX_HISTORY_ENTRIES = 24 * 30;
+export const HISTORY_COMPACTION_INTERVAL = 100;
 
 let historyLinesCache = null;
 let historyLinesCacheFile = null;
+let historyOverflowCount = 0;
 let persistenceQueue = Promise.resolve();
 
 function getHistoryCacheFile() {
@@ -28,6 +30,7 @@ function resetHistoryCacheIfNeeded() {
     if (historyLinesCacheFile !== currentHistoryFile) {
         historyLinesCache = null;
         historyLinesCacheFile = currentHistoryFile;
+        historyOverflowCount = 0;
     }
 }
 
@@ -46,6 +49,10 @@ function loadHistoryLines(log) {
 
     try {
         historyLinesCache = fs.readFileSync(currentHistoryFile, 'utf8').split('\n').filter(Boolean);
+        if (historyLinesCache.length > MAX_HISTORY_ENTRIES) {
+            historyOverflowCount = historyLinesCache.length - MAX_HISTORY_ENTRIES;
+            historyLinesCache = historyLinesCache.slice(-MAX_HISTORY_ENTRIES);
+        }
         return historyLinesCache;
     } catch (err) {
         log.error('Failed to load metrics history cache', { error: err.message });
@@ -205,9 +212,16 @@ export function appendMetricsHistory(collector, log) {
                 return;
             }
 
-            lines.push(nextLine);
-            historyLinesCache = lines.slice(-MAX_HISTORY_ENTRIES);
+            historyLinesCache = [...lines.slice(-(MAX_HISTORY_ENTRIES - 1)), nextLine];
+            historyOverflowCount += 1;
+            await fsPromises.appendFile(currentHistoryFile, `${nextLine}\n`, 'utf8');
+
+            if (historyOverflowCount < HISTORY_COMPACTION_INTERVAL) {
+                return;
+            }
+
             await fsPromises.writeFile(currentHistoryFile, `${historyLinesCache.join('\n')}\n`, 'utf8');
+            historyOverflowCount = 0;
         } catch (err) {
             log.error('Failed to append metrics history', { error: err.message });
         }

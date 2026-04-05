@@ -24,6 +24,8 @@ const mockGetResumeFileDataById = vi.fn();
 const mockRevokeShareLinks = vi.fn();
 const mockGetResumeForAccessCheck = vi.fn();
 const mockGetUserFirmId = vi.fn();
+const rateLimitCalls = [];
+let shouldBlockShareGenerate = false;
 
 vi.mock('../../services/shareResume.service.js', () => ({
     __esModule: true,
@@ -97,6 +99,21 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
     isUserAdmin: (req) => req.user?.role === 'admin'
 }));
 
+vi.mock('../../middleware/rateLimit.middleware.js', () => ({
+    userRateLimit: (...args) => {
+        rateLimitCalls.push(args);
+        return (_req, res, next) => {
+            if (shouldBlockShareGenerate) {
+                return res.status(429).json({
+                    error: 'Too many requests',
+                    retryAfter: 900
+                });
+            }
+            next();
+        };
+    }
+}));
+
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
@@ -119,6 +136,7 @@ describe('Share Routes', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        shouldBlockShareGenerate = false;
         mockPipeline.mockImplementation((source, destination) => new Promise((resolve, reject) => {
             source.on('error', reject);
             destination.on('error', reject);
@@ -177,6 +195,23 @@ describe('Share Routes', () => {
                 signal: expect.any(Object)
             })
         );
+    });
+
+    it('applies a dedicated rate limit to share PDF generation', () => {
+        expect(rateLimitCalls).toContainEqual([10, 15 * 60 * 1000]);
+    });
+
+    it('returns 429 before contacting the PDF server when the share generation limit is reached', async () => {
+        shouldBlockShareGenerate = true;
+
+        const res = await request(app)
+            .post('/api/share/resume/res-1/generate')
+            .set(AUTH)
+            .send({ htmlContent: '<h1>CV</h1>' });
+
+        expect(res.status).toBe(429);
+        expect(mockFetch).not.toHaveBeenCalled();
+        expect(mockStoreSharedPdf).not.toHaveBeenCalled();
     });
 
     it('returns 504 when the PDF server request times out', async () => {

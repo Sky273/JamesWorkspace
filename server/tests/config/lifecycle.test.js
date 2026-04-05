@@ -133,17 +133,17 @@ vi.mock('../../services/calendar.service.js', () => ({
     destroyCalendarService: (...args) => mockDestroyCalendarService(...args)
 }));
 
-vi.mock('../../routes/auth/index.js', () => ({
+vi.mock('../../services/authOauthState.service.js', () => ({
     destroyAuthOauthStates: (...args) => mockDestroyAuthOauthStates(...args),
     startAuthOauthStatesCleanup: (...args) => mockStartAuthOauthStatesCleanup(...args)
 }));
 
-vi.mock('../../routes/mail.routes.js', () => ({
+vi.mock('../../services/mailOauthState.service.js', () => ({
     destroyMailStatesCleanup: (...args) => mockDestroyMailStatesCleanup(...args),
     startMailStatesCleanup: (...args) => mockStartMailStatesCleanup(...args)
 }));
 
-vi.mock('../../routes/gdprMail.routes.js', () => ({
+vi.mock('../../services/gdprMailOauthState.service.js', () => ({
     destroyGdprMailStatesCleanup: (...args) => mockDestroyGdprMailStatesCleanup(...args),
     startGdprMailStatesCleanup: (...args) => mockStartGdprMailStatesCleanup(...args)
 }));

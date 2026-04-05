@@ -5,16 +5,15 @@
 
 import { safeLog } from '../../utils/logger.backend.js';
 import { query } from '../../config/database.js';
-import { JOB_STATUS, ITEM_STATUS } from '../batchJobs/constants.js';
-import { getPendingJobs, updateJobStatus, updateJobCounters, isJobComplete, getFinalJobOutcome } from '../batchJobs/jobCrud.js';
-import { getPendingItems, updateJobItemStatus } from '../batchJobs/itemCrud.js';
+import { JOB_STATUS, ITEM_STATUS, BATCH_SIZE, WORKER_EXECUTION_CONCURRENCY } from '../batchJobs/constants.js';
+import { getPendingJobs, updateJobStatus, updateJobCounters, isJobComplete, getFinalJobOutcome, getJobStatus } from '../batchJobs/jobCrud.js';
+import { claimPendingItems, updateJobItemStatus } from '../batchJobs/itemCrud.js';
 import { resetLLMQueue } from './llmIntegration.js';
 import { processImportItem, processImproveItem, processAdaptItem, processMatchItem, processProfileSearchItem, processProfileAnalysisItem } from './itemProcessors.js';
 import { generateJobExport } from './exportGenerator.js';
 
 // Worker configuration
 const WORKER_INTERVAL = 5000; // Check for pending jobs every 5 seconds
-const BATCH_SIZE = 100; // Process up to 100 items in parallel
 const SHUTDOWN_TIMEOUT = 30000; // Max wait time for graceful shutdown (30s)
 
 // Worker state
@@ -25,6 +24,22 @@ let isShuttingDown = false;
 let activeProcessingCount = 0;
 
 const REQUIRED_BATCH_TABLES = ['batch_jobs', 'batch_job_items'];
+
+function parseJobOptions(job) {
+    if (!job?.options) {
+        return {};
+    }
+
+    if (typeof job.options === 'string') {
+        try {
+            return JSON.parse(job.options);
+        } catch (error) {
+            throw new Error(`Invalid job options JSON: ${error.message}`);
+        }
+    }
+
+    return job.options;
+}
 
 async function ensureBatchJobsSchemaReady() {
     const result = await query(
@@ -67,6 +82,13 @@ export async function initializeWorker() {
 export async function startWorker() {
     if (workerInterval) {
         safeLog('warn', 'Batch jobs worker already running');
+        return;
+    }
+    if (activeProcessingCount > 0 || isWorkerRunning) {
+        safeLog('warn', 'Batch jobs worker cannot restart while previous processing is still draining', {
+            activeProcessingCount,
+            isWorkerRunning
+        });
         return;
     }
 
@@ -118,6 +140,7 @@ export async function stopWorker() {
     }
 
     // Wait for active processing to complete
+    let shutdownTimedOut = false;
     if (activeProcessingCount > 0 || isWorkerRunning) {
         safeLog('info', 'Waiting for active batch processing to complete...', { activeProcessingCount });
         
@@ -133,6 +156,7 @@ export async function stopWorker() {
                     resolve();
                 } else if (elapsed >= SHUTDOWN_TIMEOUT) {
                     clearInterval(checkInterval);
+                    shutdownTimedOut = true;
                     safeLog('warn', 'Shutdown timeout reached, forcing stop', { 
                         activeProcessingCount, 
                         isWorkerRunning,
@@ -151,7 +175,9 @@ export async function stopWorker() {
     }
 
     isWorkerRunning = false;
-    activeProcessingCount = 0;
+    if (!shutdownTimedOut) {
+        activeProcessingCount = 0;
+    }
     
     // Reset LLM queue to prevent stuck requests
     resetLLMQueue();
@@ -173,6 +199,7 @@ async function processNextBatch() {
     for (const job of pendingJobs) {
         try {
             safeLog('debug', 'Processing job', { jobId: job.id, status: job.status, totalItems: job.total_items });
+            const jobOptions = parseJobOptions(job);
             
             // Mark job as processing if not already
             if (job.status === JOB_STATUS.PENDING) {
@@ -180,7 +207,7 @@ async function processNextBatch() {
             }
 
             // Get pending items
-            const pendingItems = await getPendingItems(job.id);
+            const pendingItems = await claimPendingItems(job.id);
             safeLog('debug', 'Got pending items', { jobId: job.id, pendingItemsCount: pendingItems.length });
 
             if (pendingItems.length === 0) {
@@ -192,13 +219,17 @@ async function processNextBatch() {
                     await updateJobCounters(job.id);
                     
                     // Generate export ZIP if export was requested
-                    const options = typeof job.options === 'string' ? JSON.parse(job.options) : (job.options || {});
-                    if (options.export && options.templateId) {
-                        await generateJobExport(job.id, options);
+                    if (jobOptions.export && jobOptions.templateId) {
+                        await generateJobExport(job.id, jobOptions);
                         await updateJobCounters(job.id);
                     }
                     
                     const outcome = await getFinalJobOutcome(job.id);
+                    const latestStatus = await getJobStatus(job.id);
+                    if (latestStatus === JOB_STATUS.CANCELLED) {
+                        safeLog('info', 'Batch job remained cancelled after processing cycle', { jobId: job.id });
+                        continue;
+                    }
                     await updateJobStatus(job.id, outcome.status, {
                         processed_items: outcome.counters.processed_items,
                         success_count: outcome.counters.success_count,
@@ -217,11 +248,14 @@ async function processNextBatch() {
             safeLog('info', 'Processing batch', { 
                 jobId: job.id, 
                 jobType: job.job_type,
-                itemCount: pendingItems.length 
+                itemCount: pendingItems.length,
+                executionConcurrency: WORKER_EXECUTION_CONCURRENCY
             });
 
-            const promises = pendingItems.map(item => processItem(item, job));
-            await Promise.all(promises);
+            for (let index = 0; index < pendingItems.length; index += WORKER_EXECUTION_CONCURRENCY) {
+                const itemChunk = pendingItems.slice(index, index + WORKER_EXECUTION_CONCURRENCY);
+                await Promise.all(itemChunk.map(item => processItem(item, job, jobOptions)));
+            }
 
             // Update counters after batch
             await updateJobCounters(job.id);
@@ -229,13 +263,17 @@ async function processNextBatch() {
             // Check if job is complete
             if (await isJobComplete(job.id)) {
                 // Generate export ZIP if export was requested
-                const options = typeof job.options === 'string' ? JSON.parse(job.options) : (job.options || {});
-                if (options.export && options.templateId) {
-                    await generateJobExport(job.id, options);
+                if (jobOptions.export && jobOptions.templateId) {
+                    await generateJobExport(job.id, jobOptions);
                     await updateJobCounters(job.id);
                 }
                 
                 const outcome = await getFinalJobOutcome(job.id);
+                const latestStatus = await getJobStatus(job.id);
+                if (latestStatus === JOB_STATUS.CANCELLED) {
+                    safeLog('info', 'Batch job remained cancelled after processing cycle', { jobId: job.id });
+                    continue;
+                }
                 await updateJobStatus(job.id, outcome.status, {
                     processed_items: outcome.counters.processed_items,
                     success_count: outcome.counters.success_count,
@@ -249,6 +287,11 @@ async function processNextBatch() {
             }
         } catch (error) {
             safeLog('error', 'Error processing job', { jobId: job.id, error: error.message });
+            const latestStatus = await getJobStatus(job.id);
+            if (latestStatus === JOB_STATUS.CANCELLED) {
+                safeLog('info', 'Batch job remained cancelled after processing error', { jobId: job.id });
+                continue;
+            }
             await updateJobStatus(job.id, JOB_STATUS.FAILED, { error_message: error.message });
         }
     }
@@ -259,7 +302,7 @@ async function processNextBatch() {
  * @param {Object} item - The job item to process
  * @param {Object} job - The parent job
  */
-async function processItem(item, job) {
+async function processItem(item, job, jobOptions = null) {
     // Check if shutdown is in progress
     if (isShuttingDown) {
         safeLog('debug', 'Skipping item processing due to shutdown', { itemId: item.id });
@@ -271,7 +314,7 @@ async function processItem(item, job) {
     try {
         await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 10 });
 
-        const options = typeof job.options === 'string' ? JSON.parse(job.options) : (job.options || {});
+        const options = jobOptions || parseJobOptions(job);
 
         if (job.job_type === 'import') {
             await processImportItem(item, job, options);

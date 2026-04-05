@@ -24,7 +24,14 @@ const PORT = process.env.PDF_SERVER_PORT || 3002;
 const DIST_DIR = path.join(__dirname, 'dist');
 const DIST_INDEX_PATH = path.join(DIST_DIR, 'index.html');
 
-const PDF_GENERATION_TIMEOUT = parseInt(process.env.PDF_TIMEOUT || '30000', 10);
+function parsePositiveIntegerEnvValue(value) {
+  const parsed = parseInt(value || '', 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+const PDF_GENERATION_TIMEOUT = parsePositiveIntegerEnvValue(process.env.PDF_SERVER_REQUEST_TIMEOUT_MS)
+  || parsePositiveIntegerEnvValue(process.env.PDF_TIMEOUT)
+  || 30000;
 const isProduction = process.env.NODE_ENV === 'production';
 const configuredPdfToken = process.env.PDF_SERVER_INTERNAL_TOKEN || '';
 const PDF_SERVER_INTERNAL_TOKEN = resolvePdfServerInternalToken({
@@ -345,6 +352,7 @@ module.exports = {
   _internal: {
     resolvePdfServerInternalToken,
     buildGenerationFailureBody,
+    PDF_GENERATION_TIMEOUT,
     DIST_DIR,
     DIST_INDEX_PATH,
     registerProcessHandlers

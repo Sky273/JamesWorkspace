@@ -166,6 +166,16 @@ function summarizeBadRequestBody(body) {
     return { type: typeof body };
 }
 
+function buildBadRequestDiagnostic(req, body) {
+    return {
+        path: req.path,
+        method: req.method,
+        contentType: req.headers['content-type'],
+        origin: req.headers.origin || 'no-origin',
+        responseSummary: summarizeBadRequestBody(body)
+    };
+}
+
 // Reject oversized requests before parsing so large bodies do not reach the JSON parser.
 app.use((req, res, next) => {
     if (!METHODS_WITH_BODIES.has(req.method)) {
@@ -211,22 +221,32 @@ app.use(compression());
 app.use((req, res, next) => {
     const start = Date.now();
     const originalJson = res.json.bind(res);
+    const originalSend = res.send.bind(res);
+    let badRequestDiagnosticLogged = false;
+
+    const logBadRequestDiagnostic = (body) => {
+        if (badRequestDiagnosticLogged || res.statusCode !== 400) {
+            return;
+        }
+
+        badRequestDiagnosticLogged = true;
+        safeLog('warn', '400 Bad Request diagnostic', buildBadRequestDiagnostic(req, body));
+    };
     
     // Intercept JSON responses to log 400 errors with details
     res.json = function(body) {
-        if (res.statusCode === 400) {
-            safeLog('warn', '400 Bad Request diagnostic', {
-                path: req.path,
-                method: req.method,
-                origin: req.headers.origin || 'no-origin',
-                userAgent: req.headers['user-agent']?.substring(0, 100),
-                hasAccessToken: !!req.cookies?.accessToken,
-                hasCsrfCookie: !!req.cookies?.['x-csrf-token'],
-                contentType: req.headers['content-type'],
-                responseSummary: summarizeBadRequestBody(body)
-            });
-        }
+        logBadRequestDiagnostic(body);
         return originalJson(body);
+    };
+
+    res.send = function(body) {
+        const responseType = res.getHeader('Content-Type');
+        const looksJson = typeof body === 'object'
+            || (typeof body === 'string' && String(responseType || '').toLowerCase().includes('application/json'));
+        if (looksJson) {
+            logBadRequestDiagnostic(body);
+        }
+        return originalSend(body);
     };
     
     const finishHandler = () => {

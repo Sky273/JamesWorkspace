@@ -21,6 +21,7 @@ vi.mock('../../services/batchExport.service.js', () => ({
 // Mock JSZip
 const mockFile = vi.fn();
 const mockGenerateNodeStream = vi.fn();
+const mockGenerateAsync = vi.fn(() => Promise.resolve(Buffer.from('fallback-zip')));
 vi.mock('jszip', () => ({
     default: class MockJSZip {
         constructor() {
@@ -32,10 +33,34 @@ vi.mock('jszip', () => ({
         }
         generateNodeStream(opts) { return mockGenerateNodeStream(opts); }
         generateAsync(opts) {
-            return Promise.resolve(Buffer.from('fallback-zip'));
+            return mockGenerateAsync(opts);
         }
     }
 }));
+
+vi.mock('fs', async () => {
+    const actual = await vi.importActual('fs');
+    return {
+        ...actual,
+        default: {
+            ...actual,
+            promises: {
+                ...actual.promises,
+                mkdtemp: vi.fn(() => Promise.resolve('/tmp/batch-export-http-123')),
+                writeFile: vi.fn(() => Promise.resolve()),
+                rm: vi.fn(() => Promise.resolve())
+            },
+            createReadStream: vi.fn(() => Readable.from([Buffer.from('artifact')]))
+        },
+        promises: {
+            ...actual.promises,
+            mkdtemp: vi.fn(() => Promise.resolve('/tmp/batch-export-http-123')),
+            writeFile: vi.fn(() => Promise.resolve()),
+            rm: vi.fn(() => Promise.resolve())
+        },
+        createReadStream: vi.fn(() => Readable.from([Buffer.from('artifact')]))
+    };
+});
 
 // Mock logger
 vi.mock('../../utils/logger.backend.js', () => ({
@@ -103,6 +128,7 @@ describe('Batch Export Routes', () => {
         mockGetResumesByIdsForExport.mockReset();
         mockFile.mockReset();
         mockGenerateNodeStream.mockReset();
+        mockGenerateAsync.mockReset();
         mockFetch.mockReset();
         mockTrackBatchExportActivity.mockReset();
         process.env.PDF_SERVER_INTERNAL_TOKEN = 't'.repeat(32);
@@ -239,11 +265,49 @@ describe('Batch Export Routes', () => {
                 streamFiles: true,
                 compression: 'DEFLATE'
             }));
+            expect(mockGenerateAsync).not.toHaveBeenCalled();
             expect(mockTrackBatchExportActivity).toHaveBeenCalledWith(expect.objectContaining({
                 source: 'http',
                 format: 'pdf',
                 successfulRuns: 1,
                 generatedFiles: 1
+            }));
+        });
+
+        it('should spool generated artifacts to temp files before zipping', async () => {
+            mockFetch.mockResolvedValueOnce({ ok: true });
+            mockGetTemplateByIdForExport.mockResolvedValueOnce(
+                { id: TEMPLATE_UUID, template_content: '<div>-content-</div>', header_content: '', footer_content: '', stylesheet: '', footer_height: 25 }
+            );
+            mockGetResumesByIdsForExport.mockResolvedValueOnce([
+                {
+                    id: RESUME_UUID,
+                    name: 'John Doe',
+                    title: 'Dev',
+                    improved_text: 'CV content',
+                    firm_id: '00000000-0000-0000-0000-000000000010'
+                }
+            ]);
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                arrayBuffer: () => Promise.resolve(Buffer.from('pdf-content'))
+            });
+            mockGenerateNodeStream.mockReturnValueOnce(Readable.from([Buffer.from('fake-zip')]));
+
+            const fsModule = await import('fs');
+
+            const res = await request(app)
+                .post('/api/batch-export')
+                .set(AUTH)
+                .send({ resumeIds: [RESUME_UUID], templateId: TEMPLATE_UUID });
+
+            expect(res.status).toBe(200);
+            expect(fsModule.default.promises.mkdtemp).toHaveBeenCalled();
+            expect(fsModule.default.promises.writeFile).toHaveBeenCalled();
+            expect(fsModule.default.createReadStream).toHaveBeenCalled();
+            expect(fsModule.default.promises.rm).toHaveBeenCalledWith('/tmp/batch-export-http-123', expect.objectContaining({
+                recursive: true,
+                force: true
             }));
         });
 

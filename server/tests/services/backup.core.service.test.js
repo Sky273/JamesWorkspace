@@ -15,12 +15,22 @@ const {
     mockFs: {
         existsSync: vi.fn(() => true),
         mkdirSync: vi.fn(),
-        readdirSync: vi.fn(() => []),
-        statSync: vi.fn(() => ({ size: 1024, mtime: new Date('2024-06-01') })),
-        unlinkSync: vi.fn(),
-        readFileSync: vi.fn(() => ''),
         createReadStream: vi.fn(() => ({ pipe: vi.fn().mockReturnThis() })),
-        createWriteStream: vi.fn(() => ({ pipe: vi.fn().mockReturnThis() }))
+        createWriteStream: vi.fn(() => ({ pipe: vi.fn().mockReturnThis() })),
+        promises: {
+            access: vi.fn(() => Promise.resolve()),
+            open: vi.fn(() => Promise.resolve({
+                read: vi.fn((buffer) => {
+                    const content = Buffer.from('DROP TABLE IF EXISTS resumes;');
+                    content.copy(buffer, 0, 0, content.length);
+                    return Promise.resolve({ bytesRead: content.length });
+                }),
+                close: vi.fn(() => Promise.resolve())
+            })),
+            readdir: vi.fn(() => Promise.resolve([])),
+            stat: vi.fn(() => Promise.resolve({ size: 1024, mtime: new Date('2024-06-01') })),
+            unlink: vi.fn(() => Promise.resolve())
+        }
     },
     mockQuery: vi.fn(),
     mockGetBackupSettings: vi.fn(),
@@ -56,12 +66,9 @@ vi.mock('fs', () => ({
     default: mockFs,
     existsSync: (...a) => mockFs.existsSync(...a),
     mkdirSync: (...a) => mockFs.mkdirSync(...a),
-    readdirSync: (...a) => mockFs.readdirSync(...a),
-    statSync: (...a) => mockFs.statSync(...a),
-    unlinkSync: (...a) => mockFs.unlinkSync(...a),
-    readFileSync: (...a) => mockFs.readFileSync(...a),
     createReadStream: (...a) => mockFs.createReadStream(...a),
-    createWriteStream: (...a) => mockFs.createWriteStream(...a)
+    createWriteStream: (...a) => mockFs.createWriteStream(...a),
+    promises: mockFs.promises
 }));
 
 vi.mock('stream/promises', () => ({
@@ -104,20 +111,30 @@ describe('Backup Core Service', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         mockFs.existsSync.mockReturnValue(true);
-        mockFs.readdirSync.mockReturnValue([]);
-        mockFs.statSync.mockReturnValue({ size: 1024, mtime: new Date('2024-06-01') });
+        mockFs.promises.access.mockResolvedValue();
+        mockFs.promises.readdir.mockResolvedValue([]);
+        mockFs.promises.stat.mockResolvedValue({ size: 1024, mtime: new Date('2024-06-01') });
+        mockFs.promises.unlink.mockResolvedValue();
+        mockFs.promises.open.mockResolvedValue({
+            read: vi.fn((buffer) => {
+                const content = Buffer.from('DROP TABLE IF EXISTS resumes;');
+                content.copy(buffer, 0, 0, content.length);
+                return Promise.resolve({ bytesRead: content.length });
+            }),
+            close: vi.fn(() => Promise.resolve())
+        });
     });
 
     describe('cleanupOldLocalBackups', () => {
         it('should not delete files when within retention limit', async () => {
-            mockFs.readdirSync.mockReturnValue([
+            mockFs.promises.readdir.mockResolvedValue([
                 'backup-daily-testdb-2024-06-01.sql.gz',
                 'backup-daily-testdb-2024-06-02.sql.gz'
             ]);
 
             await cleanupOldLocalBackups('daily', 5);
 
-            expect(mockFs.unlinkSync).not.toHaveBeenCalled();
+            expect(mockFs.promises.unlink).not.toHaveBeenCalled();
         });
 
         it('should delete oldest files exceeding retention', async () => {
@@ -126,37 +143,37 @@ describe('Backup Core Service', () => {
                 'backup-daily-testdb-2024-06-02.sql.gz',
                 'backup-daily-testdb-2024-06-03.sql.gz'
             ];
-            mockFs.readdirSync.mockReturnValue(files);
+            mockFs.promises.readdir.mockResolvedValue(files);
 
             // Newer files first in statSync
             let callCount = 0;
-            mockFs.statSync.mockImplementation(() => {
+            mockFs.promises.stat.mockImplementation(() => {
                 callCount++;
-                return { size: 1024, mtime: new Date(Date.now() - callCount * 86400000) };
+                return Promise.resolve({ size: 1024, mtime: new Date(Date.now() - callCount * 86400000) });
             });
 
             await cleanupOldLocalBackups('daily', 1);
 
             // Should delete 2 files (keep only 1)
-            expect(mockFs.unlinkSync).toHaveBeenCalledTimes(2);
+            expect(mockFs.promises.unlink).toHaveBeenCalledTimes(2);
         });
 
         it('should only match files of the specified type', async () => {
-            mockFs.readdirSync.mockReturnValue([
+            mockFs.promises.readdir.mockResolvedValue([
                 'backup-daily-testdb-2024-06-01.sql.gz',
                 'backup-weekly-testdb-2024-06-01.sql.gz',
                 'backup-daily-testdb-2024-06-02.sql.gz'
             ]);
-            mockFs.statSync.mockReturnValue({ size: 1024, mtime: new Date('2024-01-01') });
+            mockFs.promises.stat.mockResolvedValue({ size: 1024, mtime: new Date('2024-01-01') });
 
             await cleanupOldLocalBackups('daily', 1);
 
             // Only 1 daily file should be deleted (2 daily, keep 1)
-            expect(mockFs.unlinkSync).toHaveBeenCalledTimes(1);
+            expect(mockFs.promises.unlink).toHaveBeenCalledTimes(1);
         });
 
         it('should handle errors gracefully', async () => {
-            mockFs.readdirSync.mockImplementation(() => { throw new Error('Permission denied'); });
+            mockFs.promises.readdir.mockRejectedValue(new Error('Permission denied'));
 
             // Should not throw
             await cleanupOldLocalBackups('daily', 3);
@@ -174,7 +191,7 @@ describe('Backup Core Service', () => {
             mockCreateHistoryEntry.mockResolvedValue({ id: 'h1' });
             mockUpdateHistoryEntry.mockResolvedValue({});
             mockExecAsync.mockReturnValue('pg_dump (PostgreSQL) 16.0');
-            mockFs.statSync.mockReturnValue({ size: 2048 });
+            mockFs.promises.stat.mockResolvedValue({ size: 2048 });
             mockGetBackupSettings.mockResolvedValue(null);
         });
 
@@ -262,7 +279,14 @@ describe('Backup Core Service', () => {
 
             mockExecAsync.mockReturnValue('psql (PostgreSQL) 16.0');
             mockDownloadFile.mockResolvedValue();
-            mockFs.readFileSync.mockReturnValue('DROP TABLE IF EXISTS resumes;');
+            mockFs.promises.open.mockResolvedValue({
+                read: vi.fn((buffer) => {
+                    const content = Buffer.from('DROP TABLE IF EXISTS resumes;');
+                    content.copy(buffer, 0, 0, content.length);
+                    return Promise.resolve({ bytesRead: content.length });
+                }),
+                close: vi.fn(() => Promise.resolve())
+            });
         });
 
         it('should throw when settings not configured', async () => {
@@ -279,17 +303,32 @@ describe('Backup Core Service', () => {
 
         it('should restore backup with DROP commands (no truncate)', async () => {
             mockGetBackupSettings.mockResolvedValue({ host: 'ftp.example.com', remote_path: '/backups' });
-            mockFs.readFileSync.mockReturnValue('DROP TABLE IF EXISTS resumes CASCADE;');
+            mockFs.promises.open.mockResolvedValue({
+                read: vi.fn((buffer) => {
+                    const content = Buffer.from('DROP TABLE IF EXISTS resumes CASCADE;');
+                    content.copy(buffer, 0, 0, content.length);
+                    return Promise.resolve({ bytesRead: content.length });
+                }),
+                close: vi.fn(() => Promise.resolve())
+            });
 
             const result = await restoreBackup('backup-daily-testdb-2024-06-01T10-00-00.sql.gz');
 
             expect(result.success).toBe(true);
             expect(mockDownloadFile).toHaveBeenCalled();
+            expect(mockFs.promises.open).toHaveBeenCalled();
         });
 
         it('should truncate tables for old backup format (no DROP commands)', async () => {
             mockGetBackupSettings.mockResolvedValue({ host: 'ftp.example.com', remote_path: '/backups' });
-            mockFs.readFileSync.mockReturnValue('INSERT INTO resumes VALUES (1);');
+            mockFs.promises.open.mockResolvedValue({
+                read: vi.fn((buffer) => {
+                    const content = Buffer.from('INSERT INTO resumes VALUES (1);');
+                    content.copy(buffer, 0, 0, content.length);
+                    return Promise.resolve({ bytesRead: content.length });
+                }),
+                close: vi.fn(() => Promise.resolve())
+            });
 
             const result = await restoreBackup('backup-manual-testdb-2024-06-01T10-00-00.sql.gz');
 
@@ -302,6 +341,47 @@ describe('Backup Core Service', () => {
             mockGetBackupSettings.mockResolvedValue({ host: 'ftp.example.com', remote_path: '/backups' });
 
             await expect(restoreBackup('../backup.sql.gz')).rejects.toThrow('Invalid backup filename');
+        });
+
+        it('should cleanup temporary files when restore fails after extraction', async () => {
+            mockGetBackupSettings.mockResolvedValue({ host: 'ftp.example.com', remote_path: '/backups' });
+            mockExecAsync
+                .mockReturnValueOnce('psql (PostgreSQL) 16.0')
+                .mockImplementationOnce(() => {
+                    throw new Error('restore failed');
+                });
+
+            await expect(
+                restoreBackup('backup-daily-testdb-2024-06-01T10-00-00.sql.gz')
+            ).rejects.toThrow('restore failed');
+
+            expect(mockFs.promises.unlink).toHaveBeenCalledWith(expect.stringContaining('backup-daily-testdb-2024-06-01T10-00-00.sql.gz'));
+            expect(mockFs.promises.unlink).toHaveBeenCalledWith(expect.stringContaining('backup-daily-testdb-2024-06-01T10-00-00.sql'));
+        });
+
+        it('should cleanup temporary files when a legacy restore fails after truncate', async () => {
+            mockGetBackupSettings.mockResolvedValue({ host: 'ftp.example.com', remote_path: '/backups' });
+            mockFs.promises.open.mockResolvedValue({
+                read: vi.fn((buffer) => {
+                    const content = Buffer.from('INSERT INTO resumes VALUES (1);');
+                    content.copy(buffer, 0, 0, content.length);
+                    return Promise.resolve({ bytesRead: content.length });
+                }),
+                close: vi.fn(() => Promise.resolve())
+            });
+            mockExecAsync
+                .mockReturnValueOnce('psql (PostgreSQL) 16.0')
+                .mockReturnValueOnce('TRUNCATE')
+                .mockImplementationOnce(() => {
+                    throw new Error('restore failed after truncate');
+                });
+
+            await expect(
+                restoreBackup('backup-daily-testdb-2024-06-01T10-00-00.sql.gz')
+            ).rejects.toThrow('restore failed after truncate');
+
+            expect(mockFs.promises.unlink).toHaveBeenCalledWith(expect.stringContaining('backup-daily-testdb-2024-06-01T10-00-00.sql.gz'));
+            expect(mockFs.promises.unlink).toHaveBeenCalledWith(expect.stringContaining('backup-daily-testdb-2024-06-01T10-00-00.sql'));
         });
     });
 
@@ -331,15 +411,15 @@ describe('Backup Core Service', () => {
             });
 
             // Return files for daily, none for others
-            mockFs.readdirSync.mockReturnValue([
+            mockFs.promises.readdir.mockResolvedValue([
                 'backup-daily-testdb-2024-06-01.sql.gz',
                 'backup-daily-testdb-2024-06-02.sql.gz'
             ]);
 
             let callIdx = 0;
-            mockFs.statSync.mockImplementation(() => {
+            mockFs.promises.stat.mockImplementation(() => {
                 callIdx++;
-                return { size: 1024, mtime: new Date(Date.now() - callIdx * 86400000) };
+                return Promise.resolve({ size: 1024, mtime: new Date(Date.now() - callIdx * 86400000) });
             });
             mockQuery.mockResolvedValue({ rows: [] });
 
@@ -355,7 +435,7 @@ describe('Backup Core Service', () => {
             const now = new Date();
             const yesterday = new Date(Date.now() - 86400000);
 
-            mockFs.readdirSync.mockReturnValue([
+            mockFs.promises.readdir.mockResolvedValue([
                 'backup-daily-testdb-2024-06-01.sql.gz',
                 'backup-daily-testdb-2024-06-02.sql.gz',
                 'backup-weekly-testdb-2024-06-01.sql.gz',
@@ -363,12 +443,12 @@ describe('Backup Core Service', () => {
             ]);
 
             let statCallIdx = 0;
-            mockFs.statSync.mockImplementation(() => {
+            mockFs.promises.stat.mockImplementation(() => {
                 statCallIdx++;
-                return {
+                return Promise.resolve({
                     size: statCallIdx * 500,
                     mtime: statCallIdx === 1 ? now : yesterday
-                };
+                });
             });
 
             const stats = await getLocalBackupStats();
@@ -380,7 +460,7 @@ describe('Backup Core Service', () => {
         });
 
         it('should return null on error', async () => {
-            mockFs.readdirSync.mockImplementation(() => { throw new Error('fail'); });
+            mockFs.promises.readdir.mockRejectedValue(new Error('fail'));
 
             const result = await getLocalBackupStats();
 
@@ -388,7 +468,7 @@ describe('Backup Core Service', () => {
         });
 
         it('should handle empty backup directory', async () => {
-            mockFs.readdirSync.mockReturnValue([]);
+            mockFs.promises.readdir.mockResolvedValue([]);
 
             const stats = await getLocalBackupStats();
 

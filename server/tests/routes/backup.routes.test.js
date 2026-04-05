@@ -79,7 +79,7 @@ vi.mock('../../utils/validation.js', () => ({
 
 vi.mock('../../utils/networkHostSecurity.js', () => ({
     assertSafeOutboundHost: vi.fn(async (host) => {
-        if (host === '127.0.0.1') {
+        if (host === '127.0.0.1' || host === 'localhost' || host === '::1') {
             throw new Error('Private or loopback hosts are not allowed');
         }
         return true;
@@ -301,6 +301,26 @@ describe('Backup Routes', () => {
                 .post('/api/backup/test-connection')
                 .set(authHeader)
                 .send({ host: '127.0.0.1', username: 'user', password: 'pass' });
+
+            expect(res.status).toBe(400);
+            expect(mockTestConnection).not.toHaveBeenCalled();
+        });
+
+        it('should reject localhost backup hosts', async () => {
+            const res = await request(app)
+                .post('/api/backup/test-connection')
+                .set(authHeader)
+                .send({ host: 'localhost', username: 'user', password: 'pass' });
+
+            expect(res.status).toBe(400);
+            expect(mockTestConnection).not.toHaveBeenCalled();
+        });
+
+        it('should reject IPv6 loopback backup hosts', async () => {
+            const res = await request(app)
+                .post('/api/backup/test-connection')
+                .set(authHeader)
+                .send({ host: '::1', username: 'user', password: 'pass' });
 
             expect(res.status).toBe(400);
             expect(mockTestConnection).not.toHaveBeenCalled();

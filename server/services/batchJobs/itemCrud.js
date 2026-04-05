@@ -427,6 +427,39 @@ export async function getPendingItems(jobId) {
 }
 
 /**
+ * Atomically claim pending items for processing.
+ * Prevents multiple workers from reading the same pending rows concurrently.
+ * @param {string} jobId - Job ID
+ * @returns {Promise<Array>} Claimed items
+ */
+export async function claimPendingItems(jobId) {
+    try {
+        const result = await query(`
+            WITH claimed_items AS (
+                SELECT id
+                FROM batch_job_items
+                WHERE job_id = $1 AND status = $2
+                ORDER BY created_at ASC
+                LIMIT $3
+                FOR UPDATE SKIP LOCKED
+            )
+            UPDATE batch_job_items bji
+            SET status = $4
+            FROM claimed_items ci
+            WHERE bji.id = ci.id
+            RETURNING bji.id, bji.job_id, bji.resume_id, bji.adaptation_id, bji.source_type, bji.file_name, bji.file_mime_type,
+                      bji.relative_path, bji.status, bji.progress, bji.error_message, bji.original_name, bji.display_name,
+                      bji.pending_data, bji.created_at, bji.processed_at
+        `, [jobId, ITEM_STATUS.PENDING, BATCH_SIZE, ITEM_STATUS.PROCESSING]);
+
+        return result.rows;
+    } catch (error) {
+        safeLog('error', 'Failed to claim pending batch job items', { error: error.message, jobId });
+        return [];
+    }
+}
+
+/**
  * Get the file payload for a job item on demand.
  * This avoids preloading up to 100 blobs into the worker batch result set.
  * @param {string} itemId - Item ID

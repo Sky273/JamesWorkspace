@@ -36,6 +36,7 @@ import {
     resumeItemWithName,
     getItemsPendingName,
     getPendingItems,
+    claimPendingItems,
     getJobItemFilePayload,
     clearJobItemFileData
 } from '../../services/batchJobs/itemCrud.js';
@@ -273,6 +274,24 @@ describe('Batch Jobs - Item CRUD', () => {
         it('should return empty array on error', async () => {
             query.mockRejectedValueOnce(new Error('DB error'));
             expect(await getPendingItems('j1')).toEqual([]);
+        });
+    });
+
+    describe('claimPendingItems', () => {
+        it('should atomically claim pending items with row locking', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'i1', status: 'processing' }] });
+
+            const result = await claimPendingItems('j1');
+
+            expect(result).toHaveLength(1);
+            expect(query.mock.calls[0][0]).toContain('FOR UPDATE SKIP LOCKED');
+            expect(query.mock.calls[0][0]).toContain('UPDATE batch_job_items bji');
+            expect(query.mock.calls[0][1]).toEqual(['j1', 'pending', 100, 'processing']);
+        });
+
+        it('should return empty array on claim error', async () => {
+            query.mockRejectedValueOnce(new Error('DB error'));
+            expect(await claimPendingItems('j1')).toEqual([]);
         });
     });
 

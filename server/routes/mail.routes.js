@@ -12,13 +12,14 @@ import { getUserFirmId } from '../utils/firmHelpers.js';
 import * as mailService from '../services/mail/mailService.js';
 import * as emailTemplatesService from '../services/emailTemplates.service.js';
 import * as submissionsService from '../services/resumeSubmissions.service.js';
+import {
+    setMailOauthState,
+    takeMailOauthState
+} from '../services/mailOauthState.service.js';
 
 const router = express.Router();
 
-// Store OAuth states temporarily (in production, use Redis or database)
-const oauthStates = new Map();
 const STATE_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
-const MAX_OAUTH_STATES = 100; // Prevent memory exhaustion from abuse
 const MAIL_CALLBACK_ERROR_CODE = 'mail_callback_failed';
 
 function createMailRouteHandler(logMessage, errorMessage, handler) {
@@ -143,47 +144,6 @@ async function resolveTemplateDraftContext({ templateId, templateContext, userId
     }
 }
 
-/**
- * Clean up expired OAuth states
- */
-function cleanupExpiredStates() {
-    const now = Date.now();
-    for (const [state, data] of oauthStates.entries()) {
-        if (now - data.createdAt > STATE_EXPIRY_MS) {
-            oauthStates.delete(state);
-        }
-    }
-    // Evict oldest entries if still over limit
-    while (oauthStates.size > MAX_OAUTH_STATES) {
-        const oldestKey = oauthStates.keys().next().value;
-        oauthStates.delete(oldestKey);
-    }
-}
-
-// Cleanup every 5 minutes
-let mailStatesCleanupInterval = null;
-
-export function startMailStatesCleanup(intervalMs = 5 * 60 * 1000) {
-    if (mailStatesCleanupInterval) {
-        return mailStatesCleanupInterval;
-    }
-
-    mailStatesCleanupInterval = setInterval(cleanupExpiredStates, intervalMs);
-    return mailStatesCleanupInterval;
-}
-
-/**
- * Destroy mail states cleanup interval (for graceful shutdown)
- */
-export function destroyMailStatesCleanup() {
-    if (mailStatesCleanupInterval) {
-        clearInterval(mailStatesCleanupInterval);
-        mailStatesCleanupInterval = null;
-    }
-    oauthStates.clear();
-    safeLog('info', 'Mail OAuth states cleanup destroyed');
-}
-
 // ============================================
 // GET /api/mail/status - Get connection status
 // ============================================
@@ -207,7 +167,7 @@ router.get('/auth/gmail', authenticateToken, createMailRouteHandler(
 
         // Generate CSRF state
         const state = crypto.randomBytes(32).toString('hex');
-        oauthStates.set(state, {
+        setMailOauthState(state, {
             userId,
             provider: 'gmail',
             createdAt: Date.now()
@@ -237,13 +197,16 @@ router.get('/callback/gmail', async (req, res) => {
         }
         
         // Validate state
-        if (!state || !oauthStates.has(state)) {
+        if (!state) {
             safeLog('warn', 'Invalid OAuth state');
             return res.redirect(`${frontendUrl}/resumes?mail_error=invalid_state`);
         }
-        
-        const stateData = oauthStates.get(state);
-        oauthStates.delete(state);
+
+        const stateData = takeMailOauthState(state);
+        if (!stateData) {
+            safeLog('warn', 'Invalid OAuth state');
+            return res.redirect(`${frontendUrl}/resumes?mail_error=invalid_state`);
+        }
         
         // Check state expiry
         if (Date.now() - stateData.createdAt > STATE_EXPIRY_MS) {

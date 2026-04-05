@@ -39,6 +39,16 @@ function buildSafeArchiveFilePath(relativePath, generatedFileName) {
     return `${archiveDirectory}/${generatedFileName}`;
 }
 
+async function createTempExportWorkspace(jobId) {
+    return fs.promises.mkdtemp(path.join(os.tmpdir(), `batch-export-${jobId}-`));
+}
+
+async function persistGeneratedArtifact(tempDir, itemId, format, content) {
+    const artifactPath = path.join(tempDir, `${itemId}-${format}-${Date.now()}`);
+    await fs.promises.writeFile(artifactPath, Buffer.from(content));
+    return artifactPath;
+}
+
 /**
  * Generate export ZIP for a completed job
  * @param {string} jobId - Job ID
@@ -52,6 +62,29 @@ export async function generateJobExport(jobId, options) {
             durationMs: Date.now() - startedAt,
             ...payload
         });
+    };
+    const persistItemResults = async (exportFailureMessage = null) => {
+        for (const { item, failures, successCount } of itemResults.values()) {
+            if (failures.length > 0) {
+                await updateJobItemStatus(item.id, ITEM_STATUS.ERROR, {
+                    progress: 100,
+                    error_message: failures.join(' | ').slice(0, 1000)
+                });
+                continue;
+            }
+
+            if (successCount > 0 && exportFailureMessage) {
+                await updateJobItemStatus(item.id, ITEM_STATUS.ERROR, {
+                    progress: 100,
+                    error_message: exportFailureMessage.slice(0, 1000)
+                });
+                continue;
+            }
+
+            if (successCount > 0) {
+                await updateJobItemStatus(item.id, ITEM_STATUS.SUCCESS, { progress: 100 });
+            }
+        }
     };
     const markExportItemsAsError = async (itemsToMark, errorMessage) => {
         const normalizedItems = Array.isArray(itemsToMark) ? itemsToMark : [];
@@ -133,12 +166,14 @@ export async function generateJobExport(jobId, options) {
     // Import JSZip
     const JSZip = (await import('jszip')).default;
     const zip = new JSZip();
+    const tempExportDir = await createTempExportWorkspace(jobId);
     
     // PDF Server URL
     const PDF_SERVER_URL = process.env.PDF_SERVER_URL || 'http://127.0.0.1:3002';
     try {
         await assertTrustedInternalServiceUrl(PDF_SERVER_URL);
     } catch (error) {
+        await fs.promises.rm(tempExportDir, { recursive: true, force: true }).catch(() => {});
         await markExportItemsAsError(successfulItems, error.message);
         trackBatchExport({
             format: exportFormats.length === 1 ? exportFormats[0] : 'multi',
@@ -366,9 +401,11 @@ export async function generateJobExport(jobId, options) {
                     }
                     fileNameCounts.set(result.relativePath ? filePath.split('/').slice(0, -1).join('/') + '/' + result.fileName : filePath, count + 1);
                     
+                    const artifactPath = await persistGeneratedArtifact(tempExportDir, result.itemId, result.format, result.content);
+
                     // Add to the format-specific folder
                     safeLog('debug', 'Adding file to ZIP', { format, filePath, sourceType: result.sourceType });
-                    formatFolders[format].root.file(filePath, result.content);
+                    formatFolders[format].root.file(filePath, fs.createReadStream(artifactPath));
                     exportSuccessCount++;
                 } else {
                     exportErrorCount++;
@@ -404,19 +441,9 @@ export async function generateJobExport(jobId, options) {
         durationMs: Date.now() - startedAt
     });
 
-    for (const { item, failures, successCount } of itemResults.values()) {
-        if (failures.length > 0) {
-            await updateJobItemStatus(item.id, ITEM_STATUS.ERROR, {
-                progress: 100,
-                error_message: failures.join(' | ').slice(0, 1000)
-            });
-        } else if (successCount > 0) {
-            await updateJobItemStatus(item.id, ITEM_STATUS.SUCCESS, { progress: 100 });
-        }
-    }
-    
     // Check if any files were added
     if (actualFilesInZip === 0) {
+        await persistItemResults('Export archive generation failed');
         safeLog('warn', 'No files generated for export', { jobId, exportErrors });
         trackBatchExport({
             format: exportFormats.length === 1 ? exportFormats[0] : 'multi',
@@ -430,45 +457,59 @@ export async function generateJobExport(jobId, options) {
         throw new Error('No files generated for export');
     }
     
-    // Generate ZIP directly to disk to avoid buffering the full archive in memory
-    const exportsDir = path.join(os.tmpdir(), 'batch-exports');
-    await fs.promises.mkdir(exportsDir, { recursive: true });
+    try {
+        // Generate ZIP directly to disk to avoid buffering the full archive in memory
+        const exportsDir = path.join(os.tmpdir(), 'batch-exports');
+        await fs.promises.mkdir(exportsDir, { recursive: true });
 
-    // Save ZIP file
-    const fileName = `export_${jobId}_${Date.now()}.zip`;
-    const filePath = path.join(exportsDir, fileName);
-    const zipStream = typeof zip.generateNodeStream === 'function'
-        ? zip.generateNodeStream({ streamFiles: true, compression: 'DEFLATE' })
-        : null;
-    let exportedSize = 0;
+        // Save ZIP file
+        const fileName = `export_${jobId}_${Date.now()}.zip`;
+        const filePath = path.join(exportsDir, fileName);
+        const zipStream = typeof zip.generateNodeStream === 'function'
+            ? zip.generateNodeStream({ streamFiles: true, compression: 'DEFLATE' })
+            : null;
+        let exportedSize = 0;
 
-    if (zipStream) {
-        await pipeline(zipStream, fs.createWriteStream(filePath));
-        exportedSize = (await fs.promises.stat(filePath)).size;
-    } else {
-        const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
-        await fs.promises.writeFile(filePath, zipBuffer);
-        exportedSize = (await fs.promises.stat(filePath)).size;
+        if (zipStream) {
+            await pipeline(zipStream, fs.createWriteStream(filePath));
+            exportedSize = (await fs.promises.stat(filePath)).size;
+        } else {
+            const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+            await fs.promises.writeFile(filePath, zipBuffer);
+            exportedSize = (await fs.promises.stat(filePath)).size;
+        }
+        
+        // Update job with export file info
+        await updateJobExportFile(jobId, filePath, fileName);
+        await persistItemResults();
+        trackBatchExport({
+            format: exportFormats.length === 1 ? exportFormats[0] : 'multi',
+            requestedResumes: successfulItems.length,
+            resolvedResumes: successfulItems.length,
+            generatedFiles: actualFilesInZip,
+            failedFiles: exportErrorCount,
+            archiveBytes: exportedSize,
+            successfulRuns: 1,
+            metadata: { jobId }
+        });
+        
+        safeLog('info', 'Export generated successfully', { 
+            jobId, 
+            fileName, 
+            filesCount: Object.keys(zip.files).length,
+            size: exportedSize,
+            durationMs: Date.now() - startedAt
+        });
+    } catch (error) {
+        await persistItemResults('Export archive generation failed');
+        throw error;
+    } finally {
+        await fs.promises.rm(tempExportDir, { recursive: true, force: true }).catch((cleanupError) => {
+            safeLog('warn', 'Failed to remove temporary export workspace', {
+                jobId,
+                tempExportDir,
+                error: cleanupError.message
+            });
+        });
     }
-    
-    // Update job with export file info
-    await updateJobExportFile(jobId, filePath, fileName);
-    trackBatchExport({
-        format: exportFormats.length === 1 ? exportFormats[0] : 'multi',
-        requestedResumes: successfulItems.length,
-        resolvedResumes: successfulItems.length,
-        generatedFiles: actualFilesInZip,
-        failedFiles: exportErrorCount,
-        archiveBytes: exportedSize,
-        successfulRuns: 1,
-        metadata: { jobId }
-    });
-    
-    safeLog('info', 'Export generated successfully', { 
-        jobId, 
-        fileName, 
-        filesCount: Object.keys(zip.files).length,
-        size: exportedSize,
-        durationMs: Date.now() - startedAt
-    });
 }

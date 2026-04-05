@@ -12,31 +12,20 @@ import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '..
 import { safeLog } from '../../utils/logger.backend.js';
 import * as googleAuthService from '../../services/googleAuth.service.js';
 import * as authService from '../../services/auth.service.js';
+import {
+    setAuthOauthState,
+    hasAuthOauthState,
+    takeAuthOauthState
+} from '../../services/authOauthState.service.js';
 import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from './config.js';
 
 const router = express.Router();
 
-// In-memory store for OAuth states (short-lived)
-const oauthStates = new Map();
 const STATE_EXPIRY = 10 * 60 * 1000; // 10 minutes
-const MAX_OAUTH_STATES = 100; // Prevent memory exhaustion from abuse
 const ALLOWED_OAUTH_ACTIONS = new Set(['signin', 'register', 'link']);
 
 function hasFirmAssignment(user) {
     return Boolean(user?.firm_id && user?.firm_name);
-}
-
-function pruneOAuthStates() {
-    const now = Date.now();
-    for (const [state, data] of oauthStates.entries()) {
-        if (now - data.createdAt > STATE_EXPIRY) {
-            oauthStates.delete(state);
-        }
-    }
-    while (oauthStates.size > MAX_OAUTH_STATES) {
-        const oldestKey = oauthStates.keys().next().value;
-        oauthStates.delete(oldestKey);
-    }
 }
 
 function resolveOAuthAction(action) {
@@ -53,33 +42,6 @@ function resolveOAuthUserId(req) {
     return decoded?.id || null;
 }
 
-// Cleanup expired states periodically
-let authOauthStatesCleanupInterval = null;
-
-export function startAuthOauthStatesCleanup(intervalMs = 60 * 1000) {
-    if (authOauthStatesCleanupInterval) {
-        return authOauthStatesCleanupInterval;
-    }
-
-    authOauthStatesCleanupInterval = setInterval(() => {
-        pruneOAuthStates();
-    }, intervalMs);
-
-    return authOauthStatesCleanupInterval;
-}
-
-/**
- * Destroy OAuth states cleanup interval (for graceful shutdown)
- */
-export function destroyAuthOauthStates() {
-    if (authOauthStatesCleanupInterval) {
-        clearInterval(authOauthStatesCleanupInterval);
-        authOauthStatesCleanupInterval = null;
-    }
-    oauthStates.clear();
-    safeLog('info', 'Auth OAuth states cleanup destroyed');
-}
-
 // GET /api/auth/google - Initiate Google OAuth flow
 router.get('/google', authLimiter, async (req, res) => {
     try {
@@ -93,8 +55,7 @@ router.get('/google', authLimiter, async (req, res) => {
             safeReturnUrl = returnUrl;
         }
 
-        pruneOAuthStates();
-        oauthStates.set(state, {
+        setAuthOauthState(state, {
             action: resolvedAction,
             userId: resolvedAction === 'link' ? resolveOAuthUserId(req) : null,
             returnUrl: safeReturnUrl,
@@ -128,13 +89,12 @@ router.get('/google/callback', async (req, res) => {
             return res.redirect('/signin?error=missing_code');
         }
 
-        if (typeof state !== 'string' || !oauthStates.has(state)) {
+        if (typeof state !== 'string' || !hasAuthOauthState(state)) {
             safeLog('warn', 'Invalid OAuth state');
             return res.redirect('/signin?error=invalid_state');
         }
 
-        const stateData = oauthStates.get(state);
-        oauthStates.delete(state);
+        const stateData = takeAuthOauthState(state);
 
         if (Date.now() - stateData.createdAt > STATE_EXPIRY) {
             safeLog('warn', 'OAuth state expired');

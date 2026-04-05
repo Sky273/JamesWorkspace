@@ -1173,4 +1173,20 @@ describe('Batch Jobs Routes - POST /api/batch-jobs/deal-export', () => {
             })
         }));
     });
+
+    it('should reject oversized deal exports before creating a job', async () => {
+        mockGetDealForExport.mockResolvedValueOnce({ id: '123e4567-e89b-12d3-a456-426614174000', title: 'Deal A', firm_id: 'firm-123' });
+        mockGetResumesForDeal.mockResolvedValueOnce(Array.from({ length: 60 }, (_, index) => ({ id: `res-${index + 1}` })));
+        mockGetAdaptationsForDeal.mockResolvedValueOnce(Array.from({ length: 41 }, (_, index) => ({ id: `adapt-${index + 1}` })));
+
+        const res = await request(app)
+            .post('/api/batch-jobs/deal-export')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ dealId: '123e4567-e89b-12d3-a456-426614174000', templateId: '123e4567-e89b-12d3-a456-426614174001', exportFormats: ['pdf'] });
+
+        expect(res.status).toBe(400);
+        expect(res.body.error).toContain('100');
+        expect(mockCreateJob).not.toHaveBeenCalled();
+        expect(mockAddJobExportItems).not.toHaveBeenCalled();
+    });
 });

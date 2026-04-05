@@ -11,15 +11,16 @@ import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.j
 import { validateBody, gdprMailTestSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { gdprMailService } from '../services/mail/gdprMailService.js';
+import {
+    setGdprMailOauthState,
+    hasGdprMailOauthState,
+    takeGdprMailOauthState
+} from '../services/gdprMailOauthState.service.js';
 
 const router = express.Router();
 
-// Server-side OAuth state store (prevents state forgery)
-const gdprOauthStates = new Map();
 const GDPR_STATE_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
-const MAX_GDPR_OAUTH_STATES = 100; // Prevent memory exhaustion from abuse
 const GDPR_CALLBACK_ERROR_CODE = 'gdpr_mail_callback_failed';
-let gdprStatesCleanupInterval = null;
 
 function getTrustedFrontendOrigin() {
     const frontendUrl = process.env.FRONTEND_URL || process.env.VITE_APP_URL || 'http://localhost:5173';
@@ -36,38 +37,6 @@ function escapeHtmlAttribute(value) {
         .replace(/"/g, '&quot;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
-}
-
-function cleanupExpiredGdprStates() {
-    const now = Date.now();
-    for (const [state, data] of gdprOauthStates.entries()) {
-        if (now - data.createdAt > GDPR_STATE_EXPIRY_MS) {
-            gdprOauthStates.delete(state);
-        }
-    }
-    // Evict oldest entries if still over limit
-    while (gdprOauthStates.size > MAX_GDPR_OAUTH_STATES) {
-        const oldestKey = gdprOauthStates.keys().next().value;
-        gdprOauthStates.delete(oldestKey);
-    }
-}
-
-export function startGdprMailStatesCleanup(intervalMs = 5 * 60 * 1000) {
-    if (gdprStatesCleanupInterval) {
-        return gdprStatesCleanupInterval;
-    }
-
-    gdprStatesCleanupInterval = setInterval(cleanupExpiredGdprStates, intervalMs);
-    return gdprStatesCleanupInterval;
-}
-
-export function destroyGdprMailStatesCleanup() {
-    if (gdprStatesCleanupInterval) {
-        clearInterval(gdprStatesCleanupInterval);
-        gdprStatesCleanupInterval = null;
-    }
-    gdprOauthStates.clear();
-    safeLog('info', 'GDPR mail OAuth states cleanup destroyed');
 }
 
 /**
@@ -94,7 +63,7 @@ router.get('/auth-url', authenticateToken, requireAdmin, async (req, res) => {
     try {
         // Generate cryptographic nonce for state (prevents forgery)
         const state = crypto.randomBytes(32).toString('hex');
-        gdprOauthStates.set(state, {
+        setGdprMailOauthState(state, {
             userId: req.user.id,
             type: 'gdpr',
             createdAt: Date.now()
@@ -122,13 +91,12 @@ router.get('/callback', async (req, res) => {
         }
 
         // Validate state against server-side store (prevents forgery)
-        if (!gdprOauthStates.has(state)) {
+        if (!hasGdprMailOauthState(state)) {
             safeLog('warn', 'Invalid GDPR OAuth state - possible forgery attempt');
             return res.status(400).send('Invalid or expired state parameter');
         }
 
-        const stateData = gdprOauthStates.get(state);
-        gdprOauthStates.delete(state);
+        const stateData = takeGdprMailOauthState(state);
 
         // Check state expiry
         if (Date.now() - stateData.createdAt > GDPR_STATE_EXPIRY_MS) {

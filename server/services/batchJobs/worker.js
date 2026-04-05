@@ -6,7 +6,7 @@
 import { safeLog } from '../../utils/logger.backend.js';
 import { JOB_STATUS, ITEM_STATUS, WORKER_EXECUTION_CONCURRENCY, WORKER_INTERVAL } from './constants.js';
 import { getPendingJobs, updateJobStatus, updateJobCounters, isJobComplete, getFinalJobOutcome, getJobStatus } from './jobCrud.js';
-import { getPendingItems, updateJobItemStatus } from './itemCrud.js';
+import { claimPendingItems, updateJobItemStatus } from './itemCrud.js';
 
 // Worker state
 let workerInterval = null;
@@ -92,7 +92,7 @@ async function processNextBatch(processItemFn) {
         }
 
         // Get pending items
-        const pendingItems = await getPendingItems(job.id);
+        const pendingItems = await claimPendingItems(job.id);
 
         if (pendingItems.length === 0) {
             // No more items, check if job is complete

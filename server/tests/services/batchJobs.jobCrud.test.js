@@ -236,6 +236,19 @@ describe('Batch Jobs - Job CRUD', () => {
             expect(query.mock.calls[1][1]).toEqual([['j1']]);
         });
 
+        it('should also reclaim already-processing jobs for subsequent batches', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [{ id: 'j2', status: 'processing' }] })
+                .mockResolvedValueOnce({ rows: [{ id: 'j2', status: 'processing', user_name: 'Jane', firm_name: 'Acme' }] });
+
+            const result = await getPendingJobs();
+
+            expect(result).toHaveLength(1);
+            expect(query.mock.calls[0][0]).toContain('bj.status IN ($1, $2)');
+            expect(query.mock.calls[0][1][0]).toBe('pending');
+            expect(query.mock.calls[0][1][1]).toBe('processing');
+        });
+
         it('should return empty array when no jobs were claimed', async () => {
             query.mockResolvedValueOnce({ rows: [] });
 

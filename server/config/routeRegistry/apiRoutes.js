@@ -22,7 +22,6 @@ import consentRoutes from '../../routes/consent.routes.js';
 import gdprMailRoutes from '../../routes/gdprMail.routes.js';
 import twofaRoutes from '../../routes/twofa.routes.js';
 import gdprAuditRoutes from '../../routes/gdprAudit.routes.js';
-import resumeCommentsRoutes from '../../routes/resumeComments.routes.js';
 import shareRoutes from '../../routes/share.routes.js';
 import pipelineRoutes from '../../routes/pipeline.routes.js';
 import calendarRoutes from '../../routes/calendar.routes.js';
@@ -69,7 +68,6 @@ export function registerApiRoutes(app) {
     app.use('/api/gdpr/mail', gdprMailRoutes);
     app.use('/api/gdpr-audit', gdprAuditRoutes);
     app.use('/api/2fa', twofaRoutes);
-    app.use('/api/resumes', resumeCommentsRoutes);
     app.use('/api/share', shareRoutes);
     app.use('/api/pipeline', pipelineRoutes);
     app.use('/api/calendar', calendarRoutes);

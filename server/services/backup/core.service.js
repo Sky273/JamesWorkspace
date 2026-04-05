@@ -83,28 +83,70 @@ function buildSafePath(baseDir, filename) {
     return resolvedPath;
 }
 
+async function readBackupFilePrefix(filePath, maxBytes = 5000) {
+    const fd = await fs.promises.open(filePath, 'r');
+    try {
+        const buffer = Buffer.alloc(maxBytes);
+        const { bytesRead } = await fd.read(buffer, 0, maxBytes, 0);
+        return buffer.subarray(0, bytesRead).toString('utf8');
+    } finally {
+        await fd.close();
+    }
+}
+
+async function fileExists(filePath) {
+    try {
+        await fs.promises.access(filePath);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+async function safeUnlink(filePath) {
+    try {
+        await fs.promises.unlink(filePath);
+    } catch (error) {
+        if (error?.code !== 'ENOENT') {
+            throw error;
+        }
+    }
+}
+
+async function getBackupFilesMatching(pattern) {
+    const files = await fs.promises.readdir(BACKUP_DIR);
+    const matchingFiles = await Promise.all(
+        files
+            .filter((fileName) => pattern.test(fileName))
+            .map(async (fileName) => {
+                const filePath = path.join(BACKUP_DIR, fileName);
+                const stats = await fs.promises.stat(filePath);
+                return {
+                    name: fileName,
+                    path: filePath,
+                    size: stats.size,
+                    mtime: stats.mtime
+                };
+            })
+    );
+
+    return matchingFiles.sort((a, b) => b.mtime - a.mtime);
+}
+
 /**
  * Cleanup old local backup files based on retention policy
  */
 export async function cleanupOldLocalBackups(type, retention) {
     try {
-        const files = fs.readdirSync(BACKUP_DIR);
         const pattern = new RegExp(`^backup-${type}-.*\\.sql\\.gz$`);
-        const matchingFiles = files
-            .filter(f => pattern.test(f))
-            .map(f => ({
-                name: f,
-                path: path.join(BACKUP_DIR, f),
-                mtime: fs.statSync(path.join(BACKUP_DIR, f)).mtime
-            }))
-            .sort((a, b) => b.mtime - a.mtime);
+        const matchingFiles = await getBackupFilesMatching(pattern);
         
         if (matchingFiles.length > retention) {
             const filesToDelete = matchingFiles.slice(retention);
             
             for (const file of filesToDelete) {
                 try {
-                    fs.unlinkSync(file.path);
+                    await safeUnlink(file.path);
                     safeLog('info', 'Deleted old local backup', { 
                         filename: file.name, 
                         type,
@@ -182,9 +224,9 @@ export async function createBackup(type = 'manual') {
         
         await pipeline(source, gzip, destination);
         
-        fs.unlinkSync(localPath);
+        await safeUnlink(localPath);
         
-        const stats = fs.statSync(compressedPath);
+        const stats = await fs.promises.stat(compressedPath);
         const fileSize = stats.size;
         
         const settings = await getBackupSettings();
@@ -205,7 +247,7 @@ export async function createBackup(type = 'manual') {
                 
                 await cleanupOldRemoteBackups(settings, type, retention);
                 
-                fs.unlinkSync(compressedPath);
+                await safeUnlink(compressedPath);
                 safeLog('info', 'Backup uploaded to remote server', { filename: compressedFilename });
             } catch (uploadError) {
                 safeLog('error', 'BACKUP UPLOAD FAILED - Backup created locally but upload to remote server failed', { 
@@ -281,8 +323,8 @@ export async function createBackup(type = 'manual') {
         }
         
         try {
-            if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
-            if (fs.existsSync(compressedPath)) fs.unlinkSync(compressedPath);
+            if (await fileExists(localPath)) await safeUnlink(localPath);
+            if (await fileExists(compressedPath)) await safeUnlink(compressedPath);
         } catch {
             // Ignore cleanup errors
         }
@@ -325,7 +367,7 @@ export async function restoreBackup(filename) {
         
         await pipeline(source, gunzip, destination);
         
-        fs.unlinkSync(localCompressedPath);
+        await safeUnlink(localCompressedPath);
         
         const psqlBin = findPgBinary('psql');
         
@@ -337,8 +379,8 @@ export async function restoreBackup(filename) {
         
         const env = { ...process.env, PGPASSWORD: POSTGRES_PASSWORD };
         
-        // Check if the backup file contains DROP commands
-        const backupContent = fs.readFileSync(localPath, 'utf8').slice(0, 5000);
+        // Read only the prefix needed to detect legacy dumps without loading the full backup in memory.
+        const backupContent = await readBackupFilePrefix(localPath, 5000);
         const hasDropCommands = backupContent.includes('DROP TABLE') || backupContent.includes('DROP SCHEMA');
         
         if (!hasDropCommands) {
@@ -367,7 +409,7 @@ export async function restoreBackup(filename) {
             '-f', localPath
         ], { env });
         
-        fs.unlinkSync(localPath);
+        await safeUnlink(localPath);
         
         safeLog('info', 'Database restore completed', { filename });
         
@@ -377,8 +419,8 @@ export async function restoreBackup(filename) {
         safeLog('error', 'Database restore failed', { filename, error: error.message });
         
         try {
-            if (fs.existsSync(localCompressedPath)) fs.unlinkSync(localCompressedPath);
-            if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
+            if (await fileExists(localCompressedPath)) await safeUnlink(localCompressedPath);
+            if (await fileExists(localPath)) await safeUnlink(localPath);
         } catch {
             // Ignore cleanup errors
         }
@@ -413,23 +455,15 @@ export async function cleanupAllLocalBackups() {
     
     for (const { type, retention } of types) {
         try {
-            const files = fs.readdirSync(BACKUP_DIR);
             const pattern = new RegExp(`^backup-${type}-.*\\.sql\\.gz$`);
-            const matchingFiles = files
-                .filter(f => pattern.test(f))
-                .map(f => ({
-                    name: f,
-                    path: path.join(BACKUP_DIR, f),
-                    mtime: fs.statSync(path.join(BACKUP_DIR, f)).mtime
-                }))
-                .sort((a, b) => b.mtime - a.mtime);
+            const matchingFiles = await getBackupFilesMatching(pattern);
             
             if (matchingFiles.length > retention) {
                 const filesToDelete = matchingFiles.slice(retention);
                 
                 for (const file of filesToDelete) {
                     try {
-                        fs.unlinkSync(file.path);
+                        await safeUnlink(file.path);
                         results[type]++;
                         
                         await query(`
@@ -459,7 +493,7 @@ export async function cleanupAllLocalBackups() {
  */
 export async function getLocalBackupStats() {
     try {
-        const files = fs.readdirSync(BACKUP_DIR);
+        const files = await fs.promises.readdir(BACKUP_DIR);
         const stats = {
             daily: { count: 0, totalSize: 0, oldest: null, newest: null },
             weekly: { count: 0, totalSize: 0, oldest: null, newest: null },
@@ -469,14 +503,16 @@ export async function getLocalBackupStats() {
         
         for (const type of ['daily', 'weekly', 'monthly', 'manual']) {
             const pattern = new RegExp(`^backup-${type}-.*\\.sql\\.gz$`);
-            const matchingFiles = files
-                .filter(f => pattern.test(f))
-                .map(f => {
-                    const filePath = path.join(BACKUP_DIR, f);
-                    const fileStat = fs.statSync(filePath);
-                    return { name: f, size: fileStat.size, mtime: fileStat.mtime };
-                })
-                .sort((a, b) => b.mtime - a.mtime);
+            const matchingFiles = await Promise.all(
+                files
+                    .filter((fileName) => pattern.test(fileName))
+                    .map(async (fileName) => {
+                        const filePath = path.join(BACKUP_DIR, fileName);
+                        const fileStat = await fs.promises.stat(filePath);
+                        return { name: fileName, size: fileStat.size, mtime: fileStat.mtime };
+                    })
+            );
+            matchingFiles.sort((a, b) => b.mtime - a.mtime);
             
             stats[type].count = matchingFiles.length;
             stats[type].totalSize = matchingFiles.reduce((sum, f) => sum + f.size, 0);
