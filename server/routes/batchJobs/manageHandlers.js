@@ -14,6 +14,7 @@ import {
     getItemsPendingName,
     resumeItemWithName
 } from '../../services/batchJobs.service.js';
+import { metrics } from '../../services/metrics.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { setSafeFileResponseHeaders } from '../../utils/fileResponseSecurity.js';
 import { ensureOwnerAccess, getUserContext } from './helpers.js';
@@ -22,55 +23,150 @@ const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 const DEFAULT_OFFSET = 0;
 
+function hasCompleteExportMetadata(job) {
+    return !!(job?.export_file_path && job?.export_file_name);
+}
+
+function hasIncompleteExportMetadata(job) {
+    return !!job?.id && Boolean(job?.export_file_path || job?.export_file_name) && !hasCompleteExportMetadata(job);
+}
+
 async function cleanupExportArtifact(jobId, exportFilePath, exportFileName, { clearMetadata = true } = {}) {
     if (!exportFilePath) {
         return false;
     }
 
-    let deleted = false;
-
     try {
-        await new Promise((resolve, reject) => {
+        const deleted = await new Promise((resolve, reject) => {
             fs.unlink(exportFilePath, (error) => {
-                if (!error || error.code === 'ENOENT') {
-                    resolve();
+                if (!error) {
+                    resolve(true);
+                    return;
+                }
+                if (error.code === 'ENOENT') {
+                    resolve(false);
                     return;
                 }
                 reject(error);
             });
         });
-        deleted = true;
+        if (clearMetadata) {
+            try {
+                await clearJobExportFile(jobId);
+            } catch (error) {
+                safeLog('warn', 'Failed to clear export file metadata', {
+                    jobId,
+                    filePath: exportFilePath,
+                    fileName: exportFileName,
+                    error: error.message
+                });
+            }
+        }
+
+        if (deleted) {
+            metrics.trackCleanupActivity({
+                filesDeleted: 1,
+                metadata: {
+                    source: 'batch_jobs_routes',
+                    jobId,
+                    fileName: exportFileName || null
+                }
+            });
+        }
+
+        return deleted;
     } catch (error) {
-        if (error?.code !== 'ENOENT') {
-            safeLog('warn', 'Failed to delete export file artifact', {
-                jobId,
-                filePath: exportFilePath,
-                fileName: exportFileName,
-                error: error.message
-            });
-        }
+        safeLog('warn', 'Failed to delete export file artifact', {
+            jobId,
+            filePath: exportFilePath,
+            fileName: exportFileName,
+            error: error.message
+        });
+        return false;
+    }
+}
+
+async function reconcileMissingExportArtifact(job) {
+    if (!job?.id) {
+        return job;
     }
 
-    if (clearMetadata) {
+    if (hasIncompleteExportMetadata(job)) {
         try {
-            await clearJobExportFile(jobId);
+            await clearJobExportFile(job.id);
+            safeLog('warn', 'Cleared incomplete export metadata', {
+                jobId: job.id,
+                filePath: job.export_file_path || null,
+                fileName: job.export_file_name || null
+            });
+            metrics.trackCleanupActivity({
+                staleExportRefsCleared: 1,
+                metadata: {
+                    source: 'batch_jobs_routes',
+                    jobId: job.id,
+                    reason: 'incomplete_export_metadata'
+                }
+            });
+            return {
+                ...job,
+                export_file_path: null,
+                export_file_name: null
+            };
         } catch (error) {
-            safeLog('warn', 'Failed to clear export file metadata', {
-                jobId,
-                filePath: exportFilePath,
-                fileName: exportFileName,
+            safeLog('warn', 'Failed to clear incomplete export metadata', {
+                jobId: job.id,
+                filePath: job.export_file_path || null,
+                fileName: job.export_file_name || null,
                 error: error.message
             });
+            return job;
         }
     }
 
-    return deleted;
+    if (!hasCompleteExportMetadata(job)) {
+        return job;
+    }
+
+    if (fs.existsSync(job.export_file_path)) {
+        return job;
+    }
+
+    try {
+        await clearJobExportFile(job.id);
+        safeLog('warn', 'Cleared stale export metadata for missing artifact', {
+            jobId: job.id,
+            filePath: job.export_file_path,
+            fileName: job.export_file_name
+        });
+        metrics.trackCleanupActivity({
+            staleExportRefsCleared: 1,
+            metadata: {
+                source: 'batch_jobs_routes',
+                jobId: job.id,
+                reason: 'missing_export_artifact'
+            }
+        });
+        return {
+            ...job,
+            export_file_path: null,
+            export_file_name: null
+        };
+    } catch (error) {
+        safeLog('warn', 'Failed to clear stale export metadata', {
+            jobId: job.id,
+            filePath: job.export_file_path,
+            fileName: job.export_file_name,
+            error: error.message
+        });
+        return job;
+    }
 }
 
 function withExportAvailability(job) {
+    const { export_file_path, ...jobWithoutPath } = job || {};
     return {
-        ...job,
-        export_file_available: !!(job.export_file_path && job.export_file_name && fs.existsSync(job.export_file_path))
+        ...jobWithoutPath,
+        export_file_available: hasCompleteExportMetadata(job) && fs.existsSync(export_file_path)
     };
 }
 
@@ -130,7 +226,8 @@ export async function listJobs(req, res) {
             ? await getAllJobs(options)
             : await getJobsByFirm(userContext.userFirmId, options);
 
-        res.json(jobs.map(withExportAvailability));
+        const reconciledJobs = await Promise.all(jobs.map((job) => reconcileMissingExportArtifact(job)));
+        res.json(reconciledJobs.map(withExportAvailability));
     } catch (error) {
         safeLog('error', 'Failed to get batch jobs', { error: error.message });
         res.status(500).json({ error: 'Erreur lors de la récupération des jobs' });
@@ -145,9 +242,9 @@ export async function getJobDetails(req, res) {
             return;
         }
 
-        const { job } = jobContext;
+        const reconciledJob = await reconcileMissingExportArtifact(jobContext.job);
         const items = await getJobItems(id);
-        res.json({ ...withExportAvailability(job), items });
+        res.json({ ...withExportAvailability(reconciledJob), items });
     } catch (error) {
         safeLog('error', 'Failed to get batch job', { error: error.message });
         res.status(500).json({ error: 'Erreur lors de la récupération du job' });
@@ -206,32 +303,33 @@ export async function downloadJobExport(req, res) {
             return;
         }
 
-        const { job } = jobContext;
-        if (!job.export_file_path || !job.export_file_name) {
+        const reconciledJob = await reconcileMissingExportArtifact(jobContext.job);
+        if (!hasCompleteExportMetadata(reconciledJob)) {
             return res.status(404).json({ error: "Aucun fichier d'export disponible" });
         }
-        if (!fs.existsSync(job.export_file_path)) {
+        if (!fs.existsSync(reconciledJob.export_file_path)) {
+            await reconcileMissingExportArtifact(reconciledJob);
             return res.status(404).json({ error: "Fichier d'export non trouvé sur le serveur" });
         }
 
         setSafeFileResponseHeaders(res, {
             contentType: 'application/zip',
-            filename: job.export_file_name
+            filename: reconciledJob.export_file_name
         });
 
-        const fileStream = fs.createReadStream(job.export_file_path);
+        const fileStream = fs.createReadStream(reconciledJob.export_file_path);
         let downloadCompleted = false;
         try {
             await pipeline(fileStream, res);
             downloadCompleted = true;
-            safeLog('info', 'Export file downloaded', { jobId: id, fileName: job.export_file_name });
+            safeLog('info', 'Export file downloaded', { jobId: id, fileName: reconciledJob.export_file_name });
         } finally {
             if (downloadCompleted) {
-                const deleted = await cleanupExportArtifact(id, job.export_file_path, job.export_file_name);
+                const deleted = await cleanupExportArtifact(id, reconciledJob.export_file_path, reconciledJob.export_file_name);
                 if (deleted) {
                     safeLog('debug', 'Export file deleted after download', {
                         jobId: id,
-                        filePath: job.export_file_path
+                        filePath: reconciledJob.export_file_path
                     });
                 }
             }
@@ -300,3 +398,4 @@ export async function provideNameForItem(req, res) {
         res.status(500).json({ error: 'Erreur lors de la mise à jour' });
     }
 }
+

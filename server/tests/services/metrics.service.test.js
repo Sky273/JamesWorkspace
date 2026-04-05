@@ -369,4 +369,29 @@ describe('metrics singleton safeguards', () => {
 
         expect(actualMetrics.llm.byProvider['deepseek-reasoner']).toBeDefined();
     });
+
+    it('tracks batch export activity in public metrics', () => {
+        actualMetrics.trackBatchExportActivity({
+            format: 'pdf',
+            source: 'http',
+            requestedResumes: 5,
+            resolvedResumes: 4,
+            inaccessibleResumes: 1,
+            generatedFiles: 4,
+            failedFiles: 1,
+            successfulRuns: 1,
+            durationMs: 2500,
+            archiveBytes: 2048
+        });
+
+        const publicMetrics = actualMetrics.getMetrics();
+        expect(publicMetrics.operations.batchExports).toMatchObject({
+            runs: 1,
+            successfulRuns: 1,
+            requestedResumes: 5,
+            generatedFiles: 4,
+            byFormat: { pdf: 1 },
+            bySource: { http: 1 }
+        });
+    });
 });

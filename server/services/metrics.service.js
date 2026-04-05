@@ -12,6 +12,7 @@ import {
     trackOcrActivity as trackOcrOperation,
     trackCleanupActivity as trackCleanupOperation,
     trackBatchImportActivity as trackBatchImportOperation,
+    trackBatchExportActivity as trackBatchExportOperation,
     trackProfileMatchingActivity as trackProfileMatchingOperation,
     trackImprovementActivity as trackImprovementOperation,
     trackAiModifyActivity as trackAiModifyOperation,
@@ -303,6 +304,40 @@ class MetricsCollector {
             pendingNameRuns,
             improvementRequestedRuns,
             stage,
+            metadata
+        });
+    }
+
+    trackBatchExportActivity({
+        event = 'run',
+        format = 'unknown',
+        source = 'unknown',
+        requestedResumes = 0,
+        resolvedResumes = 0,
+        inaccessibleResumes = 0,
+        generatedFiles = 0,
+        failedFiles = 0,
+        durationMs = 0,
+        archiveBytes = 0,
+        successfulRuns = 0,
+        failedRuns = 0,
+        truncatedErrors = 0,
+        metadata = {}
+    } = {}) {
+        trackBatchExportOperation(this.operations, {
+            event,
+            format,
+            source,
+            requestedResumes,
+            resolvedResumes,
+            inaccessibleResumes,
+            generatedFiles,
+            failedFiles,
+            durationMs,
+            archiveBytes,
+            successfulRuns,
+            failedRuns,
+            truncatedErrors,
             metadata
         });
     }

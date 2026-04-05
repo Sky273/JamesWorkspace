@@ -64,6 +64,21 @@ export function buildPersistedMetricsData(collector) {
                 byMimeType: collector.operations.batchImports.byMimeType,
                 stageFailures: collector.operations.batchImports.stageFailures
             },
+            batchExports: {
+                runs: collector.operations.batchExports.runs,
+                successfulRuns: collector.operations.batchExports.successfulRuns,
+                failedRuns: collector.operations.batchExports.failedRuns,
+                requestedResumes: collector.operations.batchExports.requestedResumes,
+                resolvedResumes: collector.operations.batchExports.resolvedResumes,
+                inaccessibleResumes: collector.operations.batchExports.inaccessibleResumes,
+                generatedFiles: collector.operations.batchExports.generatedFiles,
+                failedFiles: collector.operations.batchExports.failedFiles,
+                totalDurationMs: collector.operations.batchExports.totalDurationMs,
+                totalArchiveBytes: collector.operations.batchExports.totalArchiveBytes,
+                truncatedErrors: collector.operations.batchExports.truncatedErrors,
+                byFormat: collector.operations.batchExports.byFormat,
+                bySource: collector.operations.batchExports.bySource
+            },
             aiModify: {
                 runs: collector.operations.aiModify.runs,
                 successfulRuns: collector.operations.aiModify.successfulRuns,
@@ -215,6 +230,22 @@ export function buildPublicMetrics(collector) {
                 byMimeType: collector.operations.batchImports.byMimeType,
                 stageFailures: collector.operations.batchImports.stageFailures,
                 recent: collector.operations.batchImports.recent.slice(-10)
+            },
+            batchExports: {
+                runs: collector.operations.batchExports.runs,
+                successfulRuns: collector.operations.batchExports.successfulRuns,
+                failedRuns: collector.operations.batchExports.failedRuns,
+                requestedResumes: collector.operations.batchExports.requestedResumes,
+                resolvedResumes: collector.operations.batchExports.resolvedResumes,
+                inaccessibleResumes: collector.operations.batchExports.inaccessibleResumes,
+                generatedFiles: collector.operations.batchExports.generatedFiles,
+                failedFiles: collector.operations.batchExports.failedFiles,
+                totalDurationMs: collector.operations.batchExports.totalDurationMs,
+                totalArchiveBytes: collector.operations.batchExports.totalArchiveBytes,
+                truncatedErrors: collector.operations.batchExports.truncatedErrors,
+                byFormat: collector.operations.batchExports.byFormat,
+                bySource: collector.operations.batchExports.bySource,
+                recent: collector.operations.batchExports.recent.slice(-10)
             },
             aiModify: {
                 runs: collector.operations.aiModify.runs,

@@ -139,6 +139,13 @@ export function loadMetricsFromDisk(collector, { log, normalizeLLMProviderKey, p
                 stageFailures: data.operations.batchImports?.stageFailures || {},
                 recent: []
             };
+            collector.operations.batchExports = {
+                ...initialOperations.batchExports,
+                ...(data.operations.batchExports || {}),
+                byFormat: data.operations.batchExports?.byFormat || {},
+                bySource: data.operations.batchExports?.bySource || {},
+                recent: []
+            };
             collector.operations.aiModify = {
                 ...initialOperations.aiModify,
                 ...(data.operations.aiModify || {}),

@@ -9,7 +9,6 @@ import { callLLM } from '../services/llm.service.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { asyncHandler } from '../middleware/asyncHandler.middleware.js';
 import { validateBody, chatbotRequestSchema } from '../utils/validation.js';
-import { metrics } from '../services/metrics.service.js';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -59,11 +58,6 @@ const MAX_HISTORY_TOTAL_LENGTH = 50000;
  * Send a message to the chatbot and get a response
  */
 router.post('/message', authenticateToken, validateBody(chatbotRequestSchema), asyncHandler(async (req, res) => {
-    const startTime = Date.now();
-    
-    // Track request metrics
-    metrics.trackRequest('POST', '/api/chatbot/message');
-
     const { message, conversationHistory } = req.body;
     const userId = req.user?.id;
     const userName = req.user?.name;
@@ -180,7 +174,6 @@ Réponds toujours en français, sauf si l'utilisateur pose sa question en anglai
         safeLog('error', 'LLM returned empty response after retries', {
             lastError: lastError?.message
         });
-        metrics.trackError('/api/chatbot/message', 'EmptyLLMResponse');
         return res.status(500).json({
             error: 'Empty LLM response',
             response: 'Désolé, je n\'ai pas pu générer de réponse. Veuillez réessayer.'
@@ -190,15 +183,10 @@ Réponds toujours en français, sauf si l'utilisateur pose sa question en anglai
     // Note: LLM metrics are now tracked inside llm.service.js to avoid double counting
     // The callLLM function tracks metrics automatically
 
-    // Track response time
-    const responseTime = Date.now() - startTime;
-    metrics.trackResponse(200, responseTime);
-
     safeLog('info', 'Chatbot LLM response generated', { 
         userId,
         responseLength: llmResponse.content.length,
-        model: llmResponse.model,
-        responseTime
+        model: llmResponse.model
     });
 
     res.json({

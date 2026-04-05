@@ -32,6 +32,13 @@ vi.mock('../../services/batchJobsWorker/helpers.js', () => ({
     removeSuggestionMarkers: vi.fn(text => text)
 }));
 
+const mockTrackBatchExportActivity = vi.fn();
+vi.mock('../../services/metrics.service.js', () => ({
+    metrics: {
+        trackBatchExportActivity: (...args) => mockTrackBatchExportActivity(...args)
+    }
+}));
+
 // Mock jszip - must be a constructor that tracks added files
 const mockZipGenerateAsync = vi.fn(() => Buffer.from('zipdata'));
 const mockZipGenerateNodeStream = vi.fn(() => Readable.from(['zipdata']));
@@ -148,6 +155,10 @@ describe('Batch Jobs Worker - Export Generator', () => {
         await expect(
             generateJobExport('j1', { templateId: 'tpl-bad', exportFormats: ['pdf'] })
         ).rejects.toThrow('Template not found');
+
+        expect(mockUpdateJobItemStatus).toHaveBeenCalledWith('i1', 'error', expect.objectContaining({
+            error_message: 'Template not found'
+        }));
     });
 
     it('should return early when only failed items exist', async () => {
@@ -183,6 +194,12 @@ describe('Batch Jobs Worker - Export Generator', () => {
             expect.objectContaining({ method: 'POST' })
         );
         expect(mockUpdateJobExportFile).toHaveBeenCalledWith('j1', expect.any(String), expect.stringContaining('export_j1'));
+        expect(mockTrackBatchExportActivity).toHaveBeenCalledWith(expect.objectContaining({
+            source: 'job',
+            format: 'pdf',
+            successfulRuns: 1,
+            generatedFiles: 1
+        }));
     });
 
     it('should fully buffer PDF bodies before ZIP generation', async () => {
@@ -277,6 +294,12 @@ describe('Batch Jobs Worker - Export Generator', () => {
         expect(mockUpdateJobItemStatus).toHaveBeenCalledWith('i1', 'error', expect.objectContaining({
             error_message: expect.any(String)
         }));
+        expect(mockTrackBatchExportActivity).toHaveBeenCalledWith(expect.objectContaining({
+            source: 'job',
+            format: 'pdf',
+            failedRuns: 1,
+            failedFiles: 1
+        }));
     });
 
     it('should handle adaptation items', async () => {
@@ -353,5 +376,8 @@ describe('Batch Jobs Worker - Export Generator', () => {
         ).rejects.toThrow('private or loopback address');
 
         expect(mockFetch).not.toHaveBeenCalled();
+        expect(mockUpdateJobItemStatus).toHaveBeenCalledWith('i1', 'error', expect.objectContaining({
+            error_message: expect.stringContaining('private or loopback address')
+        }));
     });
 });

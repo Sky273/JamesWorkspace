@@ -210,6 +210,13 @@ vi.mock('../../utils/logger.backend.js', () => ({
     createModuleLogger: vi.fn(() => vi.fn())
 }));
 
+const mockTrackCleanupActivity = vi.fn();
+vi.mock('../../services/metrics.service.js', () => ({
+    metrics: {
+        trackCleanupActivity: (...args) => mockTrackCleanupActivity(...args)
+    }
+}));
+
 vi.mock('fs/promises', () => ({
     default: {
         unlink: vi.fn(() => Promise.resolve()),
@@ -281,6 +288,7 @@ describe('Batch Jobs Routes - GET /api/batch-jobs', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         resetMockPipeline();
+        mockTrackCleanupActivity.mockReset();
         mockGetResumeForAccessCheck.mockResolvedValue({ id: '123e4567-e89b-12d3-a456-426614174000', firm_id: 'firm-123', name: 'Resume 1' });
         app = createTestApp();
     });
@@ -371,6 +379,63 @@ describe('Batch Jobs Routes - GET /api/batch-jobs', () => {
         expect(mockGetAllJobs).toHaveBeenCalled();
         expect(mockGetJobsByFirm).not.toHaveBeenCalled();
     });
+
+    it('should clear stale export metadata when the artifact is missing', async () => {
+        mockGetJobsByFirm.mockResolvedValueOnce([
+            {
+                id: 'job-1',
+                name: 'Batch 1',
+                status: 'completed',
+                firm_id: 'firm-123',
+                export_file_path: 'C:/tmp/missing-export.zip',
+                export_file_name: 'missing-export.zip'
+            }
+        ]);
+
+        const res = await request(app)
+            .get('/api/batch-jobs')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(mockClearJobExportFile).toHaveBeenCalledWith('job-1');
+        expect(res.body[0].export_file_name).toBeNull();
+        expect(res.body[0]).not.toHaveProperty('export_file_path');
+        expect(res.body[0].export_file_available).toBe(false);
+        expect(mockTrackCleanupActivity).toHaveBeenCalledWith(expect.objectContaining({
+            staleExportRefsCleared: 1,
+            metadata: expect.objectContaining({
+                source: 'batch_jobs_routes',
+                reason: 'missing_export_artifact'
+            })
+        }));
+    });
+
+    it('should clear incomplete export metadata when only the file name is stored', async () => {
+        mockGetJobsByFirm.mockResolvedValueOnce([
+            {
+                id: 'job-2',
+                name: 'Batch 2',
+                status: 'completed',
+                firm_id: 'firm-123',
+                export_file_path: null,
+                export_file_name: 'dangling-export.zip'
+            }
+        ]);
+
+        const res = await request(app)
+            .get('/api/batch-jobs')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(mockClearJobExportFile).toHaveBeenCalledWith('job-2');
+        expect(mockTrackCleanupActivity).toHaveBeenCalledWith(expect.objectContaining({
+            staleExportRefsCleared: 1,
+            metadata: expect.objectContaining({
+                source: 'batch_jobs_routes',
+                reason: 'incomplete_export_metadata'
+            })
+        }));
+    });
 });
 
 describe('Batch Jobs Routes - GET /api/batch-jobs/:id', () => {
@@ -419,6 +484,7 @@ describe('Batch Jobs Routes - GET /api/batch-jobs/:id', () => {
         expect(res.status).toBe(200);
         expect(res.body.id).toBe('job-123');
         expect(res.body.items).toBeDefined();
+        expect(res.body).not.toHaveProperty('export_file_path');
     });
 
     it('should return 403 for job from different firm', async () => {
@@ -767,8 +833,11 @@ describe('Batch Jobs Routes - GET /api/batch-jobs/:id/download', () => {
         app = createTestApp();
         const fsModule = await import('fs');
         vi.mocked(fsModule.default.existsSync).mockReturnValue(true);
+        vi.mocked(fsModule.existsSync).mockReturnValue(true);
         vi.mocked(fsModule.default.createReadStream).mockReturnValue(Readable.from(['zip-content']));
+        vi.mocked(fsModule.createReadStream).mockReturnValue(Readable.from(['zip-content']));
         vi.mocked(fsModule.default.unlink).mockImplementation((_path, callback) => callback(null));
+        vi.mocked(fsModule.unlink).mockImplementation((_path, callback) => callback(null));
     });
 
     it('should download an available export with safe headers', async () => {
@@ -810,6 +879,56 @@ describe('Batch Jobs Routes - GET /api/batch-jobs/:id/download', () => {
 
         expect(res.status).toBe(500);
         expect(mockClearJobExportFile).not.toHaveBeenCalled();
+    });
+
+    it('should not count a missing export artifact as a deleted file after download', async () => {
+        mockPipeline.mockImplementationOnce(async (_source, destination) => {
+            destination.end('zip-content');
+        });
+        mockGetJob.mockResolvedValueOnce({
+            id: 'job-123',
+            firm_id: 'firm-123',
+            export_file_path: 'C:/tmp/export.zip',
+            export_file_name: 'batch export.zip'
+        });
+        const fsModule = await import('fs');
+        vi.mocked(fsModule.default.unlink).mockImplementationOnce((_path, callback) => callback(Object.assign(new Error('missing'), { code: 'ENOENT' })));
+
+        const res = await request(app)
+            .get('/api/batch-jobs/job-123/download')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(mockClearJobExportFile).toHaveBeenCalledWith('job-123');
+        expect(mockTrackCleanupActivity).not.toHaveBeenCalledWith(expect.objectContaining({
+            filesDeleted: 1,
+            metadata: expect.objectContaining({ source: 'batch_jobs_routes' })
+        }));
+    });
+
+    it('should clear stale metadata when the export is missing at download time', async () => {
+        const fsModule = await import('fs');
+        vi.mocked(fsModule.default.existsSync).mockReturnValue(false);
+        mockGetJob.mockResolvedValueOnce({
+            id: 'job-123',
+            firm_id: 'firm-123',
+            export_file_path: 'C:/tmp/missing-export.zip',
+            export_file_name: 'missing-export.zip'
+        });
+
+        const res = await request(app)
+            .get('/api/batch-jobs/job-123/download')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(404);
+        expect(mockClearJobExportFile).toHaveBeenCalledWith('job-123');
+        expect(mockTrackCleanupActivity).toHaveBeenCalledWith(expect.objectContaining({
+            staleExportRefsCleared: 1,
+            metadata: expect.objectContaining({
+                source: 'batch_jobs_routes',
+                reason: 'missing_export_artifact'
+            })
+        }));
     });
 });
 

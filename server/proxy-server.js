@@ -307,7 +307,7 @@ app.use((err, req, res, _next) => {
     }
     
     // Track error in metrics
-    metrics.trackError(req.path, err.name || 'UnknownError');
+    metrics.trackError(err, req.path);
     
     res.status(statusCode).json({
         error: isProduction ? 'Internal server error' : err.message,

@@ -7,8 +7,7 @@ import { validateBody, generatePdfProxySchema, generateDocxProxySchema } from '.
 import { getPdfServerAuthHeaders } from '../../utils/pdfServerAuth.js';
 import { applySafeBinaryHeaders } from '../../utils/fileResponseSecurity.js';
 import { assertTrustedInternalServiceUrl } from '../../utils/networkHostSecurity.js';
-
-const DEFAULT_PDF_PROXY_TIMEOUT_MS = 60_000;
+import { getPdfProxyTimeoutMs } from '../../utils/pdfServiceTimeouts.js';
 
 function buildProxyFailureBody(kind, statusCode) {
     const label = kind === 'DOCX' ? 'DOCX' : 'PDF';
@@ -45,11 +44,6 @@ async function relayBinaryResponse(response, res, fallbackContentType) {
     res.end(buffer);
 }
 
-function getProxyTimeoutMs() {
-    const parsed = Number.parseInt(process.env.PDF_PROXY_TIMEOUT_MS || '', 10);
-    return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_PDF_PROXY_TIMEOUT_MS;
-}
-
 async function fetchWithTimeout(url, options, timeoutMs) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(new Error(`Upstream timeout after ${timeoutMs}ms`)), timeoutMs);
@@ -70,7 +64,7 @@ function isAbortError(error) {
 
 export function registerProxyRoutes(app) {
     const PDF_SERVER_URL = process.env.PDF_SERVER_URL || 'http://localhost:3002';
-    const proxyTimeoutMs = getProxyTimeoutMs();
+    const proxyTimeoutMs = getPdfProxyTimeoutMs();
     const pdfServerUrlValidation = assertTrustedInternalServiceUrl(PDF_SERVER_URL)
         .then(() => null)
         .catch((error) => error);

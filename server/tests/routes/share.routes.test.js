@@ -7,6 +7,11 @@ import express from 'express';
 import request from 'supertest';
 import { Readable } from 'stream';
 
+const mockPipeline = vi.fn();
+vi.mock('stream/promises', () => ({
+    pipeline: (...args) => mockPipeline(...args)
+}));
+
 process.env.PDF_SERVER_INTERNAL_TOKEN = 'test-pdf-server-internal-token-minimum-32-chars';
 
 const mockStoreSharedPdf = vi.fn();
@@ -114,6 +119,12 @@ describe('Share Routes', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockPipeline.mockImplementation((source, destination) => new Promise((resolve, reject) => {
+            source.on('error', reject);
+            destination.on('error', reject);
+            destination.on('finish', resolve);
+            source.pipe(destination);
+        }));
         process.env.PDF_SERVER_INTERNAL_TOKEN = 't'.repeat(32);
         mockGetResumeForAccessCheck.mockResolvedValue({ id: 'res-1', firm_id: 'firm-1', name: 'Resume 1' });
         mockGetUserFirmId.mockResolvedValue('firm-1');
@@ -245,6 +256,49 @@ describe('Share Routes', () => {
         expect(res.headers['x-content-type-options']).toBe('nosniff');
         expect(mockCreateReadStream).toHaveBeenCalledWith('/tmp/shared/cv.pdf');
         expect(mockReadFile).not.toHaveBeenCalled();
+    });
+
+    it('returns 500 if the shared PDF stream fails after lookup', async () => {
+        mockGetSharedPdfByToken.mockResolvedValueOnce({
+            path: '/tmp/shared/cv.pdf',
+            name: 'John Doe CV'
+        });
+        mockStat.mockResolvedValueOnce({ size: 21 });
+        mockCreateReadStream.mockReturnValueOnce(Readable.from([Buffer.from('%PDF-1.4 fake content')]));
+        mockPipeline.mockRejectedValueOnce(Object.assign(new Error('stream failed'), { code: 'EIO' }));
+
+        const res = await request(app).get(`/api/share/pdf/${VALID_TOKEN}`);
+
+        expect(res.status).toBe(500);
+        expect(res.body.error).toBe('Failed to serve PDF');
+    });
+
+    it('returns 404 if the shared PDF disappears before streaming starts', async () => {
+        mockGetSharedPdfByToken.mockResolvedValueOnce({
+            path: '/tmp/shared/cv.pdf',
+            name: 'John Doe CV'
+        });
+        mockStat.mockRejectedValueOnce(Object.assign(new Error('missing'), { code: 'ENOENT' }));
+
+        const res = await request(app).get(`/api/share/pdf/${VALID_TOKEN}`);
+
+        expect(res.status).toBe(404);
+        expect(res.body.error).toBe('PDF not found');
+        expect(mockCreateReadStream).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 when the shared PDF file is missing on disk', async () => {
+        mockGetSharedPdfByToken.mockResolvedValueOnce({
+            path: '/tmp/shared/missing.pdf',
+            name: 'John Doe CV'
+        });
+        mockStat.mockRejectedValueOnce(Object.assign(new Error('missing'), { code: 'ENOENT' }));
+
+        const res = await request(app).get(`/api/share/pdf/${VALID_TOKEN}`);
+
+        expect(res.status).toBe(404);
+        expect(res.body.error).toBe('PDF not found');
+        expect(mockCreateReadStream).not.toHaveBeenCalled();
     });
 
     it('serves an original file only by file token', async () => {

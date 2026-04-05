@@ -9,6 +9,7 @@ import os from 'os';
 import { pipeline } from 'stream/promises';
 import { safeLog } from '../../utils/logger.backend.js';
 import { query } from '../../config/database.js';
+import { metrics } from '../metrics.service.js';
 import {
     ITEM_STATUS,
     updateJobItemStatus,
@@ -20,16 +21,9 @@ import { removeSuggestionMarkers } from './helpers.js';
 import { getPdfServerAuthHeaders } from '../../utils/pdfServerAuth.js';
 import { normalizeArchiveRelativePath } from '../../utils/archiveRelativePath.js';
 import { assertTrustedInternalServiceUrl } from '../../utils/networkHostSecurity.js';
+import { getBatchExportPdfTimeoutMs } from '../../utils/pdfServiceTimeouts.js';
 
-const DEFAULT_EXPORT_REQUEST_TIMEOUT_MS = 60_000;
 const MAX_LOGGED_EXPORT_ERRORS = 10;
-
-function getExportRequestTimeoutMs() {
-    const parsedTimeout = Number.parseInt(process.env.BATCH_EXPORT_PDF_TIMEOUT_MS || '', 10);
-    return Number.isInteger(parsedTimeout) && parsedTimeout > 0
-        ? parsedTimeout
-        : DEFAULT_EXPORT_REQUEST_TIMEOUT_MS;
-}
 
 function buildSafeArchiveFilePath(relativePath, generatedFileName) {
     const normalizedRelativePath = normalizeArchiveRelativePath(relativePath);
@@ -52,6 +46,24 @@ function buildSafeArchiveFilePath(relativePath, generatedFileName) {
  */
 export async function generateJobExport(jobId, options) {
     const startedAt = Date.now();
+    const trackBatchExport = (payload = {}) => {
+        metrics.trackBatchExportActivity({
+            source: 'job',
+            durationMs: Date.now() - startedAt,
+            ...payload
+        });
+    };
+    const markExportItemsAsError = async (itemsToMark, errorMessage) => {
+        const normalizedItems = Array.isArray(itemsToMark) ? itemsToMark : [];
+        const normalizedMessage = typeof errorMessage === 'string' && errorMessage.trim().length > 0
+            ? errorMessage.trim()
+            : 'Export generation failed';
+
+        await Promise.all(normalizedItems.map((item) => updateJobItemStatus(item.id, ITEM_STATUS.ERROR, {
+            progress: 100,
+            error_message: normalizedMessage.slice(0, 1000)
+        })));
+    };
     // Support both old exportFormat (single) and new exportFormats (array)
     let exportFormats = options.exportFormats || [options.exportFormat || 'pdf'];
     if (!Array.isArray(exportFormats)) {
@@ -95,12 +107,25 @@ export async function generateJobExport(jobId, options) {
     
     if (successfulItems.length === 0) {
         safeLog('warn', 'No successful items to export', { jobId, statusCounts });
+        trackBatchExport({
+            format: exportFormats.length === 1 ? exportFormats[0] : 'multi',
+            requestedResumes: items.length,
+            failedRuns: 1,
+            metadata: { jobId, reason: 'no_successful_items' }
+        });
         return;
     }
     
     // Get template
     const templateResult = await query('SELECT * FROM templates WHERE id = $1', [templateId]);
     if (templateResult.rows.length === 0) {
+        await markExportItemsAsError(successfulItems, 'Template not found');
+        trackBatchExport({
+            format: exportFormats.length === 1 ? exportFormats[0] : 'multi',
+            requestedResumes: successfulItems.length,
+            failedRuns: 1,
+            metadata: { jobId, reason: 'template_not_found' }
+        });
         throw new Error('Template not found');
     }
     const template = templateResult.rows[0];
@@ -111,7 +136,18 @@ export async function generateJobExport(jobId, options) {
     
     // PDF Server URL
     const PDF_SERVER_URL = process.env.PDF_SERVER_URL || 'http://127.0.0.1:3002';
-    await assertTrustedInternalServiceUrl(PDF_SERVER_URL);
+    try {
+        await assertTrustedInternalServiceUrl(PDF_SERVER_URL);
+    } catch (error) {
+        await markExportItemsAsError(successfulItems, error.message);
+        trackBatchExport({
+            format: exportFormats.length === 1 ? exportFormats[0] : 'multi',
+            requestedResumes: successfulItems.length,
+            failedRuns: 1,
+            metadata: { jobId, reason: 'invalid_pdf_server_url' }
+        });
+        throw error;
+    }
     
     // Track export statistics
     let exportSuccessCount = 0;
@@ -139,7 +175,7 @@ export async function generateJobExport(jobId, options) {
         const endpoint = format === 'pdf' ? '/generate-pdf' : '/generate-docx';
         const fileExtension = format === 'pdf' ? 'pdf' : format;
         const MAX_RETRIES = 3;
-        const requestTimeoutMs = getExportRequestTimeoutMs();
+        const requestTimeoutMs = getBatchExportPdfTimeoutMs();
         let lastError = null;
         
         for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -382,6 +418,15 @@ export async function generateJobExport(jobId, options) {
     // Check if any files were added
     if (actualFilesInZip === 0) {
         safeLog('warn', 'No files generated for export', { jobId, exportErrors });
+        trackBatchExport({
+            format: exportFormats.length === 1 ? exportFormats[0] : 'multi',
+            requestedResumes: successfulItems.length,
+            resolvedResumes: successfulItems.length,
+            generatedFiles: 0,
+            failedFiles: exportErrorCount,
+            failedRuns: 1,
+            metadata: { jobId, reason: 'no_generated_files' }
+        });
         throw new Error('No files generated for export');
     }
     
@@ -408,6 +453,16 @@ export async function generateJobExport(jobId, options) {
     
     // Update job with export file info
     await updateJobExportFile(jobId, filePath, fileName);
+    trackBatchExport({
+        format: exportFormats.length === 1 ? exportFormats[0] : 'multi',
+        requestedResumes: successfulItems.length,
+        resolvedResumes: successfulItems.length,
+        generatedFiles: actualFilesInZip,
+        failedFiles: exportErrorCount,
+        archiveBytes: exportedSize,
+        successfulRuns: 1,
+        metadata: { jobId }
+    });
     
     safeLog('info', 'Export generated successfully', { 
         jobId, 

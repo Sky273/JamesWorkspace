@@ -13,6 +13,33 @@
 
 import { query } from '../config/database.js';
 
+const LATEST_IMPORT_PATH_CTES_SQL = `
+    WITH latest_import_by_resume AS (
+        SELECT DISTINCT ON (bji.resume_id)
+            bji.resume_id,
+            bji.relative_path
+        FROM batch_job_items bji
+        INNER JOIN batch_jobs bj ON bj.id = bji.job_id
+        WHERE bji.relative_path IS NOT NULL
+          AND bj.job_type = 'import'
+          AND bji.resume_id IS NOT NULL
+        ORDER BY bji.resume_id, bji.created_at DESC
+    ),
+    latest_import_by_file AS (
+        SELECT DISTINCT ON (bj.firm_id, bji.file_name)
+            bj.firm_id,
+            bji.file_name,
+            bji.relative_path
+        FROM batch_job_items bji
+        INNER JOIN batch_jobs bj ON bj.id = bji.job_id
+        WHERE bji.relative_path IS NOT NULL
+          AND bj.job_type = 'import'
+          AND bji.resume_id IS NULL
+          AND bji.file_name IS NOT NULL
+        ORDER BY bj.firm_id, bji.file_name, bji.created_at DESC
+    )
+`;
+
 // Constants
 export { JOB_STATUS, ITEM_STATUS, COLLECTION_JOB_TYPES } from './batchJobs/constants.js';
 
@@ -73,30 +100,7 @@ export async function getDealForExport(dealId) {
  */
 export async function getResumesForDeal(dealId) {
     const result = await query(`
-        WITH latest_import_by_resume AS (
-            SELECT DISTINCT ON (bji.resume_id)
-                bji.resume_id,
-                bji.relative_path
-            FROM batch_job_items bji
-            INNER JOIN batch_jobs bj ON bj.id = bji.job_id
-            WHERE bji.relative_path IS NOT NULL
-              AND bj.job_type = 'import'
-              AND bji.resume_id IS NOT NULL
-            ORDER BY bji.resume_id, bji.created_at DESC
-        ),
-        latest_import_by_file AS (
-            SELECT DISTINCT ON (bj.firm_id, bji.file_name)
-                bj.firm_id,
-                bji.file_name,
-                bji.relative_path
-            FROM batch_job_items bji
-            INNER JOIN batch_jobs bj ON bj.id = bji.job_id
-            WHERE bji.relative_path IS NOT NULL
-              AND bj.job_type = 'import'
-              AND bji.resume_id IS NULL
-              AND bji.file_name IS NOT NULL
-            ORDER BY bj.firm_id, bji.file_name, bji.created_at DESC
-        )
+        ${LATEST_IMPORT_PATH_CTES_SQL}
         SELECT r.id, r.name, r.title, r.file_name as source_file_name,
                COALESCE(r.relative_path, lir.relative_path, lif.relative_path) as relative_path
         FROM resumes r
@@ -116,30 +120,7 @@ export async function getResumesForDeal(dealId) {
  */
 export async function getAdaptationsForDeal(dealId) {
     const result = await query(`
-        WITH latest_import_by_resume AS (
-            SELECT DISTINCT ON (bji.resume_id)
-                bji.resume_id,
-                bji.relative_path
-            FROM batch_job_items bji
-            INNER JOIN batch_jobs bj ON bj.id = bji.job_id
-            WHERE bji.relative_path IS NOT NULL
-              AND bj.job_type = 'import'
-              AND bji.resume_id IS NOT NULL
-            ORDER BY bji.resume_id, bji.created_at DESC
-        ),
-        latest_import_by_file AS (
-            SELECT DISTINCT ON (bj.firm_id, bji.file_name)
-                bj.firm_id,
-                bji.file_name,
-                bji.relative_path
-            FROM batch_job_items bji
-            INNER JOIN batch_jobs bj ON bj.id = bji.job_id
-            WHERE bji.relative_path IS NOT NULL
-              AND bj.job_type = 'import'
-              AND bji.resume_id IS NULL
-              AND bji.file_name IS NOT NULL
-            ORDER BY bj.firm_id, bji.file_name, bji.created_at DESC
-        )
+        ${LATEST_IMPORT_PATH_CTES_SQL}
         SELECT ra.id, ra.resume_id, ra.candidate_name, ra.adapted_title, ra.mission_title,
                COALESCE(r.relative_path, lir.relative_path, lif.relative_path) as relative_path,
                m.title as mission_name,

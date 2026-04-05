@@ -186,6 +186,72 @@ export function trackBatchImportActivity(operations, payload = {}) {
     }
 }
 
+export function trackBatchExportActivity(operations, payload = {}) {
+    const {
+        event = 'run',
+        format = 'unknown',
+        source = 'unknown',
+        requestedResumes = 0,
+        resolvedResumes = 0,
+        inaccessibleResumes = 0,
+        generatedFiles = 0,
+        failedFiles = 0,
+        durationMs = 0,
+        archiveBytes = 0,
+        successfulRuns = 0,
+        failedRuns = 0,
+        truncatedErrors = 0,
+        metadata = {}
+    } = payload;
+
+    const normalizedFormat = typeof format === 'string' && format.trim().length > 0
+        ? format.trim().toLowerCase()
+        : 'unknown';
+    const normalizedSource = typeof source === 'string' && source.trim().length > 0
+        ? source.trim().toLowerCase()
+        : 'unknown';
+
+    if (event === 'run') {
+        operations.batchExports.runs++;
+        operations.batchExports.byFormat[normalizedFormat] =
+            (operations.batchExports.byFormat[normalizedFormat] || 0) + 1;
+        operations.batchExports.bySource[normalizedSource] =
+            (operations.batchExports.bySource[normalizedSource] || 0) + 1;
+    }
+
+    operations.batchExports.successfulRuns += Number(successfulRuns) || 0;
+    operations.batchExports.failedRuns += Number(failedRuns) || 0;
+    operations.batchExports.requestedResumes += Number(requestedResumes) || 0;
+    operations.batchExports.resolvedResumes += Number(resolvedResumes) || 0;
+    operations.batchExports.inaccessibleResumes += Number(inaccessibleResumes) || 0;
+    operations.batchExports.generatedFiles += Number(generatedFiles) || 0;
+    operations.batchExports.failedFiles += Number(failedFiles) || 0;
+    operations.batchExports.totalDurationMs += Number(durationMs) || 0;
+    operations.batchExports.totalArchiveBytes += Number(archiveBytes) || 0;
+    operations.batchExports.truncatedErrors += Number(truncatedErrors) || 0;
+
+    operations.batchExports.recent.push({
+        timestamp: new Date().toISOString(),
+        event,
+        format: normalizedFormat,
+        source: normalizedSource,
+        requestedResumes: Number(requestedResumes) || 0,
+        resolvedResumes: Number(resolvedResumes) || 0,
+        inaccessibleResumes: Number(inaccessibleResumes) || 0,
+        generatedFiles: Number(generatedFiles) || 0,
+        failedFiles: Number(failedFiles) || 0,
+        durationMs: Number(durationMs) || 0,
+        archiveBytes: Number(archiveBytes) || 0,
+        successfulRuns: Number(successfulRuns) || 0,
+        failedRuns: Number(failedRuns) || 0,
+        truncatedErrors: Number(truncatedErrors) || 0,
+        ...metadata
+    });
+    if (operations.batchExports.recent.length > 50) {
+        operations.batchExports.recent.shift();
+    }
+}
+
 export function trackProfileMatchingActivity(operations, normalizeProviderKey, payload = {}) {
     const {
         provider = 'unknown',

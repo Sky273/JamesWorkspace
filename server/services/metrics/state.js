@@ -82,6 +82,22 @@ export function createOperationsState() {
             stageFailures: {},
             recent: []
         },
+        batchExports: {
+            runs: 0,
+            successfulRuns: 0,
+            failedRuns: 0,
+            requestedResumes: 0,
+            resolvedResumes: 0,
+            inaccessibleResumes: 0,
+            generatedFiles: 0,
+            failedFiles: 0,
+            totalDurationMs: 0,
+            totalArchiveBytes: 0,
+            truncatedErrors: 0,
+            byFormat: {},
+            bySource: {},
+            recent: []
+        },
         aiModify: {
             runs: 0,
             successfulRuns: 0,

@@ -42,6 +42,13 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+const mockTrackBatchExportActivity = vi.fn();
+vi.mock('../../services/metrics.service.js', () => ({
+    metrics: {
+        trackBatchExportActivity: (...args) => mockTrackBatchExportActivity(...args)
+    }
+}));
+
 // Mock validation
 vi.mock('../../utils/validation.js', () => ({
     validateBody: () => (req, res, next) => next(),
@@ -97,6 +104,7 @@ describe('Batch Export Routes', () => {
         mockFile.mockReset();
         mockGenerateNodeStream.mockReset();
         mockFetch.mockReset();
+        mockTrackBatchExportActivity.mockReset();
         process.env.PDF_SERVER_INTERNAL_TOKEN = 't'.repeat(32);
         mockGetUserFirmId.mockResolvedValue('00000000-0000-0000-0000-000000000010');
         app = createTestApp();
@@ -231,6 +239,12 @@ describe('Batch Export Routes', () => {
                 streamFiles: true,
                 compression: 'DEFLATE'
             }));
+            expect(mockTrackBatchExportActivity).toHaveBeenCalledWith(expect.objectContaining({
+                source: 'http',
+                format: 'pdf',
+                successfulRuns: 1,
+                generatedFiles: 1
+            }));
         });
 
         it('should return 500 if no files generated', async () => {
@@ -316,6 +330,12 @@ describe('Batch Export Routes', () => {
             expect(res.body.details).toHaveLength(20);
             expect(res.body.totalErrors).toBe(25);
             expect(res.body.truncated).toBe(true);
+            expect(mockTrackBatchExportActivity).toHaveBeenCalledWith(expect.objectContaining({
+                source: 'http',
+                format: 'pdf',
+                failedRuns: 1,
+                truncatedErrors: 1
+            }));
         });
 
         it('should pass firm access context to export lookups', async () => {

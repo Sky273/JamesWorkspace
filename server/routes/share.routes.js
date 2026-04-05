@@ -6,6 +6,7 @@
 import { Router, json } from 'express';
 import { createReadStream } from 'fs';
 import fs from 'fs/promises';
+import { pipeline } from 'stream/promises';
 import { authenticateToken, isUserAdmin } from '../middleware/auth.middleware.js';
 import { validateBody, validateParams, sharePdfSchema } from '../utils/validation.js';
 import * as shareResumeService from '../services/shareResume.service.js';
@@ -15,9 +16,10 @@ import { getResumeForAccessCheck } from '../services/resumes.service.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
 import { setSafeFileResponseHeaders } from '../utils/fileResponseSecurity.js';
 import { assertTrustedInternalServiceUrl } from '../utils/networkHostSecurity.js';
+import { getSharePdfTimeoutMs } from '../utils/pdfServiceTimeouts.js';
 
 const router = Router();
-const PDF_SERVER_TIMEOUT_MS = 45_000;
+const PDF_SERVER_TIMEOUT_MS = getSharePdfTimeoutMs();
 
 // JSON parsing for this router
 router.use(json());
@@ -88,17 +90,22 @@ function buildShareStatusResponse(status) {
 function createAbortablePdfRequest(req, res) {
     const controller = new AbortController();
     const abortRequest = () => controller.abort(new Error('PDF generation request aborted'));
+    const abortOnResponseClose = () => {
+        if (!res.writableEnded) {
+            abortRequest();
+        }
+    };
     const timeoutId = setTimeout(() => controller.abort(new Error('PDF generation request timed out')), PDF_SERVER_TIMEOUT_MS);
 
-    req.once('close', abortRequest);
-    res.once('close', abortRequest);
+    req.once('aborted', abortRequest);
+    res.once('close', abortOnResponseClose);
 
     return {
         signal: controller.signal,
         cleanup() {
             clearTimeout(timeoutId);
-            req.removeListener('close', abortRequest);
-            res.removeListener('close', abortRequest);
+            req.removeListener('aborted', abortRequest);
+            res.removeListener('close', abortOnResponseClose);
         }
     };
 }
@@ -112,7 +119,19 @@ async function serveSharedPdfByToken(res, token) {
         });
     }
 
-    const stats = await fs.stat(pdfInfo.path);
+    let stats;
+    try {
+        stats = await fs.stat(pdfInfo.path);
+    } catch (error) {
+        if (error?.code === 'ENOENT') {
+            return res.status(404).json({
+                success: false,
+                error: 'PDF not found'
+            });
+        }
+
+        throw error;
+    }
     const filename = pdfInfo.name ? `${pdfInfo.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf` : 'cv.pdf';
 
     setSafeFileResponseHeaders(res, {
@@ -121,7 +140,31 @@ async function serveSharedPdfByToken(res, token) {
         contentLength: stats.size,
         inline: true
     });
-    createReadStream(pdfInfo.path).pipe(res);
+
+    try {
+        await pipeline(createReadStream(pdfInfo.path), res);
+    } catch (error) {
+        if (error?.code === 'ENOENT' && !res.headersSent) {
+            res.removeHeader('Content-Type');
+            res.removeHeader('Content-Disposition');
+            res.removeHeader('Content-Length');
+            return res.status(404).json({
+                success: false,
+                error: 'PDF not found'
+            });
+        }
+        if (!res.headersSent) {
+            res.removeHeader('Content-Type');
+            res.removeHeader('Content-Disposition');
+            res.removeHeader('Content-Length');
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to serve PDF'
+            });
+        }
+        throw error;
+    }
+
     return null;
 }
 
