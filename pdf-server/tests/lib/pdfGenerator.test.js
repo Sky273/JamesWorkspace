@@ -108,4 +108,53 @@ describe('pdfGenerator', () => {
     await requestHandlers.request(dataRequest);
     expect(dataRequest.continue).toHaveBeenCalled();
   }, 10000);
+
+  it('retries once with a fresh browser after a retriable Puppeteer failure', async () => {
+    const firstPage = {
+      setRequestInterception: vi.fn().mockResolvedValue(),
+      on: vi.fn(),
+      setContent: vi.fn().mockRejectedValue(new Error('Target closed')),
+      pdf: vi.fn(),
+      close: vi.fn().mockResolvedValue()
+    };
+    const secondPage = {
+      setRequestInterception: vi.fn().mockResolvedValue(),
+      on: vi.fn(),
+      setContent: vi.fn().mockResolvedValue(),
+      pdf: vi.fn().mockResolvedValue(Buffer.from('%PDF-1.4 fake content')),
+      close: vi.fn().mockResolvedValue()
+    };
+    const firstBrowser = {
+      isConnected: vi.fn(() => true),
+      on: vi.fn(),
+      newPage: vi.fn().mockResolvedValue(firstPage),
+      close: vi.fn().mockResolvedValue()
+    };
+    const secondBrowser = {
+      isConnected: vi.fn(() => true),
+      on: vi.fn(),
+      newPage: vi.fn().mockResolvedValue(secondPage),
+      close: vi.fn().mockResolvedValue()
+    };
+
+    const puppeteer = require('puppeteer');
+    const launchSpy = vi.spyOn(puppeteer, 'launch')
+      .mockResolvedValueOnce(firstBrowser)
+      .mockResolvedValueOnce(secondBrowser);
+
+    const pdfGenerator = loadPdfGenerator();
+    pdfGenerator._internal.resetBrowserState();
+
+    await expect(pdfGenerator.generatePdf({
+      htmlContent: '<p>Hello</p>',
+      stylesheet: '',
+      headerContent: '',
+      footerContent: '',
+      footerHeight: 25
+    })).resolves.toEqual(Buffer.from('%PDF-1.4 fake content'));
+
+    expect(launchSpy).toHaveBeenCalledTimes(2);
+    expect(firstBrowser.close).toHaveBeenCalledTimes(1);
+    expect(secondPage.pdf).toHaveBeenCalledTimes(1);
+  }, 10000);
 });

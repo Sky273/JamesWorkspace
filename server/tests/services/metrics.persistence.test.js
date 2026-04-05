@@ -48,12 +48,16 @@ describe('metrics persistence', () => {
         process.env.METRICS_DIR = tempDir;
         process.env.METRICS_FILE = path.join(tempDir, 'metrics.json');
         process.env.METRICS_HISTORY_FILE = historyFile;
+        process.env.METRICS_MAX_HISTORY_ENTRIES = '12';
+        process.env.METRICS_HISTORY_COMPACTION_INTERVAL = '4';
     });
 
     afterEach(() => {
         delete process.env.METRICS_DIR;
         delete process.env.METRICS_FILE;
         delete process.env.METRICS_HISTORY_FILE;
+        delete process.env.METRICS_MAX_HISTORY_ENTRIES;
+        delete process.env.METRICS_HISTORY_COMPACTION_INTERVAL;
         if (tempDir) {
             fs.rmSync(tempDir, { recursive: true, force: true });
         }

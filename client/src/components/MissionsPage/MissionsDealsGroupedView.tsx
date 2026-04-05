@@ -18,6 +18,7 @@ import {
   MissionsGroupedEmptyState,
   MissionsGroupedSummary,
   MissionsGroupedToolbar,
+  normalizeMissionKeywordsText,
 } from './MissionsDealsGroupedView.parts';
 import type { GroupedData, GroupedMission, MissionsDealsGroupedViewProps } from './MissionsDealsGroupedView.types';
 
@@ -84,7 +85,7 @@ const MissionsDealsGroupedView = ({ onAddMission }: MissionsDealsGroupedViewProp
       mission.title?.toLowerCase().includes(q) ||
       mission.client_name?.toLowerCase().includes(q) ||
       mission.contact_name?.toLowerCase().includes(q) ||
-      mission.keywords?.toLowerCase().includes(q)
+      normalizeMissionKeywordsText(mission.keywords).includes(q)
     );
   }, [debouncedSearch]);
 

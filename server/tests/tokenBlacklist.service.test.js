@@ -25,12 +25,42 @@ import {
     destroyBlacklist,
     _internals
 } from '../services/tokenBlacklist.service.js';
+import { query } from '../config/database.js';
 
 describe('Token Blacklist Service', () => {
     beforeEach(() => {
         // Clear caches before each test
         _internals.tokenCache.clear();
         _internals.userCache.clear();
+        query.mockReset();
+        query.mockImplementation((sql, params = []) => {
+            if (sql.includes('INSERT INTO token_blacklist')) {
+                return Promise.resolve({
+                    rowCount: 1,
+                    rows: [{
+                        token_jti: params[0],
+                        user_id: params[1],
+                        reason: params[2],
+                        expires_at: params[3],
+                        created_at: new Date()
+                    }]
+                });
+            }
+
+            if (sql.includes('INSERT INTO user_blacklist')) {
+                return Promise.resolve({ rowCount: 1, rows: [] });
+            }
+
+            if (sql.includes('DELETE FROM user_blacklist')) {
+                return Promise.resolve({ rowCount: 0, rows: [] });
+            }
+
+            if (sql.includes('DELETE FROM token_blacklist')) {
+                return Promise.resolve({ rowCount: 0, rows: [] });
+            }
+
+            return Promise.resolve({ rows: [], rowCount: 0 });
+        });
     });
 
     describe('blacklistToken', () => {
@@ -88,7 +118,6 @@ describe('Token Blacklist Service', () => {
             expect(_internals.userCache.has('user123')).toBe(true);
             
             // Mock database to return rowCount > 0
-            const { query } = await import('../config/database.js');
             query.mockResolvedValueOnce({ rows: [], rowCount: 1 });
             
             const result = await unblacklistUser('user123');
@@ -227,7 +256,6 @@ describe('Integration: Token Revocation Flow', () => {
         expect(isTokenBlacklisted(null, userId)).toBe(true);
         
         // Mock database to return rowCount > 0 for unblacklist
-        const { query } = await import('../config/database.js');
         query.mockResolvedValueOnce({ rows: [], rowCount: 1 });
         
         // Reactivate account

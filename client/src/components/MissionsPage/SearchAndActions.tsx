@@ -1,4 +1,5 @@
 import { ArrowPathIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import type { TFunction } from 'i18next';
 
 import SearchField from '../page/SearchField';
 
@@ -9,7 +10,7 @@ interface SearchAndActionsProps {
   onRefresh: () => void;
   onAddMission: () => void;
   onReset?: () => void;
-  t: (key: string, fallback?: string) => string;
+  t: TFunction;
 }
 
 const SearchAndActions = ({

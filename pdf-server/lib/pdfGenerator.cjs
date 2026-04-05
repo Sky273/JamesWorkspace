@@ -11,6 +11,16 @@ const { buildPuppeteerHtml, buildPuppeteerFooter } = require('./htmlBuilder.cjs'
 let browserInstance = null;
 let browserLaunchPromise = null;
 
+const RETRIABLE_BROWSER_ERROR_PATTERNS = [
+  /target closed/i,
+  /session closed/i,
+  /browser has disconnected/i,
+  /navigating frame was detached/i,
+  /execution context was destroyed/i,
+  /connection closed/i,
+  /protocol error/i
+];
+
 function createAbortError(message) {
   const error = new Error(message);
   error.name = 'AbortError';
@@ -24,6 +34,27 @@ function shouldAllowChromiumNoSandbox() {
 
 function shouldAllowRequest(url) {
   return url.startsWith('about:') || url.startsWith('data:');
+}
+
+function isRetriableBrowserError(error) {
+  const message = String(error?.message || '');
+  return RETRIABLE_BROWSER_ERROR_PATTERNS.some((pattern) => pattern.test(message));
+}
+
+async function discardBrowserInstance() {
+  const browser = browserInstance;
+  browserInstance = null;
+  browserLaunchPromise = null;
+
+  if (!browser) {
+    return;
+  }
+
+  try {
+    await browser.close();
+  } catch (closeError) {
+    log('warn', 'Failed to discard browser instance', { error: closeError.message });
+  }
 }
 
 function removeListener(emitter, eventName, handler) {
@@ -106,6 +137,7 @@ async function getBrowser() {
  * @returns {Promise<Buffer>} PDF buffer
  */
 async function generatePdf({ htmlContent, stylesheet, headerContent, footerContent, footerHeight, signal } = {}) {
+  async function runGenerationAttempt() {
   let page = null;
   let requestHandler = null;
   let abortHandler = null;
@@ -262,6 +294,25 @@ async function generatePdf({ htmlContent, stylesheet, headerContent, footerConte
       }
     }
   }
+  }
+
+  try {
+    return await runGenerationAttempt();
+  } catch (error) {
+    if (signal?.aborted || error?.name === 'AbortError' || error?.code === 'ABORT_ERR') {
+      throw error;
+    }
+
+    if (!isRetriableBrowserError(error)) {
+      throw error;
+    }
+
+    log('warn', 'Retrying PDF generation with a fresh browser after retriable Puppeteer failure', {
+      error: error.message
+    });
+    await discardBrowserInstance();
+    return runGenerationAttempt();
+  }
 }
 
 /**
@@ -287,6 +338,7 @@ module.exports = {
     getBrowser,
     shouldAllowChromiumNoSandbox,
     shouldAllowRequest,
+    isRetriableBrowserError,
     resetBrowserState() {
       browserInstance = null;
       browserLaunchPromise = null;

@@ -4,6 +4,16 @@ function hasWindowsDrivePrefix(value) {
     return /^[a-zA-Z]:/.test(value);
 }
 
+function containsControlCharacters(value) {
+    for (let index = 0; index < value.length; index += 1) {
+        if (value.charCodeAt(index) <= 31) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 export function normalizeArchiveRelativePath(input) {
     if (input === null || input === undefined) {
         return null;
@@ -14,7 +24,7 @@ export function normalizeArchiveRelativePath(input) {
         return null;
     }
 
-    if (/[\0-\x1F]/.test(rawValue)) {
+    if (containsControlCharacters(rawValue)) {
         throw new Error('Invalid archive path');
     }
 

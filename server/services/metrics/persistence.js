@@ -13,8 +13,8 @@ export const METRICS_FILE = process.env.METRICS_FILE || path.join(METRICS_DIR, '
 export const METRICS_HISTORY_FILE = process.env.METRICS_HISTORY_FILE || path.join(METRICS_DIR, 'metrics-history.jsonl');
 export const SAVE_INTERVAL_MS = 5 * 60 * 1000;
 export const HISTORY_INTERVAL_MS = 60 * 60 * 1000;
-export const MAX_HISTORY_ENTRIES = 24 * 30;
-export const HISTORY_COMPACTION_INTERVAL = 100;
+export const MAX_HISTORY_ENTRIES = Number.parseInt(process.env.METRICS_MAX_HISTORY_ENTRIES || '', 10) || 24 * 30;
+export const HISTORY_COMPACTION_INTERVAL = Number.parseInt(process.env.METRICS_HISTORY_COMPACTION_INTERVAL || '', 10) || 100;
 
 let historyLinesCache = null;
 let historyLinesCacheFile = null;

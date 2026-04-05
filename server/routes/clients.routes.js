@@ -173,7 +173,7 @@ router.put('/:id', authenticateToken, userRateLimit(), validateParams('id'), val
             return;
         }
 
-        const { client: existing, userFirmId, isAdmin } = accessibleClient;
+        const { client: existing, isAdmin } = accessibleClient;
 
         const normalizedClient = normalizeClientPayload(req.body);
         const { name, type, status, address, website, industry, notes, firm_id } = normalizedClient;

@@ -38,7 +38,6 @@ vi.mock('fs/promises', () => ({
     unlink: vi.fn(() => Promise.resolve())
 }));
 
-import fs from 'fs';
 import fsPromises from 'fs/promises';
 import {
     LOG_LEVELS,

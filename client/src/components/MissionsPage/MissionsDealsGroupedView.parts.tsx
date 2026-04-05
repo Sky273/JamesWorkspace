@@ -71,6 +71,44 @@ export const MISSION_STATUS_COLORS: Record<string, string> = {
 
 export const INITIAL_MISSIONS_LIMIT = 6;
 
+export function normalizeMissionKeywords(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => String(entry ?? '').trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed !== value) {
+        return normalizeMissionKeywords(parsed);
+      }
+    } catch {
+      // Keep raw string fallback below when keywords are stored as CSV/plain text.
+    }
+
+    return trimmed
+      .split(/[\r\n,;]+/)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.values(value as Record<string, unknown>)
+      .flatMap((entry) => normalizeMissionKeywords(entry));
+  }
+
+  return [];
+}
+
+export function normalizeMissionKeywordsText(value: unknown): string {
+  return normalizeMissionKeywords(value).join(' ').toLowerCase();
+}
+
 function formatMissionDate(date?: string) {
   if (!date) return null;
 
@@ -91,11 +129,7 @@ export function MissionCardInDeal({ mission, index }: { mission: GroupedMission;
   const statusColor = MISSION_STATUS_COLORS[mission.status] || MISSION_STATUS_COLORS.active;
   const updatedAt = formatMissionDate(mission.updated_at || mission.created_at);
   const keywords = useMemo(
-    () => (mission.keywords || '')
-      .split(',')
-      .map((keyword) => keyword.trim())
-      .filter(Boolean)
-      .slice(0, 3),
+    () => normalizeMissionKeywords(mission.keywords).slice(0, 3),
     [mission.keywords],
   );
 

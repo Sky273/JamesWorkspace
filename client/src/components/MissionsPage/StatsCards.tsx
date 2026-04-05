@@ -9,6 +9,7 @@ import {
   BriefcaseIcon,
   DocumentTextIcon,
 } from '@heroicons/react/24/outline';
+import type { TFunction } from 'i18next';
 
 import StatCardsGrid from '../page/StatCardsGrid';
 
@@ -24,7 +25,7 @@ interface Stats {
 interface StatsCardsProps {
   stats: Stats;
   missionsCount: number;
-  t: (key: string) => string;
+  t: TFunction;
 }
 
 const StatsCards = ({ stats, missionsCount, t }: StatsCardsProps): JSX.Element => {
@@ -54,13 +55,13 @@ const StatsCards = ({ stats, missionsCount, t }: StatsCardsProps): JSX.Element =
           iconClassName: '',
           label: t('missions.stats.firms'),
           value: stats.firms,
-          helper: t('navigation.crm', 'CRM'),
+          helper: t('navigation.crm', { defaultValue: 'CRM' }),
         },
         {
           icon: DocumentTextIcon,
           iconBgClassName: 'bg-[var(--cv-warning-soft)] text-[var(--cv-warning)]',
           iconClassName: '',
-          label: t('missions.deal', 'Affaires liées'),
+          label: t('missions.deal', { defaultValue: 'Affaires liées' }),
           value: stats.linkedDeals,
           helper: `${stats.draft} ${t('missions.status.Draft')} · ${stats.closed} ${t('missions.status.Closed')}`,
         },

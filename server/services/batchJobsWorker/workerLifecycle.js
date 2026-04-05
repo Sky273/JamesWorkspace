@@ -352,3 +352,18 @@ async function processItem(item, job, jobOptions = null) {
         activeProcessingCount--;
     }
 }
+
+export const _internal = {
+    parseJobOptions,
+    processNextBatch,
+    processItem,
+    resetState() {
+        if (workerInterval) {
+            clearInterval(workerInterval);
+            workerInterval = null;
+        }
+        isWorkerRunning = false;
+        isShuttingDown = false;
+        activeProcessingCount = 0;
+    }
+};
