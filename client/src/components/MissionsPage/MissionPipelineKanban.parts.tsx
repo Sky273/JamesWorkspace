@@ -2,15 +2,17 @@ import { Link } from 'react-router-dom';
 import {
   PlusIcon,
   UserIcon,
-  CalendarIcon,
+  CalendarDaysIcon,
   StarIcon,
   XMarkIcon,
   DocumentTextIcon,
   ArrowPathIcon,
   EyeIcon,
   TrashIcon,
-  ChatBubbleLeftIcon,
-  VideoCameraIcon
+  ChatBubbleLeftRightIcon,
+  VideoCameraIcon,
+  ArrowsRightLeftIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import type { PipelineEntry, PipelineStage } from '../../services/pipelineService';
@@ -37,6 +39,9 @@ interface KanbanBoardTexts {
   unknownCandidate: string;
   viewResume: string;
   editNotes: string;
+  dragAndDrop: string;
+  stage: string;
+  emptyNotes: string;
 }
 
 interface KanbanBoardProps {
@@ -65,14 +70,17 @@ function renderScore(score?: number) {
   const stars = Math.round(score / 20);
 
   return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((index) =>
-        index <= stars ? (
-          <StarIconSolid key={index} className="w-3 h-3 text-yellow-400" />
-        ) : (
-          <StarIcon key={index} className="w-3 h-3 text-gray-300 dark:text-gray-600" />
-        )
-      )}
+    <div className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-500/20">
+      <span className="text-xs font-semibold">{score}%</span>
+      <div className="flex items-center gap-0.5">
+        {[1, 2, 3, 4, 5].map((index) =>
+          index <= stars ? (
+            <StarIconSolid key={index} className="h-3.5 w-3.5 text-amber-400" />
+          ) : (
+            <StarIcon key={index} className="h-3.5 w-3.5 text-amber-200 dark:text-amber-900/60" />
+          )
+        )}
+      </div>
     </div>
   );
 }
@@ -85,7 +93,7 @@ function CandidateCard({
   onEditNotes,
   onManageInterviews,
   onRemove,
-  texts
+  texts,
 }: {
   draggedEntry: PipelineEntry | null;
   entry: PipelineEntry;
@@ -96,99 +104,113 @@ function CandidateCard({
   onRemove: (entry: PipelineEntry) => void;
   texts: KanbanBoardTexts;
 }) {
+  const hasInterviews = Boolean(entry.interview_count && entry.interview_count > 0);
+
   return (
-    <div
+    <article
       draggable
       onDragStart={() => onDragStart(entry)}
-      className={`bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm border border-gray-200 dark:border-gray-700 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow ${
-        draggedEntry?.id === entry.id ? 'opacity-50' : ''
+      className={`group rounded-[1.5rem] border border-slate-200/80 bg-white/95 p-4 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.45)] transition-all duration-200 dark:border-white/10 dark:bg-[color:color-mix(in_srgb,var(--cv-panel-start)_88%,black)] ${
+        draggedEntry?.id === entry.id
+          ? 'scale-[0.985] opacity-50'
+          : 'hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_22px_50px_-28px_rgba(37,99,235,0.28)] dark:hover:border-white/15'
       }`}
     >
-      <div className="flex items-start justify-between mb-2">
-        <Link
-          to={`/resumes/${entry.resume_id}/analysis`}
-          className="font-medium text-gray-900 dark:text-gray-100 text-sm hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1"
-        >
-          <UserIcon className="w-4 h-4" />
-          {entry.resume_name || texts.unknownCandidate}
-        </Link>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:bg-white/5 dark:text-[var(--cv-muted)]">
+            <ArrowsRightLeftIcon className="h-3.5 w-3.5" />
+            {texts.dragAndDrop}
+          </div>
+          <Link
+            to={`/resumes/${entry.resume_id}/analysis`}
+            className="flex items-start gap-2 text-left text-sm font-semibold text-slate-900 transition-colors hover:text-[var(--cv-primary)] dark:text-[var(--cv-text)] dark:hover:text-white"
+          >
+            <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20">
+              <UserIcon className="h-4 w-4" />
+            </span>
+            <span className="min-w-0 truncate text-base">{entry.resume_name || texts.unknownCandidate}</span>
+          </Link>
+        </div>
         {renderScore(entry.global_score)}
       </div>
 
-      {entry.tags && entry.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-2">
-          {entry.tags.slice(0, 3).map((tag, index) => (
+      {entry.tags && entry.tags.length > 0 ? (
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {entry.tags.slice(0, 4).map((tag, index) => (
             <span
               key={`${entry.id}-${tag}-${index}`}
-              className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded text-xs"
+              className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-blue-700 ring-1 ring-blue-100 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20"
             >
               {tag}
             </span>
           ))}
-          {entry.tags.length > 3 && (
-            <span className="text-xs text-gray-400">+{entry.tags.length - 3}</span>
-          )}
+          {entry.tags.length > 4 ? (
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-500 dark:bg-white/5 dark:text-[var(--cv-muted)]">
+              +{entry.tags.length - 4}
+            </span>
+          ) : null}
         </div>
-      )}
+      ) : null}
 
-      {entry.notes && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 line-clamp-2">{entry.notes}</p>
-      )}
+      <div className="rounded-[1.15rem] bg-slate-50/80 px-3.5 py-3 text-sm text-slate-600 ring-1 ring-slate-200/70 dark:bg-white/[0.03] dark:text-[var(--cv-muted)] dark:ring-white/10">
+        {entry.notes ? (
+          <p className="line-clamp-3 whitespace-pre-line">{entry.notes}</p>
+        ) : (
+          <p className="italic text-slate-400 dark:text-slate-500">{texts.emptyNotes}</p>
+        )}
+      </div>
 
-      <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
-        <div className="flex items-center gap-1 text-xs text-gray-400">
-          <CalendarIcon className="w-3 h-3" />
+      <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-200/80 pt-3 text-xs text-slate-500 dark:border-white/10 dark:text-[var(--cv-muted)]">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 dark:bg-white/5">
+          <CalendarDaysIcon className="h-3.5 w-3.5" />
           {formatDate(entry.moved_at || entry.created_at)}
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={() => onManageInterviews(entry)}
-            className="p-1 text-gray-400 hover:text-purple-500 rounded"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-2xl text-slate-500 transition-colors hover:bg-purple-50 hover:text-purple-600 dark:text-[var(--cv-muted)] dark:hover:bg-purple-500/10 dark:hover:text-purple-300"
             title={texts.manageInterviews}
           >
-            <VideoCameraIcon className="w-4 h-4" />
+            <VideoCameraIcon className="h-4 w-4" />
           </button>
           <button
             onClick={() => onEditNotes(entry)}
-            className="p-1 text-gray-400 hover:text-blue-500 rounded"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-2xl text-slate-500 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:text-[var(--cv-muted)] dark:hover:bg-blue-500/10 dark:hover:text-blue-300"
             title={texts.editNotes}
           >
-            <ChatBubbleLeftIcon className="w-4 h-4" />
+            <ChatBubbleLeftRightIcon className="h-4 w-4" />
           </button>
           <Link
             to={`/resumes/${entry.resume_id}/analysis`}
-            className="p-1 text-gray-400 hover:text-blue-500 rounded"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-2xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-[var(--cv-muted)] dark:hover:bg-white/10 dark:hover:text-white"
             title={texts.viewResume}
           >
-            <EyeIcon className="w-4 h-4" />
+            <EyeIcon className="h-4 w-4" />
           </Link>
           <button
             onClick={() => onRemove(entry)}
-            className="p-1 text-gray-400 hover:text-red-500 rounded"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-2xl text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:text-[var(--cv-muted)] dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
             title={texts.remove}
           >
-            <TrashIcon className="w-4 h-4" />
+            <TrashIcon className="h-4 w-4" />
           </button>
         </div>
       </div>
 
       <button
         onClick={() => onManageInterviews(entry)}
-        className="mt-2 w-full flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors"
+        className="mt-3 inline-flex w-full items-center justify-between gap-3 rounded-[1.1rem] bg-purple-50 px-3.5 py-3 text-left text-sm font-medium text-purple-700 transition-colors hover:bg-purple-100 dark:bg-purple-500/10 dark:text-purple-300 dark:hover:bg-purple-500/15"
       >
-        <VideoCameraIcon className="w-3 h-3" />
-        {entry.interview_count && entry.interview_count > 0 ? (
-          <>
-            {entry.interview_count} {texts.interviews}
-            {entry.next_interview && (
-              <span className="text-gray-400">- {formatDate(entry.next_interview)}</span>
-            )}
-          </>
-        ) : (
-          <span>{texts.scheduleInterview}</span>
-        )}
+        <span className="inline-flex items-center gap-2">
+          <VideoCameraIcon className="h-4 w-4" />
+          {hasInterviews ? `${entry.interview_count} ${texts.interviews}` : texts.scheduleInterview}
+        </span>
+        <span className="text-xs text-purple-500 dark:text-purple-200/80">
+          {hasInterviews && entry.next_interview ? formatDate(entry.next_interview) : '→'}
+        </span>
       </button>
-    </div>
+    </article>
   );
 }
 
@@ -207,7 +229,7 @@ function StageColumn({
   onManageInterviews,
   onRemove,
   stage,
-  texts
+  texts,
 }: {
   draggedEntry: PipelineEntry | null;
   dragOverStage: string | null;
@@ -229,31 +251,47 @@ function StageColumn({
   const isDropTarget = dragOverStage === stage.id;
 
   return (
-    <div
-      className={`w-72 flex-shrink-0 rounded-lg transition-all ${
-        isDropTarget ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'bg-gray-50 dark:bg-gray-900/50'
+    <section
+      className={`flex h-full w-[320px] flex-shrink-0 flex-col overflow-hidden rounded-[1.9rem] border transition-all duration-200 ${
+        isDropTarget
+          ? 'border-[color:var(--cv-primary)] bg-blue-50/90 shadow-[0_24px_50px_-34px_rgba(37,99,235,0.55)] dark:bg-blue-500/10'
+          : 'border-slate-200/80 bg-white/70 shadow-[0_24px_50px_-38px_rgba(15,23,42,0.3)] dark:border-white/10 dark:bg-white/[0.03]'
       }`}
       onDragOver={(event) => onDragOver(event, stage.id)}
       onDragLeave={onDragLeave}
       onDrop={(event) => onDrop(event, stage.id)}
     >
-      <div
-        className="p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between"
-        style={{ borderLeftColor: stage.color, borderLeftWidth: '4px' }}
-      >
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">
-            {isEnglish ? stage.labelEn : stage.label}
-          </span>
-          <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded-full text-xs text-gray-600 dark:text-gray-400">
+      <header className="border-b border-slate-200/70 px-4 py-4 dark:border-white/10">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="mb-2 flex items-center gap-2">
+              <span
+                className="h-3 w-3 rounded-full ring-4 ring-white dark:ring-slate-950/40"
+                style={{ backgroundColor: stage.color }}
+              />
+              <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-[var(--cv-muted)]">
+                {texts.stage} {stage.order}
+              </span>
+            </div>
+            <h3 className="truncate text-base font-semibold text-slate-900 dark:text-[var(--cv-text)]">
+              {isEnglish ? stage.labelEn : stage.label}
+            </h3>
+          </div>
+          <span className="inline-flex min-w-10 items-center justify-center rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-600 dark:bg-white/5 dark:text-[var(--cv-text)]">
             {stageEntries.length}
           </span>
         </div>
-      </div>
+        <div className="rounded-[1.15rem] bg-slate-50/80 px-3 py-2 text-xs text-slate-500 ring-1 ring-slate-200/70 dark:bg-white/[0.03] dark:text-[var(--cv-muted)] dark:ring-white/10">
+          {isDropTarget ? 'Déposez le candidat ici' : `${stageEntries.length} profil${stageEntries.length > 1 ? 's' : ''} dans cette étape`}
+        </div>
+      </header>
 
-      <div className="p-2 space-y-2 min-h-[200px] max-h-[500px] overflow-y-auto">
+      <div className="flex min-h-[320px] flex-1 flex-col gap-3 overflow-y-auto px-3 py-3">
         {stageEntries.length === 0 ? (
-          <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">{noEntriesLabel}</div>
+          <div className="flex min-h-[220px] flex-1 flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50/70 px-6 text-center dark:border-white/10 dark:bg-white/[0.02]">
+            <SparklesIcon className="mb-3 h-8 w-8 text-slate-300 dark:text-slate-600" />
+            <p className="text-sm font-medium text-slate-500 dark:text-[var(--cv-muted)]">{noEntriesLabel}</p>
+          </div>
         ) : (
           stageEntries.map((entry) => (
             <CandidateCard
@@ -270,7 +308,7 @@ function StageColumn({
           ))
         )}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -280,8 +318,8 @@ export function LoadingState({ loading }: LoadingStateProps) {
   }
 
   return (
-    <div className="flex items-center justify-center py-12">
-      <ArrowPathIcon className="h-8 w-8 animate-spin text-blue-500" />
+    <div className="cv-panel flex items-center justify-center rounded-[2rem] py-16">
+      <ArrowPathIcon className="h-8 w-8 animate-spin text-[var(--cv-primary)]" />
     </div>
   );
 }
@@ -293,35 +331,43 @@ export function KanbanHeader({
   missionTitle,
   onAddCandidate,
   onClose,
-  title
+  title,
 }: KanbanHeaderProps) {
   return (
-    <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <DocumentTextIcon className="w-6 h-6 text-blue-500" />
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {missionTitle} - {candidateCount} {candidatesLabel}
-          </p>
+    <div className="flex flex-col gap-4 border-b border-slate-200/70 px-5 py-5 dark:border-white/10 sm:flex-row sm:items-start sm:justify-between sm:px-6">
+      <div className="min-w-0">
+        <div className="cv-kicker mb-2">Pipeline mission</div>
+        <div className="flex items-start gap-3">
+          <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.3rem] bg-blue-50 text-[var(--cv-primary)] ring-1 ring-blue-100 dark:bg-blue-500/10 dark:ring-blue-500/20">
+            <DocumentTextIcon className="h-6 w-6" />
+          </span>
+          <div className="min-w-0">
+            <h2 className="truncate text-2xl font-bold text-slate-950 dark:text-[var(--cv-text)]">{title}</h2>
+            <p className="mt-1 text-sm text-slate-600 dark:text-[var(--cv-muted)]">{missionTitle}</p>
+            <div className="mt-3 inline-flex items-center rounded-full bg-white/75 px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200/80 dark:bg-white/5 dark:text-[var(--cv-muted)] dark:ring-white/10">
+              {candidateCount} {candidatesLabel}
+            </div>
+          </div>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+
+      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
         <button
           onClick={onAddCandidate}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+          className="cv-gradient-button inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold"
         >
-          <PlusIcon className="w-4 h-4" />
+          <PlusIcon className="h-4 w-4" />
           {addCandidateLabel}
         </button>
-        {onClose && (
+        {onClose ? (
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="cv-ghost-button inline-flex h-12 w-12 items-center justify-center rounded-2xl text-slate-500 transition-colors hover:text-slate-900 dark:text-[var(--cv-muted)] dark:hover:text-[var(--cv-text)]"
+            aria-label="Fermer"
           >
-            <XMarkIcon className="w-5 h-5" />
+            <XMarkIcon className="h-5 w-5" />
           </button>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -342,31 +388,40 @@ export function KanbanBoard({
   onManageInterviews,
   onRemove,
   stages,
-  texts
+  texts,
 }: KanbanBoardProps) {
   return (
-    <div className="p-4 overflow-x-auto">
-      <div className="flex gap-4 min-w-max">
-        {stages.map((stage) => (
-          <StageColumn
-            key={stage.id}
-            draggedEntry={draggedEntry}
-            dragOverStage={dragOverStage}
-            entries={entries}
-            formatDate={formatDate}
-            isEnglish={isEnglish}
-            noEntriesLabel={noEntriesLabel}
-            onDragLeave={onDragLeave}
-            onDragOver={onDragOver}
-            onDragStart={onDragStart}
-            onDrop={onDrop}
-            onEditNotes={onEditNotes}
-            onManageInterviews={onManageInterviews}
-            onRemove={onRemove}
-            stage={stage}
-            texts={texts}
-          />
-        ))}
+    <div className="px-4 py-5 sm:px-6">
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-[1.5rem] bg-slate-50/80 px-4 py-3 text-sm text-slate-600 ring-1 ring-slate-200/70 dark:bg-white/[0.03] dark:text-[var(--cv-muted)] dark:ring-white/10">
+        <span className="font-semibold text-slate-900 dark:text-[var(--cv-text)]">{entries.length}</span>
+        profils répartis sur
+        <span className="font-semibold text-slate-900 dark:text-[var(--cv-text)]">{stages.length}</span>
+        étapes — glissez-déposez pour faire avancer le pipeline.
+      </div>
+
+      <div className="overflow-x-auto pb-2">
+        <div className="flex min-w-max gap-4 align-top xl:grid xl:min-w-0 xl:grid-cols-4">
+          {stages.map((stage) => (
+            <StageColumn
+              key={stage.id}
+              draggedEntry={draggedEntry}
+              dragOverStage={dragOverStage}
+              entries={entries}
+              formatDate={formatDate}
+              isEnglish={isEnglish}
+              noEntriesLabel={noEntriesLabel}
+              onDragLeave={onDragLeave}
+              onDragOver={onDragOver}
+              onDragStart={onDragStart}
+              onDrop={onDrop}
+              onEditNotes={onEditNotes}
+              onManageInterviews={onManageInterviews}
+              onRemove={onRemove}
+              stage={stage}
+              texts={texts}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

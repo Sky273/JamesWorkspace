@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 
 import EmptyStateCard from '../components/page/EmptyStateCard';
 import PageHeader from '../components/page/PageHeader';
-import PaginationPair from '../components/page/PaginationPair';
 import ViewModeToggle from '../components/page/ViewModeToggle';
+import Pagination from '../components/Pagination';
 import { MissionsDealsGroupedView, SearchAndActions, StatsCards } from '../components/MissionsPage';
 import { SkeletonMissionList } from '../components/ui/Skeleton';
 import MissionCard from './MissionCard';
@@ -59,7 +59,7 @@ export function MissionsListPanel({
   loading: boolean;
   missions: Mission[];
   onAddMission: () => void;
-  onDelete: (id: string) => Promise<void>;
+  onDelete: (mission: Mission) => void;
   onEdit: (mission: Mission) => void;
   onPageChange: (page: number) => void;
   onRefresh: () => Promise<void>;
@@ -77,6 +77,11 @@ export function MissionsListPanel({
       <StatsCards stats={stats} missionsCount={totalCount} t={t} />
       <SearchAndActions
         searchTerm={searchTerm}
+        resultsLabel={
+          searchTerm
+            ? `${totalCount} ${t('missions.results')} · “${searchTerm}”`
+            : `${totalCount} ${t('missions.results')}`
+        }
         onSearchChange={onSearchChange}
         onRefresh={() => {
           void onRefresh();
@@ -86,7 +91,7 @@ export function MissionsListPanel({
         t={t}
       />
 
-      <PaginationPair
+      <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
         totalCount={totalCount}
@@ -99,9 +104,20 @@ export function MissionsListPanel({
       <MissionsGrid
         loading={loading}
         missions={missions}
+        onAddMission={onAddMission}
         onDelete={onDelete}
         onEdit={onEdit}
         searchTerm={searchTerm}
+      />
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        pageSize={MISSIONS_PAGE_SIZE}
+        onPageChange={onPageChange}
+        loading={loading}
+        itemName={t('missions.results')}
       />
     </>
   );
@@ -110,13 +126,15 @@ export function MissionsListPanel({
 function MissionsGrid({
   loading,
   missions,
+  onAddMission,
   onDelete,
   onEdit,
   searchTerm,
 }: {
   loading: boolean;
   missions: Mission[];
-  onDelete: (id: string) => Promise<void>;
+  onAddMission: () => void;
+  onDelete: (mission: Mission) => void;
   onEdit: (mission: Mission) => void;
   searchTerm: string;
 }) {
@@ -133,20 +151,28 @@ function MissionsGrid({
         title={t('missions.noMissions')}
         description={searchTerm ? t('missions.noResults') : t('missions.createFirst')}
         containerClassName="cv-panel rounded-[2rem] p-12 text-center"
+        action={
+          <button
+            onClick={onAddMission}
+            className="cv-gradient-button mt-6 inline-flex min-h-12 items-center justify-center rounded-full px-5 text-sm font-semibold"
+          >
+            {t('missions.addMission')}
+          </button>
+        }
       />
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 2xl:grid-cols-3">
       {missions.map((mission, index) => (
         <MissionCard
           key={mission.id}
           mission={mission}
           index={index}
           onEdit={onEdit}
-          onDelete={(id) => {
-            void onDelete(id);
+          onDelete={() => {
+            onDelete(mission);
           }}
         />
       ))}

@@ -7,6 +7,7 @@ interface StatCardItem {
   iconClassName: string;
   label: string;
   value: number | string;
+  helper?: string;
 }
 
 interface StatCardsGridProps {
@@ -15,7 +16,7 @@ interface StatCardsGridProps {
 }
 
 export default function StatCardsGrid({
-  className = 'grid grid-cols-1 md:grid-cols-3 gap-4 mb-6',
+  className = 'grid grid-cols-1 gap-4 md:grid-cols-3 mb-6',
   items,
 }: StatCardsGridProps) {
   return (
@@ -25,20 +26,21 @@ export default function StatCardsGrid({
         return (
           <motion.div
             key={`${item.label}-${index}`}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: index * 0.1 }}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow p-4"
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.08 }}
+            className="lux-card rounded-[1.75rem] p-5"
           >
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${item.iconBgClassName}`}>
-                <Icon className={`w-6 h-6 ${item.iconClassName}`} />
-              </div>
+            <div className="mb-4 flex items-start justify-between gap-4">
               <div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">{item.label}</div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{item.value}</div>
+                <div className="cv-kicker mb-2">{item.label}</div>
+                <div className="cv-display text-3xl font-extrabold tracking-tight text-slate-950 dark:text-[var(--cv-text)]">{item.value}</div>
+              </div>
+              <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${item.iconBgClassName}`}>
+                <Icon className={`h-6 w-6 ${item.iconClassName}`} />
               </div>
             </div>
+            {item.helper ? <p className="text-sm text-slate-600 dark:text-[var(--cv-muted)]">{item.helper}</p> : null}
           </motion.div>
         );
       })}

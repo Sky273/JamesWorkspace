@@ -1,30 +1,25 @@
-/**
- * DealResumeCard - Resume card for deals grouped view with drag & drop
- * Extracted from DealsGroupedView.tsx
- */
-
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  CalendarIcon,
-  EyeIcon,
-  EyeSlashIcon,
   ArrowDownTrayIcon,
   BuildingOfficeIcon,
-  TrashIcon,
+  CalendarIcon,
   ClockIcon,
-  SparklesIcon,
   DocumentPlusIcon,
   ExclamationCircleIcon,
-  PauseCircleIcon
+  EyeIcon,
+  EyeSlashIcon,
+  PauseCircleIcon,
+  SparklesIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolidIcon } from '@heroicons/react/24/solid';
 import { formatDate } from '../../utils/dateFormatter';
 import ConsentBadge, { ConsentStatus } from '../ConsentBadge';
 import ManageResumeDealsModal from './AddToDealMenu';
 import TagsWithTooltip from './TagsWithTooltip';
-import { TAG_COLOR_MAP, type ResumeBasic } from './dealsGrouped.types';
+import { TAG_COLOR_MAP, type ResumeBasic, RESUME_STATUS_META } from './dealsGrouped.types';
 import ResumePreviewPanel from './ResumePreviewPanel';
 
 interface DealResumeCardProps {
@@ -56,63 +51,52 @@ export default function DealResumeCard({
   onDealChange,
   getResumeTags,
   getDownloadTitle,
-  index
+  index,
 }: DealResumeCardProps) {
   const { t } = useTranslation();
   const [showPreview, setShowPreview] = useState(false);
 
   const rating = resume.improved_global_rating || resume.global_rating;
   const normalizedStatus = (resume.status || 'new').toLowerCase();
-  
-  // Status badge colors for all possible statuses
-  const statusClass =
-    normalizedStatus === 'improved' ? 'bg-[var(--cv-tertiary-soft)] text-[var(--cv-tertiary)]' :
-    normalizedStatus === 'analyzed' ? 'bg-[var(--cv-primary-soft)] text-[var(--cv-primary)]' :
-    normalizedStatus === 'processing' ? 'bg-[var(--cv-secondary-soft)] text-[var(--cv-secondary)]' :
-    normalizedStatus === 'pending' ? 'bg-[var(--cv-warning-soft)] text-[var(--cv-warning)]' :
-    normalizedStatus === 'error' || normalizedStatus === 'failed' ? 'bg-[var(--cv-danger-soft)] text-[var(--cv-danger)]' :
-    'cv-pill text-[#dee5ff]';
+  const statusMeta = RESUME_STATUS_META[normalizedStatus] || RESUME_STATUS_META.new;
 
-  // Status icon for first column - covers all possible statuses
   const getStatusIcon = () => {
     switch (normalizedStatus) {
       case 'improved':
-        return { Icon: CheckCircleSolidIcon, color: 'text-green-500' };
+        return { Icon: CheckCircleSolidIcon, color: 'text-[var(--cv-tertiary)]' };
       case 'analyzed':
-        return { Icon: SparklesIcon, color: 'text-blue-500' };
+        return { Icon: SparklesIcon, color: 'text-[var(--cv-primary)]' };
       case 'processing':
-        return { Icon: ClockIcon, color: 'text-yellow-500' };
+        return { Icon: ClockIcon, color: 'text-[var(--cv-warning)]' };
       case 'pending':
-        return { Icon: PauseCircleIcon, color: 'text-orange-500' };
+        return { Icon: PauseCircleIcon, color: 'text-[var(--cv-secondary)]' };
       case 'error':
       case 'failed':
-        return { Icon: ExclamationCircleIcon, color: 'text-red-500' };
+        return { Icon: ExclamationCircleIcon, color: 'text-[var(--cv-danger)]' };
       case 'new':
       default:
-        return { Icon: DocumentPlusIcon, color: 'text-gray-400' };
+        return { Icon: DocumentPlusIcon, color: 'text-slate-400' };
     }
   };
-  const { Icon: StatusIcon, color: statusIconColor } = getStatusIcon();
 
-  // Alternating row background (striping)
-  const isEvenRow = index % 2 === 1;
-  const stripingClass = isEvenRow ? 'bg-white/70 dark:bg-[color:color-mix(in_srgb,var(--cv-panel-end)_86%,black)]' : 'bg-white/90 dark:bg-[color:color-mix(in_srgb,var(--cv-panel-start)_90%,black)]';
+  const { Icon: StatusIcon, color: statusIconColor } = getStatusIcon();
+  const stripingClass = index % 2 === 1
+    ? 'bg-white/70 dark:bg-[color:color-mix(in_srgb,var(--cv-panel-end)_86%,black)]'
+    : 'bg-white/90 dark:bg-[color:color-mix(in_srgb,var(--cv-panel-start)_90%,black)]';
 
   const resumeTags = getResumeTags(resume);
   const skills = (resumeTags.skills || []).slice(0, 2);
   const industries = (resumeTags.industries || []).slice(0, 2);
-
-  // Check if there are any tags to show in tooltip
-  const hasAnyTags = (resumeTags.skills?.length || 0) > 0 || 
-                     (resumeTags.industries?.length || 0) > 0 || 
-                     (resumeTags.tools?.length || 0) > 0 || 
-                     (resumeTags.soft_skills?.length || 0) > 0;
+  const hasAnyTags = (resumeTags.skills?.length || 0) > 0 ||
+    (resumeTags.industries?.length || 0) > 0 ||
+    (resumeTags.tools?.length || 0) > 0 ||
+    (resumeTags.soft_skills?.length || 0) > 0;
 
   return (
     <motion.div
       key={resume.id}
       role="article"
-      aria-label={`${t('resumes.cv', 'CV')}: ${resume.name || t('resumes.untitled')} - ${t(`resumes.status.${resume.status || 'new'}`)}`}
+      aria-label={`${t('resumes.cv', { defaultValue: 'CV' })}: ${resume.name || t('resumes.untitled')} - ${t(`resumes.status.${resume.status || 'new'}`)}`}
       tabIndex={0}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -120,60 +104,78 @@ export default function DealResumeCard({
       onDragStart={(e) => onDragStart(e as unknown as React.DragEvent, resume.id, sourceDealId)}
       onDragEnd={(e) => onDragEnd(e as unknown as React.DragEvent)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(resume.id); } }}
-      className={`rounded-[1.5rem] border border-slate-200/70 transition-all cursor-grab active:cursor-grabbing dark:border-white/6 ${
+      className={`overflow-hidden rounded-[1.6rem] border border-slate-200/70 transition-all duration-200 cursor-grab active:cursor-grabbing dark:border-white/6 ${
         isDragging
           ? 'border-[var(--cv-primary)] opacity-50 bg-white dark:bg-[color:color-mix(in_srgb,var(--cv-panel-end)_86%,black)]'
           : stripingClass
       }`}
       onClick={() => onClick(resume.id)}
     >
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <StatusIcon className={`icon-md ${statusIconColor}`} title={t(`resumes.status.${resume.status || 'new'}`)} />
-              <h4 className="cv-display truncate text-base font-semibold text-slate-950 dark:text-[#dee5ff]">
-                {resume.name || t('resumes.untitled')}
-              </h4>
-            </div>
-            {resume.title && (
-              <p className="mt-0.5 truncate pl-6 text-sm italic text-slate-600 dark:text-[var(--cv-primary)]">{resume.title}</p>
-            )}
-            {resume.firm_name && (
-              <div className="mt-1 flex min-w-0 items-center gap-1 pl-6 text-xs text-slate-500 dark:text-[#8f99b8]">
-                <BuildingOfficeIcon className="icon-sm" />
-                <span className="truncate">{resume.firm_name}</span>
+      <div className="p-4 sm:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start gap-3">
+              <span className={`mt-0.5 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl ${statusMeta.shell}`}>
+                <StatusIcon className={`h-5 w-5 ${statusIconColor}`} title={t(`resumes.status.${resume.status || 'new'}`)} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="cv-display min-w-0 flex-1 text-base font-semibold text-slate-950 dark:text-[#dee5ff]">
+                    <span className="block truncate">{resume.name || t('resumes.untitled')}</span>
+                  </h4>
+                  <span className={`rounded-full px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] ${statusMeta.badge}`}>
+                    {t(`resumes.status.${resume.status || 'new'}`)}
+                  </span>
+                </div>
+                {resume.title ? (
+                  <p className="mt-1 truncate text-sm italic text-slate-600 dark:text-[#a3aac4]">{resume.title}</p>
+                ) : null}
+                <div className="mt-2 flex flex-wrap items-center gap-2.5 text-xs text-slate-500 dark:text-[#8f99b8]">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1.5 dark:bg-white/[0.04]">
+                    <CalendarIcon className="h-3.5 w-3.5" />
+                    {formatDate(resume.created_at, 'medium')}
+                  </span>
+                  {resume.firm_name ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1.5 dark:bg-white/[0.04]">
+                      <BuildingOfficeIcon className="h-3.5 w-3.5" />
+                      <span className="truncate max-w-[180px]">{resume.firm_name}</span>
+                    </span>
+                  ) : null}
+                  {resume.consent_status ? (
+                    <ConsentBadge
+                      status={resume.consent_status as ConsentStatus}
+                      candidateName={resume.candidate_name}
+                      candidateEmail={resume.candidate_email}
+                      consentTokenExpiresAt={resume.consent_token_expires_at}
+                      retentionUntil={resume.retention_until}
+                      compact={true}
+                    />
+                  ) : null}
+                </div>
               </div>
-            )}
+            </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {rating != null && (
-              <span className="cv-display text-sm font-bold text-slate-950 dark:text-[#dee5ff]">{rating}%</span>
-            )}
-            <span className={`rounded-full px-2 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${statusClass}`}>
-              {t(`resumes.status.${resume.status || 'new'}`)}
-            </span>
+
+          <div className="flex w-full flex-col gap-3 lg:w-[220px] lg:items-end">
+            <div className="rounded-[1.2rem] border border-slate-200/70 bg-white/70 px-4 py-3 dark:border-white/6 dark:bg-white/[0.03] lg:w-full">
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <div className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-[#8f99b8]">{t('resumes.score', { defaultValue: 'Score' })}</div>
+                  <div className="cv-display mt-1 text-2xl font-bold text-slate-950 dark:text-[#dee5ff]">{rating != null ? `${rating}%` : '—'}</div>
+                </div>
+                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${statusMeta.scorePill}`}>
+                  {statusMeta.label}
+                </span>
+              </div>
+              <div className="cv-score-track mt-3 h-2.5 rounded-full">
+                <div className="cv-score-fill h-2.5 rounded-full transition-all" style={{ width: `${Math.max(6, Math.min(rating ?? 0, 100))}%` }} />
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-between mt-3">
-          <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-[#a3aac4]">
-            <div className="flex items-center gap-1">
-              <CalendarIcon className="icon-sm" />
-              {formatDate(resume.created_at, 'medium')}
-            </div>
-            {resume.consent_status && (
-              <ConsentBadge
-                status={resume.consent_status as ConsentStatus}
-                candidateName={resume.candidate_name}
-                candidateEmail={resume.candidate_email}
-                consentTokenExpiresAt={resume.consent_token_expires_at}
-                retentionUntil={resume.retention_until}
-                compact={true}
-              />
-            )}
-          </div>
-          <div className="flex items-center gap-1 overflow-visible">
+        <div className="mt-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0 flex-1">
             <TagsWithTooltip
               skills={skills}
               industries={industries}
@@ -182,50 +184,54 @@ export default function DealResumeCard({
               tagColorMap={TAG_COLOR_MAP}
               t={t}
             />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); setShowPreview(prev => !prev); }}
+              onClick={() => setShowPreview((prev) => !prev)}
               aria-pressed={showPreview}
-              className={`p-1.5 transition-colors rounded-lg cursor-pointer ${
+              className={`inline-flex min-h-10 items-center gap-2 rounded-[0.95rem] px-3 py-2 text-sm font-medium transition-colors ${
                 showPreview
                   ? 'bg-[var(--cv-secondary-soft)] text-[var(--cv-secondary)]'
-                  : 'text-slate-400 hover:bg-[var(--cv-primary-soft)] hover:text-[var(--cv-primary)] dark:text-[#7f8ab0]'
+                  : 'cv-ghost-button'
               }`}
-              title={showPreview ? t('resumes.preview.close', 'Fermer l\'aperçu') : t('resumes.preview.open', 'Aperçu rapide')}
+              title={showPreview ? t('resumes.preview.close', { defaultValue: 'Fermer l\'aperçu' }) : t('resumes.preview.open', { defaultValue: 'Aperçu rapide' })}
             >
-              {showPreview ? <EyeSlashIcon className="icon-lg" /> : <EyeIcon className="icon-lg" />}
+              {showPreview ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+              <span className="hidden sm:inline">{showPreview ? t('common.close') : t('resumes.preview.title')}</span>
             </button>
             <button
               type="button"
               onClick={(e) => onDownload(resume, e)}
-              className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-[var(--cv-primary-soft)] hover:text-[var(--cv-primary)] dark:text-[#7f8ab0]"
+              className="cv-ghost-button inline-flex min-h-10 items-center gap-2 rounded-[0.95rem] px-3 py-2 text-sm font-medium"
               title={getDownloadTitle(resume)}
             >
-              <ArrowDownTrayIcon className="icon-lg" />
+              <ArrowDownTrayIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">{t('common.download', { defaultValue: 'Télécharger' })}</span>
             </button>
-            <div onClick={(e) => e.stopPropagation()}>
-              <ManageResumeDealsModal resumeId={resume.id} onSuccess={onDealChange} />
-            </div>
+            <ManageResumeDealsModal resumeId={resume.id} onSuccess={onDealChange} />
             <button
               type="button"
               onClick={(e) => onDelete(resume, e)}
-              className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-[var(--cv-danger-soft)] hover:text-[var(--cv-danger)] dark:text-[#7f8ab0]"
+              className="inline-flex min-h-10 items-center gap-2 rounded-[0.95rem] border border-[color:color-mix(in_srgb,var(--cv-danger)_20%,transparent)] bg-[var(--cv-danger-soft)] px-3 py-2 text-sm font-medium text-[var(--cv-danger)] transition-colors hover:brightness-105"
               title={t('resumes.deleteResume')}
             >
-              <TrashIcon className="icon-lg" />
+              <TrashIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">{t('common.delete')}</span>
             </button>
           </div>
         </div>
       </div>
 
       <AnimatePresence>
-        {showPreview && (
+        {showPreview ? (
           <ResumePreviewPanel
             resumeId={resume.id}
             onClose={() => setShowPreview(false)}
             onOpenFull={(id) => { setShowPreview(false); onClick(id); }}
           />
-        )}
+        ) : null}
       </AnimatePresence>
     </motion.div>
   );

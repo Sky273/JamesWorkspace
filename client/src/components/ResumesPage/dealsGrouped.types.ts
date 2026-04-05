@@ -1,8 +1,3 @@
-/**
- * Types and constants for DealsGroupedView
- * Extracted from DealsGroupedView.tsx
- */
-
 export interface ResumeBasic {
   id: string;
   name: string;
@@ -95,54 +90,116 @@ export const STATUS_COLORS: Record<string, string> = {
   open: 'cv-status-pill cv-status-primary',
   won: 'cv-status-pill cv-status-success',
   lost: 'cv-status-pill cv-status-danger',
-  on_hold: 'cv-status-pill cv-status-warning'
+  on_hold: 'cv-status-pill cv-status-warning',
 };
 
 export const STATUS_LABELS: Record<string, string> = {
   open: 'En cours',
-  won: 'Gagnee',
+  won: 'Gagnée',
   lost: 'Perdue',
-  on_hold: 'En attente'
+  on_hold: 'En attente',
 };
 
-export const PRIORITY_ICONS: Record<string, { icon: string; color: string }> = {
-  low: { icon: 'o', color: 'text-gray-400' },
-  medium: { icon: 'oo', color: 'text-blue-500' },
-  high: { icon: 'ooo', color: 'text-orange-500' },
-  urgent: { icon: '!!!!', color: 'text-red-500' }
+export const PRIORITY_ICONS: Record<string, { icon: string; color: string; label: string }> = {
+  low: { icon: '•', color: 'text-slate-400', label: 'Faible' },
+  medium: { icon: '••', color: 'text-[var(--cv-primary)]', label: 'Normale' },
+  high: { icon: '•••', color: 'text-[var(--cv-warning)]', label: 'Haute' },
+  urgent: { icon: '••••', color: 'text-[var(--cv-danger)]', label: 'Urgente' },
+};
+
+export const MISSION_STATUS_COLORS: Record<string, string> = {
+  active: 'cv-status-pill cv-status-success',
+  Active: 'cv-status-pill cv-status-success',
+  draft: 'cv-status-pill cv-status-warning',
+  Draft: 'cv-status-pill cv-status-warning',
+  closed: 'cv-status-pill cv-status-danger',
+  Closed: 'cv-status-pill cv-status-danger',
+};
+
+export const ADAPTATION_STATUS_COLORS: Record<string, string> = {
+  completed: 'cv-status-pill cv-status-success',
+  failed: 'cv-status-pill cv-status-danger',
+  processing: 'cv-status-pill cv-status-warning',
+  pending: 'cv-status-pill cv-status-secondary',
+  default: 'cv-status-pill cv-status-neutral',
+};
+
+export const RESUME_STATUS_META: Record<string, { badge: string; shell: string; scorePill: string; label: string }> = {
+  improved: {
+    badge: 'cv-status-pill cv-status-success',
+    shell: 'bg-[var(--cv-tertiary-soft)]/70 text-[var(--cv-tertiary)]',
+    scorePill: 'bg-[var(--cv-tertiary-soft)] text-[var(--cv-tertiary)]',
+    label: 'Optimisé',
+  },
+  analyzed: {
+    badge: 'cv-status-pill cv-status-primary',
+    shell: 'bg-[var(--cv-primary-soft)]/70 text-[var(--cv-primary)]',
+    scorePill: 'bg-[var(--cv-primary-soft)] text-[var(--cv-primary)]',
+    label: 'Analysé',
+  },
+  processing: {
+    badge: 'cv-status-pill cv-status-warning',
+    shell: 'bg-[var(--cv-warning-soft)]/70 text-[var(--cv-warning)]',
+    scorePill: 'bg-[var(--cv-warning-soft)] text-[var(--cv-warning)]',
+    label: 'En cours',
+  },
+  pending: {
+    badge: 'cv-status-pill cv-status-secondary',
+    shell: 'bg-[var(--cv-secondary-soft)]/70 text-[var(--cv-secondary)]',
+    scorePill: 'bg-[var(--cv-secondary-soft)] text-[var(--cv-secondary)]',
+    label: 'En attente',
+  },
+  failed: {
+    badge: 'cv-status-pill cv-status-danger',
+    shell: 'bg-[var(--cv-danger-soft)]/70 text-[var(--cv-danger)]',
+    scorePill: 'bg-[var(--cv-danger-soft)] text-[var(--cv-danger)]',
+    label: 'Erreur',
+  },
+  error: {
+    badge: 'cv-status-pill cv-status-danger',
+    shell: 'bg-[var(--cv-danger-soft)]/70 text-[var(--cv-danger)]',
+    scorePill: 'bg-[var(--cv-danger-soft)] text-[var(--cv-danger)]',
+    label: 'Erreur',
+  },
+  new: {
+    badge: 'cv-status-pill cv-status-neutral',
+    shell: 'bg-slate-100 text-slate-500 dark:bg-white/[0.05] dark:text-[#a3aac4]',
+    scorePill: 'bg-slate-100 text-slate-600 dark:bg-white/[0.05] dark:text-[#a3aac4]',
+    label: 'Nouveau',
+  },
 };
 
 export const TAG_COLOR_MAP: Record<string, string> = {
   skills: 'cv-chip-skills',
   industries: 'cv-chip-industries',
   tools: 'cv-chip-tools',
-  soft_skills: 'cv-chip-soft'
+  soft_skills: 'cv-chip-soft',
 };
 
 export const CATEGORY_HEADER_COLORS: Record<string, { dot: string; text: string; accent: string }> = {
   Skills: { dot: 'bg-[var(--cv-tertiary)]', text: 'text-slate-950 dark:text-[#dee5ff]', accent: 'text-[var(--cv-tertiary)]' },
   Industries: { dot: 'bg-[var(--cv-primary)]', text: 'text-slate-950 dark:text-[#dee5ff]', accent: 'text-[var(--cv-primary)]' },
   Tools: { dot: 'bg-[var(--cv-cyan)]', text: 'text-slate-950 dark:text-[#dee5ff]', accent: 'text-[var(--cv-cyan)]' },
-  'Soft Skills': { dot: 'bg-[var(--cv-secondary)]', text: 'text-slate-950 dark:text-[#dee5ff]', accent: 'text-[var(--cv-secondary)]' }
+  'Soft Skills': { dot: 'bg-[var(--cv-secondary)]', text: 'text-slate-950 dark:text-[#dee5ff]', accent: 'text-[var(--cv-secondary)]' },
 };
 
 export const TAG_FILTER_COLORS: Record<string, { selected: string; unselected: string }> = {
   Skills: {
     selected: 'cv-filter-chip cv-filter-chip-selected cv-filter-chip-skills',
-    unselected: 'cv-filter-chip cv-filter-chip-skills'
+    unselected: 'cv-filter-chip cv-filter-chip-skills',
   },
   Industries: {
     selected: 'cv-filter-chip cv-filter-chip-selected cv-filter-chip-industries',
-    unselected: 'cv-filter-chip cv-filter-chip-industries'
+    unselected: 'cv-filter-chip cv-filter-chip-industries',
   },
   Tools: {
     selected: 'cv-filter-chip cv-filter-chip-selected cv-filter-chip-tools',
-    unselected: 'cv-filter-chip cv-filter-chip-tools'
+    unselected: 'cv-filter-chip cv-filter-chip-tools',
   },
   'Soft Skills': {
     selected: 'cv-filter-chip cv-filter-chip-selected cv-filter-chip-soft',
-    unselected: 'cv-filter-chip cv-filter-chip-soft'
-  }
+    unselected: 'cv-filter-chip cv-filter-chip-soft',
+  },
 };
 
 export const FILTER_CONTENT_VARIANTS = {
@@ -152,8 +209,8 @@ export const FILTER_CONTENT_VARIANTS = {
     marginBottom: '1rem',
     transition: {
       height: { duration: 0.3 },
-      opacity: { duration: 0.2 }
-    }
+      opacity: { duration: 0.2 },
+    },
   },
   collapsed: {
     height: 0,
@@ -161,10 +218,9 @@ export const FILTER_CONTENT_VARIANTS = {
     marginBottom: 0,
     transition: {
       height: { duration: 0.3 },
-      opacity: { duration: 0.2 }
-    }
-  }
+      opacity: { duration: 0.2 },
+    },
+  },
 };
 
-// Maximum CVs to show per section before "Show more"
 export const INITIAL_RESUMES_LIMIT = 10;

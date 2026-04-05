@@ -138,19 +138,11 @@ export function ResumesListPanel({
         ) : null}
       </div>
 
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalCount={totalCount}
-        pageSize={RESUMES_PAGE_SIZE}
-        onPageChange={goToPage}
-        loading={loading}
-        itemName={t('resumes.results')}
-      />
-
       <ResumesResultsGrid
+        clearFilters={clearFilters}
         filteredResumes={filteredResumes}
         formatResumeDate={formatResumeDate}
+        goToUpload={goToUpload}
         handleDownloadResume={handleDownloadResume}
         handleResumeClick={handleResumeClick}
         loading={loading}

@@ -4,8 +4,11 @@ import {
   BuildingOfficeIcon,
   CalendarIcon,
   ChartBarIcon,
+  ChevronRightIcon,
+  DocumentPlusIcon,
   DocumentTextIcon,
   EyeIcon,
+  FunnelIcon,
   SparklesIcon,
   TrashIcon,
   UserGroupIcon,
@@ -218,9 +221,47 @@ export function ResumeFiltersPanel({
   );
 }
 
+function ResultsCollectionHeader({
+  count,
+  hasActiveFilters,
+  loading,
+}: {
+  count: number;
+  hasActiveFilters: boolean;
+  loading: boolean;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex flex-col gap-3 border-b border-slate-200/70 px-5 py-5 dark:border-white/6 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <div>
+        <div className="cv-kicker mb-2">{t('resumes.resultsLabel', 'Résultats')}</div>
+        <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-[#a3aac4]">
+          <span className="cv-display text-lg font-bold text-slate-950 dark:text-[#dee5ff]">
+            {loading ? t('common.loading') : t('resumes.resultsSummary', { count, defaultValue: `${count} résultats` })}
+          </span>
+          {hasActiveFilters ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--cv-primary-soft)] px-3 py-1 text-xs font-semibold text-[var(--cv-primary)]">
+              <FunnelIcon className="h-3.5 w-3.5" />
+              {t('resumes.filteredResults', 'Filtres appliqués')}
+            </span>
+          ) : null}
+        </div>
+      </div>
+      <div className="text-sm text-slate-500 dark:text-[#8f99b8]">
+        {hasActiveFilters
+          ? t('resumes.filteredHint', 'Affinez ou réinitialisez vos filtres pour élargir la sélection.')
+          : t('resumes.resultsHint', 'Cliquez sur un CV pour ouvrir son analyse complète.')}
+      </div>
+    </div>
+  );
+}
+
 export function ResumesResultsGrid({
+  clearFilters,
   filteredResumes,
   formatResumeDate,
+  goToUpload,
   handleDownloadResume,
   handleResumeClick,
   loading,
@@ -228,8 +269,10 @@ export function ResumesResultsGrid({
   searchQuery,
   selectedTags,
 }: {
+  clearFilters: () => void;
   filteredResumes: Resume[];
   formatResumeDate: (dateString?: string) => string;
+  goToUpload: () => void;
   handleDownloadResume: (resume: Resume, event: React.MouseEvent) => Promise<void>;
   handleResumeClick: (resume: Resume) => void;
   loading: boolean;
@@ -238,24 +281,50 @@ export function ResumesResultsGrid({
   selectedTags: string[];
 }) {
   const { t } = useTranslation();
+  const hasActiveFilters = searchQuery.length > 0 || selectedTags.length > 0;
 
   if (loading) {
-    return <SkeletonResumeList count={6} />;
+    return (
+      <div className="cv-panel overflow-hidden rounded-[2rem]">
+        <ResultsCollectionHeader count={filteredResumes.length} hasActiveFilters={hasActiveFilters} loading={true} />
+        <div className="p-5 sm:p-6">
+          <SkeletonResumeList count={6} />
+        </div>
+      </div>
+    );
   }
 
   if (filteredResumes.length === 0) {
     return (
-      <EmptyStateCard
-        icon={DocumentTextIcon}
-        title={t('resumes.noResults')}
-        description={searchQuery || selectedTags.length > 0 ? t('resumes.noResultsFiltered') : t('resumes.uploadFirst')}
-        containerClassName="cv-panel rounded-[2rem] p-12 text-center"
-      />
+      <div className="cv-panel overflow-hidden rounded-[2rem]">
+        <ResultsCollectionHeader count={0} hasActiveFilters={hasActiveFilters} loading={false} />
+        <div className="p-6 sm:p-8">
+          <EmptyStateCard
+            icon={hasActiveFilters ? FunnelIcon : DocumentPlusIcon}
+            title={t('resumes.noResults')}
+            description={hasActiveFilters ? t('resumes.noResultsFiltered') : t('resumes.uploadFirst')}
+            containerClassName="rounded-[1.75rem] border border-dashed border-slate-200/80 bg-white/50 p-10 text-center dark:border-white/10 dark:bg-white/[0.02]"
+          />
+          <div className="mt-4 flex justify-center">
+            <button
+              type="button"
+              onClick={hasActiveFilters ? clearFilters : goToUpload}
+              className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-slate-900 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-100"
+            >
+              {hasActiveFilters ? <ChevronRightIcon className="h-4 w-4" /> : <DocumentPlusIcon className="h-4 w-4" />}
+              <span>{hasActiveFilters ? t('common.resetFilters') : t('resumes.uploadButton')}</span>
+            </button>
+          </div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="cv-panel overflow-hidden rounded-[2rem]">
+      <ResultsCollectionHeader count={filteredResumes.length} hasActiveFilters={hasActiveFilters} loading={false} />
+      <div className="p-5 sm:p-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
       {filteredResumes.map((resume, index) => (
         <motion.div
           key={resume.id}
@@ -375,6 +444,8 @@ export function ResumesResultsGrid({
           </div>
         </motion.div>
       ))}
+        </div>
+      </div>
     </div>
   );
 }

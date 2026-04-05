@@ -1,13 +1,9 @@
 /**
  * PipelineAddCandidateModal - Modal for adding a resume to the pipeline
- * Extracted from MissionPipelineKanban.tsx
  */
 
 import { useTranslation } from 'react-i18next';
-import {
-  XMarkIcon,
-  ArrowPathIcon
-} from '@heroicons/react/24/outline';
+import { CheckCircleIcon, MagnifyingGlassIcon, XMarkIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { StarIcon } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import SearchField from '../page/SearchField';
@@ -26,18 +22,25 @@ interface PipelineAddCandidateModalProps {
   onClose: () => void;
 }
 
+const fieldClassName =
+  'w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-[var(--cv-primary)] focus:ring-4 focus:ring-blue-100 dark:border-white/10 dark:bg-slate-950/50 dark:text-[var(--cv-text)] dark:focus:ring-blue-500/10';
+
 const renderScore = (score?: number) => {
   if (!score) return null;
-  const stars = Math.round(score / 20); // Convert 0-100 to 0-5 stars
+  const stars = Math.round(score / 20);
+
   return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map(i => (
-        i <= stars ? (
-          <StarIconSolid key={i} className="w-3 h-3 text-yellow-400" />
-        ) : (
-          <StarIcon key={i} className="w-3 h-3 text-gray-300 dark:text-gray-600" />
-        )
-      ))}
+    <div className="flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-500/20">
+      <span className="text-xs font-semibold">{score}%</span>
+      <div className="flex items-center gap-0.5">
+        {[1, 2, 3, 4, 5].map((i) =>
+          i <= stars ? (
+            <StarIconSolid key={i} className="h-3.5 w-3.5 text-amber-400" />
+          ) : (
+            <StarIcon key={i} className="h-3.5 w-3.5 text-amber-200 dark:text-amber-900/60" />
+          )
+        )}
+      </div>
     </div>
   );
 };
@@ -52,120 +55,153 @@ export default function PipelineAddCandidateModal({
   addNotes,
   setAddNotes,
   onAdd,
-  onClose
+  onClose,
 }: PipelineAddCandidateModalProps) {
   const { t } = useTranslation();
 
-  const filteredResumes = availableResumes.filter(r => 
-    r.Name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.Title?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredResumes = availableResumes.filter(
+    (resume) =>
+      resume.Name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      resume.Title?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const selectedResume = filteredResumes.find((resume) => resume.id === selectedResumeId)
+    ?? availableResumes.find((resume) => resume.id === selectedResumeId)
+    ?? null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col">
-        {/* Modal Header */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            {t('pipeline.addCandidate')}
-          </h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm sm:p-6">
+      <div className="cv-surface flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] border border-white/10 shadow-2xl">
+        <div className="flex flex-col gap-4 border-b border-slate-200/70 px-5 py-5 dark:border-white/10 sm:flex-row sm:items-start sm:justify-between sm:px-6">
+          <div>
+            <div className="cv-kicker mb-2">Pipeline mission</div>
+            <h3 className="text-2xl font-bold text-slate-950 dark:text-[var(--cv-text)]">{t('pipeline.addCandidate')}</h3>
+            <p className="mt-2 text-sm text-slate-600 dark:text-[var(--cv-muted)]">
+              {t('pipeline.searchResumes')} — sélectionnez un profil puis ajoutez du contexte si nécessaire.
+            </p>
+          </div>
           <button
             onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
+            className="cv-ghost-button inline-flex h-11 w-11 items-center justify-center rounded-2xl text-slate-500 transition-colors hover:text-slate-900 dark:text-[var(--cv-muted)] dark:hover:text-[var(--cv-text)]"
+            aria-label={t('common.close', 'Fermer')}
           >
-            <XMarkIcon className="w-5 h-5" />
+            <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Search */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <SearchField
-            containerClassName="relative"
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder={t('pipeline.searchResumes')}
-          />
-        </div>
+        <div className="grid min-h-0 flex-1 gap-0 overflow-hidden lg:grid-cols-[minmax(0,1.4fr)_320px]">
+          <section className="flex min-h-0 flex-col border-b border-slate-200/70 dark:border-white/10 lg:border-b-0 lg:border-r">
+            <div className="border-b border-slate-200/70 px-5 py-4 dark:border-white/10 sm:px-6">
+              <SearchField
+                containerClassName="relative"
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder={t('pipeline.searchResumes')}
+              />
+            </div>
 
-        {/* Resume List */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {loadingResumes ? (
-            <div className="flex items-center justify-center py-8">
-              <ArrowPathIcon className="w-6 h-6 animate-spin text-blue-500" />
-            </div>
-          ) : filteredResumes.length === 0 ? (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              {t('pipeline.noResumesAvailable')}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {filteredResumes.map(resume => (
-                <button
-                  key={resume.id}
-                  onClick={() => setSelectedResumeId(resume.id)}
-                  className={`w-full p-3 rounded-lg border text-left transition-colors ${
-                    selectedResumeId === resume.id
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-gray-100">
-                        {resume.Name}
-                      </div>
-                      {resume.Title && (
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {resume.Title}
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 sm:px-6">
+              {loadingResumes ? (
+                <div className="flex h-full min-h-[240px] items-center justify-center">
+                  <ArrowPathIcon className="h-7 w-7 animate-spin text-[var(--cv-primary)]" />
+                </div>
+              ) : filteredResumes.length === 0 ? (
+                <div className="flex min-h-[260px] flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-slate-300 bg-slate-50/70 px-6 text-center dark:border-white/10 dark:bg-white/[0.03]">
+                  <MagnifyingGlassIcon className="mb-3 h-8 w-8 text-slate-300 dark:text-slate-600" />
+                  <p className="text-sm font-medium text-slate-600 dark:text-[var(--cv-muted)]">
+                    {t('pipeline.noResumesAvailable')}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {filteredResumes.map((resume) => {
+                    const isSelected = selectedResumeId === resume.id;
+
+                    return (
+                      <button
+                        key={resume.id}
+                        onClick={() => setSelectedResumeId(resume.id)}
+                        className={`w-full rounded-[1.5rem] border p-4 text-left transition-all ${
+                          isSelected
+                            ? 'border-[var(--cv-primary)] bg-blue-50 shadow-[0_20px_40px_-28px_rgba(37,99,235,0.45)] dark:bg-blue-500/10'
+                            : 'border-slate-200/80 bg-white hover:border-slate-300 hover:shadow-[0_20px_40px_-30px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-white/15'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${isSelected ? 'bg-blue-600 text-white dark:bg-blue-400 dark:text-slate-950' : 'bg-slate-100 text-slate-400 dark:bg-white/5 dark:text-slate-500'}`}>
+                                {isSelected ? <CheckCircleIcon className="h-4 w-4" /> : <span className="h-2.5 w-2.5 rounded-full bg-current" />}
+                              </span>
+                              <div className="truncate text-base font-semibold text-slate-900 dark:text-[var(--cv-text)]">{resume.Name}</div>
+                            </div>
+                            {resume.Title ? (
+                              <div className="mt-1 truncate text-sm text-slate-500 dark:text-[var(--cv-muted)]">{resume.Title}</div>
+                            ) : null}
+                          </div>
+                          {renderScore(resume['Global Score'])}
                         </div>
-                      )}
-                    </div>
-                    {renderScore(resume['Global Score'])}
-                  </div>
-                  {resume.Tags && resume.Tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {resume.Tags.slice(0, 5).map((tag, idx) => (
-                        <span
-                          key={idx}
-                          className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded text-xs"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </button>
-              ))}
+
+                        {resume.Tags && resume.Tags.length > 0 ? (
+                          <div className="mt-3 flex flex-wrap gap-1.5">
+                            {resume.Tags.slice(0, 6).map((tag, idx) => (
+                              <span
+                                key={`${resume.id}-${tag}-${idx}`}
+                                className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600 dark:bg-white/5 dark:text-[var(--cv-muted)]"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          )}
+          </section>
+
+          <aside className="space-y-4 bg-slate-50/60 px-5 py-5 dark:bg-white/[0.03] sm:px-6">
+            <div>
+              <div className="cv-kicker mb-2">Sélection</div>
+              <h4 className="text-base font-semibold text-slate-900 dark:text-[var(--cv-text)]">
+                {selectedResume ? selectedResume.Name : t('pipeline.selectResume')}
+              </h4>
+              <p className="mt-1 text-sm text-slate-600 dark:text-[var(--cv-muted)]">
+                {selectedResume?.Title || 'Choisissez un profil dans la liste pour l’ajouter au pipeline.'}
+              </p>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                {t('pipeline.notes')} ({t('common.optional')})
+              </label>
+              <textarea
+                value={addNotes}
+                onChange={(e) => setAddNotes(e.target.value)}
+                rows={8}
+                className={fieldClassName}
+                placeholder={t('pipeline.notesPlaceholder')}
+              />
+              <p className="mt-2 text-xs text-slate-500 dark:text-[var(--cv-muted)]">
+                Ajoutez quelques repères utiles pour la suite du pipeline : contexte, points d’attention, prochaine action.
+              </p>
+            </div>
+          </aside>
         </div>
 
-        {/* Notes */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {t('pipeline.notes')} ({t('common.optional')})
-          </label>
-          <textarea
-            value={addNotes}
-            onChange={(e) => setAddNotes(e.target.value)}
-            rows={2}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-            placeholder={t('pipeline.notesPlaceholder')}
-          />
-        </div>
-
-        {/* Modal Footer */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+        <div className="flex flex-col-reverse gap-3 border-t border-slate-200/70 px-5 py-4 dark:border-white/10 sm:flex-row sm:items-center sm:justify-end sm:px-6">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="cv-ghost-button inline-flex min-h-12 items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold"
           >
             {t('common.cancel')}
           </button>
           <button
             onClick={onAdd}
             disabled={!selectedResumeId}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="cv-gradient-button inline-flex min-h-12 items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
           >
             {t('pipeline.add')}
           </button>

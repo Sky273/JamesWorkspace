@@ -1,6 +1,5 @@
 /**
  * PipelineInterviewModals - Interview list and schedule modals
- * Extracted from MissionPipelineKanban.tsx
  */
 
 import { useTranslation } from 'react-i18next';
@@ -13,23 +12,12 @@ import {
   VideoCameraIcon,
   MapPinIcon,
   CheckCircleIcon,
-  XCircleIcon
+  XCircleIcon,
+  ClipboardDocumentListIcon,
+  ArrowTopRightOnSquareIcon,
 } from '@heroicons/react/24/outline';
 import type { PipelineEntry, Interview } from '../../services/pipelineService';
-
-interface NewInterviewForm {
-  title: string;
-  description: string;
-  interviewType: 'client' | 'partner' | 'technical' | 'hr';
-  scheduledAt: string;
-  durationMinutes: number;
-  location: string;
-  meetingLink: string;
-}
-
-// ============================================================
-// Interviews List Modal
-// ============================================================
+import type { InterviewFormValues } from './MissionPipelineKanban.types';
 
 interface PipelineInterviewsListModalProps {
   entry: PipelineEntry;
@@ -42,24 +30,48 @@ interface PipelineInterviewsListModalProps {
   onClose: () => void;
 }
 
+interface PipelineScheduleInterviewModalProps {
+  isEnglish: boolean;
+  newInterview: InterviewFormValues;
+  setNewInterview: (v: InterviewFormValues) => void;
+  onSchedule: () => void;
+  onClose: () => void;
+}
+
+const fieldClassName =
+  'w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-purple-500 focus:ring-4 focus:ring-purple-100 dark:border-white/10 dark:bg-slate-950/50 dark:text-[var(--cv-text)] dark:focus:ring-purple-500/10';
+
 const getInterviewTypeLabel = (type: string, isEnglish: boolean) => {
   const labels: Record<string, { fr: string; en: string }> = {
     client: { fr: 'Entretien client', en: 'Client interview' },
     partner: { fr: 'Entretien partenaire', en: 'Partner interview' },
     technical: { fr: 'Entretien technique', en: 'Technical interview' },
-    hr: { fr: 'Entretien RH', en: 'HR interview' }
+    hr: { fr: 'Entretien RH', en: 'HR interview' },
   };
   return labels[type]?.[isEnglish ? 'en' : 'fr'] || type;
 };
 
 const getInterviewTypeColor = (type: string) => {
   const colors: Record<string, string> = {
-    client: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
-    partner: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300',
-    technical: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
-    hr: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300'
+    client: 'bg-blue-50 text-blue-700 ring-1 ring-blue-100 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20',
+    partner: 'bg-purple-50 text-purple-700 ring-1 ring-purple-100 dark:bg-purple-500/10 dark:text-purple-300 dark:ring-purple-500/20',
+    technical: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20',
+    hr: 'bg-orange-50 text-orange-700 ring-1 ring-orange-100 dark:bg-orange-500/10 dark:text-orange-300 dark:ring-orange-500/20',
   };
-  return colors[type] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+  return colors[type] || 'bg-slate-100 text-slate-700 ring-1 ring-slate-200 dark:bg-white/5 dark:text-[var(--cv-muted)] dark:ring-white/10';
+};
+
+const getOutcomeBadgeClass = (outcome: string | null) => {
+  switch (outcome) {
+    case 'positive':
+      return 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20';
+    case 'negative':
+      return 'bg-rose-50 text-rose-700 ring-1 ring-rose-100 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/20';
+    case 'neutral':
+      return 'bg-slate-100 text-slate-700 ring-1 ring-slate-200 dark:bg-white/5 dark:text-[var(--cv-muted)] dark:ring-white/10';
+    default:
+      return 'bg-amber-50 text-amber-700 ring-1 ring-amber-100 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20';
+  }
 };
 
 const formatDateTime = (dateStr: string, isEnglish: boolean) => {
@@ -69,7 +81,7 @@ const formatDateTime = (dateStr: string, isEnglish: boolean) => {
     month: 'short',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   });
 };
 
@@ -81,164 +93,157 @@ export function PipelineInterviewsListModal({
   onComplete,
   onCancel,
   onSchedule,
-  onClose
+  onClose,
 }: PipelineInterviewsListModalProps) {
   const { t } = useTranslation();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[80vh] flex flex-col">
-        {/* Header */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm sm:p-6">
+      <div className="cv-surface flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] border border-white/10 shadow-2xl">
+        <div className="flex flex-col gap-4 border-b border-slate-200/70 px-5 py-5 dark:border-white/10 sm:flex-row sm:items-start sm:justify-between sm:px-6">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              {t('pipeline.manageInterviews')}
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {entry.resume_name}
-            </p>
+            <div className="cv-kicker mb-2">Pipeline mission</div>
+            <h3 className="text-2xl font-bold text-slate-950 dark:text-[var(--cv-text)]">{t('pipeline.manageInterviews')}</h3>
+            <p className="mt-2 text-sm text-slate-600 dark:text-[var(--cv-muted)]">{entry.resume_name}</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
+            className="cv-ghost-button inline-flex h-11 w-11 items-center justify-center rounded-2xl text-slate-500 transition-colors hover:text-slate-900 dark:text-[var(--cv-muted)] dark:hover:text-[var(--cv-text)]"
+            aria-label={t('common.close', 'Fermer')}
           >
-            <XMarkIcon className="w-5 h-5" />
+            <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Interviews List */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
           {loadingInterviews ? (
-            <div className="flex items-center justify-center py-8">
-              <ArrowPathIcon className="w-6 h-6 animate-spin text-blue-500" />
+            <div className="flex min-h-[260px] items-center justify-center">
+              <ArrowPathIcon className="h-7 w-7 animate-spin text-purple-500" />
             </div>
           ) : interviews.length === 0 ? (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              {t('pipeline.noInterviews')}
+            <div className="flex min-h-[300px] flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-slate-300 bg-slate-50/70 px-6 text-center dark:border-white/10 dark:bg-white/[0.03]">
+              <ClipboardDocumentListIcon className="mb-3 h-9 w-9 text-slate-300 dark:text-slate-600" />
+              <p className="text-sm font-medium text-slate-600 dark:text-[var(--cv-muted)]">{t('pipeline.noInterviews')}</p>
+              <p className="mt-2 text-xs text-slate-500 dark:text-[var(--cv-muted)]">
+                Planifiez un entretien pour suivre les prochaines étapes de ce candidat.
+              </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {interviews.map(interview => (
-                <div
-                  key={interview.id}
-                  className={`p-4 rounded-lg border ${
-                    interview.status === 'completed'
-                      ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                      : interview.status === 'cancelled'
-                      ? 'bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-700 opacity-60'
-                      : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600'
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                        {interview.title}
-                      </h4>
-                      <span className={`inline-block px-2 py-0.5 rounded text-xs mt-1 ${getInterviewTypeColor(interview.interview_type)}`}>
-                        {getInterviewTypeLabel(interview.interview_type, isEnglish)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {interview.status === 'scheduled' && (
-                        <>
+            <div className="space-y-4">
+              {interviews.map((interview) => {
+                const isCancelled = interview.status === 'cancelled';
+                const isCompleted = interview.status === 'completed';
+
+                return (
+                  <article
+                    key={interview.id}
+                    className={`rounded-[1.6rem] border p-5 transition-colors ${
+                      isCompleted
+                        ? 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-500/20 dark:bg-emerald-500/10'
+                        : isCancelled
+                          ? 'border-slate-200 bg-slate-50/80 opacity-75 dark:border-white/10 dark:bg-white/[0.03]'
+                          : 'border-slate-200/80 bg-white shadow-[0_20px_40px_-32px_rgba(15,23,42,0.25)] dark:border-white/10 dark:bg-white/[0.03]'
+                    }`}
+                  >
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-3 flex flex-wrap items-center gap-2">
+                          <h4 className="text-lg font-semibold text-slate-900 dark:text-[var(--cv-text)]">{interview.title}</h4>
+                          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getInterviewTypeColor(interview.interview_type)}`}>
+                            {getInterviewTypeLabel(interview.interview_type, isEnglish)}
+                          </span>
+                          {isCompleted && interview.outcome ? (
+                            <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getOutcomeBadgeClass(interview.outcome)}`}>
+                              {t(`pipeline.outcomes.${interview.outcome === 'to_follow_up' ? 'toFollowUp' : interview.outcome}`)}
+                            </span>
+                          ) : null}
+                          {isCancelled ? (
+                            <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500 ring-1 ring-slate-200 dark:bg-white/5 dark:text-[var(--cv-muted)] dark:ring-white/10">
+                              {isEnglish ? 'Cancelled' : 'Annulé'}
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <div className="grid gap-2 text-sm text-slate-600 dark:text-[var(--cv-muted)] sm:grid-cols-2 xl:grid-cols-4">
+                          <span className="inline-flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2 dark:bg-white/[0.03]">
+                            <CalendarIcon className="h-4 w-4" />
+                            {formatDateTime(interview.scheduled_at, isEnglish)}
+                          </span>
+                          <span className="inline-flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2 dark:bg-white/[0.03]">
+                            <ClockIcon className="h-4 w-4" />
+                            {interview.duration_minutes} min
+                          </span>
+                          {interview.location ? (
+                            <span className="inline-flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2 dark:bg-white/[0.03]">
+                              <MapPinIcon className="h-4 w-4" />
+                              {interview.location}
+                            </span>
+                          ) : null}
+                          {interview.meeting_link ? (
+                            <a
+                              href={interview.meeting_link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 rounded-2xl bg-blue-50 px-3 py-2 font-medium text-blue-700 transition-colors hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-300"
+                            >
+                              <VideoCameraIcon className="h-4 w-4" />
+                              {t('pipeline.joinMeeting')}
+                              <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+                            </a>
+                          ) : null}
+                        </div>
+
+                        {interview.description ? (
+                          <p className="mt-4 text-sm text-slate-600 dark:text-[var(--cv-muted)]">{interview.description}</p>
+                        ) : null}
+
+                        {interview.outcome_notes ? (
+                          <div className="mt-4 rounded-[1.1rem] bg-white/70 px-4 py-3 text-sm italic text-slate-600 ring-1 ring-slate-200/70 dark:bg-slate-950/30 dark:text-slate-300 dark:ring-white/10">
+                            {interview.outcome_notes}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      {interview.status === 'scheduled' ? (
+                        <div className="flex gap-2 lg:flex-col">
                           <button
                             onClick={() => onComplete(interview, 'positive')}
-                            className="p-1 text-green-500 hover:text-green-700 rounded"
+                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
                             title={t('pipeline.outcomes.positive')}
                           >
-                            <CheckCircleIcon className="w-5 h-5" />
+                            <CheckCircleIcon className="h-4 w-4" />
+                            {t('common.complete', 'Terminer')}
                           </button>
                           <button
                             onClick={() => onCancel(interview)}
-                            className="p-1 text-red-500 hover:text-red-700 rounded"
+                            className="cv-ghost-button inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold text-rose-600 dark:text-rose-300"
                             title={t('pipeline.cancelInterview')}
                           >
-                            <XCircleIcon className="w-5 h-5" />
+                            <XCircleIcon className="h-4 w-4" />
+                            {t('pipeline.cancelInterview')}
                           </button>
-                        </>
-                      )}
-                      {interview.status === 'completed' && interview.outcome && (
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                          interview.outcome === 'positive' 
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'
-                            : interview.outcome === 'negative'
-                            ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
-                            : interview.outcome === 'neutral'
-                            ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                            : 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300'
-                        }`}>
-                          {interview.outcome === 'positive' && '? '}
-                          {interview.outcome === 'negative' && '? '}
-                          {interview.outcome === 'to_follow_up' && '? '}
-                          {t(`pipeline.outcomes.${interview.outcome === 'to_follow_up' ? 'toFollowUp' : interview.outcome}`)}
-                        </span>
-                      )}
-                      {interview.status === 'cancelled' && (
-                        <span className="text-xs text-gray-500">
-                          {isEnglish ? 'Cancelled' : 'Annul?'}
-                        </span>
-                      )}
+                        </div>
+                      ) : null}
                     </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-3 text-sm text-gray-600 dark:text-gray-400">
-                    <span className="flex items-center gap-1">
-                      <CalendarIcon className="w-4 h-4" />
-                      {formatDateTime(interview.scheduled_at, isEnglish)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <ClockIcon className="w-4 h-4" />
-                      {interview.duration_minutes} min
-                    </span>
-                    {interview.location && (
-                      <span className="flex items-center gap-1">
-                        <MapPinIcon className="w-4 h-4" />
-                        {interview.location}
-                      </span>
-                    )}
-                    {interview.meeting_link && (
-                      <a
-                        href={interview.meeting_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-blue-600 hover:text-blue-800"
-                      >
-                        <VideoCameraIcon className="w-4 h-4" />
-                        {t('pipeline.joinMeeting')}
-                      </a>
-                    )}
-                  </div>
-
-                  {interview.description && (
-                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                      {interview.description}
-                    </p>
-                  )}
-
-                  {interview.outcome_notes && (
-                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-300 italic">
-                      {interview.outcome_notes}
-                    </p>
-                  )}
-                </div>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           )}
         </div>
 
-        {/* Footer - Add Interview Button */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+        <div className="flex flex-col-reverse gap-3 border-t border-slate-200/70 px-5 py-4 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="cv-ghost-button inline-flex min-h-12 items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold"
           >
             {t('common.close')}
           </button>
           <button
             onClick={onSchedule}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-purple-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-purple-700"
           >
-            <PlusIcon className="w-4 h-4" />
+            <PlusIcon className="h-4 w-4" />
             {t('pipeline.scheduleInterview')}
           </button>
         </div>
@@ -247,104 +252,86 @@ export function PipelineInterviewsListModal({
   );
 }
 
-// ============================================================
-// Schedule Interview Modal
-// ============================================================
-
-interface PipelineScheduleInterviewModalProps {
-  isEnglish: boolean;
-  newInterview: NewInterviewForm;
-  setNewInterview: (v: NewInterviewForm) => void;
-  onSchedule: () => void;
-  onClose: () => void;
-}
-
 export function PipelineScheduleInterviewModal({
   isEnglish,
   newInterview,
   setNewInterview,
   onSchedule,
-  onClose
+  onClose,
 }: PipelineScheduleInterviewModalProps) {
   const { t } = useTranslation();
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg mx-4">
-        {/* Header */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            {t('pipeline.scheduleInterviewTitle')}
-          </h3>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm sm:p-6">
+      <div className="cv-surface flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[2rem] border border-white/10 shadow-2xl">
+        <div className="flex flex-col gap-4 border-b border-slate-200/70 px-5 py-5 dark:border-white/10 sm:flex-row sm:items-start sm:justify-between sm:px-6">
+          <div>
+            <div className="cv-kicker mb-2">Pipeline mission</div>
+            <h3 className="text-2xl font-bold text-slate-950 dark:text-[var(--cv-text)]">{t('pipeline.scheduleInterviewTitle')}</h3>
+            <p className="mt-2 text-sm text-slate-600 dark:text-[var(--cv-muted)]">
+              Cadrez le rendez-vous et centralisez les informations utiles dans le pipeline.
+            </p>
+          </div>
           <button
             onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
+            className="cv-ghost-button inline-flex h-11 w-11 items-center justify-center rounded-2xl text-slate-500 transition-colors hover:text-slate-900 dark:text-[var(--cv-muted)] dark:hover:text-[var(--cv-text)]"
+            aria-label={t('common.close', 'Fermer')}
           >
-            <XMarkIcon className="w-5 h-5" />
+            <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Form */}
-        <div className="p-4 space-y-4">
-          {/* Title */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('pipeline.interviewTitle')} *
-            </label>
-            <input
-              type="text"
-              value={newInterview.title}
-              onChange={(e) => setNewInterview({ ...newInterview, title: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500"
-              placeholder={t('pipeline.interviewTitlePlaceholder')}
-            />
-          </div>
-
-          {/* Interview Type */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('pipeline.interviewType')}
-            </label>
-            <select
-              value={newInterview.interviewType}
-              onChange={(e) => setNewInterview({ ...newInterview, interviewType: e.target.value as 'client' | 'partner' | 'technical' | 'hr' })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500"
-            >
-              <option value="client">{t('pipeline.types.client')}</option>
-              <option value="partner">{t('pipeline.types.partner')}</option>
-              <option value="technical">{t('pipeline.types.technical')}</option>
-              <option value="hr">{t('pipeline.types.hr')}</option>
-            </select>
-            {newInterview.interviewType === 'client' && (
-              <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
-                {isEnglish 
-                  ? '? This will move the candidate to "Interview Scheduled" stage'
-                  : '→ Cela déplacera le candidat à l\'étape "Entretien planifié"'}
-              </p>
-            )}
-          </div>
-
-          {/* Date and Time */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                {t('pipeline.scheduledAt')} *
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                {t('pipeline.interviewTitle')} *
               </label>
               <input
-                type="datetime-local"
-                value={newInterview.scheduledAt}
-                onChange={(e) => setNewInterview({ ...newInterview, scheduledAt: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500"
+                type="text"
+                value={newInterview.title}
+                onChange={(e) => setNewInterview({ ...newInterview, title: e.target.value })}
+                className={fieldClassName}
+                placeholder={t('pipeline.interviewTitlePlaceholder')}
               />
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                {t('pipeline.interviewType')}
+              </label>
+              <select
+                value={newInterview.interviewType}
+                onChange={(e) =>
+                  setNewInterview({
+                    ...newInterview,
+                    interviewType: e.target.value as 'client' | 'partner' | 'technical' | 'hr',
+                  })
+                }
+                className={fieldClassName}
+              >
+                <option value="client">{t('pipeline.types.client')}</option>
+                <option value="partner">{t('pipeline.types.partner')}</option>
+                <option value="technical">{t('pipeline.types.technical')}</option>
+                <option value="hr">{t('pipeline.types.hr')}</option>
+              </select>
+              {newInterview.interviewType === 'client' ? (
+                <p className="mt-2 text-xs text-blue-600 dark:text-blue-300">
+                  {isEnglish
+                    ? 'This moves the candidate into the “Interview scheduled” stage.'
+                    : 'Cela déplace automatiquement le candidat vers l’étape « Entretien planifié ».'}
+                </p>
+              ) : null}
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                 {t('pipeline.duration')}
               </label>
               <select
                 value={newInterview.durationMinutes}
-                onChange={(e) => setNewInterview({ ...newInterview, durationMinutes: parseInt(e.target.value) })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500"
+                onChange={(e) => setNewInterview({ ...newInterview, durationMinutes: parseInt(e.target.value, 10) })}
+                className={fieldClassName}
               >
                 <option value={30}>30 min</option>
                 <option value={45}>45 min</option>
@@ -353,63 +340,71 @@ export function PipelineScheduleInterviewModal({
                 <option value={120}>2h</option>
               </select>
             </div>
-          </div>
 
-          {/* Location */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('pipeline.location')}
-            </label>
-            <input
-              type="text"
-              value={newInterview.location}
-              onChange={(e) => setNewInterview({ ...newInterview, location: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500"
-              placeholder={t('pipeline.locationPlaceholder')}
-            />
-          </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                {t('pipeline.scheduledAt')} *
+              </label>
+              <input
+                type="datetime-local"
+                value={newInterview.scheduledAt}
+                onChange={(e) => setNewInterview({ ...newInterview, scheduledAt: e.target.value })}
+                className={fieldClassName}
+              />
+            </div>
 
-          {/* Meeting Link */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('pipeline.meetingLink')}
-            </label>
-            <input
-              type="url"
-              value={newInterview.meetingLink}
-              onChange={(e) => setNewInterview({ ...newInterview, meetingLink: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500"
-              placeholder="https://meet.google.com/..."
-            />
-          </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                {t('pipeline.location')}
+              </label>
+              <input
+                type="text"
+                value={newInterview.location}
+                onChange={(e) => setNewInterview({ ...newInterview, location: e.target.value })}
+                className={fieldClassName}
+                placeholder={t('pipeline.locationPlaceholder')}
+              />
+            </div>
 
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('pipeline.interviewDescription')}
-            </label>
-            <textarea
-              value={newInterview.description}
-              onChange={(e) => setNewInterview({ ...newInterview, description: e.target.value })}
-              rows={2}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500"
-              placeholder={t('pipeline.interviewDescriptionPlaceholder')}
-            />
+            <div className="sm:col-span-2">
+              <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                {t('pipeline.meetingLink')}
+              </label>
+              <input
+                type="url"
+                value={newInterview.meetingLink}
+                onChange={(e) => setNewInterview({ ...newInterview, meetingLink: e.target.value })}
+                className={fieldClassName}
+                placeholder="https://meet.google.com/..."
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                {t('pipeline.interviewDescription')}
+              </label>
+              <textarea
+                value={newInterview.description}
+                onChange={(e) => setNewInterview({ ...newInterview, description: e.target.value })}
+                rows={4}
+                className={fieldClassName}
+                placeholder={t('pipeline.interviewDescriptionPlaceholder')}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+        <div className="flex flex-col-reverse gap-3 border-t border-slate-200/70 px-5 py-4 dark:border-white/10 sm:flex-row sm:items-center sm:justify-end sm:px-6">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="cv-ghost-button inline-flex min-h-12 items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold"
           >
             {t('common.cancel')}
           </button>
           <button
             onClick={onSchedule}
             disabled={!newInterview.title || !newInterview.scheduledAt}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-purple-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {t('pipeline.schedule')}
           </button>
