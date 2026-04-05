@@ -29,7 +29,9 @@ const SearchAndActions = ({
         <div className="space-y-2">
           <div className="cv-kicker">{t('missions.title')}</div>
           <div className="text-sm text-slate-600 dark:text-[var(--cv-muted)]">
-            {hasSearch ? t('missions.noResults', 'Affinez votre recherche pour retrouver rapidement une mission.') : t('missions.subtitle')}
+            {hasSearch
+              ? t('missions.searchActive', 'Résultats filtrés en direct par titre, client, interlocuteur ou affaire.')
+              : t('missions.subtitle')}
           </div>
           {resultsLabel ? (
             <div className="inline-flex items-center rounded-full bg-white/70 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm ring-1 ring-slate-200/70 dark:bg-white/5 dark:text-[var(--cv-muted)] dark:ring-white/10">

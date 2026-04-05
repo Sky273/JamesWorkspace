@@ -347,7 +347,10 @@ export default function MissionPipelineKanban({
           scheduleInterview: t('pipeline.scheduleInterview'),
           unknownCandidate: t('pipeline.unknownCandidate'),
           viewResume: t('pipeline.viewResume'),
-          editNotes: t('pipeline.editNotes')
+          editNotes: t('pipeline.editNotes'),
+          dragAndDrop: t('pipeline.dragAndDrop', 'Glisser-déposer'),
+          stage: t('pipeline.stage', 'Étape'),
+          emptyNotes: t('pipeline.emptyNotes', 'Aucune note pour le moment.')
         }}
       />
 

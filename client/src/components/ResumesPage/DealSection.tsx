@@ -84,6 +84,11 @@ const DealSection = ({
 
   const priorityInfo = PRIORITY_ICONS[deal.priority] || PRIORITY_ICONS.medium;
   const adaptationCount = (deal.missions || []).reduce((sum, mission) => sum + (mission.adaptations?.length || 0), 0);
+  const clientTypeLabel = deal.client_type
+    ? deal.client_type === 'prospect'
+      ? t('clients.prospect', 'Prospect')
+      : t('clients.client', 'Client')
+    : null;
 
   const renderResumeCard = (resume: ResumeBasic, index: number) => (
     <DealResumeCard
@@ -150,7 +155,8 @@ const DealSection = ({
               <span className={`rounded-full px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] ${STATUS_COLORS[deal.status] || STATUS_COLORS.open}`}>
                 {t(`crm.deals.statuses.${deal.status}`, STATUS_LABELS[deal.status] || deal.status)}
               </span>
-              <span className={`rounded-full border border-slate-200/80 px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:border-white/10 dark:text-[#a3aac4] ${priorityInfo.color}`}>
+              <span className={`inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:border-white/10 dark:text-[#a3aac4] ${priorityInfo.color}`}>
+                <span aria-hidden="true">{priorityInfo.icon}</span>
                 {priorityInfo.label}
               </span>
             </div>
@@ -159,8 +165,12 @@ const DealSection = ({
               {deal.client_name ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1.5 dark:bg-white/[0.04]">
                   <BuildingOfficeIcon className="h-3.5 w-3.5" />
-                  <span className="truncate max-w-[220px]">{deal.client_name}</span>
-                  {deal.client_type ? <span className="text-slate-400">· {deal.client_type}</span> : null}
+                  <span className="max-w-[220px] truncate">{deal.client_name}</span>
+                  {clientTypeLabel ? (
+                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:bg-white/8 dark:text-[#a3aac4]">
+                      {clientTypeLabel}
+                    </span>
+                  ) : null}
                 </span>
               ) : null}
               {deal.contact_name ? (

@@ -181,7 +181,7 @@ const MissionsDealsGroupedView = ({ onAddMission }: MissionsDealsGroupedViewProp
                   </div>
                 </div>
                 <span className="rounded-full bg-[var(--cv-tertiary-soft)] px-3 py-1.5 text-sm font-semibold text-[var(--cv-tertiary)]">
-                  {filteredUnassigned.length} mission{filteredUnassigned.length !== 1 ? 's' : ''}
+                  {t('missions.grouped.resultsCount', { count: filteredUnassigned.length })}
                 </span>
               </button>
 

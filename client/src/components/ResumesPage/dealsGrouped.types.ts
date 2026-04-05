@@ -101,10 +101,10 @@ export const STATUS_LABELS: Record<string, string> = {
 };
 
 export const PRIORITY_ICONS: Record<string, { icon: string; color: string; label: string }> = {
-  low: { icon: '•', color: 'text-slate-400', label: 'Low' },
-  medium: { icon: '••', color: 'text-[var(--cv-primary)]', label: 'Medium' },
-  high: { icon: '•••', color: 'text-[var(--cv-warning)]', label: 'High' },
-  urgent: { icon: '••••', color: 'text-[var(--cv-danger)]', label: 'Urgent' },
+  low: { icon: '•', color: 'text-slate-400', label: 'Faible' },
+  medium: { icon: '••', color: 'text-[var(--cv-primary)]', label: 'Normale' },
+  high: { icon: '•••', color: 'text-[var(--cv-warning)]', label: 'Haute' },
+  urgent: { icon: '••••', color: 'text-[var(--cv-danger)]', label: 'Urgente' },
 };
 
 export const MISSION_STATUS_COLORS: Record<string, string> = {

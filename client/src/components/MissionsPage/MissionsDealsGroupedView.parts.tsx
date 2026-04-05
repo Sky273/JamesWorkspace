@@ -207,6 +207,11 @@ export function DealSection({
   const priorityMeta = PRIORITY_META[deal.priority] || PRIORITY_META.medium;
   const priorityLabel = t(priorityMeta.translationKey, priorityMeta.fallback);
   const statusClassName = STATUS_COLORS[deal.status] || STATUS_COLORS.open;
+  const clientTypeLabel = deal.client_type
+    ? deal.client_type === 'prospect'
+      ? t('clients.prospect', 'Prospect')
+      : t('clients.client', 'Client')
+    : null;
 
   return (
     <section className="cv-card overflow-hidden rounded-[2rem] border border-slate-200/70 bg-white/80 shadow-[0_24px_60px_-38px_rgba(15,23,42,0.35)] dark:border-white/8 dark:bg-[linear-gradient(180deg,color-mix(in_srgb,var(--cv-panel-start)_90%,black),color-mix(in_srgb,var(--cv-panel-end)_94%,black))]">
@@ -242,7 +247,11 @@ export function DealSection({
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100/90 px-3 py-1.5 dark:bg-white/5">
                   <BuildingOffice2Icon className="h-3.5 w-3.5 text-[var(--cv-primary)]" />
                   <span className="font-medium">{deal.client_name}</span>
-                  {deal.client_type ? <span className="text-slate-400">({deal.client_type})</span> : null}
+                  {clientTypeLabel ? (
+                    <span className="inline-flex items-center rounded-full bg-white/80 px-2 py-0.5 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-500 ring-1 ring-slate-200/70 dark:bg-white/8 dark:text-[var(--cv-muted)] dark:ring-white/10">
+                      {clientTypeLabel}
+                    </span>
+                  ) : null}
                 </span>
               ) : null}
               {deal.contact_name ? (

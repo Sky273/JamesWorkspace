@@ -39,6 +39,9 @@ interface KanbanBoardTexts {
   unknownCandidate: string;
   viewResume: string;
   editNotes: string;
+  dragAndDrop: string;
+  stage: string;
+  emptyNotes: string;
 }
 
 interface KanbanBoardProps {
@@ -117,7 +120,7 @@ function CandidateCard({
         <div className="min-w-0 flex-1">
           <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:bg-white/5 dark:text-[var(--cv-muted)]">
             <ArrowsRightLeftIcon className="h-3.5 w-3.5" />
-            Drag & drop
+            {texts.dragAndDrop}
           </div>
           <Link
             to={`/resumes/${entry.resume_id}/analysis`}
@@ -154,7 +157,7 @@ function CandidateCard({
         {entry.notes ? (
           <p className="line-clamp-3 whitespace-pre-line">{entry.notes}</p>
         ) : (
-          <p className="italic text-slate-400 dark:text-slate-500">Aucune note pour le moment.</p>
+          <p className="italic text-slate-400 dark:text-slate-500">{texts.emptyNotes}</p>
         )}
       </div>
 
@@ -267,7 +270,7 @@ function StageColumn({
                 style={{ backgroundColor: stage.color }}
               />
               <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-[var(--cv-muted)]">
-                Step {stage.order}
+                {texts.stage} {stage.order}
               </span>
             </div>
             <h3 className="truncate text-base font-semibold text-slate-900 dark:text-[var(--cv-text)]">
