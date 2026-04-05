@@ -8,9 +8,14 @@ import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { assertSchemaRequirements } from './schemaVerification.service.js';
 import {
+    buildCreateDealInsertParams,
     buildDealsWhereClause,
+    buildDealsPaginationMetadata,
     buildDealUpdateStatement,
+    getFirstRowOrNull,
+    getSingleColumnValueOrNull,
     normalizeNullableRelationId,
+    parseCountResult,
     parseDealsPagination
 } from './deals.service.helpers.js';
 
@@ -77,20 +82,9 @@ export async function initDealsTable() {
  */
 export async function createDeal(data, userId, firmId) {
     try {
-        const {
-            title,
-            description,
-            client_id,
-            contact_id,
-            status = DEAL_STATUS.OPEN,
-            expected_start_date,
-            expected_end_date,
-            budget_min,
-            budget_max,
-            priority = DEAL_PRIORITY.MEDIUM,
-            tags = [],
-            notes
-        } = data;
+        const { title, client_id, contact_id } = data;
+        const status = data.status || DEAL_STATUS.OPEN;
+        const priority = data.priority || DEAL_PRIORITY.MEDIUM;
 
         // Ensure empty strings are converted to null for UUID fields
         const cleanClientId = normalizeNullableRelationId(client_id);
@@ -105,6 +99,11 @@ export async function createDeal(data, userId, firmId) {
             priority
         });
 
+        const params = buildCreateDealInsertParams(data, userId, firmId, {
+            status: DEAL_STATUS.OPEN,
+            priority: DEAL_PRIORITY.MEDIUM
+        });
+
         const result = await query(`
             INSERT INTO deals (
                 firm_id, client_id, contact_id, title, description, status,
@@ -112,22 +111,7 @@ export async function createDeal(data, userId, firmId) {
                 budget_min, budget_max, priority, tags, notes, created_by
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             RETURNING *
-        `, [
-            firmId,
-            cleanClientId,
-            cleanContactId,
-            title,
-            description || null,
-            status,
-            expected_start_date || null,
-            expected_end_date || null,
-            budget_min || null,
-            budget_max || null,
-            priority,
-            JSON.stringify(tags),
-            notes || null,
-            userId
-        ]);
+        `, params);
 
         safeLog('info', 'Deal created', { dealId: result.rows[0].id, title });
         return result.rows[0];
@@ -219,7 +203,7 @@ export async function getDealById(dealId) {
             WHERE d.id = $1
         `, [dealId]);
 
-        return result.rows[0] || null;
+        return getFirstRowOrNull(result);
     } catch (error) {
         safeLog('error', 'Error fetching deal', { error: error.message, dealId });
         throw error;
@@ -271,13 +255,7 @@ export async function getDeals(firmId, filters = {}, pagination = {}) {
 
         return {
             data: result.rows,
-            pagination: {
-                page,
-                limit,
-                totalCount,
-                totalPages: Math.ceil(totalCount / limit),
-                hasMore: offset + result.rows.length < totalCount
-            }
+            pagination: buildDealsPaginationMetadata(page, limit, offset, totalCount, result.rows.length)
         };
     } catch (error) {
         safeLog('error', 'Error fetching deals', { error: error.message, firmId });
@@ -471,7 +449,7 @@ export async function getDealStats(firmId) {
  */
 export async function getDealFirmId(dealId) {
     const result = await query('SELECT firm_id FROM deals WHERE id = $1', [dealId]);
-    return result.rows.length > 0 ? result.rows[0].firm_id : null;
+    return getSingleColumnValueOrNull(result, 'firm_id');
 }
 
 /**
@@ -481,7 +459,7 @@ export async function getDealFirmId(dealId) {
  */
 export async function getClientFirmId(clientId) {
     const result = await query('SELECT firm_id FROM clients WHERE id = $1', [clientId]);
-    return result.rows.length > 0 ? result.rows[0].firm_id : null;
+    return getSingleColumnValueOrNull(result, 'firm_id');
 }
 
 /**
@@ -497,7 +475,7 @@ export async function getContactOwnership(contactId) {
         WHERE cc.id = $1
     `, [contactId]);
 
-    return result.rows[0] || null;
+    return getFirstRowOrNull(result);
 }
 
 /**
@@ -507,7 +485,7 @@ export async function getContactOwnership(contactId) {
  */
 export async function getResumeFirmId(resumeId) {
     const result = await query('SELECT firm_id FROM resumes WHERE id = $1', [resumeId]);
-    return result.rows.length > 0 ? result.rows[0].firm_id : null;
+    return getSingleColumnValueOrNull(result, 'firm_id');
 }
 
 /**
@@ -542,7 +520,7 @@ export async function getDealsCountForClient(clientId) {
             'SELECT COUNT(*) as count FROM deals WHERE client_id = $1',
             [clientId]
         );
-        return parseInt(result.rows[0].count);
+        return parseCountResult(result);
     } catch (error) {
         safeLog('error', 'Error fetching deals count for client', { error: error.message, clientId });
         throw error;

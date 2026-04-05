@@ -1,26 +1,8 @@
-async function unlinkQuietly(fs, filePath) {
-    if (!filePath) {
-        return;
-    }
-
-    await fs.unlink(filePath).catch(() => {});
-}
-
-async function unlinkMany(fs, items = []) {
-    for (const item of items) {
-        await unlinkQuietly(fs, item?.path);
-    }
-}
-
-function createAdvancedFallback(engine) {
-    return {
-        text: '',
-        confidence: 0,
-        score: 0,
-        engine,
-        psm: null
-    };
-}
+import {
+    unlinkQuietly,
+    unlinkMany,
+    createAdvancedFallback
+} from './pdfTextOcrPageProcessor.helpers.js';
 
 export function createPdfOcrPageProcessor({
     settings,

@@ -34,6 +34,41 @@ import {
 
 const router = express.Router();
 
+function createAdminDiagnosticsRouteHandler(logMessage, errorMessage, handler) {
+    return async (req, res) => {
+        try {
+            await handler(req, res);
+        } catch (error) {
+            safeLog('error', logMessage, { error: error.message, userId: req.user?.id });
+            res.status(500).json({ error: errorMessage });
+        }
+    };
+}
+
+function buildStorageDiagnosticsPayload(storageStats, cleanupStats) {
+    const totalFiles = Object.values(storageStats).reduce((sum, dir) => sum + dir.fileCount, 0);
+    const totalSizeMB = Object.values(storageStats).reduce((sum, dir) => sum + dir.totalSizeMB, 0);
+    const roundedTotalSizeMB = Math.round(totalSizeMB * 100) / 100;
+
+    return {
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        summary: {
+            totalFiles,
+            totalSizeMB: roundedTotalSizeMB,
+            cleanupTimerActive: cleanupStats.timerActive,
+            lastCleanupTime: cleanupStats.lastCleanupTime,
+            totalFilesDeleted: cleanupStats.totalFilesDeleted
+        },
+        directories: storageStats,
+        cleanupHistory: cleanupStats.cleanupStats,
+        metrics: {
+            totalFiles,
+            totalSizeMB: roundedTotalSizeMB
+        }
+    };
+}
+
 async function runConnectivityCheck({
     fetchUrl,
     fetchOptions,
@@ -52,6 +87,138 @@ async function runConnectivityCheck({
     return isConnected
         ? { status: latency > slowThresholdMs ? 'slow' : 'ok', message: 'API connected', latency: `${latency}ms` }
         : { status: 'error', message: `API error: ${response.status}`, latency: `${latency}ms` };
+}
+
+async function resolveApiConnectivityCheck({
+    apiKey,
+    deepCheck,
+    runDeepCheck
+}) {
+    if (!apiKey) {
+        return getNotConfiguredCheck();
+    }
+
+    if (!deepCheck) {
+        return getConfiguredCheck();
+    }
+
+    try {
+        return await runDeepCheck();
+    } catch (error) {
+        return getFailedConnectivityCheck(error);
+    }
+}
+
+async function resolveProviderConnectivityChecks(deepCheck, initialOverallStatus = 'healthy') {
+    const providerChecks = [
+        {
+            key: 'openai',
+            apiKey: OPENAI_API_KEY,
+            runDeepCheck: () => runConnectivityCheck({
+                fetchUrl: 'https://api.openai.com/v1/models',
+                fetchOptions: {
+                    method: 'GET',
+                    headers: { Authorization: `Bearer ${OPENAI_API_KEY}` }
+                }
+            })
+        },
+        {
+            key: 'anthropic',
+            apiKey: ANTHROPIC_API_KEY,
+            runDeepCheck: () => runConnectivityCheck({
+                fetchUrl: 'https://api.anthropic.com/v1/messages',
+                fetchOptions: {
+                    method: 'POST',
+                    headers: {
+                        'x-api-key': ANTHROPIC_API_KEY,
+                        'anthropic-version': '2023-06-01',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-3-haiku-20240307',
+                        max_tokens: 1,
+                        messages: [{ role: 'user', content: 'ping' }]
+                    })
+                },
+                connectedStatuses: [400]
+            })
+        },
+        {
+            key: 'deepseek',
+            apiKey: DEEPSEEK_API_KEY,
+            runDeepCheck: () => runConnectivityCheck({
+                fetchUrl: `${DEEPSEEK_BASE_URL.replace(/\/$/, '')}/chat/completions`,
+                fetchOptions: {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        messages: [{ role: 'user', content: 'ping' }],
+                        max_tokens: 1
+                    })
+                },
+                connectedStatuses: [400]
+            })
+        },
+        {
+            key: 'glm',
+            apiKey: GLM_API_KEY,
+            runDeepCheck: () => runConnectivityCheck({
+                fetchUrl: `${GLM_BASE_URL.replace(/\/$/, '')}/chat/completions`,
+                fetchOptions: {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${GLM_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'glm-5',
+                        messages: [{ role: 'user', content: 'ping' }],
+                        max_tokens: 1
+                    })
+                },
+                connectedStatuses: [400]
+            })
+        },
+        {
+            key: 'minimax',
+            apiKey: MINIMAX_API_KEY,
+            runDeepCheck: () => runConnectivityCheck({
+                fetchUrl: `${MINIMAX_ANTHROPIC_BASE_URL.replace(/\/$/, '')}/v1/messages`,
+                fetchOptions: {
+                    method: 'POST',
+                    headers: {
+                        'x-api-key': MINIMAX_API_KEY,
+                        'anthropic-version': '2023-06-01',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'MiniMax-M2.7',
+                        max_tokens: 1,
+                        messages: [{ role: 'user', content: [{ type: 'text', text: 'ping' }] }]
+                    })
+                },
+                connectedStatuses: [400]
+            })
+        }
+    ];
+
+    const checks = {};
+    let overallStatus = initialOverallStatus;
+
+    for (const providerCheck of providerChecks) {
+        checks[providerCheck.key] = await resolveApiConnectivityCheck({
+            apiKey: providerCheck.apiKey,
+            deepCheck,
+            runDeepCheck: providerCheck.runDeepCheck
+        });
+        overallStatus = updateOverallStatus(overallStatus, checks[providerCheck.key].status);
+    }
+
+    return { checks, overallStatus };
 }
 
 async function resolveAdminHealthAccess(req) {
@@ -112,148 +279,9 @@ router.get('/', async (req, res) => {
         });
     }
 
-    if (OPENAI_API_KEY) {
-        if (deepCheck) {
-            try {
-                checks.openai = await runConnectivityCheck({
-                    fetchUrl: 'https://api.openai.com/v1/models',
-                    fetchOptions: {
-                        method: 'GET',
-                        headers: { Authorization: `Bearer ${OPENAI_API_KEY}` }
-                    }
-                });
-                overallStatus = updateOverallStatus(overallStatus, checks.openai.status);
-            } catch (error) {
-                checks.openai = getFailedConnectivityCheck(error);
-            }
-        } else {
-            checks.openai = getConfiguredCheck();
-        }
-    } else {
-        checks.openai = getNotConfiguredCheck();
-    }
-
-    if (ANTHROPIC_API_KEY) {
-        if (deepCheck) {
-            try {
-                checks.anthropic = await runConnectivityCheck({
-                    fetchUrl: 'https://api.anthropic.com/v1/messages',
-                    fetchOptions: {
-                        method: 'POST',
-                        headers: {
-                            'x-api-key': ANTHROPIC_API_KEY,
-                            'anthropic-version': '2023-06-01',
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            model: 'claude-3-haiku-20240307',
-                            max_tokens: 1,
-                            messages: [{ role: 'user', content: 'ping' }]
-                        })
-                    },
-                    connectedStatuses: [400]
-                });
-                overallStatus = updateOverallStatus(overallStatus, checks.anthropic.status);
-            } catch (error) {
-                checks.anthropic = getFailedConnectivityCheck(error);
-            }
-        } else {
-            checks.anthropic = getConfiguredCheck();
-        }
-    } else {
-        checks.anthropic = getNotConfiguredCheck();
-    }
-
-    if (DEEPSEEK_API_KEY) {
-        if (deepCheck) {
-            try {
-                checks.deepseek = await runConnectivityCheck({
-                    fetchUrl: `${DEEPSEEK_BASE_URL.replace(/\/$/, '')}/chat/completions`,
-                    fetchOptions: {
-                        method: 'POST',
-                        headers: {
-                            Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            model: 'deepseek-chat',
-                            messages: [{ role: 'user', content: 'ping' }],
-                            max_tokens: 1
-                        })
-                    },
-                    connectedStatuses: [400]
-                });
-                overallStatus = updateOverallStatus(overallStatus, checks.deepseek.status);
-            } catch (error) {
-                checks.deepseek = getFailedConnectivityCheck(error);
-            }
-        } else {
-            checks.deepseek = getConfiguredCheck();
-        }
-    } else {
-        checks.deepseek = getNotConfiguredCheck();
-    }
-
-    if (GLM_API_KEY) {
-        if (deepCheck) {
-            try {
-                checks.glm = await runConnectivityCheck({
-                    fetchUrl: `${GLM_BASE_URL.replace(/\/$/, '')}/chat/completions`,
-                    fetchOptions: {
-                        method: 'POST',
-                        headers: {
-                            Authorization: `Bearer ${GLM_API_KEY}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            model: 'glm-5',
-                            messages: [{ role: 'user', content: 'ping' }],
-                            max_tokens: 1
-                        })
-                    },
-                    connectedStatuses: [400]
-                });
-                overallStatus = updateOverallStatus(overallStatus, checks.glm.status);
-            } catch (error) {
-                checks.glm = getFailedConnectivityCheck(error);
-            }
-        } else {
-            checks.glm = getConfiguredCheck();
-        }
-    } else {
-        checks.glm = getNotConfiguredCheck();
-    }
-
-    if (MINIMAX_API_KEY) {
-        if (deepCheck) {
-            try {
-                checks.minimax = await runConnectivityCheck({
-                    fetchUrl: `${MINIMAX_ANTHROPIC_BASE_URL.replace(/\/$/, '')}/v1/messages`,
-                    fetchOptions: {
-                        method: 'POST',
-                        headers: {
-                            'x-api-key': MINIMAX_API_KEY,
-                            'anthropic-version': '2023-06-01',
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            model: 'MiniMax-M2.7',
-                            max_tokens: 1,
-                            messages: [{ role: 'user', content: [{ type: 'text', text: 'ping' }] }]
-                        })
-                    },
-                    connectedStatuses: [400]
-                });
-                overallStatus = updateOverallStatus(overallStatus, checks.minimax.status);
-            } catch (error) {
-                checks.minimax = getFailedConnectivityCheck(error);
-            }
-        } else {
-            checks.minimax = getConfiguredCheck();
-        }
-    } else {
-        checks.minimax = getNotConfiguredCheck();
-    }
+    const providerChecks = await resolveProviderConnectivityChecks(deepCheck, overallStatus);
+    Object.assign(checks, providerChecks.checks);
+    overallStatus = providerChecks.overallStatus;
 
     if (OLLAMA_BASE_URL) {
         if (deepCheck) {
@@ -324,7 +352,10 @@ router.get('/', async (req, res) => {
     res.status(statusCode).json(responsePayload);
 });
 
-router.get('/memory', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/memory', authenticateToken, requireAdmin, createAdminDiagnosticsRouteHandler(
+    'Failed to get memory diagnostics',
+    'Failed to get memory diagnostics',
+    async (req, res) => {
     const memoryUsage = process.memoryUsage();
     const [settingsCacheSize, templatesCacheSize, firmsCacheSize, cacheRegistry] = await Promise.all([
         settingsCache.size(),
@@ -353,39 +384,31 @@ router.get('/memory', authenticateToken, requireAdmin, async (req, res) => {
         memoryUsage,
         cacheStats
     }));
-});
+    }
+));
 
-router.get('/storage', authenticateToken, requireAdmin, async (req, res) => {
-    try {
+router.get('/storage', authenticateToken, requireAdmin, createAdminDiagnosticsRouteHandler(
+    'Failed to get storage stats',
+    'Failed to get storage statistics',
+    async (req, res) => {
         const storageStats = await getStorageStats();
         const cleanupStats = getFileCleanupStats();
-
-        const totalFiles = Object.values(storageStats).reduce((sum, dir) => sum + dir.fileCount, 0);
-        const totalSizeMB = Object.values(storageStats).reduce((sum, dir) => sum + dir.totalSizeMB, 0);
+        const payload = buildStorageDiagnosticsPayload(storageStats, cleanupStats);
 
         res.json({
-            status: 'ok',
-            timestamp: new Date().toISOString(),
-            summary: {
-                totalFiles,
-                totalSizeMB: Math.round(totalSizeMB * 100) / 100,
-                cleanupTimerActive: cleanupStats.timerActive,
-                lastCleanupTime: cleanupStats.lastCleanupTime,
-                totalFilesDeleted: cleanupStats.totalFilesDeleted
-            },
-            directories: storageStats,
-            cleanupHistory: cleanupStats.cleanupStats
+            status: payload.status,
+            timestamp: payload.timestamp,
+            summary: payload.summary,
+            directories: payload.directories,
+            cleanupHistory: payload.cleanupHistory
         });
 
         safeLog('info', 'Storage stats requested', {
             userId: req.user?.id,
-            totalFiles,
-            totalSizeMB: Math.round(totalSizeMB * 100) / 100
+            totalFiles: payload.metrics.totalFiles,
+            totalSizeMB: payload.metrics.totalSizeMB
         });
-    } catch (error) {
-        safeLog('error', 'Failed to get storage stats', { error: error.message });
-        res.status(500).json({ error: 'Failed to get storage statistics' });
     }
-});
+));
 
 export default router;

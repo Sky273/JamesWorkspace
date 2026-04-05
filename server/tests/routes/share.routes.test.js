@@ -21,6 +21,7 @@ const mockGetResumeForAccessCheck = vi.fn();
 const mockGetUserFirmId = vi.fn();
 
 vi.mock('../../services/shareResume.service.js', () => ({
+    __esModule: true,
     default: {
         storeSharedPdf: (...args) => mockStoreSharedPdf(...args),
         getShareStatus: (...args) => mockGetShareStatus(...args),
@@ -30,7 +31,15 @@ vi.mock('../../services/shareResume.service.js', () => ({
         getResumeFileMetadataByToken: (...args) => mockGetResumeFileMetadataByToken(...args),
         getResumeFileDataById: (...args) => mockGetResumeFileDataById(...args),
         revokeShareLinks: (...args) => mockRevokeShareLinks(...args)
-    }
+    },
+    storeSharedPdf: (...args) => mockStoreSharedPdf(...args),
+    getShareStatus: (...args) => mockGetShareStatus(...args),
+    getOriginalFileInfo: (...args) => mockGetOriginalFileInfo(...args),
+    getSharedPdfByToken: (...args) => mockGetSharedPdfByToken(...args),
+    getOrCreateOriginalFileToken: (...args) => mockGetOrCreateOriginalFileToken(...args),
+    getResumeFileMetadataByToken: (...args) => mockGetResumeFileMetadataByToken(...args),
+    getResumeFileDataById: (...args) => mockGetResumeFileDataById(...args),
+    revokeShareLinks: (...args) => mockRevokeShareLinks(...args)
 }));
 
 vi.mock('../../services/resumes.service.js', () => ({

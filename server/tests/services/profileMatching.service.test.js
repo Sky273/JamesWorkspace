@@ -40,6 +40,9 @@ vi.mock('../../services/metrics.service.js', () => ({
     default: {
         trackProfileMatchingActivity: vi.fn()
     },
+    metrics: {
+        trackProfileMatchingActivity: vi.fn()
+    },
     buildLLMMetricLabel: vi.fn((provider, model = '') => model ? `${provider}:${model}` : provider)
 }));
 
@@ -55,14 +58,10 @@ vi.mock('../../config/prompts.backend.js', () => ({
 import { selectRawWithTimeout, findWithTimeout, updateWithTimeout } from '../../utils/postgresHelpers.js';
 import { callBusinessChatCompletion } from '../../services/llmProvider.service.js';
 import { getLLMSettings } from '../../services/settings.service.js';
-import metrics from '../../services/metrics.service.js';
+import { metrics } from '../../services/metrics.service.js';
 
 // Import the service (after mocks are set up)
-import profileMatchingService from '../../services/profileMatching.service.js';
-
-// Extract functions from default export
-const { findMatchingProfiles, DEFAULT_WEIGHTS } = profileMatchingService;
-const { analyzeProfileForMission } = profileMatchingService;
+import { findMatchingProfiles, analyzeProfileForMission, DEFAULT_WEIGHTS } from '../../services/profileMatching.service.js';
 
 // ============================================
 // TEST DATA
@@ -520,7 +519,7 @@ describe('Profile Matching Service', () => {
 
             try {
                 const refreshedService = await import('../../services/profileMatching.service.js');
-                const refreshedFindMatchingProfiles = refreshedService.default.findMatchingProfiles;
+                const refreshedFindMatchingProfiles = refreshedService.findMatchingProfiles;
 
                 const manyResumes = Array.from({ length: 150 }, (_, i) => ({
                     ...mockResumeRecords[0],

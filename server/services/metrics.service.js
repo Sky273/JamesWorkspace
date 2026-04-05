@@ -25,6 +25,29 @@ export function buildLLMMetricLabel(provider, model = '') {
     return buildLLMMetricLabelValue(provider, model);
 }
 
+function getTopEntries(sourceMap, limit, keyName) {
+    return Object.entries(sourceMap)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, limit)
+        .map(([key, count]) => ({ [keyName]: key, count }));
+}
+
+function formatDuration(ms) {
+    const uptimeSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(uptimeSeconds / 3600);
+    const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+    const seconds = uptimeSeconds % 60;
+
+    return {
+        seconds: uptimeSeconds,
+        formatted: `${hours}h ${minutes}m ${seconds}s`
+    };
+}
+
+function trackCollectorOperation(collector, operationFn, payload) {
+    operationFn(collector.operations, collector.normalizeLLMProviderKey.bind(collector), payload);
+}
+
 ensureMetricsDirectory(log);
 
 class MetricsCollector {
@@ -297,7 +320,7 @@ class MetricsCollector {
         normalizationEvents = 0,
         metadata = {}
     } = {}) {
-        trackProfileMatchingOperation(this.operations, this.normalizeLLMProviderKey.bind(this), {
+        trackCollectorOperation(this, trackProfileMatchingOperation, {
             provider,
             event,
             profilesRequested,
@@ -323,7 +346,7 @@ class MetricsCollector {
         outputChars = 0,
         metadata = {}
     } = {}) {
-        trackImprovementOperation(this.operations, this.normalizeLLMProviderKey.bind(this), {
+        trackCollectorOperation(this, trackImprovementOperation, {
             provider,
             event,
             successfulRuns,
@@ -347,7 +370,7 @@ class MetricsCollector {
         outputChars = 0,
         metadata = {}
     } = {}) {
-        trackAiModifyOperation(this.operations, this.normalizeLLMProviderKey.bind(this), {
+        trackCollectorOperation(this, trackAiModifyOperation, {
             provider,
             event,
             successfulRuns,
@@ -372,7 +395,7 @@ class MetricsCollector {
         outputChars = 0,
         metadata = {}
     } = {}) {
-        trackAdaptationOperation(this.operations, this.normalizeLLMProviderKey.bind(this), {
+        trackCollectorOperation(this, trackAdaptationOperation, {
             provider,
             event,
             matchRuns,
@@ -418,15 +441,12 @@ class MetricsCollector {
     // Get uptime
     getUptime() {
         const uptimeMs = Date.now() - this.startTime;
-        const uptimeSeconds = Math.floor(uptimeMs / 1000);
-        const hours = Math.floor(uptimeSeconds / 3600);
-        const minutes = Math.floor((uptimeSeconds % 3600) / 60);
-        const seconds = uptimeSeconds % 60;
+        const { seconds: uptimeSeconds, formatted } = formatDuration(uptimeMs);
         
         return {
             ms: uptimeMs,
             seconds: uptimeSeconds,
-            formatted: `${hours}h ${minutes}m ${seconds}s`
+            formatted
         };
     }
 
@@ -443,18 +463,12 @@ class MetricsCollector {
 
     // Get top endpoints by request count
     getTopEndpoints(limit = 10) {
-        return Object.entries(this.requests.byEndpoint)
-            .sort(([, a], [, b]) => b - a)
-            .slice(0, limit)
-            .map(([endpoint, count]) => ({ endpoint, count }));
+        return getTopEntries(this.requests.byEndpoint, limit, 'endpoint');
     }
 
     // Get top errors
     getTopErrors(limit = 10) {
-        return Object.entries(this.errors.byType)
-            .sort(([, a], [, b]) => b - a)
-            .slice(0, limit)
-            .map(([type, count]) => ({ type, count }));
+        return getTopEntries(this.errors.byType, limit, 'type');
     }
 
     // Calculate LLM cost with accurate per-model pricing
@@ -494,5 +508,3 @@ class MetricsCollector {
 
 // Create singleton instance
 export const metrics = new MetricsCollector();
-
-export default metrics;

@@ -2,6 +2,40 @@ export function normalizeNullableRelationId(value) {
     return value && value.trim() !== '' ? value : null;
 }
 
+export function buildCreateDealInsertParams(data, userId, firmId, defaults = {}) {
+    const {
+        title,
+        description,
+        client_id,
+        contact_id,
+        status = defaults.status,
+        expected_start_date,
+        expected_end_date,
+        budget_min,
+        budget_max,
+        priority = defaults.priority,
+        tags = [],
+        notes
+    } = data;
+
+    return [
+        firmId,
+        normalizeNullableRelationId(client_id),
+        normalizeNullableRelationId(contact_id),
+        title,
+        description || null,
+        status,
+        expected_start_date || null,
+        expected_end_date || null,
+        budget_min || null,
+        budget_max || null,
+        priority,
+        JSON.stringify(tags),
+        notes || null,
+        userId
+    ];
+}
+
 export function parseDealsPagination(pagination = {}) {
     const parsedPage = Number.parseInt(pagination.page, 10);
     const parsedLimit = Number.parseInt(pagination.limit, 10);
@@ -45,6 +79,16 @@ export function buildDealsWhereClause(firmId, filters = {}) {
         whereClause: `WHERE ${conditions.join(' AND ')}`,
         params,
         nextParamIndex: paramIndex
+    };
+}
+
+export function buildDealsPaginationMetadata(page, limit, offset, totalCount, rowsLength) {
+    return {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        hasMore: offset + rowsLength < totalCount
     };
 }
 
@@ -97,4 +141,16 @@ export function buildDealUpdateStatement(data) {
     }
 
     return { assignments, params, paramIndex };
+}
+
+export function getFirstRowOrNull(result) {
+    return result.rows[0] || null;
+}
+
+export function getSingleColumnValueOrNull(result, columnName) {
+    return result.rows.length > 0 ? result.rows[0][columnName] : null;
+}
+
+export function parseCountResult(result, columnName = 'count') {
+    return Number.parseInt(result.rows[0][columnName], 10);
 }

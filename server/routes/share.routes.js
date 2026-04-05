@@ -8,7 +8,7 @@ import { createReadStream } from 'fs';
 import fs from 'fs/promises';
 import { authenticateToken, isUserAdmin } from '../middleware/auth.middleware.js';
 import { validateBody, validateParams, sharePdfSchema } from '../utils/validation.js';
-import shareResumeService from '../services/shareResume.service.js';
+import * as shareResumeService from '../services/shareResume.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getPdfServerAuthHeaders } from '../utils/pdfServerAuth.js';
 import { getResumeForAccessCheck } from '../services/resumes.service.js';
@@ -20,11 +20,28 @@ const router = Router();
 // JSON parsing for this router
 router.use(json());
 
+function createShareRouteHandler(logMessage, errorMessage, handler, errorResponder = null) {
+    return async (req, res) => {
+        try {
+            await handler(req, res);
+        } catch (error) {
+            safeLog('error', logMessage, { error: error.message, resumeId: req.params.resumeId ?? null });
+            if (errorResponder) {
+                const handled = errorResponder(error, res);
+                if (handled) {
+                    return handled;
+                }
+            }
+            res.status(500).json({ success: false, error: errorMessage });
+        }
+    };
+}
+
 function isValidShareToken(token) {
     return typeof token === 'string' && /^[a-f0-9]{64}$/i.test(token);
 }
 
-async function assertResumeAccess(req, res) {
+async function getAccessibleResume(req, res) {
     const { resumeId } = req.params;
     const resume = await getResumeForAccessCheck(resumeId);
 
@@ -52,6 +69,71 @@ async function assertResumeAccess(req, res) {
     return resume;
 }
 
+function buildShareStatusResponse(status) {
+    return {
+        success: true,
+        hasSharedPdf: status.hasSharedPdf,
+        token: status.token,
+        expiresAt: status.expiresAt,
+        pdfToken: status.pdfToken,
+        pdfExpiresAt: status.pdfExpiresAt,
+        hasSharedFile: status.hasSharedFile,
+        fileToken: status.fileToken,
+        fileExpiresAt: status.fileExpiresAt
+    };
+}
+
+async function serveSharedPdfByToken(res, token) {
+    const pdfInfo = await shareResumeService.getSharedPdfByToken(token);
+    if (!pdfInfo) {
+        return res.status(404).json({
+            success: false,
+            error: 'PDF not found'
+        });
+    }
+
+    const stats = await fs.stat(pdfInfo.path);
+    const filename = pdfInfo.name ? `${pdfInfo.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf` : 'cv.pdf';
+
+    setSafeFileResponseHeaders(res, {
+        contentType: 'application/pdf',
+        filename,
+        contentLength: stats.size,
+        inline: true
+    });
+    createReadStream(pdfInfo.path).pipe(res);
+    return null;
+}
+
+async function serveOriginalFileByToken(res, token) {
+    const resumeMetadata = await shareResumeService.getResumeFileMetadataByToken(token);
+    if (!resumeMetadata) {
+        return res.status(404).json({
+            success: false,
+            error: 'File not found'
+        });
+    }
+
+    const resumeFileData = await shareResumeService.getResumeFileDataById(resumeMetadata.id);
+    if (!resumeFileData) {
+        return res.status(404).json({
+            success: false,
+            error: 'Original file not available'
+        });
+    }
+
+    const filename = resumeMetadata.file_name || resumeMetadata.name || 'cv';
+    const contentType = resumeMetadata.resume_file_type || 'application/octet-stream';
+
+    setSafeFileResponseHeaders(res, {
+        contentType,
+        filename,
+        contentLength: resumeMetadata.resume_file_size || resumeFileData.length
+    });
+    res.end(resumeFileData);
+    return null;
+}
+
 /**
  * POST /api/share/resume/:resumeId/generate
  * Generate a shareable PDF for an improved resume
@@ -61,7 +143,7 @@ router.post('/resume/:resumeId/generate', authenticateToken, validateParams('res
     try {
         const { resumeId } = req.params;
         const { htmlContent, filename, stylesheet, headerContent, footerContent, footerHeight } = req.body;
-        const resume = await assertResumeAccess(req, res);
+        const resume = await getAccessibleResume(req, res);
 
         if (!resume) {
             return;
@@ -128,49 +210,33 @@ router.post('/resume/:resumeId/generate', authenticateToken, validateParams('res
  * Get share status for a resume
  * Requires authentication
  */
-router.get('/resume/:resumeId/status', authenticateToken, validateParams('resumeId'), async (req, res) => {
-    try {
+router.get('/resume/:resumeId/status', authenticateToken, validateParams('resumeId'), createShareRouteHandler(
+    'Failed to get share status',
+    'Failed to get share status',
+    async (req, res) => {
         const { resumeId } = req.params;
-        const resume = await assertResumeAccess(req, res);
+        const resume = await getAccessibleResume(req, res);
 
         if (!resume) {
             return;
         }
 
         const status = await shareResumeService.getShareStatus(resumeId);
-
-        res.json({
-            success: true,
-            hasSharedPdf: status.hasSharedPdf,
-            token: status.token,
-            expiresAt: status.expiresAt,
-            pdfToken: status.pdfToken,
-            pdfExpiresAt: status.pdfExpiresAt,
-            hasSharedFile: status.hasSharedFile,
-            fileToken: status.fileToken,
-            fileExpiresAt: status.fileExpiresAt
-        });
-    } catch (error) {
-        safeLog('error', 'Failed to get share status', {
-            resumeId: req.params.resumeId,
-            error: error.message
-        });
-        res.status(500).json({
-            success: false,
-            error: 'Failed to get share status'
-        });
+        res.json(buildShareStatusResponse(status));
     }
-});
+));
 
 /**
  * GET /api/share/resume/:resumeId/original
  * Get the original file share URL
  * Requires authentication
  */
-router.get('/resume/:resumeId/original', authenticateToken, validateParams('resumeId'), async (req, res) => {
-    try {
+router.get('/resume/:resumeId/original', authenticateToken, validateParams('resumeId'), createShareRouteHandler(
+    'Failed to get original file URL',
+    'Failed to get original file URL',
+    async (req, res) => {
         const { resumeId } = req.params;
-        const resume = await assertResumeAccess(req, res);
+        const resume = await getAccessibleResume(req, res);
 
         if (!resume) {
             return;
@@ -191,27 +257,20 @@ router.get('/resume/:resumeId/original', authenticateToken, validateParams('resu
             token,
             filename: fileInfo.filename
         });
-    } catch (error) {
-        safeLog('error', 'Failed to get original file URL', {
-            resumeId: req.params.resumeId,
-            error: error.message
-        });
-        res.status(500).json({
-            success: false,
-            error: 'Failed to get original file URL'
-        });
     }
-});
+));
 
 /**
  * POST /api/share/resume/:resumeId/revoke
  * Revoke all public share links for a resume
  * Requires authentication
  */
-router.post('/resume/:resumeId/revoke', authenticateToken, validateParams('resumeId'), async (req, res) => {
-    try {
+router.post('/resume/:resumeId/revoke', authenticateToken, validateParams('resumeId'), createShareRouteHandler(
+    'Failed to revoke share links',
+    'Failed to revoke share links',
+    async (req, res) => {
         const { resumeId } = req.params;
-        const resume = await assertResumeAccess(req, res);
+        const resume = await getAccessibleResume(req, res);
 
         if (!resume) {
             return;
@@ -219,22 +278,18 @@ router.post('/resume/:resumeId/revoke', authenticateToken, validateParams('resum
 
         await shareResumeService.revokeShareLinks(resumeId);
         res.json({ success: true, message: 'Share links revoked' });
-    } catch (error) {
-        safeLog('error', 'Failed to revoke share links', {
-            resumeId: req.params.resumeId,
-            error: error.message
-        });
-        res.status(500).json({ success: false, error: 'Failed to revoke share links' });
     }
-});
+));
 
 /**
  * GET /api/share/pdf/:token
  * PUBLIC endpoint - Serve a shared PDF by token
  * No authentication required
  */
-router.get('/pdf/:token', async (req, res) => {
-    try {
+router.get('/pdf/:token', createShareRouteHandler(
+    'Failed to serve shared PDF',
+    'Failed to serve PDF',
+    async (req, res) => {
         const { token } = req.params;
 
         if (!isValidShareToken(token)) {
@@ -244,43 +299,19 @@ router.get('/pdf/:token', async (req, res) => {
             });
         }
 
-        const pdfInfo = await shareResumeService.getSharedPdfByToken(token);
-        if (!pdfInfo) {
-            return res.status(404).json({
-                success: false,
-                error: 'PDF not found'
-            });
-        }
-
-        const stats = await fs.stat(pdfInfo.path);
-        const filename = pdfInfo.name ? `${pdfInfo.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf` : 'cv.pdf';
-
-        setSafeFileResponseHeaders(res, {
-            contentType: 'application/pdf',
-            filename,
-            contentLength: stats.size,
-            inline: true
-        });
-        createReadStream(pdfInfo.path).pipe(res);
-    } catch (error) {
-        safeLog('error', 'Failed to serve shared PDF', {
-            token: req.params.token?.substring(0, 8),
-            error: error.message
-        });
-        res.status(500).json({
-            success: false,
-            error: 'Failed to serve PDF'
-        });
+        return serveSharedPdfByToken(res, token);
     }
-});
+));
 
 /**
  * GET /api/share/file/:token
  * PUBLIC endpoint - Serve the original file by token
  * No authentication required
  */
-router.get('/file/:token', async (req, res) => {
-    try {
+router.get('/file/:token', createShareRouteHandler(
+    'Failed to serve original file',
+    'Failed to serve file',
+    async (req, res) => {
         const { token } = req.params;
 
         if (!isValidShareToken(token)) {
@@ -290,41 +321,8 @@ router.get('/file/:token', async (req, res) => {
             });
         }
 
-        const resumeMetadata = await shareResumeService.getResumeFileMetadataByToken(token);
-        if (!resumeMetadata) {
-            return res.status(404).json({
-                success: false,
-                error: 'File not found'
-            });
-        }
-
-        const resumeFileData = await shareResumeService.getResumeFileDataById(resumeMetadata.id);
-        if (!resumeFileData) {
-            return res.status(404).json({
-                success: false,
-                error: 'Original file not available'
-            });
-        }
-
-        const filename = resumeMetadata.file_name || resumeMetadata.name || 'cv';
-        const contentType = resumeMetadata.resume_file_type || 'application/octet-stream';
-
-        setSafeFileResponseHeaders(res, {
-            contentType,
-            filename,
-            contentLength: resumeMetadata.resume_file_size || resumeFileData.length
-        });
-        res.end(resumeFileData);
-    } catch (error) {
-        safeLog('error', 'Failed to serve original file', {
-            token: req.params.token?.substring(0, 8),
-            error: error.message
-        });
-        res.status(500).json({
-            success: false,
-            error: 'Failed to serve file'
-        });
+        return serveOriginalFileByToken(res, token);
     }
-});
+));
 
 export default router;

@@ -17,14 +17,12 @@ const mockUpdateComment = vi.fn();
 const mockDeleteComment = vi.fn();
 const mockGetCommentCount = vi.fn();
 vi.mock('../../services/resumeComments.service.js', () => ({
-    default: {
-        getComments: (...args) => mockGetComments(...args),
-        addComment: (...args) => mockAddComment(...args),
-        getCommentForAccessCheck: (...args) => mockGetCommentForAccessCheck(...args),
-        updateComment: (...args) => mockUpdateComment(...args),
-        deleteComment: (...args) => mockDeleteComment(...args),
-        getCommentCount: (...args) => mockGetCommentCount(...args)
-    }
+    getComments: (...args) => mockGetComments(...args),
+    addComment: (...args) => mockAddComment(...args),
+    getCommentForAccessCheck: (...args) => mockGetCommentForAccessCheck(...args),
+    updateComment: (...args) => mockUpdateComment(...args),
+    deleteComment: (...args) => mockDeleteComment(...args),
+    getCommentCount: (...args) => mockGetCommentCount(...args)
 }));
 
 // Mock logger

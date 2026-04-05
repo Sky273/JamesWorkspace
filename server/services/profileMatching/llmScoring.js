@@ -6,7 +6,7 @@ import {
     PROFILE_MATCHING_LLM_BATCH_SIZE,
     PROFILE_MATCHING_LLM_MAX_CONCURRENCY
 } from '../../config/constants.js';
-import metrics, { buildLLMMetricLabel } from '../metrics.service.js';
+import { metrics, buildLLMMetricLabel } from '../metrics.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { PROFILE_MATCHING_EXPLANATION_MAX_CONCURRENCY } from './constants.js';
 import {

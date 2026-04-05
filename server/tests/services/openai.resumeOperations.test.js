@@ -18,6 +18,9 @@ vi.mock('../../services/metrics.service.js', () => ({
     default: {
         trackImprovementActivity: vi.fn()
     },
+    metrics: {
+        trackImprovementActivity: vi.fn()
+    },
     buildLLMMetricLabel: vi.fn((provider, model = '') => model ? `${provider}:${model}` : provider)
 }));
 
@@ -37,7 +40,7 @@ vi.mock('../../services/openai/textUtils.js', async (importOriginal) => {
 });
 
 import { callBusinessChatCompletion } from '../../services/llmProvider.service.js';
-import metrics from '../../services/metrics.service.js';
+import { metrics } from '../../services/metrics.service.js';
 import { analyzeResume, improveResume } from '../../services/openai/resumeOperations.js';
 
 describe('OpenAI Resume Operations', () => {

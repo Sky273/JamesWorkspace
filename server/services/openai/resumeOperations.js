@@ -5,7 +5,7 @@
 
 import { safeLog } from '../../utils/logger.backend.js';
 import { callBusinessChatCompletion } from '../llmProvider.service.js';
-import metrics, { buildLLMMetricLabel } from '../metrics.service.js';
+import { metrics, buildLLMMetricLabel } from '../metrics.service.js';
 import {
     isLikelyAnthropicModel,
     isLikelyDeepSeekModel,

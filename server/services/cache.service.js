@@ -366,5 +366,3 @@ export const cleanupAllCaches = async () => {
 
     safeLog('info', 'All caches destroyed');
 };
-
-export default MemoryCacheNamespace;

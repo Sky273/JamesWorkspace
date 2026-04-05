@@ -4,41 +4,26 @@
  */
 
 import { selectWithTimeout, updateWithTimeout, createWithTimeout } from '../utils/postgresHelpers.js';
-import {
-    OLLAMA_BASE_URL,
-    PROFILE_MATCHING_LOCAL_SKILL_WEIGHT,
-    PROFILE_MATCHING_LOCAL_TOOL_WEIGHT,
-    PROFILE_MATCHING_LOCAL_INDUSTRY_WEIGHT,
-    PROFILE_MATCHING_LOCAL_SOFTSKILL_WEIGHT,
-    PROFILE_MATCHING_LOCAL_TITLE_EXACT_WEIGHT,
-    PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT,
-    PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER
-} from '../config/constants.js';
 import { safeLog } from '../utils/logger.backend.js';
-import { resolveAvailableModel, getProviderAvailabilityFlags, syncPersistedAvailabilityState } from './llmAvailability.service.js';
+import { syncPersistedAvailabilityState } from './llmAvailability.service.js';
 import { getProviderDefaultModel } from './llmConfiguration.service.js';
-import { buildLlmAdminMetadataWithOptions, sanitizeLlmModelParameters } from './llmAdminParameters.service.js';
-import { extractPromptTextsFromSettingsRecord, resolvePromptVersionState } from './promptVersioning.service.js';
 import {
     settingsCache as sharedSettingsCache,
     CACHE_KEYS,
     invalidateSettingsCaches as invalidateSharedSettingsCaches,
     getNamedCacheStats
 } from './cache.service.js';
+import {
+    CANONICAL_LLM_SETTINGS_KEY,
+    buildCanonicalSettingsDefaults,
+    buildMappedLlmSettings,
+    applyResolvedLlmAvailability,
+    buildWeightedGlobalRatingDetails
+} from './settings.helpers.js';
 
 const LLM_SETTINGS_CACHE_KEY = CACHE_KEYS.settings.LLM_SETTINGS;
-const CANONICAL_LLM_SETTINGS_KEY = 'default';
 const DEFAULT_LLM_PROVIDER = 'openai';
 let cacheTimestamp = null;
-
-function buildCanonicalSettingsDefaults(fields = {}) {
-    return {
-        settings_key: CANONICAL_LLM_SETTINGS_KEY,
-        name: 'Default Settings',
-        status: 'active',
-        ...fields
-    };
-}
 
 async function findCanonicalSettingsRecord() {
     const records = await selectWithTimeout('llm_settings', {
@@ -108,69 +93,7 @@ export async function getLLMSettings() {
         }
         syncPersistedAvailabilityState(dbSettings.llm_availability_state || {});
 
-        const ollamaBaseUrl = dbSettings.ollama_base_url || OLLAMA_BASE_URL || '';
-
-        // Map PostgreSQL columns to frontend format
-        const settings = {
-            llmModel: dbSettings.llm_model,
-            llmProvider: dbSettings.llm_provider || 'openai',
-            ollamaBaseUrl,
-            ollamaVisionModel: dbSettings.ollama_vision_model || '',
-            ollamaKeepAlive: dbSettings.ollama_keep_alive || '5m',
-            ollamaNumCtx: dbSettings.ollama_num_ctx || 8192,
-            llmModelParameters: sanitizeLlmModelParameters(dbSettings.llm_model_parameters || {}, getProviderAvailabilityFlags()),
-            cvMode: dbSettings.cv_mode,
-            chatbotEnabled: dbSettings.chatbot_enabled,
-            webglEnabled: dbSettings.webgl_enabled,
-            preAnalysisEnabled: dbSettings.pre_analysis_enabled ?? false,
-            'Pre Analysis Prompt': dbSettings.pre_analysis_prompt,
-            'Analysis Prompt': dbSettings.analysis_prompt,
-            'Improvement Prompt': dbSettings.improvement_prompt,
-            'Match Analysis Prompt': dbSettings.match_analysis_prompt,
-            'Adaptation Prompt': dbSettings.adaptation_prompt,
-            'Executive Summary Weight': dbSettings.executive_summary_weight,
-            'Skills Weight': dbSettings.skills_weight,
-            'Experience Weight': dbSettings.experience_weight,
-            'Education Weight': dbSettings.education_weight,
-            'ATS Weight': dbSettings.ats_weight,
-            'Hobbies Languages Weight': dbSettings.hobbies_languages_weight,
-            'Profile Matching Local Skill Weight': dbSettings.profile_matching_local_skill_weight ?? PROFILE_MATCHING_LOCAL_SKILL_WEIGHT,
-            'Profile Matching Local Tool Weight': dbSettings.profile_matching_local_tool_weight ?? PROFILE_MATCHING_LOCAL_TOOL_WEIGHT,
-            'Profile Matching Local Industry Weight': dbSettings.profile_matching_local_industry_weight ?? PROFILE_MATCHING_LOCAL_INDUSTRY_WEIGHT,
-            'Profile Matching Local Soft Skill Weight': dbSettings.profile_matching_local_softskill_weight ?? PROFILE_MATCHING_LOCAL_SOFTSKILL_WEIGHT,
-            'Profile Matching Local Title Exact Weight': dbSettings.profile_matching_local_title_exact_weight ?? PROFILE_MATCHING_LOCAL_TITLE_EXACT_WEIGHT,
-            'Profile Matching Local Title Token Weight': dbSettings.profile_matching_local_title_token_weight ?? PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT,
-            'Profile Matching Local Coverage Multiplier': dbSettings.profile_matching_local_coverage_multiplier ?? PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER,
-            promptVersionState: resolvePromptVersionState({
-                storedState: dbSettings.prompt_versions || {},
-                promptTexts: extractPromptTextsFromSettingsRecord(dbSettings),
-                fallbackTimestamp: dbSettings.updated_at || dbSettings.created_at || null
-            }),
-            llmAvailabilityState: dbSettings.llm_availability_state || {},
-            ollamaDiscoveredModels: [],
-            ollamaModelCapabilities: {}
-        };
-
-        const normalizedModel = resolveAvailableModel(
-            settings.llmProvider,
-            settings.llmModel,
-            getProviderDefaultModel(settings.llmProvider)
-        );
-
-        if (normalizedModel.adjusted) {
-            safeLog('warn', 'Normalized unavailable configured LLM model', {
-                provider: settings.llmProvider,
-                originalModel: normalizedModel.originalModel,
-                effectiveModel: normalizedModel.model,
-                reason: normalizedModel.reason
-            });
-            settings.llmModel = normalizedModel.model;
-        }
-
-        settings.llmAvailability = getProviderAvailabilityFlags();
-        Object.assign(settings, buildLlmAdminMetadataWithOptions(settings.llmAvailability, {
-            ollamaModels: []
-        }));
+        const settings = applyResolvedLlmAvailability(buildMappedLlmSettings(dbSettings));
 
         // Update cache
         await sharedSettingsCache.set(LLM_SETTINGS_CACHE_KEY, settings);
@@ -273,27 +196,6 @@ export async function getPrompts() {
 }
 
 /**
- * Parse a rating string (e.g., "85%") to a number (e.g., 85)
- * @param {string|number} rating - Rating as string or number
- * @returns {number} - Rating as number (0-100)
- */
-function parseRating(rating) {
-    if (typeof rating === 'number') return rating;
-    if (typeof rating === 'string') {
-        const parsed = parseFloat(rating.replace('%', ''));
-        return isNaN(parsed) ? 0 : parsed;
-    }
-    return 0;
-}
-
-/**
- * Calculate globalRating based on section scores and admin-defined weights
- * This ensures the global rating is always consistent with the weighted average of section scores
- * @param {Object} analysis - Analysis object with section ratings
- * @param {Object} settings - Optional settings object (will be fetched if not provided)
- * @returns {Promise<Object>} - Analysis object with recalculated globalRating
- */
-/**
  * Get the latest settings record from database
  * @returns {Promise<Object|null>} Raw settings record or null
  */
@@ -350,71 +252,24 @@ export async function createSettings(fields) {
 
 export async function calculateWeightedGlobalRating(analysis, settings = null) {
     try {
-        // Get settings if not provided
         const llmSettings = settings || await getLLMSettings();
-        
-        // Get weights with defaults
-        const weights = {
-            executiveSummary: llmSettings['Executive Summary Weight'] || 20,
-            skills: llmSettings['Skills Weight'] || 20,
-            experience: llmSettings['Experience Weight'] || 20,
-            education: llmSettings['Education Weight'] || 15,
-            ats: llmSettings['ATS Weight'] || 15,
-            hobbiesLanguages: llmSettings['Hobbies Languages Weight'] || 10
-        };
-        
-        // Normalize weights to ensure they sum to 100
-        const totalWeight = Object.values(weights).reduce((sum, w) => sum + w, 0);
-        const normalizedWeights = {};
-        for (const [key, value] of Object.entries(weights)) {
-            normalizedWeights[key] = totalWeight > 0 ? (value / totalWeight) * 100 : 100 / 6;
-        }
-        
-        // Parse section ratings
-        const scores = {
-            executiveSummary: parseRating(analysis.executiveSummaryRating || analysis['Executive Summary'] || 0),
-            skills: parseRating(analysis.skillsRating || analysis['Skills'] || 0),
-            experience: parseRating(analysis.experiencesRating || analysis['Experience'] || 0),
-            education: parseRating(analysis.educationRating || analysis['Education'] || 0),
-            ats: parseRating(analysis.atsOptimizationRating || analysis['ATS Compatibility'] || analysis['ATS'] || 0),
-            hobbiesLanguages: parseRating(analysis.hobbiesLanguagesRating || analysis['Hobbies Languages'] || 0)
-        };
-        
-        // Calculate weighted average
-        let weightedSum = 0;
-        let appliedWeight = 0;
-        
-        for (const [key, score] of Object.entries(scores)) {
-            const weight = normalizedWeights[key];
-            weightedSum += score * weight;
-            appliedWeight += weight;
-        }
-        
-        const calculatedGlobalRating = appliedWeight > 0 ? Math.round(weightedSum / appliedWeight) : 0;
-        
-        // Format as percentage string
-        const globalRatingStr = `${calculatedGlobalRating}%`;
-        
+        const ratingDetails = buildWeightedGlobalRatingDetails(analysis, llmSettings);
         safeLog('debug', 'Calculated weighted global rating', {
-            scores,
-            weights: normalizedWeights,
-            originalGlobalRating: analysis.globalRating || analysis['Global Rating'],
-            calculatedGlobalRating: globalRatingStr
+            scores: ratingDetails.scores,
+            weights: ratingDetails.normalizedWeights,
+            originalGlobalRating: ratingDetails.originalGlobalRating,
+            calculatedGlobalRating: ratingDetails.globalRatingStr
         });
-        
-        // Update analysis with calculated global rating
+
         const updatedAnalysis = { ...analysis };
-        updatedAnalysis.globalRating = globalRatingStr;
-        updatedAnalysis['Global Rating'] = globalRatingStr;
-        
-        // Also store the weights used for transparency
-        updatedAnalysis._weightsUsed = normalizedWeights;
-        updatedAnalysis._originalLLMGlobalRating = analysis.globalRating || analysis['Global Rating'];
-        
+        updatedAnalysis.globalRating = ratingDetails.globalRatingStr;
+        updatedAnalysis['Global Rating'] = ratingDetails.globalRatingStr;
+        updatedAnalysis._weightsUsed = ratingDetails.normalizedWeights;
+        updatedAnalysis._originalLLMGlobalRating = ratingDetails.originalGlobalRating;
+
         return updatedAnalysis;
     } catch (error) {
         safeLog('error', 'Failed to calculate weighted global rating', { error: error.message });
-        // Return original analysis if calculation fails
         return analysis;
     }
 }

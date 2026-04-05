@@ -25,6 +25,18 @@ export function normalizeDealPayload(payload = {}) {
     };
 }
 
+export function validateDealTitle(normalizedDeal, { required = false } = {}) {
+    if (!required) {
+        return { ok: true };
+    }
+
+    if (!normalizedDeal.title || normalizedDeal.title.trim().length === 0) {
+        return { ok: false, status: 400, error: 'Title is required' };
+    }
+
+    return { ok: true };
+}
+
 export function resolveDealRelationIds({ body = {}, normalizedDeal = {}, existingDeal = null }) {
     const hasClientUpdate =
         Object.prototype.hasOwnProperty.call(body, 'client_id') ||
@@ -77,6 +89,33 @@ export async function validateDealRelations({ firmId, clientId, contactId }, { g
     }
 
     return { ok: true };
+}
+
+export async function prepareDealMutationPayload(
+    { body = {}, firmId, existingDeal = null, requireTitle = false },
+    relationDeps
+) {
+    const normalizedDeal = normalizeDealPayload(body);
+    const titleValidation = validateDealTitle(normalizedDeal, { required: requireTitle });
+    if (!titleValidation.ok) {
+        return titleValidation;
+    }
+
+    const relationIds = resolveDealRelationIds({
+        body,
+        normalizedDeal,
+        existingDeal
+    });
+
+    const relationValidation = await validateDealRelations(
+        { firmId, clientId: relationIds.clientId, contactId: relationIds.contactId },
+        relationDeps
+    );
+    if (!relationValidation.ok) {
+        return relationValidation;
+    }
+
+    return { ok: true, normalizedDeal };
 }
 
 export function ensureFirmScopedAccess({ isAdmin, userFirmId, missingFirmMessage = 'No firm association' }) {
@@ -132,6 +171,15 @@ export function parsePaginationParams(pageValue, limitValue, { defaultPage = 1, 
     return {
         ok: true,
         value: { page, limit }
+    };
+}
+
+export function buildDealsListFilters(query = {}) {
+    return {
+        clientId: query.clientId,
+        status: query.status,
+        priority: query.priority,
+        search: query.search
     };
 }
 
@@ -210,4 +258,45 @@ export async function withResumeFirmAccess(res, options, deps, handler) {
     }
 
     return handler(access);
+}
+
+export function validateBulkResumeAssociationRequest({ resumeId, dealIds }) {
+    if (!resumeId || !dealIds || !Array.isArray(dealIds) || dealIds.length === 0) {
+        return { ok: false, status: 400, error: 'resumeId and dealIds array are required' };
+    }
+
+    return { ok: true };
+}
+
+export function buildBulkResumeAssociationResponse(results, errors) {
+    return {
+        success: results.length > 0,
+        added: results.length,
+        errors: errors.length > 0 ? errors : undefined
+    };
+}
+
+export async function processBulkResumeAssociation(
+    { req, dealIds, resumeId, userId },
+    { checkDealAccess, addResumeToDeal, dealAccessDeps }
+) {
+    const results = [];
+    const errors = [];
+
+    for (const dealId of dealIds) {
+        try {
+            const dealAccess = await checkDealAccess(req, dealId, dealAccessDeps);
+            if (!dealAccess.hasAccess) {
+                errors.push({ dealId, error: dealAccess.error });
+                continue;
+            }
+
+            const result = await addResumeToDeal(dealId, resumeId, userId);
+            results.push(result);
+        } catch (error) {
+            errors.push({ dealId, error: error.message });
+        }
+    }
+
+    return { results, errors };
 }

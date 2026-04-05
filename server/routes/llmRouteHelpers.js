@@ -47,6 +47,18 @@ export function buildCircuitBreakerIndicators(states = {}) {
     ]));
 }
 
+export function buildConfiguredCircuitBreakerIndicators(states = {}, configuredProviders = {}) {
+    const indicators = buildCircuitBreakerIndicators(states);
+
+    for (const [provider, configured] of Object.entries(configuredProviders)) {
+        if (indicators[provider]) {
+            indicators[provider].configured = Boolean(configured);
+        }
+    }
+
+    return indicators;
+}
+
 export function validateMessageLengths(messages, flattenLlmTextContent, maxPromptLength) {
     if (!messages || !Array.isArray(messages)) {
         return null;

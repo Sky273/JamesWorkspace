@@ -14,21 +14,65 @@ import {
 
 const router = express.Router();
 
+function createClientsRouteHandler(logMessage, errorMessage, handler) {
+    return async (req, res) => {
+        try {
+            await handler(req, res);
+        } catch (error) {
+            safeLog('error', logMessage, { error: error.message, clientId: req.params.id ?? req.params.clientId });
+            return res.status(500).json({ error: errorMessage });
+        }
+    };
+}
+
+async function getClientAccessContext(req, { missingFirmMessage } = {}) {
+    const userFirmId = await getUserFirmId(req);
+    const isAdmin = isUserAdmin(req);
+    const access = ensureFirmScopedAccess({ isAdmin, userFirmId, missingFirmMessage });
+
+    return {
+        userFirmId,
+        isAdmin,
+        access
+    };
+}
+
+async function getAccessibleClientRecord(req, res, clientId, {
+    missingFirmMessage,
+    fetchClientFn = clientsService.findClient
+} = {}) {
+    const { userFirmId, isAdmin, access } = await getClientAccessContext(req, { missingFirmMessage });
+    if (!access.ok) {
+        res.status(access.status).json({ error: access.error });
+        return null;
+    }
+
+    const client = await fetchClientFn(clientId);
+    if (!client) {
+        res.status(404).json({ error: 'Client not found' });
+        return null;
+    }
+
+    if (!isAdmin && client.firm_id !== userFirmId) {
+        res.status(403).json({ error: 'Access denied' });
+        return null;
+    }
+
+    return { client, userFirmId, isAdmin };
+}
+
 // ============================================
 // CLIENTS ROUTES
 // ============================================
 
 // GET /api/clients - Get all clients (with server-side pagination and firm segregation)
-router.get('/', authenticateToken, async (req, res) => {
-    try {
+router.get('/', authenticateToken, createClientsRouteHandler('Error fetching clients', 'Failed to fetch clients', async (req, res) => {
         const pagination = parsePaginationParams(req.query.page, req.query.limit);
         if (!pagination.ok) {
             return res.status(400).json({ error: pagination.error });
         }
         const { search, type } = req.query;
-        const userFirmId = await getUserFirmId(req);
-        const isAdmin = isUserAdmin(req);
-        const access = ensureFirmScopedAccess({ isAdmin, userFirmId });
+        const { userFirmId, isAdmin, access } = await getClientAccessContext(req);
         if (!access.ok) {
             return res.status(access.status).json({ error: access.error });
         }
@@ -41,71 +85,41 @@ router.get('/', authenticateToken, async (req, res) => {
         });
 
         return res.json(result);
-    } catch (error) {
-        safeLog('error', 'Error fetching clients', { error: error.message });
-        return res.status(500).json({ 
-            error: 'Failed to fetch clients' 
-        });
-    }
-});
+}));
 
 // ============================================
 // INDUSTRIES ROUTES (MUST be before /:id routes)
 // ============================================
 
 // GET /api/clients/industries/list - Get all distinct industries from industry_aliases
-router.get('/industries/list', authenticateToken, async (req, res) => {
-    try {
+router.get('/industries/list', authenticateToken, createClientsRouteHandler('Error fetching industries', 'Failed to fetch industries', async (req, res) => {
         safeLog('info', 'Fetching industries from industry_aliases');
         const industries = await clientsService.listIndustries();
         safeLog('info', 'Industries fetched', { count: industries.length });
         return res.json(industries);
-    } catch (error) {
-        safeLog('error', 'Error fetching industries', { error: error.message });
-        return res.status(500).json({ 
-            error: 'Failed to fetch industries' 
-        });
-    }
-});
+}));
 
 // GET /api/clients/:id - Get client by ID with contacts
-router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => {
-    try {
+router.get('/:id', authenticateToken, validateParams('id'), createClientsRouteHandler('Error fetching client', 'Failed to fetch client', async (req, res) => {
         const { id } = req.params;
-        const userFirmId = await getUserFirmId(req);
-        const isAdmin = isUserAdmin(req);
-        const access = ensureFirmScopedAccess({ isAdmin, userFirmId });
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
-
-        const client = await clientsService.getClientById(id);
-
-        if (!client) {
-            return res.status(404).json({ error: 'Client not found' });
-        }
-
-        // Check firm access
-        if (!isAdmin && client.firm_id !== userFirmId) {
-            return res.status(403).json({ error: 'Access denied' });
-        }
-
-        return res.json(client);
-    } catch (error) {
-        safeLog('error', 'Error fetching client', { error: error.message, clientId: req.params.id });
-        return res.status(500).json({ 
-            error: 'Failed to fetch client' 
+        const accessibleClient = await getAccessibleClientRecord(req, res, id, {
+            fetchClientFn: clientsService.getClientById
         });
-    }
-});
+        if (!accessibleClient) {
+            return;
+        }
+
+        const { client } = accessibleClient;
+        return res.json(client);
+}));
 
 // POST /api/clients - Create client
-router.post('/', authenticateToken, userRateLimit(), validateBody(createClientSchema), async (req, res) => {
+router.post('/', authenticateToken, userRateLimit(), validateBody(createClientSchema), createClientsRouteHandler('Error creating client', 'Failed to create client', async (req, res) => {
     try {
-        const userFirmId = await getUserFirmId(req);
         const userId = req.user?.id;
-        const isAdmin = isUserAdmin(req);
-        const access = ensureFirmScopedAccess({ isAdmin, userFirmId, missingFirmMessage: 'User must belong to a firm to create clients' });
+        const { userFirmId, isAdmin, access } = await getClientAccessContext(req, {
+            missingFirmMessage: 'User must belong to a firm to create clients'
+        });
         if (!access.ok) {
             return res.status(400).json({ error: access.error });
         }
@@ -146,33 +160,20 @@ router.post('/', authenticateToken, userRateLimit(), validateBody(createClientSc
         if (error.code === '23505') {
             return res.status(400).json({ error: 'Client with this name already exists' });
         }
-        safeLog('error', 'Error creating client', { error: error.message });
-        return res.status(500).json({ 
-            error: 'Failed to create client' 
-        });
+        throw error;
     }
-});
+}));
 
 // PUT /api/clients/:id - Update client
-router.put('/:id', authenticateToken, userRateLimit(), validateParams('id'), validateBody(updateClientSchema), async (req, res) => {
+router.put('/:id', authenticateToken, userRateLimit(), validateParams('id'), validateBody(updateClientSchema), createClientsRouteHandler('Error updating client', 'Failed to update client', async (req, res) => {
     try {
         const { id } = req.params;
-        const userFirmId = await getUserFirmId(req);
-        const isAdmin = isUserAdmin(req);
-        const access = ensureFirmScopedAccess({ isAdmin, userFirmId });
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
+        const accessibleClient = await getAccessibleClientRecord(req, res, id);
+        if (!accessibleClient) {
+            return;
         }
 
-        // Check if client exists and user has access
-        const existing = await clientsService.findClient(id);
-        if (!existing) {
-            return res.status(404).json({ error: 'Client not found' });
-        }
-
-        if (!isAdmin && existing.firm_id !== userFirmId) {
-            return res.status(403).json({ error: 'Access denied' });
-        }
+        const { client: existing, userFirmId, isAdmin } = accessibleClient;
 
         const normalizedClient = normalizeClientPayload(req.body);
         const { name, type, status, address, website, industry, notes, firm_id } = normalizedClient;
@@ -206,32 +207,16 @@ router.put('/:id', authenticateToken, userRateLimit(), validateParams('id'), val
         if (error.code === '23505') {
             return res.status(400).json({ error: 'Client with this name already exists' });
         }
-        safeLog('error', 'Error updating client', { error: error.message, clientId: req.params.id });
-        return res.status(500).json({ 
-            error: 'Failed to update client' 
-        });
+        throw error;
     }
-});
+}));
 
 // DELETE /api/clients/:id - Delete client
-router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) => {
-    try {
+router.delete('/:id', authenticateToken, validateParams('id'), createClientsRouteHandler('Error deleting client', 'Failed to delete client', async (req, res) => {
         const { id } = req.params;
-        const userFirmId = await getUserFirmId(req);
-        const isAdmin = isUserAdmin(req);
-        const access = ensureFirmScopedAccess({ isAdmin, userFirmId });
-        if (!access.ok) {
-            return res.status(access.status).json({ error: access.error });
-        }
-
-        // Check if client exists and user has access
-        const existing = await clientsService.findClient(id);
-        if (!existing) {
-            return res.status(404).json({ error: 'Client not found' });
-        }
-
-        if (!isAdmin && existing.firm_id !== userFirmId) {
-            return res.status(403).json({ error: 'Access denied' });
+        const accessibleClient = await getAccessibleClientRecord(req, res, id);
+        if (!accessibleClient) {
+            return;
         }
 
         // Check for submissions
@@ -246,13 +231,7 @@ router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) 
         await clientsService.deleteClient(id);
 
         return res.json({ message: 'Client deleted successfully' });
-    } catch (error) {
-        safeLog('error', 'Error deleting client', { error: error.message, clientId: req.params.id });
-        return res.status(500).json({ 
-            error: 'Failed to delete client' 
-        });
-    }
-});
+}));
 
 // ============================================
 // CLIENT CONTACTS ROUTES
@@ -269,9 +248,7 @@ async function checkClientAccess(req, res, clientId) {
         return { ok: false };
     }
 
-    const userFirmId = await getUserFirmId(req);
-    const isAdmin = isUserAdmin(req);
-    const access = ensureFirmScopedAccess({ isAdmin, userFirmId });
+    const { userFirmId, isAdmin, access } = await getClientAccessContext(req);
     if (!access.ok) {
         res.status(access.status).json({ error: access.error });
         return { ok: false };
@@ -285,25 +262,17 @@ async function checkClientAccess(req, res, clientId) {
 }
 
 // GET /api/clients/:clientId/contacts - Get all contacts for a client
-router.get('/:clientId/contacts', authenticateToken, validateParams('clientId'), async (req, res) => {
-    try {
+router.get('/:clientId/contacts', authenticateToken, validateParams('clientId'), createClientsRouteHandler('Error fetching contacts', 'Failed to fetch contacts', async (req, res) => {
         const { clientId } = req.params;
         const access = await checkClientAccess(req, res, clientId);
         if (!access.ok) return;
 
         const contacts = await clientsService.listContacts(clientId);
         return res.json(contacts);
-    } catch (error) {
-        safeLog('error', 'Error fetching contacts', { error: error.message, clientId: req.params.clientId });
-        return res.status(500).json({ 
-            error: 'Failed to fetch contacts' 
-        });
-    }
-});
+}));
 
 // POST /api/clients/:clientId/contacts - Create contact
-router.post('/:clientId/contacts', authenticateToken, validateParams('clientId'), userRateLimit(), validateBody(createContactSchema), async (req, res) => {
-    try {
+router.post('/:clientId/contacts', authenticateToken, validateParams('clientId'), userRateLimit(), validateBody(createContactSchema), createClientsRouteHandler('Error creating contact', 'Failed to create contact', async (req, res) => {
         const { clientId } = req.params;
         const access = await checkClientAccess(req, res, clientId);
         if (!access.ok) return;
@@ -317,17 +286,10 @@ router.post('/:clientId/contacts', authenticateToken, validateParams('clientId')
 
         const contact = await clientsService.createContact(clientId, { name, role, email, phone, is_primary });
         return res.status(201).json(contact);
-    } catch (error) {
-        safeLog('error', 'Error creating contact', { error: error.message, clientId: req.params.clientId });
-        return res.status(500).json({ 
-            error: 'Failed to create contact' 
-        });
-    }
-});
+}));
 
 // PUT /api/clients/:clientId/contacts/:id - Update contact
-router.put('/:clientId/contacts/:id', authenticateToken, validateParams('clientId', 'id'), userRateLimit(), validateBody(updateContactSchema), async (req, res) => {
-    try {
+router.put('/:clientId/contacts/:id', authenticateToken, validateParams('clientId', 'id'), userRateLimit(), validateBody(updateContactSchema), createClientsRouteHandler('Error updating contact', 'Failed to update contact', async (req, res) => {
         const { clientId, id } = req.params;
         const access = await checkClientAccess(req, res, clientId);
         if (!access.ok) return;
@@ -342,17 +304,10 @@ router.put('/:clientId/contacts/:id', authenticateToken, validateParams('clientI
         }
 
         return res.json(updated);
-    } catch (error) {
-        safeLog('error', 'Error updating contact', { error: error.message, contactId: req.params.id });
-        return res.status(500).json({ 
-            error: 'Failed to update contact' 
-        });
-    }
-});
+}));
 
 // DELETE /api/clients/:clientId/contacts/:id - Delete contact
-router.delete('/:clientId/contacts/:id', authenticateToken, validateParams('clientId', 'id'), async (req, res) => {
-    try {
+router.delete('/:clientId/contacts/:id', authenticateToken, validateParams('clientId', 'id'), createClientsRouteHandler('Error deleting contact', 'Failed to delete contact', async (req, res) => {
         const { clientId, id } = req.params;
         const access = await checkClientAccess(req, res, clientId);
         if (!access.ok) return;
@@ -373,12 +328,6 @@ router.delete('/:clientId/contacts/:id', authenticateToken, validateParams('clie
         }
 
         return res.json({ message: 'Contact deleted successfully' });
-    } catch (error) {
-        safeLog('error', 'Error deleting contact', { error: error.message, contactId: req.params.id });
-        return res.status(500).json({ 
-            error: 'Failed to delete contact' 
-        });
-    }
-});
+}));
 
 export default router;

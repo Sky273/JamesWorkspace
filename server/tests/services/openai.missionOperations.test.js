@@ -18,6 +18,9 @@ vi.mock('../../services/metrics.service.js', () => ({
     default: {
         trackAdaptationActivity: vi.fn()
     },
+    metrics: {
+        trackAdaptationActivity: vi.fn()
+    },
     buildLLMMetricLabel: vi.fn((provider, model = '') => model ? `${provider}:${model}` : provider)
 }));
 
@@ -29,7 +32,7 @@ vi.mock('../../services/llmConfiguration.service.js', () => ({
 }));
 
 import { callBusinessChatCompletion } from '../../services/llmProvider.service.js';
-import metrics from '../../services/metrics.service.js';
+import { metrics } from '../../services/metrics.service.js';
 import { matchResumeWithMission, adaptResumeToMission } from '../../services/openai/missionOperations.js';
 
 describe('OpenAI Mission Operations', () => {

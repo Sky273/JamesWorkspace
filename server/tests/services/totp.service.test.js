@@ -25,7 +25,7 @@ process.env.JWT_SECRET = 'test-secret-key-for-encryption-32chars';
 
 // Import after mocks
 import { query } from '../../config/database.js';
-import totpService from '../../services/totp.service.js';
+import * as totpService from '../../services/totp.service.js';
 
 describe('TOTP Service', () => {
     beforeEach(() => {

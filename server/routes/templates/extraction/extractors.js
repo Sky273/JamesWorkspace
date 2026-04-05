@@ -5,6 +5,15 @@ import { safeLog } from '../../../utils/logger.backend.js';
 import { extractTemplateFromHTML, extractTemplateFromImage, extractTemplateFromCV } from '../../../services/templateExtraction.service.js';
 import { extractTextFromPDFBuffer } from '../../../services/batchJobsWorker/textExtraction.js';
 import puppeteer from 'puppeteer';
+import { injectDocxExtractedImages, injectPdfExtractedLogo } from './imagePlaceholders.js';
+import {
+    parseDocxStyles,
+    buildDocxExtractedImage
+} from './extractorHelpers.js';
+import {
+    resolvePdfParseFunction,
+    buildPdfImageDescriptor
+} from './pdfExtractionHelpers.js';
 
 const require = createRequire(import.meta.url);
 const PDF_JS_BUNDLE_PATH = require.resolve('pdfjs-dist/build/pdf.min.mjs');
@@ -70,19 +79,7 @@ async function extractFromDOCX(buffer, fileName) {
                 const file = zip.file(mediaPath);
                 if (!file) continue;
                 const imageData = await file.async('base64');
-                const ext = mediaPath.split('.').pop().toLowerCase();
-                const contentType = ext === 'png'
-                    ? 'image/png'
-                    : ext === 'jpg' || ext === 'jpeg'
-                        ? 'image/jpeg'
-                        : ext === 'gif'
-                            ? 'image/gif'
-                            : 'image/png';
-                extractedImages.push({
-                    name: mediaPath.split('/').pop(),
-                    base64: imageData,
-                    contentType
-                });
+                extractedImages.push(buildDocxExtractedImage(mediaPath, imageData));
             } catch (imgErr) {
                 safeLog('warn', 'Failed to extract image', { path: mediaPath, error: imgErr.message });
             }
@@ -137,7 +134,7 @@ async function extractFromDOCX(buffer, fileName) {
 
     const result = await extractTemplateFromHTML(htmlContent, extractedImages, fileName, extractedStyles);
     result.extractionMethod = 'docx-html';
-    injectExtractedImages(result.template, extractedImages);
+    injectDocxExtractedImages(result.template, extractedImages);
 
     if (extractedStyles.colors.length > 0 && !result.template.extractedColors?.length) {
         result.template.extractedColors = extractedStyles.colors;
@@ -153,56 +150,6 @@ async function extractFromDOCX(buffer, fileName) {
 
     return result;
 }
-
-function injectExtractedImages(template, images) {
-    if (!template || images.length === 0) return;
-
-    const logoImage = images[0];
-    const logoBase64 = `data:${logoImage.contentType};base64,${logoImage.base64}`;
-    const logoTag = `<img src="${logoBase64}" alt="Logo" class="template-logo" style="max-height:60px;">`;
-
-    const replacePlaceholders = (content) => {
-        if (!content) return content;
-        return content
-            .replace(/\[LOGO\]/gi, logoTag)
-            .replace(/\[LOGO CABINET\]/gi, logoTag)
-            .replace(/-logo-/gi, logoTag)
-            .replace(/<img[^>]*src=['"]logo\.png['"][^>]*>/gi, logoTag)
-            .replace(/<img[^>]*src=['"][^'"]*placeholder[^'"]*['"][^>]*>/gi, logoTag);
-    };
-
-    template.headerContent = replacePlaceholders(template.headerContent);
-    template.templateContent = replacePlaceholders(template.templateContent);
-    template.footerContent = replacePlaceholders(template.footerContent);
-}
-
-function parseDocxStyles(stylesXml) {
-    const colors = new Set();
-    const fonts = new Set();
-
-    const colorRegex = /w:(?:val|color)="([0-9A-Fa-f]{6})"/g;
-    let match;
-    while ((match = colorRegex.exec(stylesXml)) !== null) {
-        const color = match[1].toUpperCase();
-        if (color !== '000000' && color !== 'FFFFFF' && color !== 'AUTO') {
-            colors.add(`#${color}`);
-        }
-    }
-
-    const fontRegex = /w:(?:ascii|hAnsi|cs)="([^"]+)"/g;
-    while ((match = fontRegex.exec(stylesXml)) !== null) {
-        const font = match[1];
-        if (!['Times New Roman', 'Arial', 'Calibri'].includes(font)) {
-            fonts.add(font);
-        }
-    }
-
-    return {
-        colors: Array.from(colors).slice(0, 10),
-        fonts: Array.from(fonts).slice(0, 5)
-    };
-}
-
 async function extractImagesFromPDF(buffer) {
     const extractedImages = [];
     try {
@@ -225,18 +172,15 @@ async function extractImagesFromPDF(buffer) {
                 const stream = obj.getContents ? obj.getContents() : null;
                 if (!stream || stream.length <= 100) continue;
 
-                const isJpeg = stream[0] === 0xff && stream[1] === 0xd8 && stream[2] === 0xff;
-                const isPng = stream[0] === 0x89 && stream[1] === 0x50 && stream[2] === 0x4e && stream[3] === 0x47;
-                if (!isJpeg && !isPng) continue;
-
-                const base64 = Buffer.from(stream).toString('base64');
-                extractedImages.push({
-                    name: `pdf_image_${extractedImages.length + 1}`,
-                    base64,
-                    contentType: isJpeg ? 'image/jpeg' : 'image/png',
-                    width: width.numberValue || 0,
-                    height: height.numberValue || 0
+                const descriptor = buildPdfImageDescriptor({
+                    index: extractedImages.length + 1,
+                    stream,
+                    width,
+                    height
                 });
+                if (descriptor) {
+                    extractedImages.push(descriptor);
+                }
             } catch (objError) {
                 safeLog('debug', 'Could not process PDF object', { error: objError.message });
             }
@@ -254,13 +198,7 @@ async function extractImagesFromPDF(buffer) {
 async function extractPdfText(buffer, fileName) {
     try {
         const pdfParseModule = await import('pdf-parse');
-        const pdfParse = typeof pdfParseModule?.default === 'function'
-            ? pdfParseModule.default
-            : typeof pdfParseModule === 'function'
-                ? pdfParseModule
-                : typeof pdfParseModule?.pdfParse === 'function'
-                    ? pdfParseModule.pdfParse
-                    : null;
+        const pdfParse = resolvePdfParseFunction(pdfParseModule);
 
         if (!pdfParse) {
             throw new Error('pdf-parse module does not expose a callable parser');
@@ -390,24 +328,7 @@ async function extractFromPDF(buffer, fileName) {
         const result = await extractTemplateFromImage(imageBase64, textContent, fileName, extractedImages);
         result.extractionMethod = 'pdf-vision';
 
-        if (extractedImages.length > 0 && result.template) {
-            const logoImage = extractedImages[0];
-            const logoBase64Data = `data:${logoImage.contentType};base64,${logoImage.base64}`;
-            const replacement = `<img src="${logoBase64Data}" alt="Logo" class="template-logo" style="max-height:60px;">`;
-            if (result.template.headerContent) {
-                result.template.headerContent = result.template.headerContent
-                    .replace(/<img[^>]*src=['"]logo\.png['"][^>]*>/gi, replacement)
-                    .replace(/<img[^>]*src=['"][^'"]*logo[^'"]*['"][^>]*>/gi, replacement)
-                    .replace(/\[LOGO\]/gi, replacement)
-                    .replace(/-logo-/gi, replacement);
-            }
-            if (result.template.templateContent) {
-                result.template.templateContent = result.template.templateContent
-                    .replace(/<img[^>]*src=['"]logo\.png['"][^>]*>/gi, replacement)
-                    .replace(/<img[^>]*src=['"][^'"]*logo[^'"]*['"][^>]*>/gi, replacement)
-                    .replace(/\[LOGO\]/gi, replacement)
-                    .replace(/-logo-/gi, replacement);
-            }
+        if (extractedImages.length > 0 && injectPdfExtractedLogo(result.template, extractedImages[0])) {
             safeLog('info', 'Replaced logo placeholders with extracted image');
         }
 

@@ -10,19 +10,19 @@ import { userRateLimit } from '../middleware/rateLimit.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getUserFirmId, isUserAdmin } from '../utils/firmHelpers.js';
 import {
+    buildDealsListFilters,
     checkDealAccess,
+    processBulkResumeAssociation,
     ensureFirmScopedAccess,
-    normalizeDealPayload,
     parsePaginationParams,
-    requireDealAccess,
-    requireFirmScopedAccess,
+    prepareDealMutationPayload,
     requireResumeFirmAccess,
     withDealAccess,
     withFirmScopedAccess,
     withResumeFirmAccess,
-    resolveDealRelationIds,
     resolveScopedFirmId,
-    validateDealRelations
+    validateBulkResumeAssociationRequest,
+    buildBulkResumeAssociationResponse
 } from './deals.routes.helpers.js';
 import {
     createDeal,
@@ -90,13 +90,7 @@ router.get('/', authenticateToken, createDealsRouteHandler('Error fetching deals
         }
 
         const firmId = resolveScopedFirmId({ scopedAccess, requestedFirmId: req.query.firmId });
-        
-        const filters = {
-            clientId: req.query.clientId,
-            status: req.query.status,
-            priority: req.query.priority,
-            search: req.query.search
-        };
+        const filters = buildDealsListFilters(req.query);
 
         const result = await getDeals(firmId, filters, pagination.value);
         return res.json(result);
@@ -169,26 +163,16 @@ router.post('/', authenticateToken, userRateLimit(), validateBody(createDealSche
             return res.status(401).json({ error: 'User ID not found' });
         }
 
-        const normalizedDeal = normalizeDealPayload(req.body);
-
-        // Validate required fields
-        const { title } = normalizedDeal;
-        if (!title || title.trim().length === 0) {
-            return res.status(400).json({ error: 'Title is required' });
-        }
-
-        const relationIds = resolveDealRelationIds({
-            body: req.body,
-            normalizedDeal
-        });
-        const relationValidation = await validateDealRelations(
-            { firmId: userFirmId, clientId: relationIds.clientId, contactId: relationIds.contactId },
+        const payloadPreparation = await prepareDealMutationPayload(
+            { body: req.body, firmId: userFirmId, requireTitle: true },
             dealRelationDeps
         );
-        if (!relationValidation.ok) {
-            return res.status(relationValidation.status).json({ error: relationValidation.error });
+        if (!payloadPreparation.ok) {
+            return res.status(payloadPreparation.status).json({ error: payloadPreparation.error });
         }
 
+        const normalizedDeal = payloadPreparation.normalizedDeal;
+        const { title } = normalizedDeal;
         safeLog('info', 'Creating deal - calling createDeal service', { title, userId, userFirmId });
         const deal = await createDeal(normalizedDeal, userId, userFirmId);
         safeLog('info', 'Deal created successfully', { dealId: deal.id });
@@ -203,25 +187,20 @@ router.post('/', authenticateToken, userRateLimit(), validateBody(createDealSche
 router.put('/:id', authenticateToken, validateParams('id'), userRateLimit(), validateBody(updateDealSchema), createDealsRouteHandler('Error updating deal', 'Failed to update deal', async (req, res) => {
     const { id } = req.params;
     await withDealAccess(req, res, id, dealAccessDeps, async (access) => {
-        const normalizedDeal = normalizeDealPayload(req.body);
         const existingDeal = await getDealById(id);
         if (!existingDeal) {
             return res.status(404).json({ error: 'Deal not found' });
         }
 
-        const relationIds = resolveDealRelationIds({
-            body: req.body,
-            normalizedDeal,
-            existingDeal
-        });
-        const relationValidation = await validateDealRelations(
-            { firmId: access.firmId, clientId: relationIds.clientId, contactId: relationIds.contactId },
+        const payloadPreparation = await prepareDealMutationPayload(
+            { body: req.body, firmId: access.firmId, existingDeal },
             dealRelationDeps
         );
-        if (!relationValidation.ok) {
-            return res.status(relationValidation.status).json({ error: relationValidation.error });
+        if (!payloadPreparation.ok) {
+            return res.status(payloadPreparation.status).json({ error: payloadPreparation.error });
         }
 
+        const normalizedDeal = payloadPreparation.normalizedDeal;
         const deal = await updateDeal(id, normalizedDeal);
         return res.json(deal);
     });
@@ -340,8 +319,9 @@ router.post('/add-resume-to-multiple', authenticateToken, userRateLimit(), valid
     try {
         const { resumeId, dealIds } = req.body;
 
-        if (!resumeId || !dealIds || !Array.isArray(dealIds) || dealIds.length === 0) {
-            return res.status(400).json({ error: 'resumeId and dealIds array are required' });
+        const requestValidation = validateBulkResumeAssociationRequest({ resumeId, dealIds });
+        if (!requestValidation.ok) {
+            return res.status(requestValidation.status).json({ error: requestValidation.error });
         }
 
         const userFirmId = await getUserFirmId(req);
@@ -358,28 +338,12 @@ router.post('/add-resume-to-multiple', authenticateToken, userRateLimit(), valid
         if (!resumeAccess) return;
 
         const userId = req.user?.id;
-        const results = [];
-        const errors = [];
+        const { results, errors } = await processBulkResumeAssociation(
+            { req, dealIds, resumeId, userId },
+            { checkDealAccess, addResumeToDeal, dealAccessDeps }
+        );
 
-        for (const dealId of dealIds) {
-            try {
-                const dealAccess = await checkDealAccess(req, dealId, dealAccessDeps);
-                if (!dealAccess.hasAccess) {
-                    errors.push({ dealId, error: dealAccess.error });
-                    continue;
-                }
-                const result = await addResumeToDeal(dealId, resumeId, userId);
-                results.push(result);
-            } catch (error) {
-                errors.push({ dealId, error: error.message });
-            }
-        }
-
-        return res.json({ 
-            success: results.length > 0,
-            added: results.length,
-            errors: errors.length > 0 ? errors : undefined
-        });
+        return res.json(buildBulkResumeAssociationResponse(results, errors));
     } catch (error) {
         safeLog('error', 'Error adding resume to multiple deals', { error: error.message });
         return res.status(500).json({ error: 'Failed to add resume to deals' });

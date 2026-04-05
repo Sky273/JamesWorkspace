@@ -6,7 +6,7 @@
 import { Router, json } from 'express';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { validateBody, validateParams, createCommentSchema, updateCommentSchema } from '../utils/validation.js';
-import resumeCommentsService from '../services/resumeComments.service.js';
+import * as resumeCommentsService from '../services/resumeComments.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getResumeForAccessCheck } from '../services/resumes.service.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';

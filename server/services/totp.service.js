@@ -369,13 +369,3 @@ export async function regenerateBackupCodes(userId, code) {
         message: 'Nouveaux codes de secours générés' 
     };
 }
-
-export default {
-    generateTotpSecret,
-    verifyAndEnable2FA,
-    verifyTotpCode,
-    is2FAEnabled,
-    get2FAStatus,
-    disable2FA,
-    regenerateBackupCodes
-};

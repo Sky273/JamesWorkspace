@@ -220,14 +220,3 @@ export async function getRecentComments(userId, limit = 10) {
 
     return result.rows;
 }
-
-export default {
-    initResumeCommentsTable,
-    addComment,
-    getComments,
-    getCommentForAccessCheck,
-    updateComment,
-    deleteComment,
-    getCommentCount,
-    getRecentComments
-};

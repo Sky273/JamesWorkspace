@@ -31,7 +31,11 @@ vi.mock('../../services/security.service.js', () => ({
 
 const mockTrackAiModifyActivity = vi.fn();
 vi.mock('../../services/metrics.service.js', () => ({
+    __esModule: true,
     default: {
+        trackAiModifyActivity: (...args) => mockTrackAiModifyActivity(...args)
+    },
+    metrics: {
         trackAiModifyActivity: (...args) => mockTrackAiModifyActivity(...args)
     },
     buildLLMMetricLabel: (provider, model) => `${provider}:${model}`

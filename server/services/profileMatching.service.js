@@ -8,7 +8,7 @@ import { findWithTimeout, selectRawWithTimeout } from '../utils/postgresHelpers.
 import { safeLog } from '../utils/logger.backend.js';
 import { getLLMSettings } from './settings.service.js';
 import { PROFILE_MATCHING_LLM_PREFILTER_CAP } from '../config/constants.js';
-import metrics, { buildLLMMetricLabel } from './metrics.service.js';
+import { metrics, buildLLMMetricLabel } from './metrics.service.js';
 import { DEFAULT_WEIGHTS } from './profileMatching/constants.js';
 import {
     parseJsonField,
@@ -24,10 +24,11 @@ import {
     scoreBatchWithLLM
 } from './profileMatching/llmScoring.js';
 import {
-    clearMissionKeywordsCache,
     getMissionKeywords
 } from './profileMatching/missionKeywords.js';
 import { analyzeProfileForMission as runDetailedProfileAnalysis } from './profileMatching/detailedAnalysis.js';
+
+export { DEFAULT_WEIGHTS };
 
 async function emitProgress(progressCallback, payload) {
     if (typeof progressCallback !== 'function') {
@@ -355,10 +356,3 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
 export async function analyzeProfileForMission(missionId, resumeId, userMetadata = null) {
     return runDetailedProfileAnalysis(missionId, resumeId, emitProgress, userMetadata);
 }
-
-export default {
-    findMatchingProfiles,
-    clearMissionKeywordsCache,
-    analyzeProfileForMission,
-    DEFAULT_WEIGHTS
-};

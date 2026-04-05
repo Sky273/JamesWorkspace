@@ -12,6 +12,11 @@ import {
     FRANCE_TRAVAIL_API_URL
 } from '../config/constants.js';
 import { createModuleLogger } from '../utils/logger.backend.js';
+import {
+    isFranceTravailTokenError,
+    buildFranceTravailSearchParams,
+    normalizeFranceTravailSearchResponse
+} from './franceTravail.helpers.js';
 
 // Module logger
 const log = createModuleLogger('franceTravail');
@@ -22,6 +27,24 @@ const log = createModuleLogger('franceTravail');
 
 let accessToken = null;
 let tokenExpiresAt = 0;
+
+function invalidateCachedToken() {
+    accessToken = null;
+    tokenExpiresAt = 0;
+}
+
+async function retryFranceTravailRequest({ error, label, retryFn, isRetried }) {
+    if (!isFranceTravailTokenError(error) || isRetried) {
+        return { retried: false };
+    }
+
+    log.warn(label);
+    invalidateCachedToken();
+    return {
+        retried: true,
+        result: await retryFn()
+    };
+}
 
 /**
  * Get OAuth2 access token from France Travail
@@ -104,20 +127,7 @@ async function searchOffers(params = {}) {
     const token = await getAccessToken();
 
     try {
-        const queryParams = new URLSearchParams();
-        
-        // Add search parameters
-        if (params.motsCles) queryParams.append('motsCles', params.motsCles);
-        if (params.codeROME) queryParams.append('codeROME', params.codeROME);
-        if (params.departement) queryParams.append('departement', params.departement);
-        if (params.region) queryParams.append('region', params.region);
-        if (params.commune) queryParams.append('commune', params.commune);
-        if (params.typeContrat) queryParams.append('typeContrat', params.typeContrat);
-        if (params.experience) queryParams.append('experience', params.experience);
-        
-        // Pagination - default to first 150 results
-        const range = params.range || '0-149';
-        queryParams.append('range', range);
+        const queryParams = buildFranceTravailSearchParams(params);
 
         const url = `${FRANCE_TRAVAIL_API_URL}/offres/search?${queryParams.toString()}`;
         
@@ -130,39 +140,32 @@ async function searchOffers(params = {}) {
             }
         });
 
-        const contentRange = response.headers['content-range'];
-        const totalCount = contentRange ? parseInt(contentRange.split('/')[1]) : 0;
+        const normalizedResponse = normalizeFranceTravailSearchResponse(response);
 
-        log.info('Search completed', { resultsCount: response.data.resultats?.length || 0, totalCount });
+        log.info('Search completed', {
+            resultsCount: normalizedResponse.results.length,
+            totalCount: normalizedResponse.totalCount
+        });
 
-        return {
-            results: response.data.resultats || [],
-            filters: response.data.filtresPossibles || [],
-            totalCount,
-            contentRange
-        };
+        return normalizedResponse;
     } catch (error) {
         log.error('Search failed', {
             message: error.message,
             status: error.response?.status
         });
         
-        // Check for token expiration errors (Mal_wellFormed, 401, etc.)
-        const responseData = error.response?.data;
-        const isTokenError = error.response?.status === 401 || 
-            (typeof responseData === 'string' && responseData.includes('Mal_wellFormed')) ||
-            (responseData?.error === 'Mal_wellFormed') ||
-            (responseData?.message?.includes?.('Mal_wellFormed'));
-        
-        if (isTokenError && !params._retried) {
-            log.warn('Token expired, retrying...');
-            // Invalidate token and retry once
-            accessToken = null;
-            tokenExpiresAt = 0;
-            return searchOffers({ ...params, _retried: true });
+        const retryOutcome = await retryFranceTravailRequest({
+            error,
+            label: 'Token expired, retrying...',
+            isRetried: params._retried,
+            retryFn: () => searchOffers({ ...params, _retried: true })
+        });
+
+        if (retryOutcome.retried) {
+            return retryOutcome.result;
         }
-        
-                throw error;
+
+        throw error;
     }
 }
 
@@ -186,18 +189,15 @@ async function getReferentiel(referentiel, _retried = false) {
 
         return response.data;
     } catch (error) {
-        // Check for token expiration errors (Mal_wellFormed, 401, etc.)
-        const responseData = error.response?.data;
-        const isTokenError = error.response?.status === 401 || 
-            (typeof responseData === 'string' && responseData.includes('Mal_wellFormed')) ||
-            (responseData?.error === 'Mal_wellFormed') ||
-            (responseData?.message?.includes?.('Mal_wellFormed'));
-        
-        if (isTokenError && !_retried) {
-            log.warn('Token expired in getReferentiel, retrying...');
-            accessToken = null;
-            tokenExpiresAt = 0;
-            return getReferentiel(referentiel, true);
+        const retryOutcome = await retryFranceTravailRequest({
+            error,
+            label: 'Token expired in getReferentiel, retrying...',
+            isRetried: _retried,
+            retryFn: () => getReferentiel(referentiel, true)
+        });
+
+        if (retryOutcome.retried) {
+            return retryOutcome.result;
         }
         
         log.error('Referentiel fetch failed', { referentiel, error: error.message });

@@ -2,7 +2,7 @@ import { callBusinessChatCompletion } from '../../services/llmProvider.service.j
 import { getLLMSettings } from '../../services/settings.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { getRequestMetadata } from '../../services/security.service.js';
-import metrics, { buildLLMMetricLabel } from '../../services/metrics.service.js';
+import { metrics, buildLLMMetricLabel } from '../../services/metrics.service.js';
 import { normalizeUtf8Text, parseJsonFromLlmResponse, stripLlmThinkingContent } from '../../services/openai/textUtils.js';
 
 /**

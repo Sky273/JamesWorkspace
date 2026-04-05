@@ -1,4 +1,4 @@
-import metrics from '../metrics.service.js';
+import { metrics } from '../metrics.service.js';
 import { normalizeUtf8Text } from '../openai/textUtils.js';
 import {
     PROFILE_MATCHING_EXPLANATION_PROMPT,
