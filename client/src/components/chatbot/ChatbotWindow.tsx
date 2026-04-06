@@ -1,5 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { PaperAirplaneIcon, SparklesIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import {
+  PaperAirplaneIcon,
+  SparklesIcon,
+} from '@heroicons/react/24/outline';
 import ChatbotMessages from './ChatbotMessages';
 import type { ChatbotSize, Message } from './types';
 
@@ -25,6 +28,27 @@ interface ChatbotWindowProps {
   onInputKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onSend: () => void;
   onStartResize: (e: React.MouseEvent, direction: string) => void;
+}
+
+interface HeaderActionButtonProps {
+  onClick: () => void;
+  title: string;
+  ariaLabel?: string;
+  children: React.ReactNode;
+}
+
+function HeaderActionButton({ onClick, title, ariaLabel, children }: HeaderActionButtonProps) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      aria-label={ariaLabel ?? title}
+      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/16 bg-black/18 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14)] transition-colors hover:bg-black/28"
+      type="button"
+    >
+      {children}
+    </button>
+  );
 }
 
 export default function ChatbotWindow({
@@ -59,35 +83,54 @@ export default function ChatbotWindow({
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 100, scale: 0.8 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="fixed bottom-8 right-8 z-50 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700"
+          className="fixed bottom-8 right-8 z-50 flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800"
           style={{ width: size.width, height: size.height }}
         >
-          <div className="absolute top-0 left-0 w-4 h-4 cursor-nw-resize z-10 group" onMouseDown={(e) => onStartResize(e, 'nw')}>
-            <div className="absolute top-1 left-1 w-2 h-2 rounded-full bg-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute top-0 left-0 z-10 h-4 w-4 cursor-nw-resize group" onMouseDown={(e) => onStartResize(e, 'nw')}>
+            <div className="absolute top-1 left-1 h-2 w-2 rounded-full bg-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
           </div>
-          <div className="absolute top-0 left-4 right-0 h-2 cursor-n-resize z-10" onMouseDown={(e) => onStartResize(e, 'n')} />
-          <div className="absolute top-4 left-0 bottom-0 w-2 cursor-w-resize z-10" onMouseDown={(e) => onStartResize(e, 'w')} />
+          <div className="absolute top-0 left-4 right-0 z-10 h-2 cursor-n-resize" onMouseDown={(e) => onStartResize(e, 'n')} />
+          <div className="absolute top-4 left-0 bottom-0 z-10 w-2 cursor-w-resize" onMouseDown={(e) => onStartResize(e, 'w')} />
 
-          <div className="bg-primary-500 px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="bg-white/20 p-2 rounded-full">
-                <SparklesIcon className="h-5 w-5 text-white" />
+          <div className="border-b border-white/10 bg-[linear-gradient(135deg,#6a5cff_0%,#5647ef_52%,#3f35c9_100%)] px-4 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="inline-flex items-center rounded-full border border-white/14 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
+                Assistant IA
               </div>
-              <div>
-                <h3 className="text-white font-semibold">{title}</h3>
-                <p className="text-white/70 text-xs">{subtitle}</p>
+
+              <div className="flex flex-shrink-0 items-center gap-2">
+                <HeaderActionButton onClick={onResetSize} title={resetSizeTitle}>
+                  <span className="text-lg font-semibold leading-none text-white" aria-hidden="true">↺</span>
+                </HeaderActionButton>
+                <HeaderActionButton onClick={onClear} title={clearLabel}>
+                  <span className="text-base font-semibold leading-none text-white" aria-hidden="true">⌫</span>
+                </HeaderActionButton>
+                <HeaderActionButton onClick={onClose} title={closeLabel} ariaLabel={closeLabel}>
+                  <span className="text-xl font-semibold leading-none text-white" aria-hidden="true">×</span>
+                </HeaderActionButton>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <button onClick={onResetSize} className="text-white/70 hover:text-white text-xs px-2 py-1 rounded hover:bg-white/10 transition-colors" title={resetSizeTitle}>
-                ↺
-              </button>
-              <button onClick={onClear} className="text-white/70 hover:text-white text-xs px-2 py-1 rounded hover:bg-white/10 transition-colors" title={clearLabel}>
-                {clearLabel}
-              </button>
-              <button onClick={onClose} className="text-white/70 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors" aria-label={closeLabel}>
-                <XMarkIcon className="h-5 w-5" />
-              </button>
+
+            <div className="mt-4 flex items-start gap-3">
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl border border-white/18 bg-white/14 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+                <SparklesIcon className="h-6 w-6 stroke-[2.2] text-white" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="text-[1.65rem] font-semibold leading-8 tracking-[-0.03em] text-white">
+                      {title}
+                    </h3>
+                    <p className="mt-1 text-sm leading-5 text-white [text-shadow:0_1px_1px_rgba(0,0,0,0.18)]">
+                      {subtitle}
+                    </p>
+                  </div>
+                  <span className="mt-1 flex-shrink-0 rounded-full border border-white/14 bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-white">
+                    En ligne
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
