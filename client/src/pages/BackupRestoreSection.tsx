@@ -9,20 +9,26 @@ import {
     ArrowPathIcon,
     ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
-import type { RemoteFile } from './backupPage.types';
+import type { BackupSettings, RemoteFile } from './backupPage.types';
 import { formatFileSize, formatDate } from './backupPage.types';
 
 interface BackupRestoreSectionProps {
+    settings: BackupSettings;
     remoteFiles: RemoteFile[];
     loadingRemote: boolean;
+    remoteLoadAttempted: boolean;
+    remoteLoadError: string | null;
     restoring: string | null;
     onRefresh: () => void;
     onRestore: (filename: string) => void;
 }
 
 export default function BackupRestoreSection({
+    settings,
     remoteFiles,
     loadingRemote,
+    remoteLoadAttempted,
+    remoteLoadError,
     restoring,
     onRefresh,
     onRestore
@@ -62,14 +68,26 @@ export default function BackupRestoreSection({
                     {t('common.refresh')}
                 </button>
             </div>
+
+            {settings.backup_target !== 'remote' || !settings.host ? (
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+                    Configurez une cible de sauvegarde distante pour afficher les fichiers restaurables.
+                </div>
+            ) : null}
+
+            {remoteLoadError && !loadingRemote ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200">
+                    {remoteLoadError}
+                </div>
+            ) : null}
             
             {loadingRemote ? (
                 <div className="flex justify-center py-8">
                     <ArrowPathIcon className="w-8 h-8 animate-spin text-gray-400" />
                 </div>
-            ) : remoteFiles.length === 0 ? (
+            ) : (settings.backup_target !== 'remote' || !settings.host) ? null : remoteFiles.length === 0 ? (
                 <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                    {t('backup.noRemoteBackups')}
+                    {remoteLoadAttempted && !remoteLoadError ? t('backup.noRemoteBackups') : t('common.refresh')}
                 </p>
             ) : (
                 <div className="overflow-x-auto">

@@ -47,6 +47,8 @@ const BackupPage = (): JSX.Element => {
     const [history, setHistory] = useState<BackupHistoryItem[]>([]);
     const [remoteFiles, setRemoteFiles] = useState<RemoteFile[]>([]);
     const [loadingRemote, setLoadingRemote] = useState(false);
+    const [remoteLoadAttempted, setRemoteLoadAttempted] = useState(false);
+    const [remoteLoadError, setRemoteLoadError] = useState<string | null>(null);
     const [restoring, setRestoring] = useState<string | null>(null);
     const [activeSection, setActiveSection] = useState<'config' | 'history' | 'restore'>('config');
 
@@ -88,21 +90,48 @@ const BackupPage = (): JSX.Element => {
         fetchHistory();
     }, [fetchSettings, fetchHistory]);
 
-    const fetchRemoteFiles = async () => {
+    const fetchRemoteFiles = async ({ silent = false }: { silent?: boolean } = {}) => {
+        if (settings.backup_target !== 'remote' || !settings.host) {
+            setRemoteFiles([]);
+            setRemoteLoadError(null);
+            setRemoteLoadAttempted(true);
+            return;
+        }
+
         setLoadingRemote(true);
+        setRemoteLoadAttempted(true);
+        setRemoteLoadError(null);
         try {
             const response = await authGet('/api/backup/list-remote');
             if (response.ok) {
                 const data = await response.json();
                 if (data.success) {
                     setRemoteFiles(data.files || []);
+                    setRemoteLoadError(null);
                 } else {
-                    toast.error(getBackupErrorMessage(data.message, t('backup.remoteListError')));
+                    setRemoteFiles([]);
+                    const errorMessage = getBackupErrorMessage(data.message, t('backup.remoteListError'));
+                    setRemoteLoadError(errorMessage);
+                    if (!silent) {
+                        toast.error(errorMessage);
+                    }
+                }
+            } else {
+                const fallbackMessage = t('backup.remoteListError');
+                setRemoteFiles([]);
+                setRemoteLoadError(fallbackMessage);
+                if (!silent) {
+                    toast.error(fallbackMessage);
                 }
             }
         } catch (error) {
             logger.error('Failed to fetch remote files:', error);
-            toast.error(t('backup.remoteListError'));
+            const fallbackMessage = t('backup.remoteListError');
+            setRemoteFiles([]);
+            setRemoteLoadError(fallbackMessage);
+            if (!silent) {
+                toast.error(fallbackMessage);
+            }
         } finally {
             setLoadingRemote(false);
         }
@@ -286,7 +315,7 @@ const BackupPage = (): JSX.Element => {
                 <button
                     onClick={() => {
                         setActiveSection('restore');
-                        fetchRemoteFiles();
+                        void fetchRemoteFiles({ silent: true });
                     }}
                     className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${
                         activeSection === 'restore'
@@ -327,10 +356,13 @@ const BackupPage = (): JSX.Element => {
             {/* Restore Section */}
             {activeSection === 'restore' && (
                 <BackupRestoreSection
+                    settings={settings}
                     remoteFiles={remoteFiles}
                     loadingRemote={loadingRemote}
+                    remoteLoadAttempted={remoteLoadAttempted}
+                    remoteLoadError={remoteLoadError}
                     restoring={restoring}
-                    onRefresh={fetchRemoteFiles}
+                    onRefresh={() => void fetchRemoteFiles()}
                     onRestore={handleRestore}
                 />
             )}
