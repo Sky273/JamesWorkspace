@@ -80,28 +80,34 @@ function createProxyDebugContext(body) {
 }
 
 export function registerProxyRoutes(app) {
-    const PDF_SERVER_URL = process.env.PDF_SERVER_URL || 'http://localhost:3002';
     const proxyTimeoutMs = getPdfProxyTimeoutMs();
-    const pdfServerUrlValidation = assertTrustedInternalServiceUrl(PDF_SERVER_URL)
-        .then(() => null)
-        .catch((error) => error);
     const proxyGuards = [
         authenticateToken,
         userRateLimit(20, 15 * 60 * 1000)
     ];
 
+    async function validatePdfServerTarget(requestId, debugContext, routeLabel) {
+        const pdfServerUrl = process.env.PDF_SERVER_URL || 'http://localhost:3002';
+        try {
+            await assertTrustedInternalServiceUrl(pdfServerUrl);
+            return pdfServerUrl;
+        } catch (error) {
+            safeLog('error', `Rejected ${routeLabel} proxy target`, {
+                url: pdfServerUrl,
+                error: error.message,
+                requestId,
+                ...debugContext
+            });
+            return null;
+        }
+    }
+
     app.post('/generate-pdf', ...proxyGuards, validateBody(generatePdfProxySchema), async (req, res) => {
         const requestId = randomUUID();
         const debugContext = createProxyDebugContext(req.body);
         try {
-            const pdfServerUrlError = await pdfServerUrlValidation;
-            if (pdfServerUrlError) {
-                safeLog('error', 'Rejected PDF proxy target', {
-                    url: PDF_SERVER_URL,
-                    error: pdfServerUrlError.message,
-                    requestId,
-                    ...debugContext
-                });
+            const pdfServerUrl = await validatePdfServerTarget(requestId, debugContext, 'PDF');
+            if (!pdfServerUrl) {
                 return res.status(503).json({ error: 'PDF generation service is unavailable' });
             }
 
@@ -110,7 +116,7 @@ export function registerProxyRoutes(app) {
                 ...debugContext
             });
 
-            const response = await fetchWithTimeout(`${PDF_SERVER_URL}/generate-pdf`, {
+            const response = await fetchWithTimeout(`${pdfServerUrl}/generate-pdf`, {
                 method: 'POST',
                 headers: getPdfServerAuthHeaders({
                     'Content-Type': 'application/json',
@@ -156,14 +162,8 @@ export function registerProxyRoutes(app) {
         const requestId = randomUUID();
         const debugContext = createProxyDebugContext(req.body);
         try {
-            const pdfServerUrlError = await pdfServerUrlValidation;
-            if (pdfServerUrlError) {
-                safeLog('error', 'Rejected DOCX proxy target', {
-                    url: PDF_SERVER_URL,
-                    error: pdfServerUrlError.message,
-                    requestId,
-                    ...debugContext
-                });
+            const pdfServerUrl = await validatePdfServerTarget(requestId, debugContext, 'DOCX');
+            if (!pdfServerUrl) {
                 return res.status(503).json({ error: 'DOCX generation service is unavailable' });
             }
 
@@ -172,7 +172,7 @@ export function registerProxyRoutes(app) {
                 ...debugContext
             });
 
-            const response = await fetchWithTimeout(`${PDF_SERVER_URL}/generate-docx`, {
+            const response = await fetchWithTimeout(`${pdfServerUrl}/generate-docx`, {
                 method: 'POST',
                 headers: getPdfServerAuthHeaders({
                     'Content-Type': 'application/json',

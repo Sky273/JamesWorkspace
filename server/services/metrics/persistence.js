@@ -1,4 +1,3 @@
-import fs from 'fs';
 import fsPromises from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -16,59 +15,124 @@ export const HISTORY_INTERVAL_MS = 60 * 60 * 1000;
 export const MAX_HISTORY_ENTRIES = Number.parseInt(process.env.METRICS_MAX_HISTORY_ENTRIES || '', 10) || 24 * 30;
 export const HISTORY_COMPACTION_INTERVAL = Number.parseInt(process.env.METRICS_HISTORY_COMPACTION_INTERVAL || '', 10) || 100;
 
-let historyLinesCache = null;
+let historyLinesCache = [];
 let historyLinesCacheFile = null;
 let historyOverflowCount = 0;
 let persistenceQueue = Promise.resolve();
+let metricsFileContentsCache = null;
+let metricsFileContentsCacheFile = null;
+
+function getFsPromiseMethod(methodName) {
+    const candidate = fsPromises?.[methodName] ?? fsPromises?.default?.[methodName];
+    return typeof candidate === 'function' ? candidate.bind(fsPromises.default ?? fsPromises) : null;
+}
 
 function getHistoryCacheFile() {
     return process.env.METRICS_HISTORY_FILE || METRICS_HISTORY_FILE;
 }
 
+function getMetricsCacheFile() {
+    return process.env.METRICS_FILE || METRICS_FILE;
+}
+
 function resetHistoryCacheIfNeeded() {
     const currentHistoryFile = getHistoryCacheFile();
     if (historyLinesCacheFile !== currentHistoryFile) {
-        historyLinesCache = null;
+        historyLinesCache = [];
         historyLinesCacheFile = currentHistoryFile;
         historyOverflowCount = 0;
     }
 }
 
-function loadHistoryLines(log) {
-    resetHistoryCacheIfNeeded();
-
-    if (historyLinesCache !== null) {
-        return historyLinesCache;
-    }
-
-    const currentHistoryFile = getHistoryCacheFile();
-    if (!fs.existsSync(currentHistoryFile)) {
-        historyLinesCache = [];
-        return historyLinesCache;
-    }
-
-    try {
-        historyLinesCache = fs.readFileSync(currentHistoryFile, 'utf8').split('\n').filter(Boolean);
-        if (historyLinesCache.length > MAX_HISTORY_ENTRIES) {
-            historyOverflowCount = historyLinesCache.length - MAX_HISTORY_ENTRIES;
-            historyLinesCache = historyLinesCache.slice(-MAX_HISTORY_ENTRIES);
-        }
-        return historyLinesCache;
-    } catch (err) {
-        log.error('Failed to load metrics history cache', { error: err.message });
-        historyLinesCache = [];
-        return historyLinesCache;
+function resetMetricsCacheIfNeeded() {
+    const currentMetricsFile = getMetricsCacheFile();
+    if (metricsFileContentsCacheFile !== currentMetricsFile) {
+        metricsFileContentsCache = null;
+        metricsFileContentsCacheFile = currentMetricsFile;
     }
 }
 
-export function ensureMetricsDirectory(log) {
-    try {
-        if (!fs.existsSync(METRICS_DIR)) {
-            fs.mkdirSync(METRICS_DIR, { recursive: true });
-        }
-    } catch (err) {
-        log.error('Failed to create metrics directory', { error: err.message });
+async function preloadMetricsFile() {
+    resetMetricsCacheIfNeeded();
+    const currentMetricsFile = getMetricsCacheFile();
+    const readFile = getFsPromiseMethod('readFile');
+    if (!readFile) {
+        metricsFileContentsCache = null;
+        return;
     }
+
+    try {
+        metricsFileContentsCache = await readFile(currentMetricsFile, 'utf8');
+    } catch {
+        metricsFileContentsCache = null;
+    }
+}
+
+async function preloadHistoryCache() {
+    resetHistoryCacheIfNeeded();
+    const currentHistoryFile = getHistoryCacheFile();
+    const readFile = getFsPromiseMethod('readFile');
+    if (!readFile) {
+        historyLinesCache = [];
+        historyOverflowCount = 0;
+        return;
+    }
+
+    try {
+        const rawHistory = await readFile(currentHistoryFile, 'utf8');
+        const loadedHistoryLines = rawHistory.split('\n').filter(Boolean);
+        if (loadedHistoryLines.length > MAX_HISTORY_ENTRIES) {
+            historyOverflowCount = loadedHistoryLines.length - MAX_HISTORY_ENTRIES;
+            historyLinesCache = loadedHistoryLines.slice(-MAX_HISTORY_ENTRIES);
+        } else {
+            historyLinesCache = loadedHistoryLines;
+            historyOverflowCount = 0;
+        }
+    } catch {
+        historyLinesCache = [];
+        historyOverflowCount = 0;
+    }
+}
+
+async function preloadMetricsPersistence() {
+    const mkdir = getFsPromiseMethod('mkdir');
+    const readFile = getFsPromiseMethod('readFile');
+
+    if (!mkdir || !readFile) {
+        historyLinesCache = [];
+        historyOverflowCount = 0;
+        metricsFileContentsCache = null;
+        return;
+    }
+
+    try {
+        await mkdir(METRICS_DIR, { recursive: true });
+    } catch {
+        // Continue with deferred writes; save/append still retry the mkdir path.
+    }
+
+    await Promise.all([
+        preloadMetricsFile(),
+        preloadHistoryCache()
+    ]);
+}
+
+await preloadMetricsPersistence();
+
+function loadHistoryLines() {
+    resetHistoryCacheIfNeeded();
+    return historyLinesCache;
+}
+
+export function ensureMetricsDirectory(log) {
+    const mkdir = getFsPromiseMethod('mkdir');
+    if (!mkdir) {
+        return Promise.resolve();
+    }
+
+    return mkdir(METRICS_DIR, { recursive: true }).catch((err) => {
+        log.error('Failed to create metrics directory', { error: err.message });
+    });
 }
 
 function queuePersistenceTask(task, log, errorMessage) {
@@ -83,11 +147,13 @@ function queuePersistenceTask(task, log, errorMessage) {
 
 export function loadMetricsFromDisk(collector, { log, normalizeLLMProviderKey, pruneLLMProviderStats }) {
     try {
-        if (!fs.existsSync(METRICS_FILE)) {
+        resetMetricsCacheIfNeeded();
+
+        if (metricsFileContentsCache === null) {
             return;
         }
 
-        const data = JSON.parse(fs.readFileSync(METRICS_FILE, 'utf8'));
+        const data = JSON.parse(metricsFileContentsCache);
 
         if (data.requests) {
             collector.requests.total = data.requests.total || 0;
@@ -187,9 +253,13 @@ export function loadMetricsFromDisk(collector, { log, normalizeLLMProviderKey, p
 export function saveMetricsToDisk(collector, log) {
     return queuePersistenceTask(async () => {
         try {
-            await fsPromises.mkdir(METRICS_DIR, { recursive: true });
+            await ensureMetricsDirectory(log);
+            const writeFile = getFsPromiseMethod('writeFile');
+            if (!writeFile) {
+                return;
+            }
             const data = buildPersistedMetricsData(collector);
-            await fsPromises.writeFile(METRICS_FILE, JSON.stringify(data, null, 2), 'utf8');
+            await writeFile(METRICS_FILE, JSON.stringify(data, null, 2), 'utf8');
         } catch (err) {
             log.error('Failed to save metrics', { error: err.message });
         }
@@ -199,7 +269,12 @@ export function saveMetricsToDisk(collector, log) {
 export function appendMetricsHistory(collector, log) {
     return queuePersistenceTask(async () => {
         try {
-            await fsPromises.mkdir(METRICS_DIR, { recursive: true });
+            await ensureMetricsDirectory(log);
+            const appendFile = getFsPromiseMethod('appendFile');
+            const writeFile = getFsPromiseMethod('writeFile');
+            if (!appendFile || !writeFile) {
+                return;
+            }
             const snapshot = buildHistorySnapshot(collector);
             const nextLine = JSON.stringify(snapshot);
             const currentHistoryFile = getHistoryCacheFile();
@@ -208,19 +283,19 @@ export function appendMetricsHistory(collector, log) {
             if (lines.length < MAX_HISTORY_ENTRIES) {
                 lines.push(nextLine);
                 historyLinesCache = lines;
-                await fsPromises.appendFile(currentHistoryFile, `${nextLine}\n`, 'utf8');
+                await appendFile(currentHistoryFile, `${nextLine}\n`, 'utf8');
                 return;
             }
 
             historyLinesCache = [...lines.slice(-(MAX_HISTORY_ENTRIES - 1)), nextLine];
             historyOverflowCount += 1;
-            await fsPromises.appendFile(currentHistoryFile, `${nextLine}\n`, 'utf8');
+            await appendFile(currentHistoryFile, `${nextLine}\n`, 'utf8');
 
             if (historyOverflowCount < HISTORY_COMPACTION_INTERVAL) {
                 return;
             }
 
-            await fsPromises.writeFile(currentHistoryFile, `${historyLinesCache.join('\n')}\n`, 'utf8');
+            await writeFile(currentHistoryFile, `${historyLinesCache.join('\n')}\n`, 'utf8');
             historyOverflowCount = 0;
         } catch (err) {
             log.error('Failed to append metrics history', { error: err.message });
@@ -230,7 +305,7 @@ export function appendMetricsHistory(collector, log) {
 
 export function readMetricsHistory(limit, log) {
     try {
-        const lines = loadHistoryLines(log);
+        const lines = loadHistoryLines();
         if (lines.length === 0) {
             return [];
         }

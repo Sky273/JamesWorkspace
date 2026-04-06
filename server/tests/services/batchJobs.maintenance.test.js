@@ -4,6 +4,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import os from 'os';
+import path from 'path';
 
 vi.mock('../../config/database.js', () => ({
     query: vi.fn()
@@ -32,6 +34,9 @@ import {
     getBatchJobsStats
 } from '../../services/batchJobs/maintenance.js';
 
+const managedExportPath = path.join(os.tmpdir(), 'batch-exports', 'export.zip');
+const managedStaleJobExportPath = path.join(os.tmpdir(), 'batch-exports', 'stale-job-export.zip');
+
 describe('Batch Jobs - Maintenance', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -41,9 +46,9 @@ describe('Batch Jobs - Maintenance', () => {
     describe('cleanupOldJobs', () => {
         it('should clear file_data, cleanup export refs, and delete old jobs', async () => {
             query.mockResolvedValueOnce({ rowCount: 5 });
-            query.mockResolvedValueOnce({ rows: [{ id: 'job-1', export_file_path: 'C:/tmp/export.zip' }] });
+            query.mockResolvedValueOnce({ rows: [{ id: 'job-1', export_file_path: managedExportPath }] });
             query.mockResolvedValueOnce({ rows: [] });
-            query.mockResolvedValueOnce({ rows: [{ id: 'job-2', export_file_path: 'C:/tmp/stale-job-export.zip' }] });
+            query.mockResolvedValueOnce({ rows: [{ id: 'job-2', export_file_path: managedStaleJobExportPath }] });
             query.mockResolvedValueOnce({ rowCount: 2 });
             vi.mocked(fs.stat).mockResolvedValueOnce({
                 isDirectory: () => false,
@@ -106,7 +111,7 @@ describe('Batch Jobs - Maintenance', () => {
     describe('cleanupJobExportArtifacts', () => {
         it('should clear stale DB references when the export file is missing', async () => {
             query
-                .mockResolvedValueOnce({ rows: [{ id: 'job-1', export_file_path: 'C:/tmp/export.zip' }] })
+                .mockResolvedValueOnce({ rows: [{ id: 'job-1', export_file_path: managedExportPath }] })
                 .mockResolvedValueOnce({ rows: [] });
             vi.mocked(fs.stat).mockRejectedValueOnce(Object.assign(new Error('not found'), { code: 'ENOENT' }));
 
@@ -118,7 +123,7 @@ describe('Batch Jobs - Maintenance', () => {
 
         it('should delete expired referenced export files and clear their DB refs', async () => {
             query
-                .mockResolvedValueOnce({ rows: [{ id: 'job-1', export_file_path: 'C:/tmp/export.zip' }] })
+                .mockResolvedValueOnce({ rows: [{ id: 'job-1', export_file_path: managedExportPath }] })
                 .mockResolvedValueOnce({ rows: [] });
             vi.mocked(fs.stat).mockResolvedValueOnce({
                 isDirectory: () => false,
@@ -129,7 +134,7 @@ describe('Batch Jobs - Maintenance', () => {
             const result = await cleanupJobExportArtifacts(7);
 
             expect(result).toEqual({ orphanExportFilesDeleted: 1, staleExportRefsCleared: 1 });
-            expect(fs.unlink).toHaveBeenCalledWith('C:/tmp/export.zip');
+            expect(fs.unlink).toHaveBeenCalledWith(managedExportPath);
         });
     });
 

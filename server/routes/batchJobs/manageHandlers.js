@@ -1,4 +1,5 @@
 import fs from 'fs';
+import fsPromises from 'fs/promises';
 import { pipeline } from 'stream/promises';
 import {
     JOB_STATUS,
@@ -18,10 +19,24 @@ import { metrics } from '../../services/metrics.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { setSafeFileResponseHeaders } from '../../utils/fileResponseSecurity.js';
 import { ensureOwnerAccess, getUserContext } from './helpers.js';
+import { isManagedBatchExportPath } from '../../services/batchJobs/maintenance.js';
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 const DEFAULT_OFFSET = 0;
+
+async function fileExists(filePath) {
+    if (typeof filePath !== 'string' || filePath.length === 0) {
+        return false;
+    }
+
+    try {
+        await fsPromises.access(filePath);
+        return true;
+    } catch {
+        return false;
+    }
+}
 
 function hasCompleteExportMetadata(job) {
     return !!(job?.export_file_path && job?.export_file_name);
@@ -33,6 +48,18 @@ function hasIncompleteExportMetadata(job) {
 
 async function cleanupExportArtifact(jobId, exportFilePath, exportFileName, { clearMetadata = true } = {}) {
     if (!exportFilePath) {
+        return false;
+    }
+
+    if (!isManagedBatchExportPath(exportFilePath)) {
+        safeLog('warn', 'Rejected cleanup for unmanaged batch export artifact', {
+            jobId,
+            filePath: exportFilePath,
+            fileName: exportFileName
+        });
+        if (clearMetadata) {
+            await clearJobExportFile(jobId);
+        }
         return false;
     }
 
@@ -127,7 +154,39 @@ async function reconcileMissingExportArtifact(job) {
         return job;
     }
 
-    if (fs.existsSync(job.export_file_path)) {
+    if (!isManagedBatchExportPath(job.export_file_path)) {
+        try {
+            await clearJobExportFile(job.id);
+            safeLog('warn', 'Cleared unmanaged export metadata', {
+                jobId: job.id,
+                filePath: job.export_file_path,
+                fileName: job.export_file_name
+            });
+            metrics.trackCleanupActivity({
+                staleExportRefsCleared: 1,
+                metadata: {
+                    source: 'batch_jobs_routes',
+                    jobId: job.id,
+                    reason: 'unmanaged_export_artifact'
+                }
+            });
+            return {
+                ...job,
+                export_file_path: null,
+                export_file_name: null
+            };
+        } catch (error) {
+            safeLog('warn', 'Failed to clear unmanaged export metadata', {
+                jobId: job.id,
+                filePath: job.export_file_path,
+                fileName: job.export_file_name,
+                error: error.message
+            });
+            return job;
+        }
+    }
+
+    if (await fileExists(job.export_file_path)) {
         return job;
     }
 
@@ -162,11 +221,11 @@ async function reconcileMissingExportArtifact(job) {
     }
 }
 
-function withExportAvailability(job) {
+async function withExportAvailability(job) {
     const { export_file_path, ...jobWithoutPath } = job || {};
     return {
         ...jobWithoutPath,
-        export_file_available: hasCompleteExportMetadata(job) && fs.existsSync(export_file_path)
+        export_file_available: hasCompleteExportMetadata(job) && await fileExists(export_file_path)
     };
 }
 
@@ -227,7 +286,7 @@ export async function listJobs(req, res) {
             : await getJobsByFirm(userContext.userFirmId, options);
 
         const reconciledJobs = await Promise.all(jobs.map((job) => reconcileMissingExportArtifact(job)));
-        res.json(reconciledJobs.map(withExportAvailability));
+        res.json(await Promise.all(reconciledJobs.map((job) => withExportAvailability(job))));
     } catch (error) {
         safeLog('error', 'Failed to get batch jobs', { error: error.message });
         res.status(500).json({ error: 'Erreur lors de la récupération des jobs' });
@@ -244,7 +303,7 @@ export async function getJobDetails(req, res) {
 
         const reconciledJob = await reconcileMissingExportArtifact(jobContext.job);
         const items = await getJobItems(id);
-        res.json({ ...withExportAvailability(reconciledJob), items });
+        res.json({ ...(await withExportAvailability(reconciledJob)), items });
     } catch (error) {
         safeLog('error', 'Failed to get batch job', { error: error.message });
         res.status(500).json({ error: 'Erreur lors de la récupération du job' });
@@ -307,7 +366,7 @@ export async function downloadJobExport(req, res) {
         if (!hasCompleteExportMetadata(reconciledJob)) {
             return res.status(404).json({ error: "Aucun fichier d'export disponible" });
         }
-        if (!fs.existsSync(reconciledJob.export_file_path)) {
+        if (!await fileExists(reconciledJob.export_file_path)) {
             await reconcileMissingExportArtifact(reconciledJob);
             return res.status(404).json({ error: "Fichier d'export non trouvé sur le serveur" });
         }

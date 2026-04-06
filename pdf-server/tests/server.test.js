@@ -9,7 +9,8 @@ import request from 'supertest';
 
 const require = createRequire(import.meta.url);
 
-process.env.PDF_SERVER_INTERNAL_TOKEN = 'test-pdf-server-internal-token-minimum-32-chars';
+const validPdfServerToken = 'test-pdf-server-internal-token-minimum-32-chars';
+process.env.PDF_SERVER_INTERNAL_TOKEN = validPdfServerToken;
 
 const pdfGen = require('../lib/pdfGenerator.cjs');
 const docxGen = require('../lib/docxGenerator.cjs');
@@ -24,7 +25,12 @@ const origGetDocMimeType = docxGen.getDocMimeType;
 const origGetDocExtension = docxGen.getDocExtension;
 const origLog = logger.log;
 
-const resetServerModule = () => {
+const resetServerModule = (token = process.env.PDF_SERVER_INTERNAL_TOKEN) => {
+  if (token === null) {
+    delete process.env.PDF_SERVER_INTERNAL_TOKEN;
+  } else {
+    process.env.PDF_SERVER_INTERNAL_TOKEN = token;
+  }
   delete require.cache[require.resolve('../server.cjs')];
   return require('../server.cjs');
 };
@@ -55,6 +61,7 @@ describe('PDF Server', () => {
     delete process.env.PDF_SERVER_HEALTH_VERBOSE;
     delete process.env.PDF_SERVER_REQUEST_TIMEOUT_MS;
     delete process.env.PDF_TIMEOUT;
+    process.env.PDF_SERVER_INTERNAL_TOKEN = validPdfServerToken;
     delete require.cache[require.resolve('../server.cjs')];
   });
 
@@ -106,6 +113,36 @@ describe('PDF Server', () => {
         .post('/generate-pdf')
         .send({ htmlContent: '<p>Hello</p>', filename: 'test.pdf' });
       expect(res.status).toBe(403);
+    });
+
+    it('should return 503 when the internal token is not configured', async () => {
+      const { app: missingTokenApp } = resetServerModule(null);
+
+      const res = await request(missingTokenApp)
+        .post('/generate-pdf')
+        .set('x-internal-service-token', 'anything-goes')
+        .send({ htmlContent: '<p>Hello</p>', filename: 'test.pdf' });
+
+      expect(res.status).toBe(503);
+      expect(res.body).toEqual({
+        error: 'PDF server is not configured for internal authentication.'
+      });
+      expect(pdfGen.generatePdf).not.toHaveBeenCalled();
+    });
+
+    it('should return 503 when the internal token is too short', async () => {
+      const { app: invalidTokenApp } = resetServerModule('short-token');
+
+      const res = await request(invalidTokenApp)
+        .post('/generate-pdf')
+        .set('x-internal-service-token', 'anything-goes')
+        .send({ htmlContent: '<p>Hello</p>', filename: 'test.pdf' });
+
+      expect(res.status).toBe(503);
+      expect(res.body).toEqual({
+        error: 'PDF server is not configured for internal authentication.'
+      });
+      expect(pdfGen.generatePdf).not.toHaveBeenCalled();
     });
 
     it('should reject missing htmlContent', async () => {

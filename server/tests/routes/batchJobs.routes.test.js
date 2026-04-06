@@ -8,6 +8,8 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import { Readable } from 'stream';
+import fsPromises from 'fs/promises';
+import path from 'path';
 
 const mockPipeline = vi.fn();
 
@@ -87,6 +89,9 @@ vi.mock('stream/promises', () => ({
 // Mock multer (used for file uploads in POST /)
 vi.mock('multer', () => {
     const multerMock = (options = {}) => ({
+        storage: options.storage,
+        limits: options.limits,
+        fileFilter: options.fileFilter,
         array: () => (req, res, next) => {
             if (req.headers['x-test-invalid-upload'] === 'true' && typeof options.fileFilter === 'function') {
                 options.fileFilter(req, {
@@ -217,13 +222,22 @@ vi.mock('../../services/metrics.service.js', () => ({
     }
 }));
 
+const mockIsManagedBatchExportPath = vi.fn(() => true);
+vi.mock('../../services/batchJobs/maintenance.js', () => ({
+    isManagedBatchExportPath: (...args) => mockIsManagedBatchExportPath(...args)
+}));
+
 vi.mock('fs/promises', () => ({
     default: {
+        access: vi.fn(() => Promise.resolve()),
         unlink: vi.fn(() => Promise.resolve()),
-        open: vi.fn()
+        open: vi.fn(),
+        mkdir: vi.fn(() => Promise.resolve())
     },
+    access: vi.fn(() => Promise.resolve()),
     unlink: vi.fn(() => Promise.resolve()),
-    open: vi.fn()
+    open: vi.fn(),
+    mkdir: vi.fn(() => Promise.resolve())
 }));
 
 // Mock rate limiter (userRateLimit is a factory function)
@@ -290,6 +304,8 @@ describe('Batch Jobs Routes - GET /api/batch-jobs', () => {
         resetMockPipeline();
         mockTrackCleanupActivity.mockReset();
         mockGetResumeForAccessCheck.mockResolvedValue({ id: '123e4567-e89b-12d3-a456-426614174000', firm_id: 'firm-123', name: 'Resume 1' });
+        mockIsManagedBatchExportPath.mockReturnValue(true);
+        vi.mocked(fsPromises.access).mockResolvedValue(undefined);
         app = createTestApp();
     });
 
@@ -391,6 +407,7 @@ describe('Batch Jobs Routes - GET /api/batch-jobs', () => {
                 export_file_name: 'missing-export.zip'
             }
         ]);
+        vi.mocked(fsPromises.access).mockRejectedValue(Object.assign(new Error('missing'), { code: 'ENOENT' }));
 
         const res = await request(app)
             .get('/api/batch-jobs')
@@ -436,6 +453,28 @@ describe('Batch Jobs Routes - GET /api/batch-jobs', () => {
             })
         }));
     });
+
+    it('should mark exports as available when the artifact can be reached asynchronously', async () => {
+        mockGetJobsByFirm.mockResolvedValueOnce([
+            {
+                id: 'job-3',
+                name: 'Batch 3',
+                status: 'completed',
+                firm_id: 'firm-123',
+                export_file_path: 'C:/tmp/export.zip',
+                export_file_name: 'export.zip'
+            }
+        ]);
+        vi.mocked(fsPromises.access).mockResolvedValueOnce(undefined);
+
+        const res = await request(app)
+            .get('/api/batch-jobs')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(res.body[0].export_file_available).toBe(true);
+        expect(fsPromises.access).toHaveBeenCalledWith('C:/tmp/export.zip');
+    });
 });
 
 describe('Batch Jobs Routes - GET /api/batch-jobs/:id', () => {
@@ -445,6 +484,7 @@ describe('Batch Jobs Routes - GET /api/batch-jobs/:id', () => {
         vi.resetAllMocks();
         resetMockPipeline();
         app = createTestApp();
+        vi.mocked(fsPromises.access).mockResolvedValue(undefined);
     });
 
     it('should return 401 without authentication', async () => {
@@ -830,10 +870,10 @@ describe('Batch Jobs Routes - GET /api/batch-jobs/:id/download', () => {
     beforeEach(async () => {
         vi.resetAllMocks();
         resetMockPipeline();
+        mockIsManagedBatchExportPath.mockReturnValue(true);
         app = createTestApp();
+        vi.mocked(fsPromises.access).mockResolvedValue(undefined);
         const fsModule = await import('fs');
-        vi.mocked(fsModule.default.existsSync).mockReturnValue(true);
-        vi.mocked(fsModule.existsSync).mockReturnValue(true);
         vi.mocked(fsModule.default.createReadStream).mockReturnValue(Readable.from(['zip-content']));
         vi.mocked(fsModule.createReadStream).mockReturnValue(Readable.from(['zip-content']));
         vi.mocked(fsModule.default.unlink).mockImplementation((_path, callback) => callback(null));
@@ -861,6 +901,7 @@ describe('Batch Jobs Routes - GET /api/batch-jobs/:id/download', () => {
         expect(res.headers['content-disposition']).toContain('batch_export.zip');
         expect(res.headers['x-content-type-options']).toBe('nosniff');
         expect(res.headers['cache-control']).toBe('private, no-store, max-age=0');
+        expect(fsPromises.access).toHaveBeenCalledWith('C:/tmp/export.zip');
         expect(mockClearJobExportFile).toHaveBeenCalledWith('job-123');
     });
 
@@ -907,14 +948,13 @@ describe('Batch Jobs Routes - GET /api/batch-jobs/:id/download', () => {
     });
 
     it('should clear stale metadata when the export is missing at download time', async () => {
-        const fsModule = await import('fs');
-        vi.mocked(fsModule.default.existsSync).mockReturnValue(false);
         mockGetJob.mockResolvedValueOnce({
             id: 'job-123',
             firm_id: 'firm-123',
             export_file_path: 'C:/tmp/missing-export.zip',
             export_file_name: 'missing-export.zip'
         });
+        vi.mocked(fsPromises.access).mockRejectedValue(Object.assign(new Error('missing'), { code: 'ENOENT' }));
 
         const res = await request(app)
             .get('/api/batch-jobs/job-123/download')
@@ -929,6 +969,74 @@ describe('Batch Jobs Routes - GET /api/batch-jobs/:id/download', () => {
                 reason: 'missing_export_artifact'
             })
         }));
+    });
+
+    it('should clear unmanaged export metadata instead of reading outside the managed export directory', async () => {
+        mockIsManagedBatchExportPath.mockReturnValue(false);
+        mockGetJob.mockResolvedValueOnce({
+            id: 'job-123',
+            firm_id: 'firm-123',
+            export_file_path: 'C:/Windows/system32/config/systemprofile.zip',
+            export_file_name: 'systemprofile.zip'
+        });
+
+        const res = await request(app)
+            .get('/api/batch-jobs/job-123/download')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(404);
+        expect(mockClearJobExportFile).toHaveBeenCalledWith('job-123');
+        expect(mockTrackCleanupActivity).toHaveBeenCalledWith(expect.objectContaining({
+            staleExportRefsCleared: 1,
+            metadata: expect.objectContaining({
+                source: 'batch_jobs_routes',
+                reason: 'unmanaged_export_artifact'
+            })
+        }));
+    });
+});
+
+describe('Batch Jobs upload middleware', () => {
+    beforeEach(() => {
+        vi.resetAllMocks();
+        vi.mocked(fsPromises.mkdir).mockResolvedValue(undefined);
+    });
+
+    it('should create the batch upload directory asynchronously before accepting uploads', async () => {
+        vi.resetModules();
+        const { createUploadMiddleware } = await import('../../routes/batchJobs/helpers.uploads.js');
+        const upload = createUploadMiddleware();
+        const destination = upload.storage.destination;
+        const expectedPath = path.normalize('/tmp/uploads/batch-jobs');
+
+        const resolvedPath = await new Promise((resolve, reject) => {
+            destination({}, {}, (error, directory) => {
+                if (error) {
+                    reject(error);
+                    return;
+                }
+                resolve(directory);
+            });
+        });
+
+        expect(path.normalize(resolvedPath)).toBe(expectedPath);
+        expect(fsPromises.mkdir).toHaveBeenCalledWith(expectedPath, { recursive: true });
+    });
+
+    it('should fail fast when the batch upload directory cannot be created', async () => {
+        vi.resetModules();
+        vi.mocked(fsPromises.mkdir).mockRejectedValueOnce(new Error('mkdir failed'));
+
+        const { createUploadMiddleware } = await import('../../routes/batchJobs/helpers.uploads.js');
+        const upload = createUploadMiddleware();
+        const destination = upload.storage.destination;
+
+        const error = await new Promise((resolve) => {
+            destination({}, {}, (err) => resolve(err));
+        });
+
+        expect(error).toBeInstanceOf(Error);
+        expect(error.message).toBe('mkdir failed');
     });
 });
 

@@ -288,5 +288,23 @@ describe('Proxy Routes', () => {
         expect(res.body).toEqual({ error: 'PDF generation service is unavailable' });
         expect(mockFetch).not.toHaveBeenCalled();
     });
+
+    it('revalidates PDF_SERVER_URL at request time and fails closed on a late change', async () => {
+        process.env.PDF_SERVER_URL = 'http://127.0.0.1:3002';
+        const app = createTestApp();
+        process.env.PDF_SERVER_URL = 'https://example.com';
+
+        const res = await request(app)
+            .post('/generate-pdf')
+            .set('x-test-auth', 'ok')
+            .send({
+                htmlContent: '<p>blocked</p>',
+                filename: 'resume.pdf'
+            });
+
+        expect(res.status).toBe(503);
+        expect(res.body).toEqual({ error: 'PDF generation service is unavailable' });
+        expect(mockFetch).not.toHaveBeenCalled();
+    });
 });
 

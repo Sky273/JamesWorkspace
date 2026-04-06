@@ -180,6 +180,7 @@ import { startServer } from '../../config/lifecycle.js';
 
 describe('Lifecycle config', () => {
     const originalExit = process.exit;
+    const flushImmediate = () => new Promise((resolve) => setImmediate(resolve));
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -235,5 +236,80 @@ describe('Lifecycle config', () => {
             { enableDatabaseTasks: false }
         );
         expect(mockStartBlacklistCleanup).not.toHaveBeenCalled();
+    });
+
+    it('should run shutdown cleanup and exit cleanly when the server closes successfully', async () => {
+        mockInitializeDatabase.mockResolvedValue(false);
+
+        const server = {
+            timeout: 0,
+            keepAliveTimeout: 0,
+            headersTimeout: 0,
+            close: vi.fn((callback) => callback())
+        };
+
+        const app = {
+            listen: vi.fn((port, cb) => {
+                setImmediate(cb);
+                return server;
+            })
+        };
+
+        const startedServer = startServer(app, 'C:\\Users\\mail\\CascadeProjects\\ResumeConverter\\server');
+        await flushImmediate();
+        await flushImmediate();
+        vi.clearAllMocks();
+        process.exit = vi.fn();
+
+        await startedServer.gracefulShutdown('SIGTERM', 0);
+        await flushImmediate();
+        await flushImmediate();
+
+        expect(mockCleanupRateLimitStore).toHaveBeenCalled();
+        expect(mockStopMemoryMonitor).toHaveBeenCalled();
+        expect(mockCleanupAllCaches).toHaveBeenCalled();
+        expect(mockStopPeriodicCleanup).toHaveBeenCalled();
+        expect(mockStopBatchJobsWorker).toHaveBeenCalled();
+        expect(mockClosePool).toHaveBeenCalled();
+        expect(process.exit).toHaveBeenCalledWith(0);
+    });
+
+    it('should fail closed when server.close reports an error', async () => {
+        mockInitializeDatabase.mockResolvedValue(false);
+
+        const closeError = new Error('close failed');
+        closeError.code = 'EFAIL';
+
+        const server = {
+            timeout: 0,
+            keepAliveTimeout: 0,
+            headersTimeout: 0,
+            close: vi.fn((callback) => callback(closeError))
+        };
+
+        const app = {
+            listen: vi.fn((port, cb) => {
+                setImmediate(cb);
+                return server;
+            })
+        };
+
+        const startedServer = startServer(app, 'C:\\Users\\mail\\CascadeProjects\\ResumeConverter\\server');
+        await flushImmediate();
+        await flushImmediate();
+        vi.clearAllMocks();
+        process.exit = vi.fn();
+
+        await startedServer.gracefulShutdown('SIGINT', 2);
+        await flushImmediate();
+        await flushImmediate();
+
+        expect(mockCleanupAllCaches).not.toHaveBeenCalled();
+        expect(mockCleanupRateLimitStore).not.toHaveBeenCalled();
+        expect(mockStopMemoryMonitor).not.toHaveBeenCalled();
+        expect(mockStopPeriodicCleanup).not.toHaveBeenCalled();
+        expect(mockStopBatchJobsWorker).not.toHaveBeenCalled();
+        expect(mockClosePool).not.toHaveBeenCalled();
+        expect(process.exit).toHaveBeenCalledWith(2);
     });
 });

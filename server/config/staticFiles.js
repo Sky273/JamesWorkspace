@@ -24,6 +24,56 @@ const mimeTypes = {
     '.eot': 'application/vnd.ms-fontobject'
 };
 
+function normalizeStaticRequestPath(filePath) {
+    return `/${String(filePath || '').replace(/\\/g, '/')}`;
+}
+
+function stripCompressionSuffix(filePath) {
+    if (filePath.endsWith('.br') || filePath.endsWith('.gz')) {
+        return filePath.slice(0, -3);
+    }
+    return filePath;
+}
+
+function buildPrecompressedAssetIndex(distPath) {
+    const precompressedAssets = new Map();
+
+    function walkDirectory(directoryPath) {
+        let entries = [];
+        try {
+            entries = fs.readdirSync(directoryPath, { withFileTypes: true });
+        } catch {
+            return;
+        }
+
+        for (const entry of entries) {
+            const entryPath = path.join(directoryPath, entry.name);
+            if (entry.isDirectory()) {
+                walkDirectory(entryPath);
+                continue;
+            }
+
+            if (!entry.name.endsWith('.br') && !entry.name.endsWith('.gz')) {
+                continue;
+            }
+
+            const compressedRequestPath = normalizeStaticRequestPath(
+                stripCompressionSuffix(path.relative(distPath, entryPath))
+            );
+            const cachedEntry = precompressedAssets.get(compressedRequestPath) || { br: false, gzip: false };
+            if (entry.name.endsWith('.br')) {
+                cachedEntry.br = true;
+            } else {
+                cachedEntry.gzip = true;
+            }
+            precompressedAssets.set(compressedRequestPath, cachedEntry);
+        }
+    }
+
+    walkDirectory(distPath);
+    return precompressedAssets;
+}
+
 /**
  * Configure static file serving with pre-compression and SPA fallback
  * @param {express.Application} app - Express application
@@ -31,38 +81,30 @@ const mimeTypes = {
  */
 export function configureStaticFiles(app, serverDir) {
     const distPath = path.join(serverDir, '..', 'client', 'dist');
+    const precompressedAssetIndex = buildPrecompressedAssetIndex(distPath);
 
-    // Serve pre-compressed files (Brotli and Gzip) if available
-    // This middleware checks for .br and .gz versions of requested files
+    // Serve pre-compressed files (Brotli and Gzip) if available.
     app.use((req, res, next) => {
-        // Only for static assets (JS, CSS, etc.)
         if (!req.path.startsWith('/api/') && !req.path.startsWith('/health')) {
             const acceptEncoding = req.headers['accept-encoding'] || '';
-            const filePath = path.join(distPath, req.path);
             const ext = path.extname(req.path).toLowerCase();
             const mimeType = mimeTypes[ext];
+            const cachedVariants = precompressedAssetIndex.get(req.path);
             
-            // Try Brotli first (better compression)
-            if (acceptEncoding.includes('br')) {
-                const brPath = filePath + '.br';
-                if (fs.existsSync(brPath)) {
-                    res.set('X-Content-Type-Options', 'nosniff');
-                    res.set('Content-Encoding', 'br');
-                    res.set('Vary', 'Accept-Encoding');
-                    if (mimeType) res.set('Content-Type', mimeType);
-                    req.url = req.url + '.br';
-                }
+            if (cachedVariants?.br && acceptEncoding.includes('br')) {
+                res.set('X-Content-Type-Options', 'nosniff');
+                res.set('Content-Encoding', 'br');
+                res.set('Vary', 'Accept-Encoding');
+                if (mimeType) res.set('Content-Type', mimeType);
+                req.url = req.url + '.br';
             }
-            // Fallback to Gzip
-            else if (acceptEncoding.includes('gzip')) {
-                const gzPath = filePath + '.gz';
-                if (fs.existsSync(gzPath)) {
-                    res.set('X-Content-Type-Options', 'nosniff');
-                    res.set('Content-Encoding', 'gzip');
-                    res.set('Vary', 'Accept-Encoding');
-                    if (mimeType) res.set('Content-Type', mimeType);
-                    req.url = req.url + '.gz';
-                }
+            // Gzip remains the fallback when Brotli is unavailable.
+            else if (cachedVariants?.gzip && acceptEncoding.includes('gzip')) {
+                res.set('X-Content-Type-Options', 'nosniff');
+                res.set('Content-Encoding', 'gzip');
+                res.set('Vary', 'Accept-Encoding');
+                if (mimeType) res.set('Content-Type', mimeType);
+                req.url = req.url + '.gz';
             }
         }
         next();

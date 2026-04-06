@@ -195,6 +195,7 @@ describe('Share Routes', () => {
                 signal: expect.any(Object)
             })
         );
+        expect(mockFetch.mock.calls[0][1].headers['x-internal-service-token']).toBe(process.env.PDF_SERVER_INTERNAL_TOKEN);
     });
 
     it('applies a dedicated rate limit to share PDF generation', () => {

@@ -199,6 +199,7 @@ describe('Batch Jobs Worker - Export Generator', () => {
             expect.stringContaining('/generate-pdf'),
             expect.objectContaining({ method: 'POST' })
         );
+        expect(mockFetch.mock.calls[0][1].headers['x-internal-service-token']).toBe(process.env.PDF_SERVER_INTERNAL_TOKEN);
         expect(mockUpdateJobExportFile).toHaveBeenCalledWith('j1', expect.any(String), expect.stringContaining('export_j1'));
         expect(mockTrackBatchExportActivity).toHaveBeenCalledWith(expect.objectContaining({
             source: 'job',
@@ -312,6 +313,7 @@ describe('Batch Jobs Worker - Export Generator', () => {
             expect.stringContaining('/generate-docx'),
             expect.any(Object)
         );
+        expect(mockFetch.mock.calls[0][1].headers['x-internal-service-token']).toBe(process.env.PDF_SERVER_INTERNAL_TOKEN);
     });
 
     it('should mark items as error when PDF generation fails', async () => {

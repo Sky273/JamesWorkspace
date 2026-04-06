@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
+import JSZip from 'jszip';
 
 const { mockUserRateLimit } = vi.hoisted(() => ({
     mockUserRateLimit: vi.fn(() => (req, _res, next) => next())
@@ -27,6 +28,8 @@ vi.mock('../../services/batchJobsWorker/textExtraction.js', () => ({
 
 const mockExtractFromDOCX = vi.fn();
 const mockExtractFromPDF = vi.fn();
+let validDocxBuffer = Buffer.from([0x50, 0x4B, 0x03, 0x04, 0x14, 0x00]);
+let invalidDocxBuffer = Buffer.from([0x50, 0x4B, 0x03, 0x04, 0x14, 0x00]);
 
 function getTemplateFileBuffer(filename) {
     if (filename.endsWith('.pdf')) {
@@ -41,6 +44,26 @@ function getTemplateFileBuffer(filename) {
     return Buffer.from('invalid');
 }
 
+async function buildValidDocxBuffer() {
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8"?>
+    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+      <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml" />
+    </Types>`);
+    zip.file('word/document.xml', '<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Template</w:t></w:r></w:p></w:body></w:document>');
+    return Buffer.from(await zip.generateAsync({ type: 'nodebuffer' }));
+}
+
+async function buildInvalidDocxBuffer() {
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8"?>
+    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+      <Override PartName="/customXml/item1.xml" ContentType="application/xml" />
+    </Types>`);
+    zip.file('customXml/item1.xml', '<root><value>not a docx</value></root>');
+    return Buffer.from(await zip.generateAsync({ type: 'nodebuffer' }));
+}
+
 vi.mock('../../routes/templates/extraction/extractors.js', () => ({
     upload: {
         single: () => (req, _res, next) => {
@@ -48,16 +71,24 @@ vi.mock('../../routes/templates/extraction/extractors.js', () => ({
                 req.file = null;
             } else if (req.headers['x-test-mimetype']) {
                 const filename = req.headers['x-test-filename'] || 'template.pdf';
-                req.file = {
-                    buffer: req.headers['x-test-invalid-signature'] === 'true'
+                let buffer;
+                if (req.headers['x-test-docx-archive'] === 'valid') {
+                    buffer = validDocxBuffer;
+                } else if (req.headers['x-test-docx-archive'] === 'invalid') {
+                    buffer = invalidDocxBuffer;
+                } else {
+                    buffer = req.headers['x-test-invalid-signature'] === 'true'
                         ? Buffer.from('not-a-real-file')
-                        : getTemplateFileBuffer(filename),
+                        : getTemplateFileBuffer(filename);
+                }
+                req.file = {
+                    buffer,
                     originalname: filename,
                     mimetype: req.headers['x-test-mimetype']
                 };
             } else {
                 req.file = {
-                    buffer: getTemplateFileBuffer('template.docx'),
+                    buffer: validDocxBuffer,
                     originalname: 'template.docx',
                     mimetype: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
                 };
@@ -119,8 +150,10 @@ const AUTH = { Authorization: 'Bearer valid-token' };
 describe('Templates Extraction Routes', () => {
     let app;
 
-    beforeEach(() => {
+    beforeEach(async () => {
         vi.clearAllMocks();
+        validDocxBuffer = await buildValidDocxBuffer();
+        invalidDocxBuffer = await buildInvalidDocxBuffer();
         mockExtractFromDOCX.mockResolvedValue({
             template: { name: 'DOCX Template' },
             model: 'test-model',
@@ -171,12 +204,28 @@ describe('Templates Extraction Routes', () => {
                 .set({
                     ...AUTH,
                     'x-test-filename': 'template.docx',
-                    'x-test-mimetype': 'application/octet-stream'
+                    'x-test-mimetype': 'application/octet-stream',
+                    'x-test-docx-archive': 'valid'
                 });
 
             expect(res.status).toBe(200);
             expect(mockExtractFromDOCX).toHaveBeenCalled();
             expect(mockExtractFromPDF).not.toHaveBeenCalled();
+        });
+
+        it('should reject zip files renamed as docx', async () => {
+            const res = await request(app)
+                .post('/api/templates/extract-from-cv')
+                .set({
+                    ...AUTH,
+                    'x-test-filename': 'template.docx',
+                    'x-test-mimetype': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'x-test-docx-archive': 'invalid'
+                });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('Invalid file contents');
+            expect(mockExtractFromDOCX).not.toHaveBeenCalled();
         });
 
         it('should reject invalid binary contents even with an allowed file type', async () => {
@@ -225,7 +274,8 @@ describe('Templates Extraction Routes', () => {
                 .set({
                     ...AUTH,
                     'x-test-filename': 'template.docx',
-                    'x-test-mimetype': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                    'x-test-mimetype': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'x-test-docx-archive': 'valid'
                 })
                 .then((response) => response);
             const secondRequest = request(app)
@@ -233,7 +283,8 @@ describe('Templates Extraction Routes', () => {
                 .set({
                     ...AUTH,
                     'x-test-filename': 'template.docx',
-                    'x-test-mimetype': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                    'x-test-mimetype': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'x-test-docx-archive': 'valid'
                 })
                 .then((response) => response);
 
@@ -246,7 +297,8 @@ describe('Templates Extraction Routes', () => {
                 .set({
                     ...AUTH,
                     'x-test-filename': 'template.docx',
-                    'x-test-mimetype': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                    'x-test-mimetype': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'x-test-docx-archive': 'valid'
                 });
 
             expect(thirdResponse.status).toBe(429);

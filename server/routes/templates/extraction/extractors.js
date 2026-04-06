@@ -235,9 +235,7 @@ async function extractFromPDF(buffer, fileName) {
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-web-security',
-                '--allow-file-access-from-files'
+                '--disable-dev-shm-usage'
             ]
         });
 

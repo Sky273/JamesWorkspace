@@ -50,9 +50,11 @@ const mockReadFile = vi.fn();
 const mockUnlink = vi.fn();
 vi.mock('fs/promises', () => ({
     default: {
+        mkdir: vi.fn(() => Promise.resolve()),
         readFile: (...args) => mockReadFile(...args),
         unlink: (...args) => mockUnlink(...args)
     },
+    mkdir: vi.fn(() => Promise.resolve()),
     readFile: (...args) => mockReadFile(...args),
     unlink: (...args) => mockUnlink(...args)
 }));
@@ -79,6 +81,13 @@ vi.mock('pdfjs-dist/legacy/build/pdf.mjs', () => ({
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn(),
     createModuleLogger: () => ({ info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() })
+}));
+
+vi.mock('../../services/metrics.service.js', () => ({
+    metrics: {
+        trackUploadActivity: vi.fn(),
+        trackOcrActivity: vi.fn()
+    }
 }));
 
 const mockExtractTextFromWordBuffer = vi.fn();

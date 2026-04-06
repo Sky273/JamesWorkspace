@@ -1,4 +1,3 @@
-import fs from 'fs';
 import fsPromises from 'fs/promises';
 import multer from 'multer';
 import path from 'path';
@@ -22,6 +21,11 @@ const ALLOWED_MIME_BY_EXTENSION = new Map([
     ['.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
 ]);
 const DEFAULT_SIGNATURE_BYTES = 12;
+const BATCH_UPLOAD_DIR = path.join(UPLOAD_DIR, 'batch-jobs');
+
+function ensureBatchUploadDir() {
+    return fsPromises.mkdir(BATCH_UPLOAD_DIR, { recursive: true });
+}
 
 export async function cleanupUploadedFiles(files) {
     await Promise.all((Array.isArray(files) ? files : []).map(async (file) => {
@@ -98,13 +102,12 @@ export async function normalizeAndValidateUploadedFiles(files, relativePaths, al
 }
 
 export function createUploadMiddleware() {
-    const batchUploadDir = path.join(UPLOAD_DIR, 'batch-jobs');
-
     return multer({
         storage: multer.diskStorage({
             destination: (_req, _file, cb) => {
-                fs.mkdirSync(batchUploadDir, { recursive: true });
-                cb(null, batchUploadDir);
+                ensureBatchUploadDir()
+                    .then(() => cb(null, BATCH_UPLOAD_DIR))
+                    .catch((error) => cb(error));
             },
             filename: (_req, file, cb) => {
                 const timestamp = Date.now();

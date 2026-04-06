@@ -265,6 +265,7 @@ describe('Batch Export Routes', () => {
                 streamFiles: true,
                 compression: 'DEFLATE'
             }));
+            expect(mockFetch.mock.calls[1][1].headers['x-internal-service-token']).toBe(process.env.PDF_SERVER_INTERNAL_TOKEN);
             expect(mockGenerateAsync).not.toHaveBeenCalled();
             expect(mockTrackBatchExportActivity).toHaveBeenCalledWith(expect.objectContaining({
                 source: 'http',

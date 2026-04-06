@@ -105,4 +105,44 @@ describe('pdfTextOcrPageProcessor.service', () => {
         });
         expect(fsMock.unlink).toHaveBeenCalledWith('/tmp/rendered-page.png');
     });
+
+    it('still cleans OCR temp artifacts when variant recognition fails after assets are created', async () => {
+        const { fsMock, services, processor } = createHarness();
+        services.preparePythonOcrVariants.mockResolvedValueOnce({
+            outputDir: '/tmp/resume-ocr-variants-2',
+            variants: [{ name: 'thresholded', path: '/tmp/variant-thresholded.png' }],
+            blocks: [{ path: '/tmp/block-1.png' }]
+        });
+        services.recognizeWithTesseractCli
+            .mockResolvedValueOnce({
+                text: 'Recognized OCR text',
+                confidence: 72,
+                score: 144,
+                engine: 'tesseract-cli',
+                psm: '6'
+            })
+            .mockRejectedValueOnce(new Error('variant OCR failed'));
+        const state = {
+            ocrPageCount: 0,
+            ocrUsed: false,
+            totalOcrConfidence: 0,
+            failedOcrPages: 0,
+            recentResults: []
+        };
+
+        await expect(processor({
+            page: {},
+            pageNum: 4,
+            buffer: Buffer.from('pdf'),
+            state
+        })).rejects.toThrow('variant OCR failed');
+
+        expect(fsMock.unlink).toHaveBeenCalledWith('/tmp/variant-thresholded.png');
+        expect(fsMock.unlink).toHaveBeenCalledWith('/tmp/block-1.png');
+        expect(fsMock.rm).toHaveBeenCalledWith('/tmp/resume-ocr-variants-2', {
+            recursive: true,
+            force: true
+        });
+        expect(fsMock.unlink).toHaveBeenCalledWith('/tmp/rendered-page.png');
+    });
 });

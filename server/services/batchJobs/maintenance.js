@@ -12,6 +12,19 @@ import { safeLog } from '../../utils/logger.backend.js';
 const EXPORTS_DIR = path.join(os.tmpdir(), 'batch-exports');
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
+export function isManagedBatchExportPath(filePath) {
+    if (typeof filePath !== 'string' || filePath.trim().length === 0) {
+        return false;
+    }
+
+    const resolvedExportsDir = path.resolve(EXPORTS_DIR);
+    const resolvedFilePath = path.resolve(filePath);
+    const relativePath = path.relative(resolvedExportsDir, resolvedFilePath);
+    return relativePath !== ''
+        && !relativePath.startsWith('..')
+        && !path.isAbsolute(relativePath);
+}
+
 async function clearJobExportReference(jobId) {
     await query(`
         UPDATE batch_jobs
@@ -22,6 +35,11 @@ async function clearJobExportReference(jobId) {
 
 async function deleteExportArtifact(filePath) {
     if (!filePath) {
+        return false;
+    }
+
+    if (!isManagedBatchExportPath(filePath)) {
+        safeLog('warn', 'Rejected deletion of unmanaged batch export artifact', { filePath });
         return false;
     }
 
@@ -58,6 +76,16 @@ export async function cleanupJobExportArtifacts(maxAgeDays = 7) {
         for (const row of result.rows) {
             const filePath = row.export_file_path;
             if (!filePath) continue;
+
+            if (!isManagedBatchExportPath(filePath)) {
+                safeLog('warn', 'Clearing unmanaged batch export metadata', {
+                    jobId: row.id,
+                    filePath
+                });
+                await clearJobExportReference(row.id);
+                staleExportRefsCleared++;
+                continue;
+            }
 
             let stats;
             try {

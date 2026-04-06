@@ -1,7 +1,7 @@
 import { safeLog } from '../../../utils/logger.backend.js';
 import { extractFromDOCX, extractFromPDF } from './extractors.js';
 import { inferMimeTypeFromFilename } from '../../../utils/uploadFileTypes.js';
-import { isValidFileSignature } from '../../../utils/fileSignature.js';
+import { isValidDocxArchive, isValidFileSignature } from '../../../utils/fileSignature.js';
 
 function createExtractFromCvHandler() {
     return async (req, res) => {
@@ -12,7 +12,10 @@ function createExtractFromCvHandler() {
 
             const { buffer, originalname, mimetype } = req.file;
             const resolvedMimeType = inferMimeTypeFromFilename(originalname) || mimetype;
-            if (!isValidFileSignature(buffer, resolvedMimeType)) {
+            const hasValidContents = resolvedMimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                ? await isValidDocxArchive(buffer)
+                : isValidFileSignature(buffer, resolvedMimeType);
+            if (!hasValidContents) {
                 return res.status(400).json({ error: 'Invalid file contents.' });
             }
             let result;
