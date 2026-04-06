@@ -28,7 +28,7 @@ const CRMPage = (): JSX.Element => {
   const dashboard = useClientsDashboard();
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-6 max-w-7xl mx-auto">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="cv-surface app-page-shell">
       <CRMHeader />
 
       <CRMMainTabs crmTab={dashboard.crmTab} onClientsClick={dashboard.goToClientsTab} onDealsClick={dashboard.goToDealsTab} />

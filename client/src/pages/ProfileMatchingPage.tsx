@@ -14,6 +14,7 @@ import {
   DocumentTextIcon,
   SparklesIcon
 } from '@heroicons/react/24/outline';
+import PageHeader from '../components/page/PageHeader';
 import { findMatchingProfiles, getMissions, getDeals, clearMissionKeywordsCache, analyzeProfileForMission } from '../utils/profileMatchingService';
 import type { 
   Mission, 
@@ -218,7 +219,7 @@ const ProfileMatchingPage = (): JSX.Element => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-6 max-w-6xl mx-auto relative"
+      className="cv-surface app-page-shell-6xl relative"
     >
       {/* Polished overlay during processing */}
       <AnimatePresence>
@@ -226,18 +227,7 @@ const ProfileMatchingPage = (): JSX.Element => {
           <ProfileMatchingOverlay mode={loading ? 'searching' : 'analyzing'} />
         )}
       </AnimatePresence>
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-1 h-8 rounded-full bg-primary-500" />
-          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
-            {t('profileMatching.title')}
-          </h1>
-        </div>
-        <p className="text-gray-500 dark:text-gray-400 ml-[1.75rem]">
-          {t('profileMatching.subtitle')}
-        </p>
-      </div>
+      <PageHeader title={t('profileMatching.title')} subtitle={t('profileMatching.subtitle')} />
 
       {/* Search Panel */}
       <ProfileMatchSearchPanel

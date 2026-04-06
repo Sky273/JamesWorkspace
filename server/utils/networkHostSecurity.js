@@ -21,15 +21,27 @@ function isIpv4InCidr(ip, base, prefixLength) {
 
 function isPrivateIpv4(ip) {
     return (
-        isIpv4InCidr(ip, '0.0.0.0', 8)
-        || isIpv4InCidr(ip, '10.0.0.0', 8)
+        isPrivateBackupIpv4(ip)
+        || isBlockedOutboundIpv4(ip)
+    );
+}
+
+function isPrivateBackupIpv4(ip) {
+    return (
+        isIpv4InCidr(ip, '10.0.0.0', 8)
         || isIpv4InCidr(ip, '100.64.0.0', 10)
+        || isIpv4InCidr(ip, '172.16.0.0', 12)
+        || isIpv4InCidr(ip, '192.168.0.0', 16)
+    );
+}
+
+function isBlockedOutboundIpv4(ip) {
+    return (
+        isIpv4InCidr(ip, '0.0.0.0', 8)
         || isIpv4InCidr(ip, '127.0.0.0', 8)
         || isIpv4InCidr(ip, '169.254.0.0', 16)
-        || isIpv4InCidr(ip, '172.16.0.0', 12)
         || isIpv4InCidr(ip, '192.0.0.0', 24)
         || isIpv4InCidr(ip, '192.0.2.0', 24)
-        || isIpv4InCidr(ip, '192.168.0.0', 16)
         || isIpv4InCidr(ip, '198.18.0.0', 15)
         || isIpv4InCidr(ip, '198.51.100.0', 24)
         || isIpv4InCidr(ip, '203.0.113.0', 24)
@@ -39,25 +51,34 @@ function isPrivateIpv4(ip) {
 
 function isTrustedInternalIpv4(ip) {
     return (
-        isIpv4InCidr(ip, '10.0.0.0', 8)
+        isPrivateBackupIpv4(ip)
         || isIpv4InCidr(ip, '127.0.0.0', 8)
         || isIpv4InCidr(ip, '169.254.0.0', 16)
-        || isIpv4InCidr(ip, '172.16.0.0', 12)
-        || isIpv4InCidr(ip, '192.168.0.0', 16)
     );
 }
 
 function isPrivateIpv6(ip) {
+    return isPrivateBackupIpv6(ip) || isBlockedOutboundIpv6(ip);
+}
+
+function isPrivateBackupIpv6(ip) {
+    const normalized = ip.toLowerCase();
+    return (
+        normalized.startsWith('fc')
+        || normalized.startsWith('fd')
+    );
+}
+
+function isBlockedOutboundIpv6(ip) {
     const normalized = ip.toLowerCase();
     return (
         normalized === '::1'
         || normalized === '::'
-        || normalized.startsWith('fc')
-        || normalized.startsWith('fd')
         || normalized.startsWith('fe8')
         || normalized.startsWith('fe9')
         || normalized.startsWith('fea')
         || normalized.startsWith('feb')
+        || normalized.startsWith('ff')
     );
 }
 
@@ -65,8 +86,7 @@ function isTrustedInternalIpv6(ip) {
     const normalized = ip.toLowerCase();
     return (
         normalized === '::1'
-        || normalized.startsWith('fc')
-        || normalized.startsWith('fd')
+        || isPrivateBackupIpv6(normalized)
         || normalized.startsWith('fe8')
         || normalized.startsWith('fe9')
         || normalized.startsWith('fea')
@@ -98,6 +118,7 @@ function isTrustedInternalIp(ip) {
 
 export async function assertSafeOutboundHost(host, {
     allowPrivateHostsEnvVar = 'ALLOW_PRIVATE_OUTBOUND_HOSTS',
+    allowPrivateAddresses = false,
     resolver = dns.lookup
 } = {}) {
     if (process.env[allowPrivateHostsEnvVar] === 'true') {
@@ -117,7 +138,10 @@ export async function assertSafeOutboundHost(host, {
         throw new Error('Private or loopback hosts are not allowed');
     }
 
-    if (isPrivateOrReservedIp(normalizedHost)) {
+    const isBlockedIpAddress = isBlockedOutboundIp(normalizedHost);
+    const isPrivateIpAddress = isPrivateOrReservedIp(normalizedHost);
+
+    if (isBlockedIpAddress || (isPrivateIpAddress && !allowPrivateAddresses)) {
         throw new Error('Private or loopback hosts are not allowed');
     }
 
@@ -126,7 +150,11 @@ export async function assertSafeOutboundHost(host, {
         throw new Error('Remote host could not be resolved');
     }
 
-    if (resolvedAddresses.some((entry) => isPrivateOrReservedIp(entry.address))) {
+    if (resolvedAddresses.some((entry) => isBlockedOutboundIp(entry.address))) {
+        throw new Error('Remote host resolves to a private or loopback address');
+    }
+
+    if (!allowPrivateAddresses && resolvedAddresses.some((entry) => isPrivateOrReservedIp(entry.address))) {
         throw new Error('Remote host resolves to a private or loopback address');
     }
 
@@ -137,6 +165,17 @@ function isLoopbackOrLocalHostname(hostname) {
     return hostname === 'localhost'
         || hostname.endsWith('.localhost')
         || hostname === 'localhost.localdomain';
+}
+
+function isBlockedOutboundIp(ip) {
+    const family = net.isIP(ip);
+    if (family === 4) {
+        return isBlockedOutboundIpv4(ip);
+    }
+    if (family === 6) {
+        return isBlockedOutboundIpv6(ip);
+    }
+    return false;
 }
 
 export async function assertTrustedInternalServiceUrl(urlString, {

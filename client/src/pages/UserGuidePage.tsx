@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+import PageHeader from '../components/page/PageHeader';
 import { extractGuideSectionContent, getUserGuideSections } from './userGuide.config';
 import { loadUserGuideContent } from './userGuideContentLoader';
 import { userGuideMarkdownComponents } from './userGuideMarkdownComponents';
@@ -57,21 +58,13 @@ const UserGuidePage = (): JSX.Element => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="p-6 max-w-6xl mx-auto"
+      className="cv-surface app-page-shell max-w-6xl"
     >
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-1 h-8 rounded-full bg-primary-500" />
-          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
-            {t('userGuide.title')}
-          </h1>
-        </div>
-        <p className="text-gray-500 dark:text-gray-400 ml-[1.75rem]">{t('userGuide.subtitle')}</p>
-      </div>
+      <PageHeader title={t('userGuide.title')} subtitle={t('userGuide.subtitle')} />
 
       <div className="flex flex-col md:flex-row gap-6">
         <div className="md:w-72 flex-shrink-0">
-          <nav className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 sticky top-6">
+          <nav className="section-shell sticky top-6 rounded-[2rem] p-4">
             <ul className="space-y-1">
               {sections.map((section) => {
                 const IconComponent = section.icon;
@@ -96,7 +89,7 @@ const UserGuidePage = (): JSX.Element => {
         </div>
 
         <div className="flex-1">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 md:p-8">
+          <div className="section-shell rounded-[2rem] p-6 md:p-8">
             {isLoadingGuide ? (
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>

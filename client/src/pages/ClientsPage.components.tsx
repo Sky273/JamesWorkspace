@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { Client, ClientType } from '../types/entities';
 import Pagination from '../components/Pagination';
+import PageHeader from '../components/page/PageHeader';
 import SearchField from '../components/page/SearchField';
 import { SkeletonClientList } from '../components/ui/Skeleton';
 import type { CRMTab, ClientFilter, ClientsStats } from './ClientsPage.hooks';
@@ -32,22 +33,14 @@ function getTypeColor(type: ClientType): string {
 export function CRMHeader() {
   const { t } = useTranslation();
 
-  return (
-    <div className="mb-8">
-      <div className="flex items-center gap-3 mb-1">
-        <div className="w-1 h-8 rounded-full bg-primary-500" />
-        <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">{t('crm.title')}</h1>
-      </div>
-      <p className="text-gray-500 dark:text-gray-400 ml-[1.75rem]">{t('crm.subtitle')}</p>
-    </div>
-  );
+  return <PageHeader title={t('crm.title')} subtitle={t('crm.subtitle')} />;
 }
 
 export function CRMMainTabs({ crmTab, onClientsClick, onDealsClick }: { crmTab: CRMTab; onClientsClick: () => void; onDealsClick: () => void }) {
   const { t } = useTranslation();
 
   return (
-    <div className="flex items-center gap-1 mb-6 border-b border-gray-200 dark:border-gray-700">
+    <div className="app-tab-strip mb-6">
       <button onClick={onClientsClick} className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition-colors ${crmTab === 'clients' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}>
         <BuildingOfficeIcon className="w-5 h-5" />
         {t('crm.tabs.clients')}
@@ -64,20 +57,20 @@ export function CRMStatsCards({ stats }: { stats: ClientsStats }) {
   const { t } = useTranslation();
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex items-center gap-3">
+    <div className="grid grid-cols-2 gap-4 mb-6 md:grid-cols-4">
+      <div className="lux-card flex items-center gap-3 rounded-[1.75rem] p-4">
         <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg"><BuildingOfficeIcon className="w-6 h-6 text-green-600 dark:text-green-400" /></div>
         <div><div className="text-sm text-gray-600 dark:text-gray-400">{t('clients.stats.clients')}</div><div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalClients}</div></div>
       </div>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex items-center gap-3">
+      <div className="lux-card flex items-center gap-3 rounded-[1.75rem] p-4">
         <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg"><BriefcaseIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" /></div>
         <div><div className="text-sm text-gray-600 dark:text-gray-400">{t('clients.stats.prospects')}</div><div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalProspects}</div></div>
       </div>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex items-center gap-3">
+      <div className="lux-card flex items-center gap-3 rounded-[1.75rem] p-4">
         <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg"><UserGroupIcon className="w-6 h-6 text-purple-600 dark:text-purple-400" /></div>
         <div><div className="text-sm text-gray-600 dark:text-gray-400">{t('clients.stats.contacts')}</div><div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalContacts}</div></div>
       </div>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex items-center gap-3">
+      <div className="lux-card flex items-center gap-3 rounded-[1.75rem] p-4">
         <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg"><PaperAirplaneIcon className="w-6 h-6 text-orange-600 dark:text-orange-400" /></div>
         <div><div className="text-sm text-gray-600 dark:text-gray-400">{t('clients.stats.submissions')}</div><div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalSubmissions}</div></div>
       </div>
@@ -103,16 +96,16 @@ export function ClientsToolbar({
   const { t } = useTranslation();
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-4">
+    <div className="section-shell mb-6 rounded-[2rem]">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--cv-outline)] p-4">
         <div className="flex items-center gap-2">
-          <button onClick={() => onSetActiveTab('all')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>{t('clients.tabs.all')}</button>
-          <button onClick={() => onSetActiveTab('client')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'client' ? 'bg-green-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}><BuildingOfficeIcon className="w-5 h-5" />{t('clients.tabs.clients')}</button>
-          <button onClick={() => onSetActiveTab('prospect')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'prospect' ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}><BriefcaseIcon className="w-5 h-5" />{t('clients.tabs.prospects')}</button>
+          <button onClick={() => onSetActiveTab('all')} className={`app-tab-button ${activeTab === 'all' ? 'app-tab-button-active' : ''}`}>{t('clients.tabs.all')}</button>
+          <button onClick={() => onSetActiveTab('client')} className={`app-tab-button ${activeTab === 'client' ? 'app-tab-button-active' : ''}`}><BuildingOfficeIcon className="w-5 h-5" />{t('clients.tabs.clients')}</button>
+          <button onClick={() => onSetActiveTab('prospect')} className={`app-tab-button ${activeTab === 'prospect' ? 'app-tab-button-active' : ''}`}><BriefcaseIcon className="w-5 h-5" />{t('clients.tabs.prospects')}</button>
         </div>
         <div className="flex gap-2">
-          <button onClick={onRefresh} className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title={t('common.refresh')}><ArrowPathIcon className="w-5 h-5" /></button>
-          <button onClick={onCreateClient} className="btn btn-primary flex items-center gap-2 px-4 py-2"><PlusIcon className="w-5 h-5" />{t('clients.addClient')}</button>
+          <button onClick={onRefresh} className="app-button-secondary rounded-2xl p-2.5" title={t('common.refresh')}><ArrowPathIcon className="w-5 h-5" /></button>
+          <button onClick={onCreateClient} className="app-button-primary flex items-center gap-2 rounded-2xl px-4 py-2.5"><PlusIcon className="w-5 h-5" />{t('clients.addClient')}</button>
         </div>
       </div>
       <div className="p-4">
@@ -123,7 +116,7 @@ export function ClientsToolbar({
             value={searchTerm}
             onChange={onSearchTermChange}
           />
-          {searchTerm && <button onClick={() => onSearchTermChange('')} className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title={t('common.resetFilters')}><XMarkIcon className="w-4 h-4" /></button>}
+          {searchTerm && <button onClick={() => onSearchTermChange('')} className="app-button-secondary inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm font-medium" title={t('common.resetFilters')}><XMarkIcon className="w-4 h-4" /></button>}
         </div>
       </div>
     </div>
@@ -152,13 +145,13 @@ export function ClientsResults({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
       {clients.length === 0 ? (
-        <div className="col-span-full bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
+        <div className="section-shell col-span-full rounded-[2rem] p-12 text-center">
           <BuildingOfficeIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
           <p className="text-gray-600 dark:text-gray-400">{t('clients.noClients')}</p>
         </div>
       ) : (
         clients.map((client, index) => (
-          <motion.div key={client.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }} className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow">
+          <motion.div key={client.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }} className="lux-card rounded-[1.75rem] transition-all hover:-translate-y-0.5">
             <div className="p-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -180,8 +173,8 @@ export function ClientsResults({
               </div>
               <div className="flex items-center gap-1 mb-4"><BuildingOfficeIcon className="w-3 h-3 text-gray-400" /><span className="text-xs text-gray-400 dark:text-gray-500">{client.firm_name || t('clients.noFirm')}</span></div>
               <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
-                <button onClick={() => onOpenClientDetail(client)} className="btn btn-primary flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm"><EyeIcon className="w-4 h-4" />{t('common.view')}</button>
-                <button onClick={() => onEditClient(client)} className="btn btn-secondary flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm"><PencilSquareIcon className="w-4 h-4" />{t('common.edit')}</button>
+                <button onClick={() => onOpenClientDetail(client)} className="app-button-primary flex flex-1 items-center justify-center gap-1 rounded-2xl px-3 py-2 text-sm"><EyeIcon className="w-4 h-4" />{t('common.view')}</button>
+                <button onClick={() => onEditClient(client)} className="app-button-secondary flex flex-1 items-center justify-center gap-1 rounded-2xl px-3 py-2 text-sm"><PencilSquareIcon className="w-4 h-4" />{t('common.edit')}</button>
                 <button
                   onClick={() => onDeleteClient(client)}
                   disabled={(client.submissions_count || 0) > 0}

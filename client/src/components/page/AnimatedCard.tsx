@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import type { ReactNode } from 'react';
 
 const BASE_CARD_CLASS_NAME =
-  'bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 transition-shadow';
+  'lux-card rounded-[1.75rem] border transition-all duration-200';
 
 export default function AnimatedCard({
   children,

@@ -31,12 +31,6 @@ export default function ResumeAnalysisHeader({
       className="mb-6"
     >
       <div className="glass-panel-strong overflow-hidden rounded-[2rem] p-5 sm:p-6">
-        <div className="mb-4 flex items-center gap-3">
-          <span className="cv-kicker">{t('resumes.title')}</span>
-          <span className="text-slate-400 dark:text-slate-500">&gt;</span>
-          <span className="cv-kicker text-[var(--cv-primary)]">{t('resume.analysis.title')}</span>
-        </div>
-
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-3">

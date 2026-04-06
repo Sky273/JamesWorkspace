@@ -43,7 +43,7 @@ const SettingsPage = (): JSX.Element => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="p-6 max-w-6xl mx-auto"
+      className="cv-surface app-page-shell max-w-6xl"
     >
       <SettingsHeader t={t} />
 
@@ -53,7 +53,7 @@ const SettingsPage = (): JSX.Element => {
         onTabChange={setActiveTab}
       />
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 overflow-visible">
+      <div className="section-shell rounded-[2rem] p-6 overflow-visible">
         {activeTab === 'llm' && (
           <LLMTab
             formData={formData}

@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
+import PageHeader from '../components/page/PageHeader';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import logger from '../utils/logger.frontend';
 import type { BackupSettings, BackupHistoryItem, RemoteFile } from './backupPage.types';
@@ -257,19 +258,8 @@ const BackupPage = (): JSX.Element => {
     }
 
     return (
-        <div className="max-w-6xl mx-auto px-4 py-6">
-            {/* Header */}
-            <div className="mb-8">
-                <div className="flex items-center gap-3 mb-1">
-                    <div className="w-1 h-8 rounded-full bg-primary-500" />
-                    <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
-                        {t('backup.pageTitle')}
-                    </h1>
-                </div>
-                <p className="text-gray-500 dark:text-gray-400 ml-[1.75rem]">
-                    {t('backup.pageDescription')}
-                </p>
-            </div>
+        <div className="cv-surface app-page-shell max-w-6xl">
+            <PageHeader title={t('backup.pageTitle')} subtitle={t('backup.pageDescription')} />
 
             {/* Section Tabs */}
             <div className="flex space-x-4 border-b border-gray-200 dark:border-gray-700 mb-6">

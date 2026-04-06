@@ -296,15 +296,15 @@ const BatchUploadPage = (): JSX.Element => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-      <div className="max-w-4xl mx-auto px-4">
+    <div className="mx-auto max-w-4xl">
+      <div className="cv-surface app-page-shell">
         <BatchUploadHeader t={tf} />
 
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6"
+          className="section-shell mb-6 rounded-[2rem] p-6"
         >
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
             {t('batchUpload.processingOptions', 'Options de traitement')}

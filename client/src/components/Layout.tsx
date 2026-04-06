@@ -83,15 +83,45 @@ const Layout = (): JSX.Element => {
 
   const isResumesRoute = location.pathname === '/resumes';
   const isMissionsRoute = location.pathname === '/missions';
-  const isEditorialMigratedRoute = isResumesRoute || isMissionsRoute;
-  const editorialRouteClassName = isResumesRoute ? ' resumes-editorial-shell' : isMissionsRoute ? ' missions-editorial-shell' : '';
+  const editorialRoutes = [
+    '/resumes',
+    '/missions',
+    '/adaptations',
+    '/profile-matching',
+    '/upload',
+    '/batch-upload',
+    '/batch-jobs',
+    '/clients',
+    '/templates',
+    '/dashboard/tags',
+    '/dashboard/users',
+    '/dashboard/security-logs',
+    '/dashboard/metrics',
+    '/dashboard/email-templates',
+    '/dashboard/gdpr-audit',
+    '/dashboard/backup',
+    '/settings',
+    '/facts',
+    '/metiers',
+    '/guide',
+    '/profile',
+  ];
+  const isEditorialMigratedRoute = editorialRoutes.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`));
+  const editorialRouteClassName = isResumesRoute
+    ? ' resumes-editorial-shell'
+    : isMissionsRoute
+      ? ' missions-editorial-shell'
+      : isEditorialMigratedRoute
+        ? ' app-editorial-shell'
+        : '';
 
   return (
     <div className="min-h-screen bg-app">
       <ScrollToTop />
       <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
 
-      <div className={`flex min-h-screen flex-1 flex-col md:pl-64${isEditorialMigratedRoute ? ` editorial-migrated-shell${editorialRouteClassName}` : ''}`}>
+      <div className="min-h-screen md:pl-64">
+        <div className={`flex min-h-screen flex-1 flex-col${isEditorialMigratedRoute ? ` editorial-migrated-shell${editorialRouteClassName}` : ''}`}>
         <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/92 shadow-[0_1px_0_rgba(15,23,42,0.04)] backdrop-blur-xl dark:border-white/6 dark:bg-[#0c1222]/95 dark:shadow-[0_1px_0_rgba(255,255,255,0.03)]">
           <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-3.5">
@@ -182,7 +212,8 @@ const Layout = (): JSX.Element => {
           </div>
         </main>
 
-        <Footer />
+          <Footer />
+        </div>
       </div>
 
       <Suspense fallback={null}>

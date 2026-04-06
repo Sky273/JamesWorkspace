@@ -11,6 +11,7 @@ import {
   ClockIcon,
   XCircleIcon
 } from '@heroicons/react/24/outline';
+import PageHeader from '../components/page/PageHeader';
 import logger from '../utils/logger.frontend';
 import type { ActionType, Firm, GdprAuditFilters, GdprAuditLog, Pagination, Stats } from '../components/GdprAudit/types';
 import GdprAuditStatsGrid from '../components/GdprAudit/GdprAuditStatsGrid';
@@ -182,41 +183,31 @@ const GdprAuditPage = (): JSX.Element => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <div className="w-1 h-8 rounded-full bg-primary-500" />
-                <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
-                  {tr('gdprAudit.title', 'Journal RGPD')}
-                </h1>
-              </div>
-              <p className="text-gray-500 dark:text-gray-400 ml-[1.75rem]">
-                {tr('gdprAudit.subtitle', 'Historique des actions de conformit? RGPD')}
-              </p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`btn btn-secondary inline-flex items-center px-3 py-2 text-sm font-medium ${showFilters ? 'ring-2 ring-primary-500' : ''}`}
-              >
-                <FunnelIcon className="h-4 w-4 mr-2" />
-                {tr('gdprAudit.filters', 'Filtres')}
-              </button>
-              <button
-                onClick={() => { void fetchLogs(); void fetchStats(); }}
-                className="btn btn-primary inline-flex items-center px-3 py-2 text-sm font-medium"
-              >
-                <ArrowPathIcon className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                {tr('gdprAudit.refresh', 'Actualiser')}
-              </button>
-            </div>
-          </div>
+    <div className="cv-surface app-page-shell">
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <PageHeader
+          title={tr('gdprAudit.title', 'Journal RGPD')}
+          subtitle={tr('gdprAudit.subtitle', 'Historique des actions de conformité RGPD')}
+        />
+        <div className="mt-4 flex items-center space-x-2">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`cv-ghost-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-medium ${showFilters ? 'ring-2 ring-[color:color-mix(in_srgb,var(--cv-primary)_25%,transparent)]' : ''}`}
+          >
+            <FunnelIcon className="mr-2 h-4 w-4" />
+            {tr('gdprAudit.filters', 'Filtres')}
+          </button>
+          <button
+            onClick={() => { void fetchLogs(); void fetchStats(); }}
+            className="cv-gradient-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-semibold"
+          >
+            <ArrowPathIcon className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            {tr('gdprAudit.refresh', 'Actualiser')}
+          </button>
         </div>
+      </div>
 
-        <GdprAuditStatsGrid stats={stats} t={tr} />
+      <GdprAuditStatsGrid stats={stats} t={tr} />
 
         {showFilters && (
           <GdprAuditFiltersPanel
@@ -251,7 +242,6 @@ const GdprAuditPage = (): JSX.Element => {
           />
           <GdprAuditPagination pagination={pagination} onPageChange={setPage} t={tr} />
         </div>
-      </div>
     </div>
   );
 };

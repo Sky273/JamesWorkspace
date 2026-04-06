@@ -20,6 +20,28 @@ describe('networkHostSecurity', () => {
         })).rejects.toThrow('Remote host resolves to a private or loopback address');
     });
 
+    it('allows private backup hosts when explicitly enabled', async () => {
+        await expect(assertSafeOutboundHost('internal.example', {
+            allowPrivateAddresses: true,
+            resolver: async () => [{ address: '10.0.0.7' }]
+        })).resolves.toBe(true);
+
+        await expect(assertSafeOutboundHost('192.168.1.10', {
+            allowPrivateAddresses: true
+        })).resolves.toBe(true);
+    });
+
+    it('still rejects loopback or reserved hosts even when private backup hosts are enabled', async () => {
+        await expect(assertSafeOutboundHost('127.0.0.1', {
+            allowPrivateAddresses: true
+        })).rejects.toThrow('Private or loopback hosts are not allowed');
+
+        await expect(assertSafeOutboundHost('internal.example', {
+            allowPrivateAddresses: true,
+            resolver: async () => [{ address: '::1' }]
+        })).rejects.toThrow('Remote host resolves to a private or loopback address');
+    });
+
     it('allows public domains', async () => {
         await expect(assertSafeOutboundHost('public.example', {
             resolver: async () => [{ address: '8.8.8.8' }]

@@ -9,6 +9,7 @@ import {
   ServerIcon,
 } from '@heroicons/react/24/outline';
 import { formatDateTime } from '../utils/dateFormatter';
+import PageHeader from '../components/page/PageHeader';
 import { StatCard } from './MetricsPage.parts';
 import { formatNumber, formatUptime, safeNumber } from './MetricsPage.utils';
 import type { Metrics } from './MetricsPage.types';
@@ -45,15 +46,9 @@ export function MetricsPageHeader({
 }: MetricsHeaderProps): JSX.Element {
   return (
     <div className="mb-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-1 h-8 rounded-full bg-primary-500" />
-            <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
-              {t('metrics.title')}
-            </h1>
-          </div>
-          <p className="text-gray-500 dark:text-gray-400 ml-[1.75rem]">{t('metrics.subtitle')}</p>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex-1">
+          <PageHeader title={t('metrics.title')} subtitle={t('metrics.subtitle')} />
         </div>
         <div className="flex items-center gap-4">
           <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
@@ -65,16 +60,16 @@ export function MetricsPageHeader({
             />
             {t('metrics.autoRefresh')}
           </label>
-          <button onClick={onRefresh} className="btn btn-primary flex items-center gap-2 px-4 py-2">
+          <button onClick={onRefresh} className="app-button-primary flex items-center gap-2 rounded-2xl px-4 py-2.5">
             <ArrowPathIcon className="w-4 h-4" />
             {t('metrics.refresh')}
           </button>
           <div className="relative group">
-            <button className="btn btn-secondary flex items-center gap-2 px-4 py-2">
+            <button className="app-button-secondary flex items-center gap-2 rounded-2xl px-4 py-2.5">
               <ArrowDownTrayIcon className="w-4 h-4" />
               {t('metrics.export')}
             </button>
-            <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+            <div className="section-shell invisible absolute right-0 z-10 mt-2 w-32 rounded-[1.5rem] opacity-0 transition-all group-hover:visible group-hover:opacity-100">
               <button
                 onClick={() => onExport('json')}
                 className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg"

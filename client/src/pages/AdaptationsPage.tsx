@@ -47,7 +47,7 @@ const AdaptationsPage = (): JSX.Element => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="p-6 max-w-7xl mx-auto"
+      className="cv-surface app-page-shell"
     >
       <AdaptationsHeader />
       <AdaptationsViewModeToggle value={viewMode} onChange={setViewMode} />

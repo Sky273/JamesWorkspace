@@ -20,6 +20,7 @@ import { useAuthFetch } from '../hooks/useAuthFetch';
 import logger from '../utils/logger.frontend';
 import TwoFactorSettings from '../components/TwoFactorSettings';
 import InputWithLeadingIcon from '../components/form/InputWithLeadingIcon';
+import PageHeader from '../components/page/PageHeader';
 
 interface UserProfile {
   id: string;
@@ -108,19 +109,9 @@ const UserProfilePage = (): JSX.Element => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="p-6 max-w-4xl mx-auto"
+      className="cv-surface app-page-shell-4xl"
     >
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-1 h-8 rounded-full bg-primary-500" />
-          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
-            {t('userProfile.title')}
-          </h1>
-        </div>
-        <p className="text-gray-500 dark:text-gray-400 ml-[1.75rem]">
-          {t('userProfile.subtitle')}
-        </p>
-      </div>
+      <PageHeader title={t('userProfile.title')} subtitle={t('userProfile.subtitle')} />
 
       {/* Tabs */}
       <div className="border-b border-gray-200 dark:border-gray-700 mb-6">

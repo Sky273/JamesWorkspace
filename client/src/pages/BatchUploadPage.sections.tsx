@@ -6,6 +6,7 @@ import {
   DocumentArrowUpIcon,
   FolderArrowDownIcon,
 } from '@heroicons/react/24/outline';
+import PageHeader from '../components/page/PageHeader';
 
 interface HeaderProps {
   t: (key: string, fallback?: string) => string;
@@ -40,16 +41,11 @@ interface ActionsProps {
 
 export function BatchUploadHeader({ t }: HeaderProps): JSX.Element {
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-      <div className="flex items-center gap-3 mb-1">
-        <div className="w-1 h-8 rounded-full bg-primary-500" />
-        <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
-          {t('batchUpload.title', 'Import par lot')}
-        </h1>
-      </div>
-      <p className="text-gray-500 dark:text-gray-400 ml-[1.75rem]">
-        {t('batchUpload.subtitle', "Chargez plusieurs CVs d'un coup pour les analyser automatiquement")}
-      </p>
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+      <PageHeader
+        title={t('batchUpload.title', 'Import par lot')}
+        subtitle={t('batchUpload.subtitle', "Chargez plusieurs CVs d'un coup pour les analyser automatiquement")}
+      />
     </motion.div>
   );
 }

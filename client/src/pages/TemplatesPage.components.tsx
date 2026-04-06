@@ -208,7 +208,7 @@ export function TemplatesToolbar({
   const { t } = useTranslation();
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+    <div className="section-shell mb-6 rounded-[2rem]">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 gap-4">
         <SearchField value={searchTerm} onChange={onSearchChange} placeholder={t('templates.searchPlaceholder')} />
         <div className="flex items-center gap-3">
@@ -216,19 +216,19 @@ export function TemplatesToolbar({
             <select
               value={sortBy}
               onChange={(event) => onSortChange(event.target.value as TemplateSort)}
-              className="appearance-none bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg py-2 pl-3 pr-10 text-sm font-medium text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-blue-500"
+              className="cv-search-input appearance-none rounded-2xl py-2.5 pl-3 pr-10 text-sm font-medium"
             >
               <option value="popular">{t('templates.sort.popular')}</option>
               <option value="name">{t('templates.sort.name')}</option>
             </select>
             <ChevronDownIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
           </div>
-          <button onClick={() => void onRefresh()} className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title={t('templates.refresh')}><ArrowPathIcon className="w-5 h-5" /></button>
+          <button onClick={() => void onRefresh()} className="app-button-secondary rounded-2xl p-2.5" title={t('templates.refresh')}><ArrowPathIcon className="w-5 h-5" /></button>
           {searchTerm ? (
-            <button onClick={onResetSearch} className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" title={t('common.resetFilters')}><XMarkIcon className="w-4 h-4" /><span className="hidden sm:inline">{t('common.resetFilters')}</span></button>
+            <button onClick={onResetSearch} className="app-button-secondary inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm font-medium" title={t('common.resetFilters')}><XMarkIcon className="w-4 h-4" /><span className="hidden sm:inline">{t('common.resetFilters')}</span></button>
           ) : null}
-          <button onClick={onExtract} className="btn btn-secondary flex items-center gap-2 px-4 py-2" title={t('templates.extract.title')}><SparklesIcon className="w-5 h-5" /><span className="hidden sm:inline">{t('templates.extract.buttonShort')}</span></button>
-          <button onClick={onCreate} className="btn btn-primary flex items-center gap-2 px-4 py-2"><PlusIcon className="w-5 h-5" />{t('templates.newTemplate')}</button>
+          <button onClick={onExtract} className="app-button-secondary flex items-center gap-2 rounded-2xl px-4 py-2.5" title={t('templates.extract.title')}><SparklesIcon className="w-5 h-5" /><span className="hidden sm:inline">{t('templates.extract.buttonShort')}</span></button>
+          <button onClick={onCreate} className="app-button-primary flex items-center gap-2 rounded-2xl px-4 py-2.5"><PlusIcon className="w-5 h-5" />{t('templates.newTemplate')}</button>
         </div>
       </div>
     </div>
@@ -273,7 +273,7 @@ export function TemplatesResults({
       />
 
       {error ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center"><p className="text-red-500 dark:text-red-400">{error}</p></div>
+        <div className="section-shell rounded-[2rem] p-12 text-center"><p className="text-red-500 dark:text-red-400">{error}</p></div>
       ) : templates.length === 0 ? (
         <EmptyStateCard icon={DocumentTextIcon} title={t('templates.status.empty')} description={searchTerm ? t('templates.noResults') : t('templates.createFirst')} />
       ) : (

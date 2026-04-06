@@ -77,13 +77,15 @@ vi.mock('../../utils/validation.js', () => ({
     restoreBackupSchema: {}
 }));
 
+const mockAssertSafeOutboundHost = vi.fn(async (host) => {
+    if (host === '127.0.0.1' || host === 'localhost' || host === '::1') {
+        throw new Error('Private or loopback hosts are not allowed');
+    }
+    return true;
+});
+
 vi.mock('../../utils/networkHostSecurity.js', () => ({
-    assertSafeOutboundHost: vi.fn(async (host) => {
-        if (host === '127.0.0.1' || host === 'localhost' || host === '::1') {
-            throw new Error('Private or loopback hosts are not allowed');
-        }
-        return true;
-    })
+    assertSafeOutboundHost: (...args) => mockAssertSafeOutboundHost(...args)
 }));
 
 // Mock auth middleware
@@ -180,12 +182,38 @@ describe('Backup Routes', () => {
             const res = await request(app)
                 .put('/api/backup/settings')
                 .set(authHeader)
-                .send({ host: 'ftp.example.com', protocol: 'ftp', password: 'secret' });
+                .send({ backup_target: 'remote', host: 'ftp.example.com', protocol: 'ftp', password: 'secret' });
 
             expect(res.status).toBe(200);
             expect(res.body.password).toBeUndefined();
             expect(res.body.hasPassword).toBe(true);
             expect(mockReloadBackupScheduler).toHaveBeenCalled();
+            expect(mockAssertSafeOutboundHost).toHaveBeenCalledWith('ftp.example.com', expect.objectContaining({
+                allowPrivateHostsEnvVar: 'BACKUP_ALLOW_PRIVATE_HOSTS',
+                allowPrivateAddresses: true
+            }));
+        });
+
+        it('should allow private remote backup hosts in settings', async () => {
+            mockGetBackupSettings.mockResolvedValue(null);
+            mockSaveBackupSettings.mockResolvedValue({
+                host: '10.0.0.5',
+                protocol: 'ftp',
+                password: 'secret'
+            });
+            mockReloadBackupScheduler.mockResolvedValue(undefined);
+            mockGetSchedulerStatus.mockReturnValue({ running: true });
+
+            const res = await request(app)
+                .put('/api/backup/settings')
+                .set(authHeader)
+                .send({ backup_target: 'remote', host: '10.0.0.5', protocol: 'ftp', password: 'secret' });
+
+            expect(res.status).toBe(200);
+            expect(mockAssertSafeOutboundHost).toHaveBeenCalledWith('10.0.0.5', expect.objectContaining({
+                allowPrivateHostsEnvVar: 'BACKUP_ALLOW_PRIVATE_HOSTS',
+                allowPrivateAddresses: true
+            }));
         });
 
         it('should return 500 on error', async () => {
@@ -296,7 +324,7 @@ describe('Backup Routes', () => {
             expect(res.status).toBe(400);
         });
 
-        it('should reject private backup hosts', async () => {
+        it('should reject loopback backup hosts', async () => {
             const res = await request(app)
                 .post('/api/backup/test-connection')
                 .set(authHeader)
@@ -304,6 +332,23 @@ describe('Backup Routes', () => {
 
             expect(res.status).toBe(400);
             expect(mockTestConnection).not.toHaveBeenCalled();
+        });
+
+        it('should allow private backup hosts', async () => {
+            mockTestConnection.mockResolvedValue({ success: true, message: 'Connected' });
+
+            const res = await request(app)
+                .post('/api/backup/test-connection')
+                .set(authHeader)
+                .send({ host: '10.0.0.5', username: 'user', password: 'pass' });
+
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(mockAssertSafeOutboundHost).toHaveBeenCalledWith('10.0.0.5', expect.objectContaining({
+                allowPrivateHostsEnvVar: 'BACKUP_ALLOW_PRIVATE_HOSTS',
+                allowPrivateAddresses: true
+            }));
+            expect(mockTestConnection).toHaveBeenCalled();
         });
 
         it('should reject localhost backup hosts', async () => {

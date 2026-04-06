@@ -4,14 +4,9 @@ interface PageHeaderProps {
   eyebrow?: string;
 }
 
-export default function PageHeader({ title, subtitle, eyebrow = 'Plateforme' }: PageHeaderProps) {
+export default function PageHeader({ title, subtitle }: PageHeaderProps) {
   return (
     <div className="page-hero glass-panel-strong mb-10 overflow-hidden rounded-[2rem] p-6 sm:p-8">
-      <div className="mb-3 flex items-center gap-3">
-        <span className="cv-kicker">{eyebrow}</span>
-        <span className="text-slate-400 dark:text-slate-500">&gt;</span>
-        <span className="cv-kicker text-[var(--cv-primary)]">{title}</span>
-      </div>
       <div className="flex items-start gap-4">
         <div className="mt-1 h-14 w-1 rounded-full bg-[linear-gradient(to_bottom,var(--cv-primary),color-mix(in_srgb,var(--cv-primary)_70%,white),var(--cv-tertiary))]" />
         <div>

@@ -54,13 +54,15 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+const mockAssertSafeOutboundHost = vi.fn(async (host) => {
+    if (host === '127.0.0.1') {
+        throw new Error('Private or loopback hosts are not allowed');
+    }
+    return true;
+});
+
 vi.mock('../../utils/networkHostSecurity.js', () => ({
-    assertSafeOutboundHost: vi.fn(async (host) => {
-        if (host === '127.0.0.1') {
-            throw new Error('Private or loopback hosts are not allowed');
-        }
-        return true;
-    })
+    assertSafeOutboundHost: (...args) => mockAssertSafeOutboundHost(...args)
 }));
 
 import {
@@ -88,6 +90,10 @@ describe('Backup FTP/SFTP Service', () => {
             const result = await getClient(sftpSettings);
 
             expect(result.type).toBe('sftp');
+            expect(mockAssertSafeOutboundHost).toHaveBeenCalledWith('sftp.example.com', expect.objectContaining({
+                allowPrivateHostsEnvVar: 'BACKUP_ALLOW_PRIVATE_HOSTS',
+                allowPrivateAddresses: true
+            }));
             expect(mockSftpConnect).toHaveBeenCalledWith(expect.objectContaining({
                 host: 'sftp.example.com',
                 port: 22,
@@ -145,6 +151,19 @@ describe('Backup FTP/SFTP Service', () => {
         it('should reject loopback hosts before connecting', async () => {
             await expect(getClient({ ...ftpSettings, host: '127.0.0.1' })).rejects.toThrow('Private or loopback hosts are not allowed');
             expect(mockFtpAccess).not.toHaveBeenCalled();
+        });
+
+        it('should allow private backup hosts before connecting', async () => {
+            mockFtpAccess.mockResolvedValueOnce(undefined);
+
+            const result = await getClient({ ...ftpSettings, host: '10.0.0.5' });
+
+            expect(result.type).toBe('ftp');
+            expect(mockAssertSafeOutboundHost).toHaveBeenCalledWith('10.0.0.5', expect.objectContaining({
+                allowPrivateHostsEnvVar: 'BACKUP_ALLOW_PRIVATE_HOSTS',
+                allowPrivateAddresses: true
+            }));
+            expect(mockFtpAccess).toHaveBeenCalled();
         });
     });
 

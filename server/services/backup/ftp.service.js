@@ -81,7 +81,10 @@ async function getBasicFtp() {
  * Get FTP client based on protocol
  */
 export async function getClient(settings) {
-    await assertSafeOutboundHost(settings.host, { allowPrivateHostsEnvVar: 'BACKUP_ALLOW_PRIVATE_HOSTS' });
+    await assertSafeOutboundHost(settings.host, {
+        allowPrivateHostsEnvVar: 'BACKUP_ALLOW_PRIVATE_HOSTS',
+        allowPrivateAddresses: true
+    });
 
     if (settings.protocol === 'sftp') {
         const SftpClient = await getSftpClient();

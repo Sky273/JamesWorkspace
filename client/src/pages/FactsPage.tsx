@@ -32,7 +32,7 @@ export default function FactsPage() {
         collectingSuccess={factsDashboard.collectingSuccess}
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="cv-surface app-page-shell">
         <PageHeader title={t('marketRadar.title')} subtitle={t('marketRadar.subtitle')} />
 
         <FactsTabs activeTab={activeTab} onChange={setActiveTab} />

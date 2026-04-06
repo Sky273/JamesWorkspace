@@ -97,7 +97,10 @@ router.put('/settings', validateBody(updateBackupSettingsSchema), async (req, re
 
         if (backup_target === 'remote' && effectiveHost) {
             try {
-                await assertSafeOutboundHost(effectiveHost, { allowPrivateHostsEnvVar: 'BACKUP_ALLOW_PRIVATE_HOSTS' });
+                await assertSafeOutboundHost(effectiveHost, {
+                    allowPrivateHostsEnvVar: 'BACKUP_ALLOW_PRIVATE_HOSTS',
+                    allowPrivateAddresses: true
+                });
             } catch (validationError) {
                 return res.status(400).json({ error: validationError.message });
             }
@@ -184,7 +187,10 @@ router.post('/test-connection', validateBody(testBackupConnectionSchema), async 
         }
 
         try {
-            await assertSafeOutboundHost(host, { allowPrivateHostsEnvVar: 'BACKUP_ALLOW_PRIVATE_HOSTS' });
+            await assertSafeOutboundHost(host, {
+                allowPrivateHostsEnvVar: 'BACKUP_ALLOW_PRIVATE_HOSTS',
+                allowPrivateAddresses: true
+            });
         } catch (validationError) {
             return res.status(400).json({
                 success: false,

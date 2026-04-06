@@ -175,12 +175,6 @@ const MissionViewPage = (): JSX.Element => {
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
           <section className="glass-panel-strong overflow-hidden rounded-[2rem] p-5 sm:p-6">
-            <div className="mb-4 flex items-center gap-3">
-              <span className="cv-kicker">{t('missions.title')}</span>
-              <span className="text-slate-400 dark:text-slate-500">&gt;</span>
-              <span className="cv-kicker text-[var(--cv-primary)]">{t('missions.view', 'Détail')}</span>
-            </div>
-
             <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
               <div className="min-w-0 flex-1">
                 <div className="mb-4 flex flex-wrap items-center gap-2">
