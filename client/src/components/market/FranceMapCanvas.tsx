@@ -35,6 +35,49 @@ interface FranceMapCanvasProps {
 
 const MAPLIBRE_STYLE_ID = 'maplibre-gl-runtime-styles';
 
+function createMarkerElement({
+  size,
+  backgroundColor,
+  fontSize,
+  text,
+  title,
+  hoverScaleClassName,
+  extraInnerClassName = '',
+}: {
+  size: number;
+  backgroundColor: string;
+  fontSize: string;
+  text: string;
+  title: string;
+  hoverScaleClassName: string;
+  extraInnerClassName?: string;
+}) {
+  const wrapper = document.createElement('div');
+  wrapper.style.width = `${size}px`;
+  wrapper.style.height = `${size}px`;
+  wrapper.style.display = 'flex';
+  wrapper.style.alignItems = 'center';
+  wrapper.style.justifyContent = 'center';
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = [
+    'flex h-full w-full items-center justify-center rounded-full text-white font-bold shadow-lg',
+    'transition-transform duration-200 focus:outline-none',
+    'transform-gpu origin-center',
+    hoverScaleClassName,
+    extraInnerClassName,
+  ].join(' ').trim();
+  button.style.backgroundColor = backgroundColor;
+  button.style.fontSize = fontSize;
+  button.title = title;
+  button.textContent = text;
+
+  wrapper.appendChild(button);
+
+  return { wrapper, button };
+}
+
 export default function FranceMapCanvas({
   mapRef,
   isDarkMode,
@@ -55,9 +98,15 @@ export default function FranceMapCanvas({
 }: FranceMapCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const markersRef = useRef<Marker[]>([]);
+  const regionButtonsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const selectedRegionCodeRef = useRef<string | null>(null);
   const popupRef = useRef<Popup | null>(null);
   const navControlRef = useRef<NavigationControl | null>(null);
   const appliedStyleRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    selectedRegionCodeRef.current = selectedRegion?.code ?? null;
+  }, [selectedRegion]);
 
   useEffect(() => {
     if (typeof document === 'undefined' || document.getElementById(MAPLIBRE_STYLE_ID)) {
@@ -96,6 +145,7 @@ export default function FranceMapCanvas({
       popupRef.current = null;
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = [];
+      regionButtonsRef.current.clear();
       navControlRef.current = null;
       appliedStyleRef.current = null;
       mapRef.current = null;
@@ -127,6 +177,7 @@ export default function FranceMapCanvas({
 
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
+    regionButtonsRef.current.clear();
     popupRef.current?.remove();
     popupRef.current = null;
 
@@ -150,22 +201,22 @@ export default function FranceMapCanvas({
                 : String(Math.round(typeInfo.value)))
             : (Number.isNaN(typeInfo.value) ? '0' : typeInfo.value.toFixed(1));
 
-          const button = document.createElement('button');
-          button.type = 'button';
-          button.className = 'rounded-full flex items-center justify-center text-white font-bold shadow-lg transition-all duration-200 hover:scale-125 focus:outline-none border-2 border-white';
-          button.style.width = size + 'px';
-          button.style.height = size + 'px';
-          button.style.backgroundColor = 'hsl(' + hue + ', 70%, 50%)';
-          button.style.fontSize = '9px';
-          button.title = region.regionName + ' - ' + typeInfo.label + ': ' + (typeInfo.type === 'offres'
+          const { wrapper, button } = createMarkerElement({
+            size,
+            backgroundColor: 'hsl(' + hue + ', 70%, 50%)',
+            fontSize: '9px',
+            text: valueLabel,
+            title: region.regionName + ' - ' + typeInfo.label + ': ' + (typeInfo.type === 'offres'
             ? (Number.isNaN(typeInfo.value) ? '0' : typeInfo.value.toLocaleString())
-            : (Number.isNaN(typeInfo.value) ? '0' : typeInfo.value.toFixed(1)));
-          button.textContent = valueLabel;
+            : (Number.isNaN(typeInfo.value) ? '0' : typeInfo.value.toFixed(1))),
+            hoverScaleClassName: 'hover:scale-125',
+            extraInnerClassName: 'border-2 border-white',
+          });
           button.addEventListener('click', () => onDataSourceChange(typeInfo.type));
           button.addEventListener('mouseenter', () => onHoveredRegionChange(region.regionCode));
           button.addEventListener('mouseleave', () => onHoveredRegionChange(null));
 
-          const marker = new Marker({ element: button, anchor: 'center' })
+          const marker = new Marker({ element: wrapper, anchor: 'center' })
             .setLngLat([region.coords[0] + offsetLng, region.coords[1] + offsetLat])
             .addTo(map);
 
@@ -176,26 +227,26 @@ export default function FranceMapCanvas({
     }
 
     currentRegionData.forEach((region) => {
-      const isSelected = selectedRegion?.code === region.code;
       const size = getBubbleSize(region.value);
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'rounded-full flex items-center justify-center text-white font-bold shadow-lg transition-all duration-200 hover:scale-110 focus:outline-none' + (isSelected ? ' ring-4 ring-indigo-500' : '');
-      button.style.width = size + 'px';
-      button.style.height = size + 'px';
-      button.style.backgroundColor = getRegionColor(region.value);
-      button.style.fontSize = size > 40 ? '12px' : '10px';
-      button.title = region.name + ': ' + formatValue(region.value) + ' ' + getValueLabel();
-      button.textContent = formatValue(region.value);
-      button.addEventListener('click', () => onRegionSelect(isSelected ? null : region));
+      const { wrapper, button } = createMarkerElement({
+        size,
+        backgroundColor: getRegionColor(region.value),
+        fontSize: size > 40 ? '12px' : '10px',
+        text: formatValue(region.value),
+        title: region.name + ': ' + formatValue(region.value) + ' ' + getValueLabel(),
+        hoverScaleClassName: 'hover:scale-110',
+        extraInnerClassName: '',
+      });
+      button.addEventListener('click', () => onRegionSelect(selectedRegionCodeRef.current === region.code ? null : region));
       button.addEventListener('mouseenter', () => onHoveredRegionChange(region.code));
       button.addEventListener('mouseleave', () => onHoveredRegionChange(null));
 
-      const marker = new Marker({ element: button, anchor: 'center' })
+      const marker = new Marker({ element: wrapper, anchor: 'center' })
         .setLngLat(region.coords)
         .addTo(map);
 
       markersRef.current.push(marker);
+      regionButtonsRef.current.set(region.code, button);
     });
   }, [
     currentRegionData,
@@ -204,15 +255,20 @@ export default function FranceMapCanvas({
     getBubbleSize,
     getRegionColor,
     getValueLabel,
-    hoveredRegion,
     mapRef,
     multiTypeRegionData,
     onDataSourceChange,
     onHoveredRegionChange,
     onRegionSelect,
-    selectedMetier,
-    selectedRegion,
   ]);
+
+  useEffect(() => {
+    regionButtonsRef.current.forEach((button, regionCode) => {
+      const isSelected = selectedRegion?.code === regionCode;
+      button.classList.toggle('ring-4', isSelected);
+      button.classList.toggle('ring-indigo-500', isSelected);
+    });
+  }, [selectedRegion]);
 
   useEffect(() => {
     const map = mapRef.current;

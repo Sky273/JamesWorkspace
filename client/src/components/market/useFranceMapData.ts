@@ -136,6 +136,10 @@ export const useTrendMetadata = ({
     [addToCache, getFromCache]
   );
 
+  const resetMetadata = useCallback(() => {
+    setSelectedTrendMetadata(null);
+  }, []);
+
   useEffect(() => {
     setSelectedTrendMetadata(null);
     setCache({});
@@ -168,6 +172,6 @@ export const useTrendMetadata = ({
     selectedTrendMetadata,
     metadataLoading,
     loadTrendMetadata,
-    resetMetadata: () => setSelectedTrendMetadata(null),
+    resetMetadata,
   };
 };
