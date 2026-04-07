@@ -7,13 +7,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
-import { 
-  UserCircleIcon, 
-  ShieldCheckIcon, 
+import {
+  UserCircleIcon,
+  ShieldCheckIcon,
   KeyIcon,
   EnvelopeIcon,
   PhoneIcon,
-  BriefcaseIcon
+  BriefcaseIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
 import { useAuthFetch } from '../hooks/useAuthFetch';
@@ -45,7 +46,6 @@ const UserProfilePage = (): JSX.Element => {
     phone: ''
   });
 
-   
   const fetchProfile = useCallback(async () => {
     try {
       const response = await authGet('/api/auth/me');
@@ -66,7 +66,7 @@ const UserProfilePage = (): JSX.Element => {
   }, [authGet]);
 
   useEffect(() => {
-    fetchProfile();
+    void fetchProfile();
   }, [fetchProfile]);
 
   const handleSave = async () => {
@@ -80,7 +80,7 @@ const UserProfilePage = (): JSX.Element => {
 
       if (response.ok) {
         toast.success(t('userProfile.updateSuccess'));
-        fetchProfile();
+        void fetchProfile();
       } else {
         toast.error(t('userProfile.updateError'));
       }
@@ -98,8 +98,11 @@ const UserProfilePage = (): JSX.Element => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="cv-surface app-page-shell-4xl flex min-h-[60vh] items-center justify-center">
+        <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+          <ArrowPathIcon className="h-5 w-5 animate-spin" />
+          <span>{t('common.loading')}</span>
+        </div>
       </div>
     );
   }
@@ -113,7 +116,6 @@ const UserProfilePage = (): JSX.Element => {
     >
       <PageHeader title={t('userProfile.title')} subtitle={t('userProfile.subtitle')} />
 
-      {/* Tabs */}
       <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
         <nav className="-mb-px flex space-x-8">
           {tabs.map((tab) => {
@@ -138,17 +140,15 @@ const UserProfilePage = (): JSX.Element => {
         </nav>
       </div>
 
-      {/* Profile Tab */}
       {activeTab === 'profile' && (
         <div className="space-y-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <div className="section-shell rounded-[2rem] p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
               <UserCircleIcon className="h-6 w-6 text-blue-600" />
               {t('userProfile.personalInfo')}
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('userProfile.fullName')}
@@ -162,7 +162,6 @@ const UserProfilePage = (): JSX.Element => {
                 />
               </div>
 
-              {/* Email (read-only) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('userProfile.email')}
@@ -177,7 +176,6 @@ const UserProfilePage = (): JSX.Element => {
                 <p className="text-xs text-gray-500 mt-1">{t('userProfile.emailReadonly')}</p>
               </div>
 
-              {/* Job Title */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('userProfile.jobTitle')}
@@ -192,7 +190,6 @@ const UserProfilePage = (): JSX.Element => {
                 />
               </div>
 
-              {/* Phone */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('userProfile.phone')}
@@ -208,7 +205,6 @@ const UserProfilePage = (): JSX.Element => {
               </div>
             </div>
 
-            {/* Firm info (read-only) */}
             {profile?.firm && (
               <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -225,7 +221,7 @@ const UserProfilePage = (): JSX.Element => {
               >
                 {saving ? (
                   <>
-                    <span className="animate-spin">⏳</span>
+                    <ArrowPathIcon className="h-4 w-4 animate-spin" />
                     {t('common.saving')}
                   </>
                 ) : (
@@ -235,20 +231,21 @@ const UserProfilePage = (): JSX.Element => {
             </div>
           </div>
 
-          {/* Password change section */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <div className="section-shell rounded-[2rem] p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
               <KeyIcon className="h-6 w-6 text-blue-600" />
               {t('userProfile.passwordTitle')}
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-gray-600 dark:text-gray-400 mb-3">
               {t('userProfile.passwordHelp')}
             </p>
+            <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-200">
+              {t('userProfile.passwordExternalProviderNotice')}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Security Tab */}
       {activeTab === 'security' && (
         <div className="space-y-6">
           <TwoFactorSettings />

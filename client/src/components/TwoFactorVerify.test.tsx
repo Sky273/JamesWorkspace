@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import TwoFactorVerify from './TwoFactorVerify';
 
 const {
@@ -40,26 +41,32 @@ const defaultProps = {
   onCancel: vi.fn(),
 };
 
+const renderTwoFactorVerify = (props = {}) => render(
+  <MemoryRouter>
+    <TwoFactorVerify {...defaultProps} {...props} />
+  </MemoryRouter>
+);
+
 describe('TwoFactorVerify', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('keeps verify disabled for short codes', () => {
-    render(<TwoFactorVerify {...defaultProps} />);
+    renderTwoFactorVerify();
 
     fireEvent.change(screen.getByPlaceholderText('000000'), { target: { value: '123' } });
 
-    expect(screen.getByRole('button', { name: 'Vérifier' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Verifier' })).toBeDisabled();
   });
 
   it('verifies the code and calls onSuccess on success', async () => {
     mockSignIn.mockResolvedValue({ id: 'user-1', email: 'john@example.com' });
     const onSuccess = vi.fn();
-    render(<TwoFactorVerify {...defaultProps} onSuccess={onSuccess} />);
+    renderTwoFactorVerify({ onSuccess });
 
     fireEvent.change(screen.getByPlaceholderText('000000'), { target: { value: '123456' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Vérifier' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Verifier' }));
 
     await waitFor(() => {
       expect(mockSignIn).toHaveBeenCalledWith('john@example.com', 'secret', '123456');
@@ -72,7 +79,7 @@ describe('TwoFactorVerify', () => {
 
   it('shows the service error when verification fails', async () => {
     mockSignIn.mockRejectedValue(new Error('Code invalide'));
-    render(<TwoFactorVerify {...defaultProps} />);
+    renderTwoFactorVerify();
 
     fireEvent.change(screen.getByPlaceholderText('000000'), { target: { value: '123456' } });
     fireEvent.keyDown(screen.getByPlaceholderText('000000'), { key: 'Enter' });
@@ -83,7 +90,7 @@ describe('TwoFactorVerify', () => {
 
   it('calls onCancel when the cancel button is clicked', () => {
     const onCancel = vi.fn();
-    render(<TwoFactorVerify {...defaultProps} onCancel={onCancel} />);
+    renderTwoFactorVerify({ onCancel });
 
     fireEvent.click(screen.getByRole('button', { name: 'Annuler' }));
     expect(onCancel).toHaveBeenCalled();

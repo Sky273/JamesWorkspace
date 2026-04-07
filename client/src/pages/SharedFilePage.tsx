@@ -25,6 +25,7 @@ const SharedFilePage = (): JSX.Element => {
   const [isMobile, setIsMobile] = useState(false);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [requiresManualDownload, setRequiresManualDownload] = useState(false);
   const blobUrlRef = useRef<string | null>(null);
 
   const handleDownload = useCallback(() => {
@@ -88,14 +89,10 @@ const SharedFilePage = (): JSX.Element => {
 
         if (contentType.includes('pdf')) {
           setPdfUrl(type === 'pdf' ? endpoint : url);
+          setRequiresManualDownload(false);
         } else {
           setPdfUrl(null);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = extractedFilename;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
+          setRequiresManualDownload(true);
         }
 
         setLoading(false);
@@ -106,7 +103,7 @@ const SharedFilePage = (): JSX.Element => {
       }
     };
 
-    fetchFile();
+    void fetchFile();
 
     return () => {
       if (blobUrlRef.current) {
@@ -218,11 +215,33 @@ const SharedFilePage = (): JSX.Element => {
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 max-w-md w-full text-center">
         <DocumentArrowDownIcon className="h-16 w-16 text-green-500 mx-auto mb-4" />
         <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          {t('share.downloadStarted', 'Download started')}
+          {requiresManualDownload
+            ? t('share.fileReadyTitle', 'File ready to download')
+            : t('share.downloadStarted', 'Download started')}
         </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          {t('share.downloadDescription', 'The CV file is being downloaded to your device.')}
+        <p className="text-gray-600 dark:text-gray-400 mb-6">
+          {requiresManualDownload
+            ? t('share.fileReadyDescription', 'Choose whether to open the file in a new tab or start the download.')
+            : t('share.downloadDescription', 'The CV file is being downloaded to your device.')}
         </p>
+        {requiresManualDownload ? (
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={handleOpenInNewTab}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              <EyeIcon className="h-5 w-5" />
+              {t('share.openFile', 'Open file')}
+            </button>
+            <button
+              onClick={handleDownload}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+            >
+              <DocumentArrowDownIcon className="h-5 w-5" />
+              {t('share.downloadPdf', 'Download')}
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -8,6 +8,16 @@ import { ArrowLeftIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 
 const PrivacyPolicyPage = (): JSX.Element => {
   const { t } = useTranslation();
+  const sections = [
+    { id: 'introduction', title: t('legal.privacy.sections.introduction.title') },
+    { id: 'data-collection', title: t('legal.privacy.sections.dataCollection.title') },
+    { id: 'data-use', title: t('legal.privacy.sections.dataUse.title') },
+    { id: 'data-protection', title: t('legal.privacy.sections.dataProtection.title') },
+    { id: 'gdpr', title: t('legal.privacy.sections.gdpr.title') },
+    { id: 'cookies', title: t('legal.privacy.sections.cookies.title') },
+    { id: 'contact', title: t('legal.privacy.sections.contact.title') },
+  ];
+  const lastUpdated = '2026-04-07';
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
@@ -28,12 +38,23 @@ const PrivacyPolicyPage = (): JSX.Element => {
             </h1>
           </div>
 
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
-            {t('legal.privacy.lastUpdated')}: {new Date().toLocaleDateString()}
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            {t('legal.privacy.lastUpdated')}: {lastUpdated}
           </p>
 
+          <nav className="mb-10 rounded-2xl bg-slate-50 p-5 dark:bg-slate-900/40">
+            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Sommaire</p>
+            <div className="flex flex-wrap gap-3">
+              {sections.map((section) => (
+                <a key={section.id} href={`#${section.id}`} className="rounded-full bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:text-blue-600 dark:bg-white/5 dark:text-slate-200">
+                  {section.title}
+                </a>
+              ))}
+            </div>
+          </nav>
+
           <div className="prose dark:prose-invert max-w-none">
-            <section className="mb-8">
+            <section id="introduction" className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {t('legal.privacy.sections.introduction.title')}
               </h2>
@@ -42,7 +63,7 @@ const PrivacyPolicyPage = (): JSX.Element => {
               </p>
             </section>
 
-            <section className="mb-8">
+            <section id="data-collection" className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {t('legal.privacy.sections.dataCollection.title')}
               </h2>
@@ -57,7 +78,7 @@ const PrivacyPolicyPage = (): JSX.Element => {
               </ul>
             </section>
 
-            <section className="mb-8">
+            <section id="data-use" className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {t('legal.privacy.sections.dataUse.title')}
               </h2>
@@ -72,7 +93,7 @@ const PrivacyPolicyPage = (): JSX.Element => {
               </ul>
             </section>
 
-            <section className="mb-8">
+            <section id="data-protection" className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {t('legal.privacy.sections.dataProtection.title')}
               </h2>
@@ -81,7 +102,7 @@ const PrivacyPolicyPage = (): JSX.Element => {
               </p>
             </section>
 
-            <section className="mb-8">
+            <section id="gdpr" className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {t('legal.privacy.sections.gdpr.title')}
               </h2>
@@ -97,7 +118,7 @@ const PrivacyPolicyPage = (): JSX.Element => {
               </ul>
             </section>
 
-            <section className="mb-8">
+            <section id="cookies" className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {t('legal.privacy.sections.cookies.title')}
               </h2>
@@ -106,7 +127,7 @@ const PrivacyPolicyPage = (): JSX.Element => {
               </p>
             </section>
 
-            <section className="mb-8">
+            <section id="contact" className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {t('legal.privacy.sections.contact.title')}
               </h2>

@@ -135,7 +135,11 @@ function PublicHeader(): JSX.Element {
           </Link>
           
           {/* Auth Links */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-5">
+            <div className="hidden items-center gap-4 text-sm text-gray-500 dark:text-gray-400 md:flex">
+              <Link to="/privacy" className="transition hover:text-gray-900 dark:hover:text-gray-100">Confidentialité</Link>
+              <Link to="/terms" className="transition hover:text-gray-900 dark:hover:text-gray-100">Conditions</Link>
+            </div>
             <Link 
               to="/signin" 
               className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg font-medium transition-colors"
@@ -203,6 +207,10 @@ function PublicHomePage(): JSX.Element {
                     {t('common.signIn', 'Se connecter')}
                   </Link>
                 </motion.div>
+                <div className="mt-5 flex flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400">
+                  <Link to="/privacy" className="transition hover:text-gray-900 dark:hover:text-gray-100">Politique de confidentialité</Link>
+                  <Link to="/terms" className="transition hover:text-gray-900 dark:hover:text-gray-100">Conditions d'utilisation</Link>
+                </div>
 
                 {/* Trust Badges */}
                 <motion.div 
@@ -255,4 +263,3 @@ function PublicHomePage(): JSX.Element {
 }
 
 export default PublicHomePage;
-

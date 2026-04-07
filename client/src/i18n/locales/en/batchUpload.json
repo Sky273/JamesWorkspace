@@ -2,6 +2,25 @@
   "batchUpload": {
     "title": "Batch Import",
     "subtitle": "Upload multiple CVs at once for automatic analysis",
+    "badges": {
+      "pdfDocx": "PDF, DOC, DOCX",
+      "limit": "Up to 200 files",
+      "gdpr": "Internal GDPR flow"
+    },
+    "howItWorks": {
+      "title": "Import flow",
+      "step1Title": "1. Prepare files",
+      "step1Body": "Drag and drop a folder or select multiple CVs at once.",
+      "step2Title": "2. Choose processing",
+      "step2Body": "Enable improvement, export, or deletion after processing when needed.",
+      "step3Title": "3. Run and review",
+      "step3Body": "Track states, fix errors, and export results when everything is ready."
+    },
+    "summary": {
+      "files": "Files",
+      "ready": "Pending",
+      "completed": "Done"
+    },
     "tabs": {
       "import": "Import",
       "jobs": "Jobs"
@@ -22,8 +41,10 @@
     "dropHere": "Drop files here...",
     "loadingFiles": "Loading files...",
     "dragDrop": "Drag and drop your CVs here, or click to select",
-    "fileTypes": "PDF, DOC, DOCX • Max 50MB per file",
+    "fileTypes": "PDF, DOC, DOCX | Max 50MB per file",
     "nominativeRecommendation": "For better name extraction, use files named with the candidate's name (e.g., John_Doe_CV.pdf)",
+    "lockedFilesWarning": "Close files opened in Word, LibreOffice, or another app before importing. Locked files (e.g., ~$document.docx) will be ignored.",
+    "selectFolder": "Select a folder",
     "filesCount": "Files",
     "retryAll": "Retry errors",
     "confirmClear": "Confirm?",
@@ -35,6 +56,7 @@
     "files": "file(s)",
     "export": "Export",
     "exporting": "Exporting...",
+    "processing": "Processing...",
     "gdprTitle": "GDPR",
     "gdprInfo": "Batch imported CVs are treated as internal (employees). No consent request will be sent and no candidate name is recorded.",
     "noFiles": "No files to process",

@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { DocumentArrowDownIcon, CheckCircleIcon, SparklesIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
-import { SkeletonCard } from '../components/ui/Skeleton';
+import { ArrowLeftIcon, ArrowPathIcon, DocumentArrowDownIcon, CheckCircleIcon, SparklesIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import ExportTab from '../components/ResumeAnalysis/ExportTab';
 import ConsentBadge, { ConsentStatus } from '../components/ConsentBadge';
 import SendEmailModal from '../components/ResumeAnalysis/SendEmailModal';
+import PageHeader from '../components/page/PageHeader';
 import { useResumeExportPage } from './ResumeExportPage.hooks';
 
 const ResumeExportPage = (): JSX.Element => {
@@ -32,59 +32,85 @@ const ResumeExportPage = (): JSX.Element => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          <SkeletonCard className="h-96" />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="editorial-migrated-shell min-h-screen px-4 py-6 sm:px-6 sm:py-8"
+      >
+        <div className="cv-surface mx-auto max-w-7xl rounded-[2.5rem] p-6 sm:p-8">
+          <div className="section-shell rounded-[2rem] p-8">
+            <div className="flex items-start gap-4">
+              <ArrowPathIcon className="mt-1 h-6 w-6 animate-spin text-[var(--cv-primary)]" />
+              <div className="flex-1 space-y-4">
+                <div>
+                  <div className="h-8 w-64 max-w-full rounded-full bg-gray-200/80 animate-pulse dark:bg-gray-700/70" />
+                  <div className="mt-3 h-4 w-[30rem] max-w-full rounded-full bg-gray-200/70 animate-pulse dark:bg-gray-700/60" />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="h-20 rounded-3xl bg-gray-100 animate-pulse dark:bg-gray-800" />
+                  <div className="h-20 rounded-3xl bg-gray-100 animate-pulse dark:bg-gray-800" />
+                  <div className="h-20 rounded-3xl bg-gray-100 animate-pulse dark:bg-gray-800" />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   if (error || !currentResume) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="text-red-500 dark:text-red-400">{error || 'Resume not found'}</p>
-          <Link to="/resumes" className="text-blue-500 hover:underline mt-4 inline-block">
-            {t('common.backToList')}
-          </Link>
+      <div className="editorial-migrated-shell min-h-screen px-4 py-6 sm:px-6 sm:py-8">
+        <div className="cv-surface mx-auto max-w-7xl rounded-[2.5rem] p-6 sm:p-8">
+          <div className="section-shell rounded-[2rem] p-10 text-center">
+            <DocumentArrowDownIcon className="mx-auto mb-4 h-14 w-14 text-slate-300 dark:text-slate-600" />
+            <h2 className="text-2xl font-bold text-slate-950 dark:text-[var(--cv-text)]">
+              {error || 'Resume not found'}
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-500 dark:text-[var(--cv-muted)]">
+              {t('resume.export.title')}
+            </p>
+            <Link
+              to="/resumes"
+              className="cv-gradient-button mt-6 inline-flex min-h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold"
+            >
+              <ArrowLeftIcon className="h-4 w-4" />
+              {t('common.backToList')}
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-      <div className="max-w-7xl mx-auto px-4">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="editorial-migrated-shell min-h-screen px-4 py-6 sm:px-6 sm:py-8"
+    >
+      <div className="cv-surface mx-auto max-w-7xl rounded-[2.5rem] p-6 sm:p-8">
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+          <PageHeader title={t('resume.export.title')} subtitle={resumeName} />
+          {currentResume?.consent_status && (
+            <ConsentBadge
+              status={currentResume.consent_status as ConsentStatus}
+              candidateName={currentResume?.candidate_name as string | undefined}
+              candidateEmail={currentResume?.candidate_email as string | undefined}
+              consentTokenExpiresAt={currentResume?.consent_token_expires_at as string | null | undefined}
+              retentionUntil={currentResume?.retention_until as string | null | undefined}
+              compact={true}
+            />
+          )}
+        </div>
+
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-6"
         >
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {resumeName}
-              </h1>
-              {currentResume?.consent_status && (
-                <ConsentBadge
-                  status={currentResume.consent_status as ConsentStatus}
-                  candidateName={currentResume?.candidate_name as string | undefined}
-                  candidateEmail={currentResume?.candidate_email as string | undefined}
-                  consentTokenExpiresAt={currentResume?.consent_token_expires_at as string | null | undefined}
-                  retentionUntil={currentResume?.retention_until as string | null | undefined}
-                  compact={true}
-                />
-              )}
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {t('resume.export.title')}
-            </p>
-          </div>
-        </motion.div>
-
-        <div className="mb-6">
-          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg ${
+          <div className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ${
             exportSource === 'improved'
               ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800'
               : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
@@ -104,13 +130,13 @@ const ResumeExportPage = (): JSX.Element => {
               </Link>
             )}
           </div>
-        </div>
+        </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="mb-6"
+          className="section-shell mb-6 rounded-[2rem] p-5 sm:p-6"
         >
           <div className="flex items-center">
             <Link to={`/resumes/${id}/analysis`} className="flex items-center gap-2 group">
@@ -168,7 +194,7 @@ const ResumeExportPage = (): JSX.Element => {
           </div>
         </motion.div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="section-shell rounded-[2rem] p-6">
           <ExportTab
             resume={currentResume}
             templates={templates}
@@ -195,7 +221,7 @@ const ResumeExportPage = (): JSX.Element => {
           onGenerateAttachment={generateEmailAttachment}
         />
       )}
-    </div>
+    </motion.div>
   );
 };
 

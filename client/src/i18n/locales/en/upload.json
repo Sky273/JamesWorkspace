@@ -1,6 +1,19 @@
 {
   "upload": {
     "title": "Resume Analyzer",
-    "subtitle": "Upload your resume for instant AI-powered analysis"
+    "subtitle": "Upload your resume for instant AI-powered analysis",
+    "guidance": {
+      "title": "Before you start",
+      "description": "Single-file upload is the fastest way to test a resume, refine a profile, or prepare a focused export.",
+      "step1Title": "Drop one file",
+      "step1Body": "Use a PDF, DOC, or DOCX. Large or locked files can slow down analysis.",
+      "step2Title": "Let the analysis run",
+      "step2Body": "Processing extracts text, detects sections, and prepares the improvement steps.",
+      "step3Title": "Move to the next step",
+      "step3Body": "You can then improve, compare, or export the resume from the dedicated screens.",
+      "formats": "Formats: PDF, DOC, DOCX",
+      "maxSize": "Max size: 50 MB",
+      "tip": "Tip: name files clearly for easier handling"
+    }
   }
 }

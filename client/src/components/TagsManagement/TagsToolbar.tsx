@@ -1,4 +1,9 @@
-import { ArrowPathIcon, BeakerIcon, DocumentTextIcon, GlobeEuropeAfricaIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowPathIcon,
+  BeakerIcon,
+  DocumentTextIcon,
+  GlobeEuropeAfricaIcon,
+} from '@heroicons/react/24/outline';
 import type { TabType } from './types';
 import SearchField from '../page/SearchField';
 
@@ -31,68 +36,30 @@ export default function TagsToolbar({
   onRecalculateCleanedTags,
   onRecalculateEscoTags,
   onRefresh,
-  t
+  t,
 }: TagsToolbarProps): JSX.Element {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
-      <div className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="flex -mb-px">
-          <button
-            onClick={() => onTabChange('raw')}
-            className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'raw'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:border-gray-300'
-            }`}
-          >
-            <DocumentTextIcon className="w-5 h-5" />
-            {t('tags.tabs.raw')}
-            <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{totalTags}</span>
-          </button>
-          <button
-            onClick={() => onTabChange('cleaned')}
-            className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'cleaned'
-                ? 'border-green-500 text-green-600 dark:text-green-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:border-gray-300'
-            }`}
-          >
-            <BeakerIcon className="w-5 h-5" />
-            {t('tags.tabs.cleaned')}
-            <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{totalCleanedTags}</span>
-          </button>
-          <button
-            onClick={() => onTabChange('esco')}
-            className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'esco'
-                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:border-gray-300'
-            }`}
-          >
-            <GlobeEuropeAfricaIcon className="w-5 h-5" />
-            {t('tags.tabs.esco')}
-            <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{totalEscoTags}</span>
-          </button>
-        </nav>
-      </div>
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 gap-4">
-        <SearchField
-          containerClassName="relative flex-1 max-w-md"
-          placeholder={t('tags.searchPlaceholder')}
-          value={searchTerm}
-          onChange={onSearchChange}
-        />
-        <div className="flex gap-2">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-950 dark:text-[var(--cv-text)]">
+            {t(`tags.tabs.${activeTab}`)}
+          </h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            {t('tags.searchPlaceholder')}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
           {activeTab === 'cleaned' && (
             <button
               onClick={onRecalculateCleanedTags}
               disabled={savingCleanedTags}
-              className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {savingCleanedTags ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
               ) : (
-                <ArrowPathIcon className="w-5 h-5" />
+                <ArrowPathIcon className="h-4 w-4" />
               )}
               {t('tags.recalculateCleanedTags')}
             </button>
@@ -101,22 +68,79 @@ export default function TagsToolbar({
             <button
               onClick={onRecalculateEscoTags}
               disabled={convertingToEsco}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {convertingToEsco ? (
-                <ArrowPathIcon className="w-5 h-5 animate-spin" />
+                <ArrowPathIcon className="h-4 w-4 animate-spin" />
               ) : (
-                <GlobeEuropeAfricaIcon className="w-5 h-5" />
+                <GlobeEuropeAfricaIcon className="h-4 w-4" />
               )}
               {t('tags.recalculateEscoTags')}
             </button>
           )}
-          <button onClick={onRefresh} className="btn btn-primary flex items-center gap-2 px-4 py-2">
-            <ArrowPathIcon className="w-5 h-5" />
+          <button
+            onClick={onRefresh}
+            className="cv-ghost-button inline-flex min-h-11 items-center gap-2 px-4 py-2 text-sm font-medium"
+          >
+            <ArrowPathIcon className="h-4 w-4" />
             {t('tags.refresh')}
           </button>
         </div>
       </div>
+
+      <div className="rounded-[1.75rem] border border-slate-200/80 bg-white/70 p-2 dark:border-slate-700/80 dark:bg-slate-900/40">
+        <nav className="flex flex-wrap gap-2">
+          <button
+            onClick={() => onTabChange('raw')}
+            className={`inline-flex min-h-11 items-center gap-2 rounded-2xl px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'raw'
+                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            <DocumentTextIcon className="h-5 w-5" />
+            {t('tags.tabs.raw')}
+            <span className="rounded-full bg-white/90 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+              {totalTags}
+            </span>
+          </button>
+          <button
+            onClick={() => onTabChange('cleaned')}
+            className={`inline-flex min-h-11 items-center gap-2 rounded-2xl px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'cleaned'
+                ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            <BeakerIcon className="h-5 w-5" />
+            {t('tags.tabs.cleaned')}
+            <span className="rounded-full bg-white/90 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+              {totalCleanedTags}
+            </span>
+          </button>
+          <button
+            onClick={() => onTabChange('esco')}
+            className={`inline-flex min-h-11 items-center gap-2 rounded-2xl px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'esco'
+                ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
+                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            <GlobeEuropeAfricaIcon className="h-5 w-5" />
+            {t('tags.tabs.esco')}
+            <span className="rounded-full bg-white/90 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+              {totalEscoTags}
+            </span>
+          </button>
+        </nav>
+      </div>
+
+      <SearchField
+        containerClassName="relative max-w-xl"
+        placeholder={t('tags.searchPlaceholder')}
+        value={searchTerm}
+        onChange={onSearchChange}
+      />
     </div>
   );
 }

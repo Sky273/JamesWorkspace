@@ -8,6 +8,20 @@ import { ArrowLeftIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 
 const TermsOfServicePage = (): JSX.Element => {
   const { t } = useTranslation();
+  const sections = [
+    { id: 'acceptance', title: t('legal.terms.sections.acceptance.title') },
+    { id: 'description', title: t('legal.terms.sections.description.title') },
+    { id: 'account', title: t('legal.terms.sections.account.title') },
+    { id: 'usage', title: t('legal.terms.sections.usage.title') },
+    { id: 'intellectual', title: t('legal.terms.sections.intellectual.title') },
+    { id: 'user-content', title: t('legal.terms.sections.userContent.title') },
+    { id: 'disclaimer', title: t('legal.terms.sections.disclaimer.title') },
+    { id: 'limitation', title: t('legal.terms.sections.limitation.title') },
+    { id: 'termination', title: t('legal.terms.sections.termination.title') },
+    { id: 'governing', title: t('legal.terms.sections.governing.title') },
+    { id: 'contact', title: t('legal.terms.sections.contact.title') },
+  ];
+  const lastUpdated = '2026-04-07';
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
@@ -28,12 +42,23 @@ const TermsOfServicePage = (): JSX.Element => {
             </h1>
           </div>
 
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">
-            {t('legal.terms.lastUpdated')}: {new Date().toLocaleDateString()}
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            {t('legal.terms.lastUpdated')}: {lastUpdated}
           </p>
 
+          <nav className="mb-10 rounded-2xl bg-slate-50 p-5 dark:bg-slate-900/40">
+            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Sommaire</p>
+            <div className="flex flex-wrap gap-3">
+              {sections.map((section) => (
+                <a key={section.id} href={`#${section.id}`} className="rounded-full bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:text-blue-600 dark:bg-white/5 dark:text-slate-200">
+                  {section.title}
+                </a>
+              ))}
+            </div>
+          </nav>
+
           <div className="prose dark:prose-invert max-w-none">
-            <section className="mb-8">
+            <section id="acceptance" className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {t('legal.terms.sections.acceptance.title')}
               </h2>
@@ -42,7 +67,7 @@ const TermsOfServicePage = (): JSX.Element => {
               </p>
             </section>
 
-            <section className="mb-8">
+            <section id="description" className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {t('legal.terms.sections.description.title')}
               </h2>
@@ -51,7 +76,7 @@ const TermsOfServicePage = (): JSX.Element => {
               </p>
             </section>
 
-            <section className="mb-8">
+            <section id="account" className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {t('legal.terms.sections.account.title')}
               </h2>
@@ -65,7 +90,7 @@ const TermsOfServicePage = (): JSX.Element => {
               </ul>
             </section>
 
-            <section className="mb-8">
+            <section id="usage" className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {t('legal.terms.sections.usage.title')}
               </h2>
@@ -80,7 +105,7 @@ const TermsOfServicePage = (): JSX.Element => {
               </ul>
             </section>
 
-            <section className="mb-8">
+            <section id="intellectual" className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {t('legal.terms.sections.intellectual.title')}
               </h2>
@@ -89,7 +114,7 @@ const TermsOfServicePage = (): JSX.Element => {
               </p>
             </section>
 
-            <section className="mb-8">
+            <section id="user-content" className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {t('legal.terms.sections.userContent.title')}
               </h2>
@@ -98,7 +123,7 @@ const TermsOfServicePage = (): JSX.Element => {
               </p>
             </section>
 
-            <section className="mb-8">
+            <section id="disclaimer" className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {t('legal.terms.sections.disclaimer.title')}
               </h2>
@@ -107,7 +132,7 @@ const TermsOfServicePage = (): JSX.Element => {
               </p>
             </section>
 
-            <section className="mb-8">
+            <section id="limitation" className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {t('legal.terms.sections.limitation.title')}
               </h2>
@@ -116,7 +141,7 @@ const TermsOfServicePage = (): JSX.Element => {
               </p>
             </section>
 
-            <section className="mb-8">
+            <section id="termination" className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {t('legal.terms.sections.termination.title')}
               </h2>
@@ -125,7 +150,7 @@ const TermsOfServicePage = (): JSX.Element => {
               </p>
             </section>
 
-            <section className="mb-8">
+            <section id="governing" className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {t('legal.terms.sections.governing.title')}
               </h2>
@@ -134,7 +159,7 @@ const TermsOfServicePage = (): JSX.Element => {
               </p>
             </section>
 
-            <section className="mb-8">
+            <section id="contact" className="mb-8 scroll-mt-24">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 {t('legal.terms.sections.contact.title')}
               </h2>

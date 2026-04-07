@@ -4,8 +4,10 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import PageHeader from '../../components/page/PageHeader';
 import type { EmailTemplate, EmailTemplateKeywords } from '../../types/entities';
 import emailTemplateService from '../../services/emailTemplateService';
 import {
@@ -33,6 +35,7 @@ const EmailTemplatesPage = (): JSX.Element => {
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [keywords, setKeywords] = useState<EmailTemplateKeywords | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(
     null,
@@ -45,6 +48,7 @@ const EmailTemplatesPage = (): JSX.Element => {
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       const [templatesData, keywordsData] = await Promise.all([
         emailTemplateService.getTemplates(),
@@ -53,6 +57,7 @@ const EmailTemplatesPage = (): JSX.Element => {
       setTemplates(templatesData);
       setKeywords(keywordsData);
     } catch {
+      setLoadError(true);
       toast.error(t('emailTemplates.errors.loadFailed'));
     } finally {
       setLoading(false);
@@ -218,31 +223,93 @@ const EmailTemplatesPage = (): JSX.Element => {
     }
   }, [form.mjml, form.subject, t]);
 
-  return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <EmailTemplatesHeader
-        title={t('emailTemplates.title')}
-        subtitle={t('emailTemplates.subtitle')}
-        createLabel={t('emailTemplates.createNew')}
-        onCreate={handleCreate}
-      />
+  const defaultTemplatesCount = templates.filter((template) => template.is_default).length;
+  const systemTemplatesCount = templates.filter((template) => template.is_system).length;
 
-      <EmailTemplatesList
-        templates={templates}
-        loading={loading}
-        noTemplatesLabel={t('emailTemplates.noTemplates')}
-        systemTemplateLabel={t('emailTemplates.systemTemplate')}
-        defaultTemplateLabel={t('emailTemplates.defaultTemplate')}
-        subjectLabel={t('emailTemplates.subjectLabel')}
-        previewLabel={t('emailTemplates.preview')}
-        editLabel={t('common.edit')}
-        duplicateLabel={t('emailTemplates.duplicate')}
-        deleteLabel={t('common.delete')}
-        onPreview={handlePreview}
-        onEdit={handleEdit}
-        onDuplicate={handleDuplicate}
-        onDelete={handleDelete}
-      />
+  if (loading) {
+    return (
+      <div className="cv-surface app-page-shell max-w-6xl">
+        <div className="section-shell rounded-[2rem] p-8">
+          <div className="flex items-start gap-4">
+            <ArrowPathIcon className="mt-1 h-6 w-6 animate-spin text-primary-500" />
+            <div className="flex-1 space-y-4">
+              <div>
+                <div className="h-8 w-72 max-w-full animate-pulse rounded-full bg-gray-200/80 dark:bg-gray-700/70" />
+                <div className="mt-3 h-4 w-[32rem] max-w-full animate-pulse rounded-full bg-gray-200/70 dark:bg-gray-700/60" />
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="h-28 rounded-3xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                <div className="h-28 rounded-3xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                <div className="h-28 rounded-3xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="cv-surface app-page-shell max-w-6xl">
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <PageHeader
+          title={t('emailTemplates.title')}
+          subtitle={t('emailTemplates.subtitle')}
+        />
+      </div>
+
+      <div className="space-y-6">
+        <div className="section-shell rounded-[2rem] p-6">
+          <EmailTemplatesHeader
+            createLabel={t('emailTemplates.createNew')}
+            defaultTemplatesCount={defaultTemplatesCount}
+            onCreate={handleCreate}
+            systemTemplatesCount={systemTemplatesCount}
+            totalTemplates={templates.length}
+          />
+        </div>
+
+        {loadError && (
+          <div className="section-shell rounded-[2rem] border border-amber-200/70 bg-amber-50/80 p-4 dark:border-amber-800/70 dark:bg-amber-900/15">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 text-amber-500" />
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  {t('emailTemplates.errors.loadFailed')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  void loadData();
+                }}
+                className="cv-ghost-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-medium"
+              >
+                {t('common.retry')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="section-shell rounded-[2rem] p-6">
+          <EmailTemplatesList
+            templates={templates}
+            loading={loading}
+            noTemplatesLabel={t('emailTemplates.noTemplates')}
+            systemTemplateLabel={t('emailTemplates.systemTemplate')}
+            defaultTemplateLabel={t('emailTemplates.defaultTemplate')}
+            subjectLabel={t('emailTemplates.subjectLabel')}
+            previewLabel={t('emailTemplates.preview')}
+            editLabel={t('common.edit')}
+            duplicateLabel={t('emailTemplates.duplicate')}
+            deleteLabel={t('common.delete')}
+            onPreview={handlePreview}
+            onEdit={handleEdit}
+            onDuplicate={handleDuplicate}
+            onDelete={handleDelete}
+          />
+        </div>
+      </div>
 
       {(modalMode === 'create' || modalMode === 'edit') && (
         <EmailTemplatesEditModal

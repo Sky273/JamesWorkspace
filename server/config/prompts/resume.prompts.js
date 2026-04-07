@@ -304,76 +304,154 @@ IMPORTANT pour le champ "name" du JSON:
 - Ne jamais retourner un champ "name" vide, null ou "Non renseigné"
 - Si aucun nom n'est identifiable après avoir vérifié toutes les sources ci-dessus, retournez "XXX" (ceci permettra un traitement ultérieur des cas problématiques)`;
 
-export const DEFAULT_PRE_ANALYSIS_PROMPT = `# Prompt de pre-analyse CV - Reconstruction de texte CV
+export const DEFAULT_PRE_ANALYSIS_PROMPT = `# Prompt de préanalyse CV - ResumeConverter
 
-## Role
+## ROLE
 
-Tu reconstitues un CV texte coherent a partir d'un texte brut extrait d'un document, y compris lorsque plusieurs blocs ont ete melanges, fusionnes ou mal ordonnes lors de l'extraction native ou OCR.
+Tu transformes un texte de CV extrait nativement ou par OCR en une version texte canonique, propre, structurée et directement exploitable par l’analyse downstream.
 
-## Objectif
+## OBJECTIF
 
-Transformer un texte de CV desordonne en un texte de CV lisible, structure et coherent, en restaurant autant que possible l'ordre logique et les regroupements naturels des informations, sans inventer ni interpreter au-dela de la source.
+Produire un texte Markdown lisible, cohérent et stable en sortie, en conservant strictement le contenu présent dans la source, mais en le réorganisant fortement lorsque la forme extraite est dégradée.
 
-## Entrees
+L’objectif n’est pas de réécrire le CV, mais de convertir un extrait brut ou semi-brut en un texte propre, structuré et homogène.
+
+## ENTREES
 
 - Texte extrait : {TEXT}
-- Nom du fichier d'origine : {FILENAME}
+- Nom du fichier d’origine : {FILENAME}
 
-## Regles absolues
+## REGLES ABSOLUES
 
-- Ne jamais inventer d'information.
-- Ne jamais ajouter de competences, experiences, diplomes, dates, employeurs, certifications, langues, chiffres, lieux, titres ou missions absents.
-- Ne jamais transformer une hypothese en fait.
-- Ne jamais supprimer une information potentiellement utile presente dans la source.
-- Reordonner, regrouper et nettoyer uniquement a partir d'indices presents dans le texte.
-- Si plusieurs blocs semblent melanges, reconstruire l'ordre le plus probable d'un CV classique.
-- Si un rattachement est incertain, conserver l'information de maniere prudente, sans forcer une association douteuse.
-- Conserver la langue majoritaire du CV.
-- Corriger uniquement les artefacts evidents si le sens est clair :
-  - espaces parasites
-  - sauts de ligne incoherents
-  - lignes coupees au mauvais endroit
-  - listes mal cassees
-  - titres de sections colles
-  - doublons manifestes
-  - artefacts OCR evidents
-- Retourner uniquement le texte final, sans JSON, sans commentaire, sans balise de code.
+- Ne jamais inventer d’information.
+- Ne jamais ajouter de compétences, expériences, diplômes, dates, employeurs, certifications, langues, chiffres, rôles ou titres absents.
+- Ne jamais supprimer une information utile présente dans la source.
+- Ne jamais résumer, interpréter, évaluer ou enrichir le contenu.
+- Ne jamais produire de JSON.
+- Ne jamais produire de HTML.
+- Retourner uniquement le texte final en Markdown simple.
 
-## Travail attendu
+## PRINCIPES DE TRANSFORMATION
 
-1. Reconstituer un texte de CV coherent a partir de blocs potentiellement melanges.
-2. Regrouper ensemble les elements qui appartiennent visiblement a la meme section ou a la meme experience.
-3. Retablir un ordre de lecture naturel quand il peut etre deduit de facon raisonnable.
-4. Isoler clairement, si elles sont presentes :
-   - identite / titre
-   - resume
-   - competences
-   - experiences
-   - formation
-   - certifications
-   - langues
-   - centres d'interet
-5. Pour les experiences et formations :
-   - regrouper date, poste, organisation, lieu et details quand leur association est probable
-   - conserver les details factuels tels quels autant que possible
-   - presenter les missions ou realisations en puces simples si une liste est evidente
-6. Depliquer les repetitions evidentes dues a l'extraction, sans perdre d'information distincte.
-7. Preserver strictement les dates, noms d'entreprises, postes, technologies, diplomes, certifications et formulations factuelles presentes.
+Tu dois privilégier la lisibilité et la structure, même si cela implique une réorganisation importante de la forme initiale.
 
-## Gestion de l'incertitude
+La fidélité attendue porte sur le contenu, pas sur la mise en page brute issue du PDF ou de l’OCR.
 
-- Si une information est lisible mais son emplacement exact est incertain, la conserver dans la section la plus probable sans extrapoler.
-- Si deux blocs semblent contradictoires ou difficiles a rattacher, preferer une restitution prudente et litterale.
-- Ne pas "completer" une experience ou une formation a partir de connaissances externes ou d'habitudes de CV.
+Tu dois corriger ou normaliser lorsque c’est évident :
+- espaces parasites
+- retours à la ligne incohérents
+- mots ou expressions coupés artificiellement
+- listes cassées
+- libellés séparés de leur valeur
+- titres de sections collés au texte
+- artefacts de pagination
+- répétitions manifestement dues à l’extraction
+- ponctuation manifestement dégradée si le sens est clair
 
-## Format de sortie
+Si un passage reste ambigu, conserver la formulation la plus prudente possible.
 
-- Retourner un texte Markdown propre, lisible et sobre.
-- Utiliser des titres de section uniquement si la section est clairement identifiable.
-- Utiliser des puces simples quand une enumeration est evidente.
-- Ne pas produire de HTML.
-- Ne pas produire de resume interprete, de score, d'analyse ou de metadonnees.
-- Produire un CV texte final directement exploitable par une etape d'analyse downstream.
+## STRUCTURE DE SORTIE OBLIGATOIRE
+
+Quand l’information est présente, organiser le texte dans cet ordre :
+
+1. Identité
+2. Titre
+3. Résumé ou accroche
+4. Compétences techniques
+5. Compétences clés
+6. Langues
+7. Formation
+8. Expérience professionnelle
+9. Certifications
+10. Centres d’intérêt
+
+Ne créer une section que si elle est clairement présente dans la source.
+
+## REGLES DE NORMALISATION
+
+### Identité / en-tête
+- Regrouper proprement les informations de contact sur quelques lignes lisibles.
+- Mettre le nom, le titre et les coordonnées sur des lignes distinctes si nécessaire.
+- Fusionner les fragments cassés, par exemple :
+  - "3 ans d’" + "expérience" -> "3 ans d’expérience"
+
+### Compétences
+- Transformer les catégories techniques en liste Markdown.
+- Une catégorie = une puce principale.
+- Le contenu de la catégorie reste sur une seule ligne si possible.
+- Exemple attendu :
+  - Systèmes d’exploitation : ...
+  - Langages & Technologies Web : ...
+  - Frameworks : ...
+- Ne pas laisser un bloc compact de texte non structuré si des catégories sont identifiables.
+
+### Formation
+- Présenter chaque formation sur une ligne ou un bloc court lisible.
+- Supprimer les ruptures de lignes artificielles.
+
+### Langues
+- Une langue par puce.
+
+### Expérience professionnelle
+Pour chaque expérience ou projet, utiliser obligatoirement le bloc suivant lorsque les informations sont présentes :
+
+#### [Nom du projet ou intitulé]
+- Entreprise : ...
+- Client : ...
+- Dates : ...
+- Durée : ...
+- Contexte : ...
+- Rôles et responsabilités :
+  - ...
+  - ...
+- Environnement technique : ...
+- Méthodologie : ...
+
+### Cas particulier : formation ou intercontrat
+Si un bloc correspond à une formation, le faire apparaître clairement comme tel, sans le mélanger à une expérience projet.
+Exemple :
+#### Formation - [Nom]
+- Entreprise : ...
+- Dates : ...
+- Durée : ...
+- Contexte : ...
+
+## NETTOYAGE DES ARTEFACTS
+
+Tu dois supprimer les éléments suivants lorsqu’ils n’apportent aucune information métier utile :
+- numéros de page isolés
+- intitulés techniques de mise en page répétés
+- labels administratifs lourds quand leur contenu est déjà conservé
+- répétitions évidentes causées par l’extraction PDF/OCR
+
+Exemples de simplification autorisée :
+- "Entreprise (employeur):" -> "Entreprise :"
+- "Dates (début-fin):" -> "Dates :"
+- "Nombre effectif de mois atteints:" -> "Durée :"
+- "Technologies et méthodologies utilisées dans le projet :" -> "Environnement technique :"
+
+## CONTRAINTES FORTES DE LISIBILITE
+
+- Interdiction de produire un texte au kilomètre.
+- Interdiction de laisser une expérience sous forme de paragraphe brut si des champs sont identifiables.
+- Interdiction de fusionner plusieurs expériences dans un même bloc.
+- Interdiction de laisser des puces collées à la suite dans une seule ligne.
+- Interdiction de conserver les numéros de page seuls ou les fragments de pagination.
+
+## FORMAT DE SORTIE
+
+- Markdown simple uniquement
+- Titres de section niveau \`##\`
+- Titres d’expérience niveau \`####\`
+- Puces simples \`-\`
+- Pas de tableau
+- Pas de JSON
+- Pas de commentaire
+- Pas d’explication
+
+## RESULTAT ATTENDU
+
+La sortie doit ressembler à un CV texte propre, cohérent, stable d’un document à l’autre, et directement exploitable par une étape d’analyse automatique.
 `;
 
 export const DEFAULT_ANALYSIS_PROMPT = `# Prompt d'analyse CV — ResumeConverter

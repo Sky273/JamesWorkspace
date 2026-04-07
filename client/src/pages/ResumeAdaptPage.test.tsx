@@ -199,7 +199,7 @@ describe('ResumeAdaptPage', () => {
     );
 
     expect(await screen.findByText('errors.resumeNotFound')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'common.backToResumes' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common.backToList' }));
     expect(navigateMock).toHaveBeenCalledWith('/resumes');
   });
 });

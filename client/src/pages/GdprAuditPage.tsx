@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import {
@@ -30,11 +31,8 @@ const DEFAULT_FILTERS: GdprAuditFilters = {
 };
 
 const GdprAuditPage = (): JSX.Element => {
-  const { t } = useTranslation();
   const { authGet } = useAuthFetch();
-  const tr = useCallback((key: string, fallback?: string): string => {
-    return fallback ? t(key, { defaultValue: fallback }) : t(key);
-  }, [t]);
+  const { t } = useTranslation();
 
   const [logs, setLogs] = useState<GdprAuditLog[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
@@ -182,12 +180,19 @@ const GdprAuditPage = (): JSX.Element => {
     }).format(date);
   };
 
+  const hasActiveFilters = Object.values(filters).some(value => value !== '');
+
   return (
-    <div className="cv-surface app-page-shell">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45 }}
+      className="cv-surface app-page-shell max-w-6xl"
+    >
       <div className="mb-8 flex items-start justify-between gap-4">
         <PageHeader
-          title={tr('gdprAudit.title', 'Journal RGPD')}
-          subtitle={tr('gdprAudit.subtitle', 'Historique des actions de conformité RGPD')}
+          title={t('gdprAudit.title')}
+          subtitle={t('gdprAudit.subtitle')}
         />
         <div className="mt-4 flex items-center space-x-2">
           <button
@@ -195,54 +200,92 @@ const GdprAuditPage = (): JSX.Element => {
             className={`cv-ghost-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-medium ${showFilters ? 'ring-2 ring-[color:color-mix(in_srgb,var(--cv-primary)_25%,transparent)]' : ''}`}
           >
             <FunnelIcon className="mr-2 h-4 w-4" />
-            {tr('gdprAudit.filters', 'Filtres')}
+            {t('gdprAudit.filters')}
           </button>
           <button
             onClick={() => { void fetchLogs(); void fetchStats(); }}
             className="cv-gradient-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-semibold"
           >
             <ArrowPathIcon className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            {tr('gdprAudit.refresh', 'Actualiser')}
+            {t('gdprAudit.refresh')}
           </button>
         </div>
       </div>
 
-      <GdprAuditStatsGrid stats={stats} t={tr} />
+      <div className="space-y-6">
+        <div className="section-shell rounded-[2rem] p-6">
+          <GdprAuditStatsGrid stats={stats} t={t} />
+        </div>
 
         {showFilters && (
-          <GdprAuditFiltersPanel
-            filters={filters}
-            firms={firms}
-            categories={categories}
-            actionTypes={actionTypes}
-            onFilterChange={handleFilterChange}
-            onClearFilters={clearFilters}
-            t={tr}
-          />
+          <div className="section-shell rounded-[2rem] p-6">
+            <GdprAuditFiltersPanel
+              filters={filters}
+              firms={firms}
+              categories={categories}
+              actionTypes={actionTypes}
+              onFilterChange={handleFilterChange}
+              onClearFilters={clearFilters}
+              t={t}
+            />
+          </div>
         )}
 
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+          <div className="section-shell rounded-[2rem] border border-red-200/70 bg-red-50/70 p-4 dark:border-red-800/70 dark:bg-red-900/15">
             <div className="flex items-center">
-              <ExclamationTriangleIcon className="h-5 w-5 text-red-500 mr-2" />
+              <ExclamationTriangleIcon className="mr-2 h-5 w-5 text-red-500" />
               <span className="text-red-700 dark:text-red-400">{error}</span>
             </div>
           </div>
         )}
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-          <GdprAuditLogsTable
-            logs={logs}
-            loading={loading}
-            formatDate={formatDate}
-            formatAction={formatAction}
-            getActionIcon={getActionIcon}
-            getCategoryColor={getCategoryColor}
-            t={tr}
-          />
-          <GdprAuditPagination pagination={pagination} onPageChange={setPage} t={tr} />
-        </div>
-    </div>
+        {!loading && !error && logs.length === 0 ? (
+          <div className="section-shell rounded-[2rem] p-8 text-center">
+            <InformationCircleIcon className="mx-auto h-10 w-10 text-gray-400" />
+            <h2 className="mt-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
+              {t('gdprAudit.noLogs')}
+            </h2>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              {hasActiveFilters
+                ? 'Clear the current filters to broaden the audit window.'
+                : 'Refresh the audit log to fetch the latest entries.'}
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="cv-ghost-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-medium"
+                >
+                  {t('gdprAudit.clearFilters')}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => { void fetchLogs(); void fetchStats(); }}
+                className="cv-gradient-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-semibold"
+              >
+                {t('gdprAudit.refresh')}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="section-shell overflow-hidden rounded-[2rem]">
+            <GdprAuditLogsTable
+              logs={logs}
+              loading={loading}
+              formatDate={formatDate}
+              formatAction={formatAction}
+              getActionIcon={getActionIcon}
+              getCategoryColor={getCategoryColor}
+              t={t}
+            />
+            <GdprAuditPagination pagination={pagination} onPageChange={setPage} t={t} />
+          </div>
+        )}
+      </div>
+    </motion.div>
   );
 };
 

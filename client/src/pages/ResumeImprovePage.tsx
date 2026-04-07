@@ -7,13 +7,14 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useResume } from '../context/ResumeContext';
 import { useTranslation } from 'react-i18next';
+import { motion } from 'framer-motion';
+import { ArrowLeftIcon, ArrowPathIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import ShareQRCodeModal from '../components/ShareQRCodeModal';
 import { templateService } from '../utils/templateService';
 import { Resume } from '../types/entities';
 import { resumeService } from '../utils/resumeService';
 import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
-import { SkeletonCard } from '../components/ui/Skeleton';
 import ImprovementAnimation from '../components/ImprovementAnimation';
 import ImprovedTextTab from '../components/ResumeAnalysis/ImprovedTextTab';
 import ResumeImproveHeader from '../components/ResumeImprove/ResumeImproveHeader';
@@ -23,6 +24,7 @@ import CompareTab from '../components/ResumeAnalysis/CompareTab';
 import OverviewTab from '../components/ResumeAnalysis/OverviewTab';
 import PipelineTab from '../components/ResumeAnalysis/PipelineTab';
 import ResumeComments from '../components/ResumeComments';
+import PageHeader from '../components/page/PageHeader';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
 import { FRONTEND_LLM_AI_MODIFICATION_TIMEOUT_MS } from '../constants/llmTimeouts';
 import {
@@ -278,24 +280,58 @@ const ResumeImprovePage = (): JSX.Element => {
     }
   }, [id, localResume, t]);
 
+  const resumeName = localResume?.['Name'] || localResume?.['File Name'] || 'CV';
+  const hasImprovedText = !!localResume?.['Improved Text'];
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          <SkeletonCard className="h-96" />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="editorial-migrated-shell min-h-screen px-4 py-6 sm:px-6 sm:py-8"
+      >
+        <div className="cv-surface mx-auto max-w-7xl rounded-[2.5rem] p-6 sm:p-8">
+          <div className="section-shell rounded-[2rem] p-8">
+            <div className="flex items-start gap-4">
+              <ArrowPathIcon className="mt-1 h-6 w-6 animate-spin text-[var(--cv-primary)]" />
+              <div className="flex-1 space-y-4">
+                <div>
+                  <div className="h-8 w-72 max-w-full rounded-full bg-gray-200/80 animate-pulse dark:bg-gray-700/70" />
+                  <div className="mt-3 h-4 w-[34rem] max-w-full rounded-full bg-gray-200/70 animate-pulse dark:bg-gray-700/60" />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="h-24 rounded-3xl bg-gray-100 animate-pulse dark:bg-gray-800" />
+                  <div className="h-24 rounded-3xl bg-gray-100 animate-pulse dark:bg-gray-800" />
+                  <div className="h-24 rounded-3xl bg-gray-100 animate-pulse dark:bg-gray-800" />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   if (error || !localResume) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="text-red-500 dark:text-red-400">{error || 'Resume not found'}</p>
-          <Link to="/resumes" className="text-blue-500 hover:underline mt-4 inline-block">
-            {t('common.backToList')}
-          </Link>
+      <div className="editorial-migrated-shell min-h-screen px-4 py-6 sm:px-6 sm:py-8">
+        <div className="cv-surface mx-auto max-w-7xl rounded-[2.5rem] p-6 sm:p-8">
+          <div className="section-shell rounded-[2rem] p-10 text-center">
+            <DocumentTextIcon className="mx-auto mb-4 h-14 w-14 text-slate-300 dark:text-slate-600" />
+            <h2 className="text-2xl font-bold text-slate-950 dark:text-[var(--cv-text)]">
+              {error || 'Resume not found'}
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-500 dark:text-[var(--cv-muted)]">
+              {t('resume.improve.description')}
+            </p>
+            <Link
+              to="/resumes"
+              className="cv-gradient-button mt-6 inline-flex min-h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold"
+            >
+              <ArrowLeftIcon className="h-4 w-4" />
+              {t('common.backToList')}
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -311,12 +347,24 @@ const ResumeImprovePage = (): JSX.Element => {
     );
   }
 
-  const resumeName = localResume['Name'] || localResume['File Name'] || 'CV';
-  const hasImprovedText = !!localResume['Improved Text'];
-
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-      <div className="max-w-7xl mx-auto px-4">
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="editorial-migrated-shell min-h-screen px-4 py-6 sm:px-6 sm:py-8"
+      >
+        <div className="cv-surface mx-auto max-w-7xl rounded-[2.5rem] p-6 sm:p-8">
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+          <PageHeader title={t('resume.improve.title')} subtitle={t('resume.improve.description')} />
+          <div className="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-[var(--cv-muted)]">
+            <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-white/5">{resumeName}</span>
+            <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-white/5">
+              {hasImprovedText ? t('resume.analysis.improvedResume') : t('resume.improve.notYetImproved')}
+            </span>
+          </div>
+        </div>
+
         <ResumeImproveHeader
           resume={localResume}
           resumeName={resumeName}
@@ -345,45 +393,45 @@ const ResumeImprovePage = (): JSX.Element => {
           />
         ) : (
           <>
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="border-b border-gray-200 dark:border-gray-700">
-                <nav className="flex -mb-px">
+            <div className="section-shell overflow-hidden rounded-[2rem] p-0">
+              <div className="border-b border-gray-200 dark:border-gray-700 px-2 pt-2">
+                <nav className="flex flex-wrap gap-1">
                   <button
                     onClick={() => setActiveTab('improved')}
-                    className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    className={`rounded-t-2xl px-5 py-3 text-sm font-medium transition-colors ${
                       activeTab === 'improved'
-                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                        ? 'bg-[color:color-mix(in_srgb,var(--cv-primary)_12%,transparent)] text-[var(--cv-primary)]'
+                        : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
                     }`}
                   >
                     {t('resume.analysis.tabs.improved')}
                   </button>
                   <button
                     onClick={() => setActiveTab('compare')}
-                    className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    className={`rounded-t-2xl px-5 py-3 text-sm font-medium transition-colors ${
                       activeTab === 'compare'
-                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                        ? 'bg-[color:color-mix(in_srgb,var(--cv-primary)_12%,transparent)] text-[var(--cv-primary)]'
+                        : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
                     }`}
                   >
                     {t('resume.analysis.tabs.compare')}
                   </button>
                   <button
                     onClick={() => setActiveTab('analysis')}
-                    className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    className={`rounded-t-2xl px-5 py-3 text-sm font-medium transition-colors ${
                       activeTab === 'analysis'
-                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                        ? 'bg-[color:color-mix(in_srgb,var(--cv-primary)_12%,transparent)] text-[var(--cv-primary)]'
+                        : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
                     }`}
                   >
                     {t('resume.analysis.tabs.overview')}
                   </button>
                   <button
                     onClick={() => setActiveTab('pipeline')}
-                    className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                    className={`rounded-t-2xl px-5 py-3 text-sm font-medium transition-colors ${
                       activeTab === 'pipeline'
-                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                        ? 'bg-[color:color-mix(in_srgb,var(--cv-primary)_12%,transparent)] text-[var(--cv-primary)]'
+                        : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
                     }`}
                   >
                     {t('resume.analysis.tabs.pipeline')}
@@ -434,8 +482,8 @@ const ResumeImprovePage = (): JSX.Element => {
             )}
           </>
         )}
-      </div>
-
+        </div>
+      </motion.div>
       {/* Share QR Code Modal */}
       <ShareQRCodeModal
         isOpen={showShareModal}
@@ -445,7 +493,7 @@ const ResumeImprovePage = (): JSX.Element => {
         candidateName={localResume?.['Name'] || 'CV'}
         isLoading={shareLoading}
       />
-    </div>
+    </>
   );
 };
 

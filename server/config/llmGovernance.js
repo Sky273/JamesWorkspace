@@ -101,7 +101,7 @@ export const PROMPT_REGISTRY = Object.freeze({
   DEFAULT_PRE_ANALYSIS_PROMPT: Object.freeze({
     key: 'DEFAULT_PRE_ANALYSIS_PROMPT',
     id: 'resume.pre-analysis.default',
-    version: '1.1.0',
+    version: '1.2.0',
     domain: 'resume',
     operation: 'resume-pre-analysis',
     contractId: 'resume_pre_analysis_v1',

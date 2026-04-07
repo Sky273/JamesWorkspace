@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
@@ -280,93 +281,119 @@ const BackupPage = (): JSX.Element => {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center py-12">
-                <ArrowPathIcon className="w-8 h-8 animate-spin text-gray-400" />
-            </div>
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35 }}
+                className="cv-surface app-page-shell max-w-6xl"
+            >
+                <div className="section-shell rounded-[2rem] p-8">
+                    <div className="flex items-start gap-4">
+                        <ArrowPathIcon className="mt-1 w-6 h-6 animate-spin text-primary-500" />
+                        <div className="flex-1 space-y-4">
+                            <div>
+                                <div className="h-8 w-72 max-w-full rounded-full bg-gray-200/80 dark:bg-gray-700/70 animate-pulse" />
+                                <div className="mt-3 h-4 w-[32rem] max-w-full rounded-full bg-gray-200/70 dark:bg-gray-700/60 animate-pulse" />
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-3">
+                                <div className="h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                                <div className="h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                                <div className="h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                            </div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{t('backup.pageDescription')}</p>
+                        </div>
+                    </div>
+                </div>
+            </motion.div>
         );
     }
 
     return (
-        <div className="cv-surface app-page-shell max-w-6xl">
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45 }}
+            className="cv-surface app-page-shell max-w-6xl"
+        >
             <PageHeader title={t('backup.pageTitle')} subtitle={t('backup.pageDescription')} />
 
-            {/* Section Tabs */}
-            <div className="flex space-x-4 border-b border-gray-200 dark:border-gray-700 mb-6">
-                <button
-                    onClick={() => setActiveSection('config')}
-                    className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${
-                        activeSection === 'config'
-                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
-                    }`}
-                >
-                    {t('backup.configTab')}
-                </button>
-                <button
-                    onClick={() => setActiveSection('history')}
-                    className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${
-                        activeSection === 'history'
-                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
-                    }`}
-                >
-                    {t('backup.historyTab')}
-                </button>
-                <button
-                    onClick={() => {
-                        setActiveSection('restore');
-                        void fetchRemoteFiles({ silent: true });
-                    }}
-                    className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${
-                        activeSection === 'restore'
-                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
-                    }`}
-                >
-                    {t('backup.restoreTab')}
-                </button>
+            <div className="section-shell mb-6 rounded-[2rem] p-3">
+                <div className="flex flex-wrap gap-2">
+                    <button
+                        onClick={() => setActiveSection('config')}
+                        className={`inline-flex min-h-11 items-center rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                            activeSection === 'config'
+                                ? 'bg-[color:color-mix(in_srgb,var(--cv-primary)_16%,transparent)] text-primary-700 dark:text-primary-300'
+                                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700/70 dark:hover:text-gray-200'
+                        }`}
+                    >
+                        {t('backup.configTab')}
+                    </button>
+                    <button
+                        onClick={() => setActiveSection('history')}
+                        className={`inline-flex min-h-11 items-center rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                            activeSection === 'history'
+                                ? 'bg-[color:color-mix(in_srgb,var(--cv-primary)_16%,transparent)] text-primary-700 dark:text-primary-300'
+                                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700/70 dark:hover:text-gray-200'
+                        }`}
+                    >
+                        {t('backup.historyTab')}
+                    </button>
+                    <button
+                        onClick={() => {
+                            setActiveSection('restore');
+                            void fetchRemoteFiles({ silent: true });
+                        }}
+                        className={`inline-flex min-h-11 items-center rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                            activeSection === 'restore'
+                                ? 'bg-[color:color-mix(in_srgb,var(--cv-primary)_16%,transparent)] text-primary-700 dark:text-primary-300'
+                                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700/70 dark:hover:text-gray-200'
+                        }`}
+                    >
+                        {t('backup.restoreTab')}
+                    </button>
+                </div>
             </div>
 
-            {/* Configuration Section */}
-            {activeSection === 'config' && (
-                <BackupConfigSection
-                    settings={settings}
-                    password={password}
-                    setPassword={setPassword}
-                    saving={saving}
-                    testing={testing}
-                    backingUp={backingUp}
-                    dayNames={dayNames}
-                    onInputChange={handleInputChange}
-                    onSave={handleSave}
-                    onTestConnection={handleTestConnection}
-                    onRunBackup={handleRunBackup}
-                />
-            )}
+            <div className="section-shell rounded-[2rem] p-6">
+                {activeSection === 'config' && (
+                    <BackupConfigSection
+                        settings={settings}
+                        password={password}
+                        setPassword={setPassword}
+                        saving={saving}
+                        testing={testing}
+                        backingUp={backingUp}
+                        dayNames={dayNames}
+                        onInputChange={handleInputChange}
+                        onSave={handleSave}
+                        onTestConnection={handleTestConnection}
+                        onRunBackup={handleRunBackup}
+                    />
+                )}
 
-            {/* History Section */}
-            {activeSection === 'history' && (
-                <BackupHistorySection
-                    history={history}
-                    onRefresh={fetchHistory}
-                    onDelete={handleDeleteHistory}
-                />
-            )}
+                {activeSection === 'history' && (
+                    <BackupHistorySection
+                        history={history}
+                        onRefresh={fetchHistory}
+                        onDelete={handleDeleteHistory}
+                    />
+                )}
 
-            {/* Restore Section */}
-            {activeSection === 'restore' && (
-                <BackupRestoreSection
-                    settings={settings}
-                    remoteFiles={remoteFiles}
-                    loadingRemote={loadingRemote}
-                    remoteLoadAttempted={remoteLoadAttempted}
-                    remoteLoadError={remoteLoadError}
-                    restoring={restoring}
-                    onRefresh={() => void fetchRemoteFiles()}
-                    onRestore={handleRestore}
-                />
-            )}
-        </div>
+                {activeSection === 'restore' && (
+                    <BackupRestoreSection
+                        settings={settings}
+                        remoteFiles={remoteFiles}
+                        loadingRemote={loadingRemote}
+                        remoteLoadAttempted={remoteLoadAttempted}
+                        remoteLoadError={remoteLoadError}
+                        restoring={restoring}
+                        onRefresh={() => void fetchRemoteFiles()}
+                        onRestore={handleRestore}
+                    />
+                )}
+            </div>
+        </motion.div>
     );
 };
 

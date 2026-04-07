@@ -70,49 +70,47 @@ export default function ProfileMatchSearchPanel({
   const { t } = useTranslation();
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+    <div className="cv-panel mb-6 rounded-[2rem] p-5 sm:p-6">
       <div className="space-y-4">
-        {/* Deal selector */}
         {deals.length > 0 && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              <BriefcaseIcon className="w-4 h-4 inline mr-2" />
+            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+              <BriefcaseIcon className="mr-2 inline h-4 w-4" />
               {t('profileMatching.selectDeal')}
             </label>
             <select
               value={selectedDealId}
               onChange={(e) => setSelectedDealId(e.target.value)}
               disabled={loadingMissions}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-slate-900 focus:border-[var(--cv-primary)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cv-primary)_20%,transparent)] dark:border-white/10 dark:bg-white/[0.04] dark:text-[var(--cv-text)]"
             >
               <option value="">{t('profileMatching.allDeals')}</option>
-              {deals.map(deal => (
+              {deals.map((deal) => (
                 <option key={deal.id} value={deal.id}>
-                  {deal.title}{deal.client_name ? ` — ${deal.client_name}` : ''}
+                  {deal.title}{deal.client_name ? ` | ${deal.client_name}` : ''}
                 </option>
               ))}
             </select>
           </div>
         )}
 
-        {/* Mission selector */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            <BriefcaseIcon className="w-4 h-4 inline mr-2" />
+          <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+            <BriefcaseIcon className="mr-2 inline h-4 w-4" />
             {t('profileMatching.selectMission')}
           </label>
           <select
             value={selectedMissionId}
             onChange={(e) => setSelectedMissionId(e.target.value)}
             disabled={loadingMissions}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-slate-900 focus:border-[var(--cv-primary)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cv-primary)_20%,transparent)] dark:border-white/10 dark:bg-white/[0.04] dark:text-[var(--cv-text)]"
           >
             {loadingMissions ? (
               <option>{t('profileMatching.loadingMissions')}</option>
             ) : missions.length === 0 ? (
               <option>{t('profileMatching.noMissions')}</option>
             ) : (
-              missions.map(mission => (
+              missions.map((mission) => (
                 <option key={mission.id} value={mission.id}>
                   {mission.Title}
                 </option>
@@ -121,50 +119,47 @@ export default function ProfileMatchSearchPanel({
           </select>
         </div>
 
-        {/* Mission preview */}
         {selectedMission && selectedMission.Content && (
-          <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
-            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3">
+          <div className="rounded-[1.5rem] border border-dashed border-slate-200 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+            <p className="line-clamp-3 text-sm text-slate-600 dark:text-[var(--cv-muted)]">
               {selectedMission.Content.replace(/<[^>]*>/g, '').substring(0, 300)}...
             </p>
           </div>
         )}
 
-        {/* Advanced options toggle */}
         <button
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+          className="inline-flex items-center gap-2 text-sm font-medium text-[var(--cv-primary)] hover:opacity-80"
         >
-          <AdjustmentsHorizontalIcon className="w-4 h-4" />
+          <AdjustmentsHorizontalIcon className="h-4 w-4" />
           {t('profileMatching.advancedOptions')}
-          {showAdvanced ? <ChevronUpIcon className="w-4 h-4" /> : <ChevronDownIcon className="w-4 h-4" />}
+          {showAdvanced ? <ChevronUpIcon className="h-4 w-4" /> : <ChevronDownIcon className="h-4 w-4" />}
         </button>
 
-        {/* Advanced options */}
         <AnimatePresence>
           {showAdvanced && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700"
+              className="space-y-4 border-t border-slate-200 pt-4 dark:border-white/10"
             >
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
                     {t('profileMatching.maxResults')}
                   </label>
                   <input
                     type="number"
                     min={0}
                     value={limit}
-                    onChange={(e) => setLimit(Math.max(0, parseInt(e.target.value) || 0))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    onChange={(e) => setLimit(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                    className="w-full rounded-2xl border border-slate-200 bg-white/80 px-3 py-2.5 text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-[var(--cv-text)]"
                     placeholder={t('profileMatching.maxResultsPlaceholder')}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
                     {t('profileMatching.minScore')}
                   </label>
                   <input
@@ -172,21 +167,20 @@ export default function ProfileMatchSearchPanel({
                     min={0}
                     max={100}
                     value={minScore}
-                    onChange={(e) => setMinScore(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    onChange={(e) => setMinScore(Math.min(100, Math.max(0, parseInt(e.target.value, 10) || 0)))}
+                    className="w-full rounded-2xl border border-slate-200 bg-white/80 px-3 py-2.5 text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-[var(--cv-text)]"
                   />
                 </div>
               </div>
 
-              {/* Weights */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
                   {t('profileMatching.weights')}
                 </label>
-                <div className="grid grid-cols-4 gap-3">
-                  {(['skills', 'tools', 'industries', 'softSkills'] as const).map(key => (
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  {(['skills', 'tools', 'industries', 'softSkills'] as const).map((key) => (
                     <div key={key}>
-                      <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                      <label className="mb-1 block text-xs text-slate-500 dark:text-[var(--cv-muted)]">
                         {t(`profileMatching.categories.${key}`)}
                       </label>
                       <input
@@ -194,20 +188,20 @@ export default function ProfileMatchSearchPanel({
                         min={0}
                         max={100}
                         value={weights[key]}
-                        onChange={(e) => setWeights(prev => ({ ...prev, [key]: parseInt(e.target.value) || 0 }))}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        onChange={(e) => setWeights((prev) => ({ ...prev, [key]: parseInt(e.target.value, 10) || 0 }))}
+                        className="w-full rounded-xl border border-slate-200 bg-white/80 px-2 py-2 text-sm text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-[var(--cv-text)]"
                       />
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <p className="mt-1 text-xs text-slate-500 dark:text-[var(--cv-muted)]">
                   {t('profileMatching.weightsTotal')}: {weights.skills + weights.tools + weights.industries + weights.softSkills}%
                 </p>
               </div>
 
               <button
                 onClick={() => setWeights(DEFAULT_WEIGHTS)}
-                className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                className="text-sm text-slate-500 hover:text-slate-700 dark:text-[var(--cv-muted)] dark:hover:text-[var(--cv-text)]"
               >
                 {t('profileMatching.resetWeights')}
               </button>
@@ -215,33 +209,32 @@ export default function ProfileMatchSearchPanel({
           )}
         </AnimatePresence>
 
-        {/* Search button */}
         <div className="flex gap-3 pt-2">
           <button
             onClick={onSearch}
             disabled={loading || !selectedMissionId || loadingMissions}
-            className={`btn btn-primary flex-1 flex items-center justify-center gap-2 px-6 py-3 ${loading || !selectedMissionId || loadingMissions ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`btn btn-primary flex flex-1 items-center justify-center gap-2 px-6 py-3 ${loading || !selectedMissionId || loadingMissions ? 'cursor-not-allowed opacity-50' : ''}`}
           >
             {loading ? (
               <>
-                <ArrowPathIcon className="w-5 h-5 animate-spin" />
+                <ArrowPathIcon className="h-5 w-5 animate-spin" />
                 {t('profileMatching.searching')}
               </>
             ) : (
               <>
-                <MagnifyingGlassIcon className="w-5 h-5" />
+                <MagnifyingGlassIcon className="h-5 w-5" />
                 {t('profileMatching.search')}
               </>
             )}
           </button>
-          
+
           {hasResults && (
             <button
               onClick={onRefreshKeywords}
-              className="flex items-center gap-2 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-slate-700 transition-colors hover:bg-slate-50 dark:border-white/10 dark:text-[var(--cv-text)] dark:hover:bg-white/[0.04]"
               title={t('profileMatching.refreshKeywordsTooltip')}
             >
-              <ArrowPathIcon className="w-5 h-5" />
+              <ArrowPathIcon className="h-5 w-5" />
             </button>
           )}
         </div>

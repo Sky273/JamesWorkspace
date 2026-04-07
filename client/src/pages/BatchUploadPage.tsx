@@ -17,6 +17,7 @@ import { useAuth } from '../context/AuthContext';
 import logger from '../utils/logger.frontend';
 import toast from 'react-hot-toast';
 import type { Template } from '../utils/templateService';
+import { ArrowRightIcon, CloudArrowUpIcon, FolderPlusIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 import { type FileWithPath, type FileStatus, type ExportFormats, getFilesFromEvent } from './batchUpload.utils';
 import BatchUploadOptions from './BatchUploadOptions';
 import BatchUploadFileList from './BatchUploadFileList';
@@ -300,6 +301,49 @@ const BatchUploadPage = (): JSX.Element => {
       <div className="cv-surface app-page-shell">
         <BatchUploadHeader t={tf} />
 
+        <motion.section
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="section-shell mb-6 rounded-[2rem] p-6"
+        >
+          <div className="mb-4 flex items-center gap-2">
+            <CloudArrowUpIcon className="h-5 w-5 text-[var(--cv-primary)]" />
+            <h2 className="text-lg font-semibold text-slate-950 dark:text-[var(--cv-text)]">
+              {t('batchUpload.howItWorks.title')}
+            </h2>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-[1.25rem] bg-white/70 p-4 ring-1 ring-slate-200/70 dark:bg-white/[0.03] dark:ring-white/10">
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-[var(--cv-text)]">
+                <FolderPlusIcon className="h-4 w-4 text-[var(--cv-primary)]" />
+                {t('batchUpload.howItWorks.step1Title')}
+              </div>
+              <p className="text-sm text-slate-600 dark:text-[var(--cv-muted)]">
+                {t('batchUpload.howItWorks.step1Body')}
+              </p>
+            </div>
+            <div className="rounded-[1.25rem] bg-white/70 p-4 ring-1 ring-slate-200/70 dark:bg-white/[0.03] dark:ring-white/10">
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-[var(--cv-text)]">
+                <ArrowRightIcon className="h-4 w-4 text-[var(--cv-primary)]" />
+                {t('batchUpload.howItWorks.step2Title')}
+              </div>
+              <p className="text-sm text-slate-600 dark:text-[var(--cv-muted)]">
+                {t('batchUpload.howItWorks.step2Body')}
+              </p>
+            </div>
+            <div className="rounded-[1.25rem] bg-white/70 p-4 ring-1 ring-slate-200/70 dark:bg-white/[0.03] dark:ring-white/10">
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-[var(--cv-text)]">
+                <ShieldCheckIcon className="h-4 w-4 text-[var(--cv-primary)]" />
+                {t('batchUpload.howItWorks.step3Title')}
+              </div>
+              <p className="text-sm text-slate-600 dark:text-[var(--cv-muted)]">
+                {t('batchUpload.howItWorks.step3Body')}
+              </p>
+            </div>
+          </div>
+        </motion.section>
+
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -329,15 +373,17 @@ const BatchUploadPage = (): JSX.Element => {
           />
         </motion.div>
 
-        <BatchUploadDropzone
-          getRootProps={getRootProps}
-          getInputProps={getInputProps}
-          isDragActive={isDragActive}
-          isLoadingFiles={isLoadingFiles}
-          isProcessing={isProcessing}
-          onFolderChange={handleFolderSelection}
-          t={tf}
-        />
+        <div className="mb-6">
+          <BatchUploadDropzone
+            getRootProps={getRootProps}
+            getInputProps={getInputProps}
+            isDragActive={isDragActive}
+            isLoadingFiles={isLoadingFiles}
+            isProcessing={isProcessing}
+            onFolderChange={handleFolderSelection}
+            t={tf}
+          />
+        </div>
 
         <BatchUploadFileList
           files={files}
@@ -353,6 +399,34 @@ const BatchUploadPage = (): JSX.Element => {
           onClearAll={clearAllFiles}
           onRetryAll={() => files.forEach((f, i) => { if (f.status === 'error') retryFile(i); })}
         />
+
+        <motion.section
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="section-shell mb-6 rounded-[2rem] p-6"
+        >
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-[1.25rem] bg-white/70 p-4 ring-1 ring-slate-200/70 dark:bg-white/[0.03] dark:ring-white/10">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-[var(--cv-muted)]">
+                {t('batchUpload.summary.files')}
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-[var(--cv-text)]">{files.length}</p>
+            </div>
+            <div className="rounded-[1.25rem] bg-white/70 p-4 ring-1 ring-slate-200/70 dark:bg-white/[0.03] dark:ring-white/10">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-[var(--cv-muted)]">
+                {t('batchUpload.summary.ready')}
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-[var(--cv-text)]">{pendingCount}</p>
+            </div>
+            <div className="rounded-[1.25rem] bg-white/70 p-4 ring-1 ring-slate-200/70 dark:bg-white/[0.03] dark:ring-white/10">
+              <p className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-[var(--cv-muted)]">
+                {t('batchUpload.summary.completed')}
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950 dark:text-[var(--cv-text)]">{successCount}</p>
+            </div>
+          </div>
+        </motion.section>
 
         <BatchUploadActions
           isProcessing={isProcessing}

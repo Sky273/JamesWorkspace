@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useMemo, ForwardRefExoticComponent, RefAttributes, SVGProps } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   DocumentArrowUpIcon,
@@ -409,12 +410,13 @@ const ProcessingScreen = ({
   );
 
   if (fullscreen) {
-    return (
+    const overlay = (
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-[60]"
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm"
+        data-testid="processing-screen-fullscreen-overlay"
       >
         <motion.div
           initial={{ scale: 0.92, opacity: 0 }}
@@ -427,6 +429,8 @@ const ProcessingScreen = ({
         </motion.div>
       </motion.div>
     );
+
+    return typeof document !== 'undefined' ? createPortal(overlay, document.body) : overlay;
   }
 
   return <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">{content}</div>;

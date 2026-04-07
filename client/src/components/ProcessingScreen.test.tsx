@@ -38,4 +38,18 @@ describe('ProcessingScreen', () => {
 
     expect(screen.getByText('processing.steps.preanalyze.title')).toBeInTheDocument();
   });
+
+  it('mounts the fullscreen overlay at the document level', () => {
+    render(
+      <ProcessingScreen
+        currentStep="analyze"
+        fullscreen={true}
+      />
+    );
+
+    const overlay = screen.getByTestId('processing-screen-fullscreen-overlay');
+    expect(overlay).toBeInTheDocument();
+    expect(document.body).toContainElement(overlay);
+    expect(overlay).toHaveClass('fixed', 'inset-0', 'z-[100]');
+  });
 });

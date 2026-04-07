@@ -1,19 +1,19 @@
 {
   "backup": {
-    "pageTitle": "Sauvegarde de la Base de Données",
+    "pageTitle": "Sauvegarde de la base de données",
     "pageDescription": "Configurez les sauvegardes automatiques de votre base de données.",
     "configTab": "Configuration",
     "historyTab": "Historique",
     "restoreTab": "Restauration",
     "targetTitle": "Destination de la sauvegarde",
-    "targetLocal": "Local uniquement (disque serveur)",
+    "targetLocal": "Local uniquement (disque du serveur)",
     "targetRemote": "Serveur distant (FTP/SFTP)",
-    "localWarning": "Les sauvegardes locales sont stockées sur le serveur. Pour une reprise après sinistre, envisagez la sauvegarde distante.",
+    "localWarning": "Les sauvegardes locales sont stockées sur le serveur. Pour une reprise après sinistre, envisagez une sauvegarde distante.",
     "connectionTitle": "Connexion au serveur",
     "scheduleTitle": "Planification des sauvegardes",
     "protocol": "Protocole",
     "tlsMode": "Mode TLS",
-    "tlsExplicit": "Explicite (AUTH TLS) - Recommandé",
+    "tlsExplicit": "Explicite (AUTH TLS) - recommandé",
     "tlsImplicit": "Implicite (port 990)",
     "tlsNone": "Aucun (non sécurisé)",
     "tlsHelp": "Explicite = comme FileZilla. Implicite = connexion TLS directe.",
@@ -60,7 +60,7 @@
     "restoreConfirm": "Êtes-vous sûr de vouloir restaurer cette sauvegarde ? Cette action écrasera toutes les données actuelles de la base de données.",
     "restoreSuccess": "Base de données restaurée avec succès",
     "restoreError": "Erreur lors de la restauration",
-    "restoreWarningTitle": "Attention - Zone dangereuse",
-    "restoreWarning": "La restauration d'une sauvegarde écrasera toutes les données actuelles de la base de données. Cette action est irréversible. Assurez-vous d'avoir une sauvegarde récente avant de procéder."
+    "restoreWarningTitle": "Attention - zone dangereuse",
+    "restoreWarning": "La restauration d'une sauvegarde écrasera toutes les données actuelles de la base de données. Cette action est irréversible. Assurez-vous d'avoir une sauvegarde récente avant de continuer."
   }
 }

@@ -1,6 +1,19 @@
 {
   "upload": {
     "title": "Analyseur de CV",
-    "subtitle": "Téléchargez votre CV pour une analyse instantanée par IA"
+    "subtitle": "Telechargez votre CV pour une analyse instantanee par IA",
+    "guidance": {
+      "title": "Avant de commencer",
+      "description": "L'import unique est le plus rapide pour tester un CV, corriger un profil ou preparer un export cible.",
+      "step1Title": "Deposez un fichier",
+      "step1Body": "Utilisez un PDF, DOC ou DOCX. Les fichiers lourds ou verrouilles peuvent ralentir l'analyse.",
+      "step2Title": "Laissez l'analyse s'executer",
+      "step2Body": "Le traitement extrait le texte, detecte les sections et prepare les etapes d'amelioration.",
+      "step3Title": "Passez a l'action",
+      "step3Body": "Vous pouvez ensuite ameliorer, comparer ou exporter le CV depuis les ecrans dedies.",
+      "formats": "Formats: PDF, DOC, DOCX",
+      "maxSize": "Taille max: 50 MB",
+      "tip": "Astuce: renommez clairement vos fichiers CV"
+    }
   }
 }

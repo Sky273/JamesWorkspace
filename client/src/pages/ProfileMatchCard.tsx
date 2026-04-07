@@ -9,9 +9,11 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   ArrowPathIcon,
+  CheckCircleIcon,
   EyeIcon,
   SparklesIcon,
   AcademicCapIcon,
+  XCircleIcon,
   WrenchScrewdriverIcon,
   HeartIcon,
   BuildingOfficeIcon
@@ -49,32 +51,28 @@ export default function ProfileMatchCard({
   const keyStrengths = asStringArray(profile.keyStrengths);
   const keyGaps = asStringArray(profile.keyGaps);
 
-  const stripingClass = index % 2 === 1
-    ? 'bg-gray-100 dark:bg-gray-700'
-    : 'bg-white dark:bg-gray-800';
-
   return (
     <motion.div
       key={profile.resumeId}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className={`${stripingClass} rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden`}
+      className="cv-panel overflow-hidden rounded-[1.75rem] p-0"
     >
       <div
-        className="p-4 cursor-pointer"
+        className="cursor-pointer p-5"
         onClick={() => onToggleExpand(isExpanded ? null : profile.resumeId)}
       >
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-bold text-sm">
-                #{index + 1}
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">{profile.name}</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{profile.title || t('profileMatching.noTitle')}</p>
-              </div>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-1 items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600 dark:bg-white/[0.06] dark:text-[var(--cv-muted)]">
+              #{index + 1}
+            </div>
+            <div className="min-w-0">
+              <h3 className="font-semibold text-slate-950 dark:text-[var(--cv-text)]">{profile.name}</h3>
+              <p className="text-sm text-slate-500 dark:text-[var(--cv-muted)]">
+                {profile.title || t('profileMatching.noTitle')}
+              </p>
             </div>
           </div>
 
@@ -83,18 +81,18 @@ export default function ProfileMatchCard({
               <div className={`text-2xl font-bold ${getScoreColor(profile.matchScore)}`}>
                 {profile.matchScore}%
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">
+              <div className="text-xs text-slate-500 dark:text-[var(--cv-muted)]">
                 {t('profileMatching.matchScore')}
               </div>
             </div>
 
-            <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-              {isExpanded ? <ChevronUpIcon className="w-5 h-5" /> : <ChevronDownIcon className="w-5 h-5" />}
+            <button className="text-slate-400 hover:text-slate-600 dark:hover:text-[var(--cv-text)]">
+              {isExpanded ? <ChevronUpIcon className="h-5 w-5" /> : <ChevronDownIcon className="h-5 w-5" />}
             </button>
           </div>
         </div>
 
-        <div className="mt-3 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+        <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-white/[0.08]">
           <div
             className={`h-full ${getScoreBgColor(profile.matchScore)} transition-all duration-500`}
             style={{ width: `${profile.matchScore}%` }}
@@ -102,61 +100,63 @@ export default function ProfileMatchCard({
         </div>
 
         {profile.categoryScores && (
-          <div className="mt-3 flex flex-wrap gap-4 text-xs">
+          <div className="mt-4 flex flex-wrap gap-4 text-xs">
             <span className="flex items-center gap-1">
-              <AcademicCapIcon className="w-3 h-3 text-blue-500" />
-              <span className="text-gray-600 dark:text-gray-400">{t('profileMatching.categories.skills')}:</span>
+              <AcademicCapIcon className="h-3 w-3 text-blue-500" />
+              <span className="text-slate-600 dark:text-[var(--cv-muted)]">{t('profileMatching.categories.skills')}:</span>
               <span className={getScoreColor(profile.categoryScores.skills)}>{profile.categoryScores.skills}%</span>
             </span>
             <span className="flex items-center gap-1">
-              <WrenchScrewdriverIcon className="w-3 h-3 text-green-500" />
-              <span className="text-gray-600 dark:text-gray-400">{t('profileMatching.categories.tools')}:</span>
+              <WrenchScrewdriverIcon className="h-3 w-3 text-green-500" />
+              <span className="text-slate-600 dark:text-[var(--cv-muted)]">{t('profileMatching.categories.tools')}:</span>
               <span className={getScoreColor(profile.categoryScores.tools)}>{profile.categoryScores.tools}%</span>
             </span>
             <span className="flex items-center gap-1">
-              <BuildingOfficeIcon className="w-3 h-3 text-purple-500" />
-              <span className="text-gray-600 dark:text-gray-400">{t('profileMatching.categories.industries')}:</span>
+              <BuildingOfficeIcon className="h-3 w-3 text-purple-500" />
+              <span className="text-slate-600 dark:text-[var(--cv-muted)]">{t('profileMatching.categories.industries')}:</span>
               <span className={getScoreColor(profile.categoryScores.industries)}>{profile.categoryScores.industries}%</span>
             </span>
             <span className="flex items-center gap-1">
-              <HeartIcon className="w-3 h-3 text-yellow-500" />
-              <span className="text-gray-600 dark:text-gray-400">{t('profileMatching.categories.softSkills')}:</span>
+              <HeartIcon className="h-3 w-3 text-yellow-500" />
+              <span className="text-slate-600 dark:text-[var(--cv-muted)]">{t('profileMatching.categories.softSkills')}:</span>
               <span className={getScoreColor(profile.categoryScores.softSkills)}>{profile.categoryScores.softSkills}%</span>
             </span>
           </div>
         )}
 
         {profile.llmScored && (
-          <div className="mt-2 space-y-1">
+          <div className="mt-3 space-y-1">
             <div className="flex items-center gap-2 text-xs">
               <span
-                className={`px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                className={`flex items-center gap-1 rounded-full px-2 py-0.5 ${
                   profile.confidence === 'high'
                     ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
                     : profile.confidence === 'medium'
-                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
-                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                      ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
+                      : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
                 }`}
               >
-                <SparklesIcon className="w-3 h-3" />
+                <SparklesIcon className="h-3 w-3" />
                 {t('profileMatching.llmScored')}
                 {profile.confidence && ` (${t(`profileMatching.confidence.${profile.confidence}`)})`}
               </span>
             </div>
-            {profile.reason && (
-              <p className="text-xs text-gray-600 dark:text-gray-400 italic">
+            {profile.reason ? (
+              <p className="text-xs italic text-slate-600 dark:text-[var(--cv-muted)]">
                 {profile.reason}
               </p>
-            )}
-            <div className="flex flex-wrap gap-2 mt-1">
+            ) : null}
+            <div className="mt-1 flex flex-wrap gap-2">
               {keyStrengths.map((strength, idx) => (
-                <span key={`strength-${idx}`} className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                  ✓ {strength}
+                <span key={`strength-${idx}`} className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                  <CheckCircleIcon className="h-3.5 w-3.5" />
+                  {strength}
                 </span>
               ))}
               {keyGaps.map((gap, idx) => (
-                <span key={`gap-${idx}`} className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                  ✗ {gap}
+                <span key={`gap-${idx}`} className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                  <XCircleIcon className="h-3.5 w-3.5" />
+                  {gap}
                 </span>
               ))}
             </div>
@@ -164,9 +164,9 @@ export default function ProfileMatchCard({
         )}
 
         {!profile.llmScored && profile.titleAdjustment !== undefined && profile.titleAdjustment !== 0 && (
-          <div className="mt-2 flex items-center gap-2 text-xs">
+          <div className="mt-3 flex items-center gap-2 text-xs">
             <span
-              className={`px-2 py-0.5 rounded-full ${
+              className={`rounded-full px-2 py-0.5 ${
                 profile.titleAdjustment > 0
                   ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
                   : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
@@ -174,11 +174,11 @@ export default function ProfileMatchCard({
             >
               {t('profileMatching.titleAdjustment')}: {profile.titleAdjustment > 0 ? '+' : ''}{profile.titleAdjustment}
             </span>
-            {profile.titleReason && (
-              <span className="text-gray-500 dark:text-gray-400 italic truncate max-w-xs" title={profile.titleReason}>
+            {profile.titleReason ? (
+              <span className="max-w-xs truncate italic text-slate-500 dark:text-[var(--cv-muted)]" title={profile.titleReason}>
                 {profile.titleReason}
               </span>
-            )}
+            ) : null}
           </div>
         )}
       </div>
@@ -189,9 +189,9 @@ export default function ProfileMatchCard({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="border-t border-gray-200 dark:border-gray-700"
+            className="border-t border-slate-200 dark:border-white/10"
           >
-            <div className="p-4 space-y-4">
+            <div className="space-y-4 p-5">
               {profile.matchedTags && (
                 <ProfileMatchTagGroups
                   title={t('profileMatching.matchedTags')}
@@ -219,16 +219,16 @@ export default function ProfileMatchCard({
                   <button
                     onClick={() => onDetailedAnalysis(profile.resumeId)}
                     disabled={analyzingProfile === profile.resumeId}
-                    className={`btn btn-primary flex items-center gap-2 px-4 py-2 text-sm ${analyzingProfile === profile.resumeId ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`btn btn-primary flex items-center gap-2 px-4 py-2 text-sm ${analyzingProfile === profile.resumeId ? 'cursor-not-allowed opacity-50' : ''}`}
                   >
                     {analyzingProfile === profile.resumeId ? (
                       <>
-                        <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                        <ArrowPathIcon className="h-4 w-4 animate-spin" />
                         {t('profileMatching.analyzing')}
                       </>
                     ) : (
                       <>
-                        <SparklesIcon className="w-4 h-4" />
+                        <SparklesIcon className="h-4 w-4" />
                         {t('profileMatching.analyzeProfile')}
                       </>
                     )}
@@ -238,7 +238,7 @@ export default function ProfileMatchCard({
                   onClick={() => onViewResume(profile.resumeId)}
                   className="btn btn-secondary flex items-center gap-2 px-4 py-2 text-sm"
                 >
-                  <EyeIcon className="w-4 h-4" />
+                  <EyeIcon className="h-4 w-4" />
                   {t('profileMatching.viewResume')}
                 </button>
               </div>

@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { fetchWithAuth, createAuthOptions } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
@@ -19,8 +20,6 @@ import OperationsInfraCards from '../components/Metrics/OperationsInfraCards';
 import HttpTrafficCards from '../components/Metrics/HttpTrafficCards';
 import { ApmMetricsSection, ProgressBar } from './MetricsPage.parts';
 import {
-  MetricsEmptyState,
-  MetricsLoadingState,
   MetricsPageHeader,
   OperationsUnavailableBanner,
   OverviewStatsGrid
@@ -36,17 +35,23 @@ const MetricsPage = (): JSX.Element => {
   const [apmMetrics, setApmMetrics] = useState<APMMetrics | null>(null);
   const [operationsMetrics, setOperationsMetrics] = useState<OperationsMetrics | null>(null);
   const [operationsMetricsError, setOperationsMetricsError] = useState<string | null>(null);
+  const [pageError, setPageError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   const fetchMetrics = useCallback(async (): Promise<void> => {
     try {
+      setPageError(null);
       const response = await fetchWithAuth('/api/metrics', createAuthOptions());
       if (!response.ok) {
-        if (response.status === 403) toast.error(t('metrics.accessDenied'));
-        else if (response.status === 401) toast.error(t('metrics.sessionExpired'));
-        else toast.error(t('metrics.error'));
+        const message = response.status === 403
+          ? t('metrics.accessDenied')
+          : response.status === 401
+            ? t('metrics.sessionExpired')
+            : t('metrics.error');
+        setPageError(message);
+        toast.error(message);
         throw new Error(`Failed to fetch metrics: ${response.status}`);
       }
       const data = await response.json();
@@ -54,6 +59,7 @@ const MetricsPage = (): JSX.Element => {
       setLastUpdated(new Date());
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '';
+      setPageError(t('metrics.error'));
       if (!errorMessage.includes('Session expired')) {
         logger.error('Error fetching metrics:', error);
       }
@@ -209,7 +215,68 @@ const MetricsPage = (): JSX.Element => {
   }, [autoRefresh, refreshAllMetrics]);
 
   if (loading) {
-    return <MetricsLoadingState />;
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+        className="cv-surface app-page-shell max-w-6xl"
+      >
+        <div className="section-shell rounded-[2rem] p-8">
+          <div className="flex items-start gap-4">
+            <ArrowPathIcon className="mt-1 h-6 w-6 animate-spin text-primary-500" />
+            <div className="flex-1 space-y-4">
+              <div>
+                <div className="h-8 w-64 max-w-full rounded-full bg-gray-200/80 dark:bg-gray-700/70 animate-pulse" />
+                <div className="mt-3 h-4 w-[34rem] max-w-full rounded-full bg-gray-200/70 dark:bg-gray-700/60 animate-pulse" />
+              </div>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div className="h-28 rounded-3xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                <div className="h-28 rounded-3xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                <div className="h-28 rounded-3xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                <div className="h-28 rounded-3xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('metrics.subtitle')}</p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  if (!metrics) {
+    const message = pageError || t('metrics.error');
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+        className="cv-surface app-page-shell max-w-6xl"
+      >
+        <div className="section-shell rounded-[2rem] p-8">
+          <div className="flex items-start gap-4">
+            <ExclamationTriangleIcon className="mt-1 h-6 w-6 text-amber-500" />
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  {message}
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm text-gray-600 dark:text-gray-400">
+                  {t('metrics.operationsHint')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={refreshAllMetrics}
+                className="cv-gradient-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-semibold"
+              >
+                {t('metrics.retry')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    );
   }
 
   const profileMatchingMetrics = operationsMetrics?.operations?.profileMatching;
@@ -261,7 +328,7 @@ const MetricsPage = (): JSX.Element => {
   );
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="cv-surface app-page-shell">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="cv-surface app-page-shell max-w-6xl">
       <MetricsPageHeader
         autoRefresh={autoRefresh}
         lastUpdated={lastUpdated}
@@ -271,102 +338,102 @@ const MetricsPage = (): JSX.Element => {
         t={t}
       />
 
-      {metrics ? (
-        <>
-          <OverviewStatsGrid metrics={metrics} t={t} />
+      <div className="space-y-6">
+        <div className="section-shell rounded-[2rem] p-6">
+          <div className="space-y-8">
+            <OverviewStatsGrid metrics={metrics} t={t} />
 
-          <ServerHealthCards
-            metrics={metrics}
-            cacheBackend={cacheBackend}
-            cacheConnected={cacheConnected}
-            cacheFallbackReason={cacheFallbackReason}
-            t={t}
-            safeNumber={safeNumber}
-            formatBytes={formatBytes}
-            formatNumber={formatNumber}
-          />
+            <ServerHealthCards
+              metrics={metrics}
+              cacheBackend={cacheBackend}
+              cacheConnected={cacheConnected}
+              cacheFallbackReason={cacheFallbackReason}
+              t={t}
+              safeNumber={safeNumber}
+              formatBytes={formatBytes}
+              formatNumber={formatNumber}
+            />
 
-          <DatabaseMetricsCards
-            metrics={dbMetrics}
-            t={t}
-            safeNumber={safeNumber}
-            formatNumber={formatNumber}
-          />
+            <DatabaseMetricsCards
+              metrics={dbMetrics}
+              t={t}
+              safeNumber={safeNumber}
+              formatNumber={formatNumber}
+            />
 
-          {operationsMetricsError && !operationsMetrics && (
-            <OperationsUnavailableBanner error={operationsMetricsError} t={t} />
-          )}
+            {operationsMetricsError && !operationsMetrics && (
+              <OperationsUnavailableBanner error={operationsMetricsError} t={t} />
+            )}
 
-          {operationsMetrics && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-              <OperationsInfraCards
-                metrics={operationsMetrics}
-                t={t}
-                safeNumber={safeNumber}
-                formatNumber={formatNumber}
-                formatBytes={formatBytes}
-              />
+            {operationsMetrics && (
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                <OperationsInfraCards
+                  metrics={operationsMetrics}
+                  t={t}
+                  safeNumber={safeNumber}
+                  formatNumber={formatNumber}
+                  formatBytes={formatBytes}
+                />
 
-              <BatchImportMetricsCard
-                metrics={batchImportMetrics}
-                successRatio={batchImportSuccessRatio}
-                t={t}
-                safeNumber={safeNumber}
-                formatNumber={formatNumber}
-                formatBytes={formatBytes}
-              />
-              <AiModifyMetricsCard
-                metrics={aiModifyMetrics}
-                successRatio={aiModifySuccessRatio}
-                t={t}
-                safeNumber={safeNumber}
-                formatNumber={formatNumber}
-              />
+                <BatchImportMetricsCard
+                  metrics={batchImportMetrics}
+                  successRatio={batchImportSuccessRatio}
+                  t={t}
+                  safeNumber={safeNumber}
+                  formatNumber={formatNumber}
+                  formatBytes={formatBytes}
+                />
+                <AiModifyMetricsCard
+                  metrics={aiModifyMetrics}
+                  successRatio={aiModifySuccessRatio}
+                  t={t}
+                  safeNumber={safeNumber}
+                  formatNumber={formatNumber}
+                />
 
-              <ProfileMatchingMetricsCard
-                metrics={profileMatchingMetrics}
-                requestedToScoredRatio={requestedToScoredRatio}
-                scoredToExplainedRatio={scoredToExplainedRatio}
-                scoredToReturnedRatio={scoredToReturnedRatio}
-                alerts={profileMatchingAlerts}
-                t={t}
-                safeNumber={safeNumber}
-                formatNumber={formatNumber}
-              />
+                <ProfileMatchingMetricsCard
+                  metrics={profileMatchingMetrics}
+                  requestedToScoredRatio={requestedToScoredRatio}
+                  scoredToExplainedRatio={scoredToExplainedRatio}
+                  scoredToReturnedRatio={scoredToReturnedRatio}
+                  alerts={profileMatchingAlerts}
+                  t={t}
+                  safeNumber={safeNumber}
+                  formatNumber={formatNumber}
+                />
 
-              <OperationLLMCard
-                metrics={improvementMetrics}
-                successRatio={improvementSuccessRatio}
-                mode="improvement"
-                t={t}
-                safeNumber={safeNumber}
-                formatNumber={formatNumber}
-              />
+                <OperationLLMCard
+                  metrics={improvementMetrics}
+                  successRatio={improvementSuccessRatio}
+                  mode="improvement"
+                  t={t}
+                  safeNumber={safeNumber}
+                  formatNumber={formatNumber}
+                />
 
-              <OperationLLMCard
-                metrics={adaptationMetrics}
-                successRatio={adaptationSuccessRatio}
-                mode="adaptation"
-                t={t}
-                safeNumber={safeNumber}
-                formatNumber={formatNumber}
-              />
-            </div>
-          )}
+                <OperationLLMCard
+                  metrics={adaptationMetrics}
+                  successRatio={adaptationSuccessRatio}
+                  mode="adaptation"
+                  t={t}
+                  safeNumber={safeNumber}
+                  formatNumber={formatNumber}
+                />
+              </div>
+            )}
 
-          <ApmMetricsSection metrics={apmMetrics} t={t} safeNumber={safeNumber} />
+            <ApmMetricsSection metrics={apmMetrics} t={t} safeNumber={safeNumber} />
 
-          <HttpTrafficCards
-            metrics={metrics}
-            ProgressBar={ProgressBar}
-            t={t}
-            safeNumber={safeNumber}
-            formatNumber={formatNumber}
-          />
-        </>
-      ) : (
-        <MetricsEmptyState onRetry={refreshAllMetrics} t={t} />
-      )}
+            <HttpTrafficCards
+              metrics={metrics}
+              ProgressBar={ProgressBar}
+              t={t}
+              safeNumber={safeNumber}
+              formatNumber={formatNumber}
+            />
+          </div>
+        </div>
+      </div>
     </motion.div>
   );
 };

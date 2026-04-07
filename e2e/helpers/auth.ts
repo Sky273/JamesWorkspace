@@ -8,15 +8,29 @@ const { Pool } = pg;
 
 const DEFAULT_USER_EMAIL = 'playwright.user@resumeconverter.local';
 const DEFAULT_USER_PASSWORD = 'Playwright123!';
+const DEFAULT_ADMIN_EMAIL = 'playwright.admin@resumeconverter.local';
+const DEFAULT_ADMIN_PASSWORD = 'PlaywrightAdmin123!';
 const E2E_TEMPLATE_NAME = '000 Playwright Export Template';
 const E2E_TEMPLATE_CONTENT = '<section><h1>-name-</h1><h2>-title-</h2><div>-content-</div></section>';
 const E2E_TEMPLATE_STYLESHEET = 'body { font-family: Arial, sans-serif; } h1 { font-size: 20px; } h2 { font-size: 14px; color: #555; }';
 
 export const E2E_USER_EMAIL = process.env.E2E_USER_EMAIL || DEFAULT_USER_EMAIL;
 export const E2E_USER_PASSWORD = process.env.E2E_USER_PASSWORD || DEFAULT_USER_PASSWORD;
+export const E2E_ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || DEFAULT_ADMIN_EMAIL;
+export const E2E_ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD;
 
 let bootstrapPromise: Promise<void> | null = null;
 let bootstrappedUser: {
+  id: string;
+  email: string;
+  name: string;
+  status: string;
+  role: string;
+  firm_id: string;
+  firm: string | null;
+  customer: string | null;
+} | null = null;
+let bootstrappedAdmin: {
   id: string;
   email: string;
   name: string;
@@ -70,12 +84,13 @@ async function ensureActivePlaywrightUser(): Promise<void> {
           'SELECT name FROM firms WHERE id = $1 LIMIT 1',
           [firmId]
         );
-        const passwordHash = await bcrypt.hash(E2E_USER_PASSWORD, 10);
+        const userPasswordHash = await bcrypt.hash(E2E_USER_PASSWORD, 10);
+        const adminPasswordHash = await bcrypt.hash(E2E_ADMIN_PASSWORD, 10);
 
         await pool.query(
           `
-            INSERT INTO users (email, password, name, role, status, firm_id)
-            VALUES ($1, $2, $3, 'user', 'active', $4)
+            INSERT INTO users (email, password, name, role, status, firm_id, firm_name)
+            VALUES ($1, $2, $3, 'user', 'active', $4, $5)
             ON CONFLICT (email)
             DO UPDATE SET
               password = EXCLUDED.password,
@@ -83,9 +98,27 @@ async function ensureActivePlaywrightUser(): Promise<void> {
               role = 'user',
               status = 'active',
               firm_id = EXCLUDED.firm_id,
+              firm_name = EXCLUDED.firm_name,
               updated_at = CURRENT_TIMESTAMP
           `,
-          [E2E_USER_EMAIL.toLowerCase(), passwordHash, 'Playwright User', firmId]
+          [E2E_USER_EMAIL.toLowerCase(), userPasswordHash, 'Playwright User', firmId, firmNameResult.rows[0]?.name || null]
+        );
+
+        await pool.query(
+          `
+            INSERT INTO users (email, password, name, role, status, firm_id, firm_name)
+            VALUES ($1, $2, $3, 'admin', 'active', $4, $5)
+            ON CONFLICT (email)
+            DO UPDATE SET
+              password = EXCLUDED.password,
+              name = EXCLUDED.name,
+              role = 'admin',
+              status = 'active',
+              firm_id = EXCLUDED.firm_id,
+              firm_name = EXCLUDED.firm_name,
+              updated_at = CURRENT_TIMESTAMP
+          `,
+          [E2E_ADMIN_EMAIL.toLowerCase(), adminPasswordHash, 'Playwright Admin', firmId, firmNameResult.rows[0]?.name || null]
         );
 
         const userResult = await pool.query(
@@ -113,6 +146,33 @@ async function ensureActivePlaywrightUser(): Promise<void> {
           firm_id: user.firm_id as string,
           firm: (firmNameResult.rows[0]?.name as string | null) || (user.firm as string | null) || null,
           customer: (firmNameResult.rows[0]?.name as string | null) || (user.firm as string | null) || null,
+        };
+
+        const adminResult = await pool.query(
+          `
+            SELECT u.id, u.email, u.name, u.status, u.role, u.firm_id, f.name AS firm
+            FROM users u
+            LEFT JOIN firms f ON f.id = u.firm_id
+            WHERE u.email = $1
+            LIMIT 1
+          `,
+          [E2E_ADMIN_EMAIL.toLowerCase()]
+        );
+
+        if (adminResult.rows.length === 0) {
+          throw new Error('Failed to load the bootstrapped Playwright admin');
+        }
+
+        const admin = adminResult.rows[0];
+        bootstrappedAdmin = {
+          id: admin.id as string,
+          email: admin.email as string,
+          name: admin.name as string,
+          status: admin.status as string,
+          role: admin.role as string,
+          firm_id: admin.firm_id as string,
+          firm: (firmNameResult.rows[0]?.name as string | null) || (admin.firm as string | null) || null,
+          customer: (firmNameResult.rows[0]?.name as string | null) || (admin.firm as string | null) || null,
         };
 
         const templateResult = await pool.query(
@@ -232,5 +292,20 @@ export async function signInAsE2EUser(page: Page): Promise<void> {
   ]);
 
   await page.goto('/');
+  await expect(page).toHaveURL(/\/$/);
+}
+
+export async function signInAsE2EAdmin(page: Page): Promise<void> {
+  await ensureActivePlaywrightUser();
+
+  if (!bootstrappedAdmin || !bootstrappedTemplate) {
+    throw new Error('Playwright bootstrap did not produce the required admin fixtures');
+  }
+
+  await page.context().clearCookies();
+  await page.goto('/signin');
+  await page.locator('#email-address').fill(E2E_ADMIN_EMAIL);
+  await page.locator('#password').fill(E2E_ADMIN_PASSWORD);
+  await page.locator('button[type="submit"]').click();
   await expect(page).toHaveURL(/\/$/);
 }

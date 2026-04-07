@@ -262,8 +262,8 @@ const AdaptationViewPage = (): JSX.Element => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-      <div className="max-w-5xl mx-auto px-4">
+    <div className="editorial-migrated-shell min-h-screen px-4 py-6 sm:px-6 sm:py-8">
+      <div className="cv-surface mx-auto max-w-5xl rounded-[2.5rem] p-6 sm:p-8">
         <AdaptationBackButton onBack={handleBack} t={t} />
 
         <AdaptationPanel>

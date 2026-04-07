@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeftIcon,
   BriefcaseIcon,
@@ -123,6 +124,7 @@ function formatBudget(min?: number, max?: number): string | null {
 
 export default function DealDetailView({ dealId, onBack, onEdit }: DealDetailViewProps): JSX.Element {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { authGet } = useAuthFetch();
   const [deal, setDeal] = useState<DealDetail | null>(null);
   const [missions, setMissions] = useState<DealMission[]>([]);
@@ -379,9 +381,12 @@ export default function DealDetailView({ dealId, onBack, onEdit }: DealDetailVie
                 <div className="space-y-3">
                   {missions.map((mission) => (
                     <div key={mission.id} className="rounded-[1.5rem] bg-white/60 p-4 ring-1 ring-slate-200/70 dark:bg-white/[0.03] dark:ring-white/10">
-                      <p className="font-semibold text-slate-900 dark:text-[var(--cv-text)]">
+                      <button
+                        onClick={() => navigate(`/missions/${mission.id}`)}
+                        className="text-left font-semibold text-slate-900 transition-colors hover:text-[var(--cv-primary)] dark:text-[var(--cv-text)]"
+                      >
                         {mission.title || mission.id}
-                      </p>
+                      </button>
                       {mission.status ? (
                         <p className="mt-1 text-sm text-slate-500 dark:text-[var(--cv-muted)]">{mission.status}</p>
                       ) : null}
@@ -406,9 +411,12 @@ export default function DealDetailView({ dealId, onBack, onEdit }: DealDetailVie
                 <div className="space-y-3">
                   {resumes.map((resume) => (
                     <div key={resume.id} className="rounded-[1.5rem] bg-white/60 p-4 ring-1 ring-slate-200/70 dark:bg-white/[0.03] dark:ring-white/10">
-                      <p className="font-semibold text-slate-900 dark:text-[var(--cv-text)]">
+                      <button
+                        onClick={() => navigate(`/resumes/${resume.id}/analysis`)}
+                        className="text-left font-semibold text-slate-900 transition-colors hover:text-[var(--cv-primary)] dark:text-[var(--cv-text)]"
+                      >
                         {resume.filename || resume.id}
-                      </p>
+                      </button>
                       {resume.status ? (
                         <p className="mt-1 text-sm text-slate-500 dark:text-[var(--cv-muted)]">{resume.status}</p>
                       ) : null}
