@@ -85,6 +85,19 @@ describe('SignIn', () => {
     expect(mockResetSessionState).toHaveBeenCalled();
   });
 
+  it('localizes the password visibility toggle', () => {
+    renderSignIn();
+
+    expect(screen.getByRole('button', { name: 'auth.togglePassword.show' })).toBeInTheDocument();
+  });
+
+  it('exposes programmatic labels for sign-in fields', () => {
+    renderSignIn();
+
+    expect(screen.getByLabelText('auth.signIn.emailLabel')).toBeInTheDocument();
+    expect(screen.getByLabelText('auth.signIn.passwordLabel')).toBeInTheDocument();
+  });
+
   it('submits credentials in lowercase and navigates home on success', async () => {
     mockSignIn.mockResolvedValue({ id: '1', email: 'john@example.com' });
     renderSignIn();

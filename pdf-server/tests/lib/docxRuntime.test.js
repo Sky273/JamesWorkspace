@@ -61,4 +61,34 @@ describe('docxRuntime', () => {
     expect(fs.unlink).toHaveBeenCalledWith('C:\\temp\\a.html');
     expect(log).not.toHaveBeenCalled();
   });
+
+  it('continues cleanup after a non-ENOENT unlink error and logs the failures once', async () => {
+    const fs = {
+      unlink: vi.fn((filePath) => {
+        if (filePath.endsWith('a.html')) {
+          return Promise.reject(Object.assign(new Error('busy'), { code: 'EBUSY' }));
+        }
+        return Promise.resolve();
+      })
+    };
+    const log = vi.fn();
+
+    await cleanupTempFiles({
+      fs,
+      log,
+      filePaths: ['C:\\temp\\a.html', 'C:\\temp\\b.docx', 'C:\\temp\\c.pdf']
+    });
+
+    expect(fs.unlink).toHaveBeenCalledTimes(3);
+    expect(fs.unlink).toHaveBeenNthCalledWith(1, 'C:\\temp\\a.html');
+    expect(fs.unlink).toHaveBeenNthCalledWith(2, 'C:\\temp\\b.docx');
+    expect(fs.unlink).toHaveBeenNthCalledWith(3, 'C:\\temp\\c.pdf');
+    expect(log).toHaveBeenCalledWith('warn', 'Failed to cleanup temp files', expect.objectContaining({
+      failures: 1,
+      errors: [expect.objectContaining({
+        filePath: 'C:\\temp\\a.html',
+        error: 'busy'
+      })]
+    }));
+  });
 });

@@ -225,6 +225,14 @@ describe('shareResume.service', () => {
         });
     });
 
+    it('fails closed when share status lookup fails', async () => {
+        query.mockRejectedValueOnce(new Error('db failure'));
+
+        await expect(getShareStatus('resume-123')).rejects.toMatchObject({
+            code: 'SHARE_STATUS_LOOKUP_FAILED'
+        });
+    });
+
     it('returns inactive status for expired tokens', async () => {
         query.mockResolvedValueOnce({
             rows: [{

@@ -237,7 +237,10 @@ export async function getShareStatus(resumeId) {
             resumeId,
             error: error.message
         });
-        return createEmptyShareStatus();
+        const serviceError = new Error('Failed to get share status');
+        serviceError.code = 'SHARE_STATUS_LOOKUP_FAILED';
+        serviceError.cause = error;
+        throw serviceError;
     }
 }
 

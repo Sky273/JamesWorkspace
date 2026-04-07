@@ -308,6 +308,29 @@ describe('PDF Server', () => {
       expect(res.headers['x-pdf-debug-id']).toBe('proxy-request-123');
     });
 
+    it('should sanitize and bound x-request-id before exposing it', async () => {
+      pdfGen.generatePdf.mockResolvedValue(Buffer.from('fake'));
+      const rawRequestId = `  ../${'a'.repeat(200)}?drop=table  `;
+      const expectedRequestId = serverModule._internal.sanitizeRequestDebugId(rawRequestId);
+      const { app: reloadedApp } = resetServerModule();
+
+      const res = await request(reloadedApp)
+        .post('/generate-pdf')
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
+        .set('x-request-id', rawRequestId)
+        .send({
+          htmlContent: '<p>Body</p>',
+          filename: 'test.pdf'
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.headers['x-pdf-debug-id']).toBe(expectedRequestId);
+      expect(res.headers['x-pdf-debug-id'].length).toBeLessThanOrEqual(128);
+      expect(pdfGen.generatePdf).toHaveBeenCalledWith(expect.objectContaining({
+        requestId: expectedRequestId
+      }));
+    });
+
     it('should return 413 when generated PDF exceeds size limit', async () => {
       process.env.PDF_MAX_OUTPUT_SIZE = '3';
       pdfGen.generatePdf.mockResolvedValue(Buffer.from('fake-pdf'));

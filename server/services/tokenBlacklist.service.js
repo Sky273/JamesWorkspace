@@ -35,6 +35,18 @@ let lastCacheRefresh = 0;
 const MAX_TOKEN_CACHE_SIZE = 10000;
 const MAX_USER_CACHE_SIZE = 1000;
 
+class TokenBlacklistLookupError extends Error {
+    constructor(message, cause) {
+        super(message);
+        this.name = 'TokenBlacklistLookupError';
+        this.code = 'TOKEN_BLACKLIST_LOOKUP_FAILED';
+        this.statusCode = 503;
+        if (cause) {
+            this.cause = cause;
+        }
+    }
+}
+
 // Cleanup interval reference
 let cleanupInterval = null;
 let refreshPromise = null;
@@ -338,7 +350,7 @@ export async function isTokenBlacklistedAsync(tokenId, userId = null, tokenIssue
         return false;
     } catch (error) {
         safeLog('error', 'Failed targeted blacklist lookup', { error: error.message, tokenId, userId });
-        return isTokenBlacklisted(tokenId, userId, tokenIssuedAt);
+        throw new TokenBlacklistLookupError('Failed to verify token blacklist state', error);
     }
 }
 

@@ -80,6 +80,12 @@ vi.mock('../../services/settings.service.js', () => ({
     getLLMSettings: vi.fn()
 }));
 
+// Mock token blacklist service so auth integration tests focus on JWT shape
+vi.mock('../../services/tokenBlacklist.service.js', () => ({
+    isTokenBlacklistedAsync: vi.fn().mockResolvedValue(false),
+    blacklistToken: vi.fn().mockResolvedValue(true)
+}));
+
 // Import mocked modules
 import { selectWithTimeout, findWithTimeout, createWithTimeout } from '../../utils/postgresHelpers.js';
 import bcrypt from 'bcryptjs';

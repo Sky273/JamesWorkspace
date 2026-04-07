@@ -153,6 +153,9 @@ const SignIn = (): JSX.Element => {
         ) : null}
 
         <div className="rounded-2xl border border-slate-200 shadow-sm -space-y-px dark:border-white/10">
+          <label htmlFor="email-address" className="sr-only">
+            {t('auth.signIn.emailLabel')}
+          </label>
           <input
             id="email-address"
             name="email"
@@ -165,6 +168,9 @@ const SignIn = (): JSX.Element => {
             placeholder={t('auth.signIn.emailPlaceholder')}
           />
           <div className="relative">
+            <label htmlFor="password" className="sr-only">
+              {t('auth.signIn.passwordLabel')}
+            </label>
             <input
               id="password"
               name="password"
@@ -180,7 +186,7 @@ const SignIn = (): JSX.Element => {
               type="button"
               onClick={() => setShowPassword((value) => !value)}
               className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200"
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-label={showPassword ? t('auth.togglePassword.hide') : t('auth.togglePassword.show')}
             >
               {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
             </button>

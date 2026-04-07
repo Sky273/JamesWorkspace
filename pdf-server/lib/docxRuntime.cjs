@@ -31,22 +31,30 @@ async function runExternalCommand({ command, args = [], cwd, timeout, failureMes
 }
 
 async function cleanupTempFiles({ fs, log, filePaths }) {
-  try {
-    for (const filePath of filePaths) {
-      if (!filePath) {
-        continue;
-      }
+  const cleanupErrors = [];
 
-      try {
-        await fs.unlink(filePath);
-      } catch (error) {
-        if (error?.code !== 'ENOENT') {
-          throw error;
-        }
+  for (const filePath of filePaths) {
+    if (!filePath) {
+      continue;
+    }
+
+    try {
+      await fs.unlink(filePath);
+    } catch (error) {
+      if (error?.code !== 'ENOENT') {
+        cleanupErrors.push({
+          filePath,
+          error: error.message
+        });
       }
     }
-  } catch (cleanupError) {
-    log('warn', 'Failed to cleanup temp files', { error: cleanupError.message });
+  }
+
+  if (cleanupErrors.length > 0) {
+    log('warn', 'Failed to cleanup temp files', {
+      failures: cleanupErrors.length,
+      errors: cleanupErrors
+    });
   }
 }
 

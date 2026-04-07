@@ -140,13 +140,27 @@ function isTimeoutAbort(signal, error) {
   return message.toLowerCase().includes('timed out');
 }
 
+function sanitizeRequestDebugId(value) {
+  const text = String(value || '').trim();
+  if (!text) {
+    return randomUUID();
+  }
+
+  const sanitized = text
+    .replace(/[^a-zA-Z0-9._-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^[_./-]+|[_./-]+$/g, '');
+  const bounded = sanitized.slice(0, 128);
+  return bounded || randomUUID();
+}
+
 function getRequestDebugId(req) {
   const headerValue = req.headers['x-request-id'];
   if (typeof headerValue === 'string' && headerValue.trim()) {
-    return headerValue.trim();
+    return sanitizeRequestDebugId(headerValue);
   }
   if (Array.isArray(headerValue) && typeof headerValue[0] === 'string' && headerValue[0].trim()) {
-    return headerValue[0].trim();
+    return sanitizeRequestDebugId(headerValue[0]);
   }
   return randomUUID();
 }
@@ -384,6 +398,7 @@ module.exports = {
   _internal: {
     resolvePdfServerInternalToken,
     buildGenerationFailureBody,
+    sanitizeRequestDebugId,
     PDF_GENERATION_TIMEOUT,
     DIST_DIR,
     DIST_INDEX_PATH,

@@ -129,6 +129,9 @@ const Register = (): JSX.Element => {
         ) : null}
 
         <div className="rounded-2xl border border-slate-200 shadow-sm -space-y-px dark:border-white/10">
+          <label htmlFor="name" className="sr-only">
+            {t('auth.register.nameLabel')}
+          </label>
           <input
             id="name"
             name="name"
@@ -139,6 +142,9 @@ const Register = (): JSX.Element => {
             className="relative block w-full rounded-t-2xl border-0 bg-white px-3 py-3 text-gray-900 placeholder-gray-500 focus:z-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400"
             placeholder={t('auth.register.namePlaceholder')}
           />
+          <label htmlFor="email" className="sr-only">
+            {t('auth.register.emailLabel')}
+          </label>
           <input
             id="email"
             name="email"
@@ -151,6 +157,9 @@ const Register = (): JSX.Element => {
             placeholder={t('auth.register.emailPlaceholder')}
           />
           <div className="relative">
+            <label htmlFor="password" className="sr-only">
+              {t('auth.register.passwordLabel')}
+            </label>
             <input
               id="password"
               name="password"
@@ -166,12 +175,15 @@ const Register = (): JSX.Element => {
               type="button"
               onClick={() => setShowPassword((value) => !value)}
               className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200"
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-label={showPassword ? t('auth.togglePassword.hide') : t('auth.togglePassword.show')}
             >
               {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
             </button>
           </div>
           <div className="relative">
+            <label htmlFor="confirmPassword" className="sr-only">
+              {t('auth.register.confirmPasswordLabel')}
+            </label>
             <input
               id="confirmPassword"
               name="confirmPassword"
@@ -187,7 +199,11 @@ const Register = (): JSX.Element => {
               type="button"
               onClick={() => setShowConfirmPassword((value) => !value)}
               className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200"
-              aria-label={showConfirmPassword ? 'Hide password confirmation' : 'Show password confirmation'}
+              aria-label={
+                showConfirmPassword
+                  ? t('auth.togglePassword.hideConfirmation')
+                  : t('auth.togglePassword.showConfirmation')
+              }
             >
               {showConfirmPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
             </button>

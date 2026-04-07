@@ -31,6 +31,7 @@ import {
 describe('Token Blacklist Service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        destroyBlacklist();
         // Clear internal caches
         _internals.tokenCache.clear();
         _internals.userCache.clear();
@@ -187,6 +188,22 @@ describe('Token Blacklist Service', () => {
             const result = await isTokenBlacklistedAsync('jti-999');
 
             expect(result).toBe(true);
+        });
+
+        it('should fail closed when targeted blacklist lookup fails', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+            query.mockResolvedValueOnce({ rows: [] });
+            query.mockRejectedValueOnce(new Error('DB down'));
+
+            await expect(isTokenBlacklistedAsync('jti-999', 'user-1')).rejects.toMatchObject({
+                code: 'TOKEN_BLACKLIST_LOOKUP_FAILED',
+                statusCode: 503
+            });
+            expect(safeLog).toHaveBeenCalledWith(
+                'error',
+                'Failed targeted blacklist lookup',
+                expect.objectContaining({ error: 'DB down', tokenId: 'jti-999', userId: 'user-1' })
+            );
         });
     });
 

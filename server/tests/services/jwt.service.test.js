@@ -104,6 +104,13 @@ describe('JWT Service', () => {
             const token = generateAccessToken(testUser);
             await expect(verifyToken(token)).resolves.toBeNull();
         });
+
+        it('should return null when blacklist lookup fails', async () => {
+            isTokenBlacklistedAsync.mockRejectedValueOnce(new Error('blacklist db down'));
+            const token = generateAccessToken(testUser);
+
+            await expect(verifyToken(token)).resolves.toBeNull();
+        });
     });
 
     describe('verifyRefreshToken', () => {

@@ -51,6 +51,8 @@ const EmailTemplatePreview = ({ html, subject, loading }: EmailTemplatePreviewPr
           <button
             type="button"
             onClick={() => setViewMode('desktop')}
+            aria-label={t('emailTemplates.desktopView')}
+            aria-pressed={viewMode === 'desktop'}
             className={`p-1.5 rounded ${
               viewMode === 'desktop'
                 ? 'bg-white dark:bg-gray-600 shadow-sm'
@@ -63,6 +65,8 @@ const EmailTemplatePreview = ({ html, subject, loading }: EmailTemplatePreviewPr
           <button
             type="button"
             onClick={() => setViewMode('mobile')}
+            aria-label={t('emailTemplates.mobileView')}
+            aria-pressed={viewMode === 'mobile'}
             className={`p-1.5 rounded ${
               viewMode === 'mobile'
                 ? 'bg-white dark:bg-gray-600 shadow-sm'

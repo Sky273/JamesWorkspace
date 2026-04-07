@@ -64,6 +64,22 @@ describe('Register', () => {
     expect(screen.getByRole('button', { name: 'auth.register.registerWithGoogle' })).toBeInTheDocument();
   });
 
+  it('localizes the password visibility toggles', () => {
+    renderRegister();
+
+    expect(screen.getByRole('button', { name: 'auth.togglePassword.show' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'auth.togglePassword.showConfirmation' })).toBeInTheDocument();
+  });
+
+  it('exposes programmatic labels for registration fields', () => {
+    renderRegister();
+
+    expect(screen.getByLabelText('auth.register.nameLabel')).toBeInTheDocument();
+    expect(screen.getByLabelText('auth.register.emailLabel')).toBeInTheDocument();
+    expect(screen.getByLabelText('auth.register.passwordLabel')).toBeInTheDocument();
+    expect(screen.getByLabelText('auth.register.confirmPasswordLabel')).toBeInTheDocument();
+  });
+
   it('shows Google registration error from query params', async () => {
     mockSearchParams = new URLSearchParams('error=registration_failed');
     renderRegister();
