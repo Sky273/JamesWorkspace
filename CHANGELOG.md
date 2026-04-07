@@ -1,3 +1,28 @@
+## v1.8.9 - 2026-04-07
+### Qualité frontend, overlays CV et gouvernance des prompts
+
+#### Parcours CV et analyse
+- L’overlay fullscreen pendant l’analyse et l’amélioration de CV couvre désormais correctement tout le viewport, y compris le footer applicatif et le bouton du chatbot.
+- Le rendu des écrans de traitement CV a été sécurisé via montage portail au niveau `document.body`, pour éviter les problèmes de stacking context sur les shells éditoriaux.
+
+#### Prompt de préanalyse
+- Remplacement du prompt de préanalyse CV par une nouvelle version orientée canonicalisation Markdown, plus stricte sur la fidélité au contenu source et la structuration des sorties.
+- Mise à jour de la gouvernance associée du prompt de préanalyse pour refléter cette nouvelle révision.
+
+#### CRM / deals
+- Ajout d’une action de consultation sur les cartes deal.
+- Création d’une vue de consultation deal réutilisable et d’une page dédiée accessible par route.
+
+#### UX/UI ciblée
+- Amélioration ciblée des vues `Templates email`, `Etiquettes` et `Logs de sécurité`.
+- Ajout d’un smoke test Playwright admin sur ces pages pour verrouiller les parcours essentiels.
+
+#### Qualité
+- Alignement de la version applicative sur `v1.8.9`.
+- Vérifications ciblées maintenues sur les changements récents frontend et backend.
+
+---
+
 ## v1.8.8 - 2026-03-30
 ### Fiabilisation plateforme, backup, cache et refactors structurels
 

@@ -115,4 +115,28 @@ describe('App routing', () => {
 
     expect(await screen.findByText('settings-page')).toBeInTheDocument();
   });
+
+  it('renders the email templates admin page on the direct route for admin users', async () => {
+    authState = {
+      isAuthenticated: true,
+      user: { role: 'admin' },
+    };
+    window.history.replaceState({}, '', '/email-templates');
+
+    render(<App />);
+
+    expect(await screen.findByText('email-templates-page')).toBeInTheDocument();
+  });
+
+  it('redirects the legacy email templates route to the new direct route', async () => {
+    authState = {
+      isAuthenticated: true,
+      user: { role: 'admin' },
+    };
+    window.history.replaceState({}, '', '/dashboard/email-templates');
+
+    render(<App />);
+
+    expect(await screen.findByText('email-templates-page')).toBeInTheDocument();
+  });
 });

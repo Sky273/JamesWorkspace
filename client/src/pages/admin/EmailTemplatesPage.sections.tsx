@@ -1,10 +1,12 @@
 import {
-  ArrowRightIcon,
+  Bars3BottomLeftIcon,
   DocumentDuplicateIcon,
   EyeIcon,
   LockClosedIcon,
+  PaintBrushIcon,
   PencilSquareIcon,
   PlusIcon,
+  StarIcon,
   TrashIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
@@ -22,19 +24,32 @@ export const EmailTemplatesHeader = ({
   onCreate,
   systemTemplatesCount,
   totalTemplates,
+  introLabel,
+  hintLabel,
+  totalLabel,
+  defaultLabel,
+  systemLabel,
 }: {
   createLabel: string;
   defaultTemplatesCount: number;
   onCreate: () => void;
   systemTemplatesCount: number;
   totalTemplates: number;
+  introLabel: string;
+  hintLabel: string;
+  totalLabel: string;
+  defaultLabel: string;
+  systemLabel: string;
 }) => (
   <div className="space-y-6">
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-      <div className="max-w-2xl">
-        <p className="text-sm leading-6 text-slate-600 dark:text-[var(--cv-muted)]">
-          Organisez les modeles systeme et les variantes metier sans quitter l'espace d'administration.
-        </p>
+    <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <div className="max-w-3xl space-y-3">
+        <p className="cv-kicker">Administration email</p>
+        <p className="text-sm leading-6 text-slate-600 dark:text-[var(--cv-muted)]">{introLabel}</p>
+        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300">
+          <PaintBrushIcon className="h-4 w-4 text-primary-500" />
+          {hintLabel}
+        </div>
       </div>
       <button
         onClick={onCreate}
@@ -46,16 +61,33 @@ export const EmailTemplatesHeader = ({
     </div>
 
     <div className="grid gap-3 md:grid-cols-3">
-      <div className="rounded-3xl border border-slate-200/80 bg-white/80 p-4 dark:border-slate-700/80 dark:bg-slate-900/40">
-        <p className="text-sm text-slate-500 dark:text-slate-400">Templates</p>
+      <div className="rounded-[1.75rem] border border-slate-200/80 bg-white/80 p-4 shadow-sm dark:border-slate-700/80 dark:bg-slate-900/40">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-slate-500 dark:text-slate-400">{totalLabel}</p>
+          <div className="rounded-2xl bg-slate-100 p-2 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            <Bars3BottomLeftIcon className="h-5 w-5" />
+          </div>
+        </div>
         <p className="mt-2 text-3xl font-semibold text-slate-950 dark:text-[var(--cv-text)]">{totalTemplates}</p>
       </div>
-      <div className="rounded-3xl border border-amber-200/80 bg-amber-50/80 p-4 dark:border-amber-800/60 dark:bg-amber-900/15">
-        <p className="text-sm text-amber-700 dark:text-amber-300">Par defaut</p>
+
+      <div className="rounded-[1.75rem] border border-amber-200/80 bg-amber-50/80 p-4 shadow-sm dark:border-amber-800/60 dark:bg-amber-900/15">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-amber-700 dark:text-amber-300">{defaultLabel}</p>
+          <div className="rounded-2xl bg-amber-100/90 p-2 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+            <StarIcon className="h-5 w-5" />
+          </div>
+        </div>
         <p className="mt-2 text-3xl font-semibold text-amber-900 dark:text-amber-100">{defaultTemplatesCount}</p>
       </div>
-      <div className="rounded-3xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-700/80 dark:bg-slate-900/50">
-        <p className="text-sm text-slate-500 dark:text-slate-400">Systeme</p>
+
+      <div className="rounded-[1.75rem] border border-slate-200/80 bg-slate-50/80 p-4 shadow-sm dark:border-slate-700/80 dark:bg-slate-900/50">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-slate-500 dark:text-slate-400">{systemLabel}</p>
+          <div className="rounded-2xl bg-slate-200/80 p-2 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            <LockClosedIcon className="h-5 w-5" />
+          </div>
+        </div>
         <p className="mt-2 text-3xl font-semibold text-slate-950 dark:text-[var(--cv-text)]">{systemTemplatesCount}</p>
       </div>
     </div>
@@ -120,20 +152,31 @@ export const EmailTemplatesList = ({
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {templates.map((template) => (
-        <div
+        <article
           key={template.id}
-          className="rounded-[1.75rem] border border-slate-200/80 bg-white/90 p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-700/80 dark:bg-slate-900/60"
+          className="cv-card rounded-[1.75rem] p-5 transition-all hover:-translate-y-0.5"
         >
           <div className="mb-4 flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2">
-              {template.is_system && (
-                <LockClosedIcon className="w-4 h-4 text-gray-400" title={systemTemplateLabel} />
-              )}
-              <h3 className="text-base font-semibold text-slate-950 dark:text-[var(--cv-text)]">{template.name}</h3>
+            <div className="min-w-0 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {template.is_system && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-slate-200/80 bg-slate-100/80 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                    <LockClosedIcon className="h-3.5 w-3.5" />
+                    {systemTemplateLabel}
+                  </span>
+                )}
+                {template.is_default && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-amber-200/80 bg-amber-50/90 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-700 dark:border-amber-700/70 dark:bg-amber-900/20 dark:text-amber-300">
+                    <StarIconSolid className="h-3.5 w-3.5" />
+                    {defaultTemplateLabel}
+                  </span>
+                )}
+              </div>
+              <h3 className="truncate text-base font-semibold text-slate-950 dark:text-[var(--cv-text)]">{template.name}</h3>
             </div>
-            {template.is_default && (
-              <StarIconSolid className="w-5 h-5 text-yellow-500" title={defaultTemplateLabel} />
-            )}
+            <div className="rounded-2xl bg-primary-50 p-2 text-primary-600 dark:bg-primary-950/30 dark:text-primary-300">
+              <PaintBrushIcon className="h-5 w-5" />
+            </div>
           </div>
 
           {template.description && (
@@ -151,16 +194,17 @@ export const EmailTemplatesList = ({
             </div>
           </div>
 
-          <div className="mt-4 flex items-center gap-2 border-t border-slate-200/80 pt-4 dark:border-slate-700/80">
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-200/80 pt-4 dark:border-slate-700/80">
             <button
               onClick={() => onPreview(template)}
-              className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+              className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-slate-100/80 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200/80 hover:text-slate-900 dark:bg-slate-800/90 dark:text-slate-200 dark:hover:bg-slate-700 dark:hover:text-white"
               aria-label={previewLabel}
               title={previewLabel}
             >
               <EyeIcon className="h-4 w-4" />
               <span>{previewLabel}</span>
             </button>
+
             {!template.is_system && (
               <button
                 onClick={() => onEdit(template)}
@@ -171,6 +215,7 @@ export const EmailTemplatesList = ({
                 <PencilSquareIcon className="h-4 w-4" />
               </button>
             )}
+
             <button
               onClick={() => onDuplicate(template)}
               className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
@@ -179,6 +224,7 @@ export const EmailTemplatesList = ({
             >
               <DocumentDuplicateIcon className="h-4 w-4" />
             </button>
+
             <button
               onClick={() => onDelete(template)}
               className="ml-auto inline-flex min-h-10 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
@@ -188,16 +234,7 @@ export const EmailTemplatesList = ({
               <TrashIcon className="h-4 w-4" />
             </button>
           </div>
-          <div className="mt-3 flex justify-end">
-            <button
-              onClick={() => onPreview(template)}
-              className="inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400"
-            >
-              {previewLabel}
-              <ArrowRightIcon className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+        </article>
       ))}
     </div>
   );
@@ -217,76 +254,101 @@ export const EmailTemplatesEditModal = ({
   onChange,
   t,
 }: EmailTemplatesEditModalProps) => (
-  <div className="fixed inset-0 z-50 overflow-y-auto">
-    <div className="flex min-h-screen items-start justify-center p-4 pt-16">
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative flex max-h-[85vh] w-full max-w-6xl flex-col overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800">
-        <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            {mode === 'create' ? t('emailTemplates.createNew') : t('emailTemplates.editTemplate')}
-          </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <XMarkIcon className="w-6 h-6" />
+  <div className="fixed inset-0 z-[60] overflow-y-auto">
+    <div className="flex min-h-screen items-start justify-center p-4 pt-8 sm:p-6 sm:pt-10">
+      <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative flex max-h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.18)] dark:border-slate-700/80 dark:bg-slate-900">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200/80 px-5 py-4 dark:border-slate-700/80 sm:px-6">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950 dark:text-[var(--cv-text)]">
+              {mode === 'create' ? t('emailTemplates.createNew') : t('emailTemplates.editTemplate')}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t('emailTemplates.headerIntro')}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+          >
+            <XMarkIcon className="h-6 w-6" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div className="space-y-4">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {t('emailTemplates.nameLabel')} *
-                </label>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => onChange('name', e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                  placeholder={t('emailTemplates.namePlaceholder')}
-                />
+            <div className="section-shell rounded-[1.75rem] p-5 sm:p-6">
+              <div className="mb-5 flex items-center gap-3">
+                <div className="rounded-2xl bg-primary-50 p-2 text-primary-600 dark:bg-primary-950/30 dark:text-primary-300">
+                  <PencilSquareIcon className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    {mode === 'create' ? t('emailTemplates.createNew') : t('emailTemplates.editTemplate')}
+                  </p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{t('emailTemplates.subjectLabel')} · MJML</p>
+                </div>
               </div>
 
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {t('emailTemplates.descriptionLabel')}
-                </label>
-                <textarea
-                  value={form.description}
-                  onChange={(e) => onChange('description', e.target.value)}
-                  rows={2}
-                  className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
-                  placeholder={t('emailTemplates.descriptionPlaceholder')}
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    {t('emailTemplates.nameLabel')} *
+                  </label>
+                  <input
+                    type="text"
+                    value={form.name}
+                    onChange={(e) => onChange('name', e.target.value)}
+                    className="w-full rounded-2xl border border-slate-200/80 bg-white px-4 py-3 text-slate-950 shadow-sm outline-none transition focus:border-[color:color-mix(in_srgb,var(--cv-primary)_55%,transparent)] focus:ring-4 focus:ring-[color:color-mix(in_srgb,var(--cv-primary)_12%,transparent)] dark:border-white/10 dark:bg-white/5 dark:text-[var(--cv-text)]"
+                    placeholder={t('emailTemplates.namePlaceholder')}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    {t('emailTemplates.descriptionLabel')}
+                  </label>
+                  <textarea
+                    value={form.description}
+                    onChange={(e) => onChange('description', e.target.value)}
+                    rows={2}
+                    className="w-full resize-none rounded-2xl border border-slate-200/80 bg-white px-4 py-3 text-slate-950 shadow-sm outline-none transition focus:border-[color:color-mix(in_srgb,var(--cv-primary)_55%,transparent)] focus:ring-4 focus:ring-[color:color-mix(in_srgb,var(--cv-primary)_12%,transparent)] dark:border-white/10 dark:bg-white/5 dark:text-[var(--cv-text)]"
+                    placeholder={t('emailTemplates.descriptionPlaceholder')}
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-slate-50/80 px-3 py-3 dark:border-slate-700/80 dark:bg-slate-800/70">
+                  <input
+                    type="checkbox"
+                    id="isDefault"
+                    checked={form.isDefault}
+                    onChange={(e) => onChange('isDefault', e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-[var(--cv-primary)] focus:ring-[var(--cv-primary)]"
+                  />
+                  <label htmlFor="isDefault" className="text-sm text-slate-700 dark:text-slate-300">
+                    {t('emailTemplates.setAsDefault')}
+                  </label>
+                </div>
+
+                <EmailTemplateEditor
+                  initialMjml={form.mjml}
+                  subjectTemplate={form.subject}
+                  onSubjectChange={(value) => onChange('subject', value)}
+                  onMjmlChange={(value) => onChange('mjml', value)}
+                  keywords={keywords || undefined}
                 />
               </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="isDefault"
-                  checked={form.isDefault}
-                  onChange={(e) => onChange('isDefault', e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <label htmlFor="isDefault" className="text-sm text-gray-700 dark:text-gray-300">
-                  {t('emailTemplates.setAsDefault')}
-                </label>
-              </div>
-
-              <EmailTemplateEditor
-                initialMjml={form.mjml}
-                subjectTemplate={form.subject}
-                onSubjectChange={(value) => onChange('subject', value)}
-                onMjmlChange={(value) => onChange('mjml', value)}
-                keywords={keywords || undefined}
-              />
             </div>
 
-            <div className="lg:border-l lg:border-gray-200 lg:pl-6 lg:dark:border-gray-700">
-              <div className="mb-3 flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {t('emailTemplates.preview')}
-                </span>
-                <button type="button" onClick={onPreview} className="btn btn-secondary px-3 py-1 text-sm">
+            <div className="section-shell rounded-[1.75rem] p-5 sm:p-6">
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('emailTemplates.preview')}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{previewSubject || t('emailTemplates.subjectLabel')}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={onPreview}
+                  className="cv-ghost-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-medium"
+                >
                   {t('emailTemplates.refreshPreview')}
                 </button>
               </div>
@@ -299,14 +361,14 @@ export const EmailTemplatesEditModal = ({
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3 border-t border-gray-200 p-4 dark:border-gray-700">
-          <button onClick={onClose} className="btn btn-secondary px-4 py-2">
+        <div className="flex items-center justify-end gap-3 border-t border-slate-200/80 px-5 py-4 dark:border-slate-700/80 sm:px-6">
+          <button onClick={onClose} className="cv-ghost-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-medium">
             {t('common.cancel')}
           </button>
           <button
             onClick={onSave}
             disabled={saving}
-            className={`btn btn-primary px-4 py-2 ${saving ? 'cursor-not-allowed opacity-50' : ''}`}
+            className={`cv-gradient-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-semibold ${saving ? 'cursor-not-allowed opacity-50' : ''}`}
           >
             {saving ? t('common.saving') : t('common.save')}
           </button>
@@ -323,18 +385,24 @@ export const EmailTemplatesPreviewModal = ({
   previewLoading,
   onClose,
 }: EmailTemplatesPreviewModalProps) => (
-  <div className="fixed inset-0 z-50 overflow-y-auto">
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800">
-        <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-700">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{template.name}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <XMarkIcon className="w-6 h-6" />
+  <div className="fixed inset-0 z-[60] overflow-y-auto">
+    <div className="flex min-h-screen items-center justify-center p-4 sm:p-6">
+      <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative flex max-h-[88vh] w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.18)] dark:border-slate-700/80 dark:bg-slate-900">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200/80 px-5 py-4 dark:border-slate-700/80 sm:px-6">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950 dark:text-[var(--cv-text)]">{template.name}</h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{previewSubject}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+          >
+            <XMarkIcon className="h-6 w-6" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6">
           <EmailTemplatePreview
             html={previewHtml}
             subject={previewSubject}

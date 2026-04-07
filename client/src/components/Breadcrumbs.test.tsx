@@ -62,7 +62,7 @@ describe('Breadcrumbs', () => {
     ['/dashboard/users', 'navigation.users'],
     ['/dashboard/metrics', 'navigation.metrics'],
     ['/dashboard/tags', 'navigation.tags'],
-    ['/dashboard/email-templates', 'navigation.emailTemplates'],
+    ['/email-templates', 'navigation.emailTemplates'],
     ['/dashboard/gdpr-audit', 'navigation.gdprAudit'],
     ['/dashboard/backup', 'navigation.backup'],
   ])('renders %s breadcrumb trail', (path, expectedLabel) => {

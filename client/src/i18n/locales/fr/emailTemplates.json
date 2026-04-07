@@ -4,6 +4,8 @@
     "subtitle": "Gérez vos templates d'email pour l'envoi de CVs",
     "createNew": "Nouveau template",
     "editTemplate": "Modifier le template",
+    "headerIntro": "Pilotez vos messages de candidature, gardez un template par défaut clair et préparez des variantes par client ou contexte sans sortir du module d'administration.",
+    "headerHint": "Les templates système restent verrouillés mais peuvent être dupliqués pour créer vos propres versions.",
     "noTemplates": "Aucun template créé. Créez votre premier template ou dupliquez le template système.",
     "systemTemplate": "Template système (lecture seule)",
     "defaultTemplate": "Template par défaut",
@@ -25,6 +27,11 @@
     "blockPlaceholder": "Saisissez le contenu...",
     "logoPlaceholder": "Logo du cabinet (sera affiché automatiquement)",
     "insertKeyword": "Insérer un mot-clé",
+    "stats": {
+      "total": "Templates",
+      "default": "Par défaut",
+      "system": "Système"
+    },
     "errors": {
       "loadFailed": "Erreur lors du chargement des templates",
       "createFailed": "Erreur lors de la création du template",

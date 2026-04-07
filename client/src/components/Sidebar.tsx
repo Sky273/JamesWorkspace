@@ -91,7 +91,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
     title: null,
     items: [
       { name: t('navigation.templates'), href: '/templates', icon: DocumentDuplicateIcon },
-      { name: t('navigation.emailTemplates'), href: '/dashboard/email-templates', icon: EnvelopeIcon },
+      { name: t('navigation.emailTemplates'), href: '/email-templates', icon: EnvelopeIcon },
       { name: t('navigation.tags'), href: '/dashboard/tags', icon: TagIcon },
       { name: t('navigation.users'), href: '/dashboard/users', icon: UsersIcon },
       { name: t('navigation.security'), href: '/dashboard/security-logs', icon: ShieldCheckIcon },

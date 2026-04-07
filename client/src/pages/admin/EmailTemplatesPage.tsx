@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import PageHeader from '../../components/page/PageHeader';
@@ -229,6 +230,7 @@ const EmailTemplatesPage = (): JSX.Element => {
   if (loading) {
     return (
       <div className="cv-surface app-page-shell max-w-6xl">
+        <PageHeader title={t('emailTemplates.title')} subtitle={t('emailTemplates.subtitle')} />
         <div className="section-shell rounded-[2rem] p-8">
           <div className="flex items-start gap-4">
             <ArrowPathIcon className="mt-1 h-6 w-6 animate-spin text-primary-500" />
@@ -238,9 +240,9 @@ const EmailTemplatesPage = (): JSX.Element => {
                 <div className="mt-3 h-4 w-[32rem] max-w-full animate-pulse rounded-full bg-gray-200/70 dark:bg-gray-700/60" />
               </div>
               <div className="grid gap-3 md:grid-cols-3">
-                <div className="h-28 rounded-3xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
-                <div className="h-28 rounded-3xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
-                <div className="h-28 rounded-3xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                <div className="h-28 rounded-3xl bg-gray-100 animate-pulse dark:bg-gray-800" />
+                <div className="h-28 rounded-3xl bg-gray-100 animate-pulse dark:bg-gray-800" />
+                <div className="h-28 rounded-3xl bg-gray-100 animate-pulse dark:bg-gray-800" />
               </div>
             </div>
           </div>
@@ -250,22 +252,30 @@ const EmailTemplatesPage = (): JSX.Element => {
   }
 
   return (
-    <div className="cv-surface app-page-shell max-w-6xl">
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <PageHeader
-          title={t('emailTemplates.title')}
-          subtitle={t('emailTemplates.subtitle')}
-        />
-      </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45 }}
+      className="cv-surface app-page-shell max-w-6xl"
+    >
+      <PageHeader
+        title={t('emailTemplates.title')}
+        subtitle={t('emailTemplates.subtitle')}
+      />
 
       <div className="space-y-6">
-        <div className="section-shell rounded-[2rem] p-6">
+        <div className="section-shell rounded-[2rem] p-6 sm:p-7">
           <EmailTemplatesHeader
             createLabel={t('emailTemplates.createNew')}
             defaultTemplatesCount={defaultTemplatesCount}
             onCreate={handleCreate}
             systemTemplatesCount={systemTemplatesCount}
             totalTemplates={templates.length}
+            introLabel={t('emailTemplates.headerIntro')}
+            hintLabel={t('emailTemplates.headerHint')}
+            totalLabel={t('emailTemplates.stats.total')}
+            defaultLabel={t('emailTemplates.stats.default')}
+            systemLabel={t('emailTemplates.stats.system')}
           />
         </div>
 
@@ -337,7 +347,7 @@ const EmailTemplatesPage = (): JSX.Element => {
           onClose={closeModal}
         />
       )}
-    </div>
+    </motion.div>
   );
 };
 

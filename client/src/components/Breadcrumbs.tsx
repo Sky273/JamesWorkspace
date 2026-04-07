@@ -43,15 +43,6 @@ const Breadcrumbs = ({ items, className = '', tone = 'default' }: BreadcrumbsPro
         current: 'font-medium text-gray-900 dark:text-gray-100',
       };
 
-  const pushDashboardChild = (
-    breadcrumbs: BreadcrumbItem[],
-    label: string,
-    href: string,
-    isLast: boolean,
-  ): void => {
-    breadcrumbs.push({ label, href: isLast ? undefined : href, current: isLast });
-  };
-
   const getDynamicLabel = (segment: string, previousSegment?: string): BreadcrumbItem | null => {
     if (previousSegment === 'resumes') {
       const resumeName = currentResume?.Name || currentResume?.['File Name'] || t('common.loading');
@@ -156,25 +147,25 @@ const Breadcrumbs = ({ items, className = '', tone = 'default' }: BreadcrumbsPro
           breadcrumbs.push({ label: t('navigation.metiers', 'Métiers'), current: true });
           break;
         case 'metrics':
-          pushDashboardChild(breadcrumbs, t('navigation.metrics'), '/dashboard/metrics', isLast);
+          breadcrumbs.push({ label: t('navigation.metrics'), href: isLast ? undefined : '/dashboard/metrics', current: isLast });
           break;
         case 'users':
-          pushDashboardChild(breadcrumbs, t('navigation.users'), '/dashboard/users', isLast);
+          breadcrumbs.push({ label: t('navigation.users'), href: isLast ? undefined : '/dashboard/users', current: isLast });
           break;
         case 'security-logs':
-          pushDashboardChild(breadcrumbs, t('navigation.securityLogs'), '/dashboard/security-logs', isLast);
+          breadcrumbs.push({ label: t('navigation.securityLogs'), href: isLast ? undefined : '/dashboard/security-logs', current: isLast });
           break;
         case 'tags':
-          pushDashboardChild(breadcrumbs, t('navigation.tags'), '/dashboard/tags', isLast);
+          breadcrumbs.push({ label: t('navigation.tags'), href: isLast ? undefined : '/dashboard/tags', current: isLast });
           break;
         case 'email-templates':
-          pushDashboardChild(breadcrumbs, t('navigation.emailTemplates'), '/dashboard/email-templates', isLast);
+          breadcrumbs.push({ label: t('navigation.emailTemplates'), href: isLast ? undefined : '/email-templates', current: isLast });
           break;
         case 'gdpr-audit':
-          pushDashboardChild(breadcrumbs, t('navigation.gdprAudit', 'Audit RGPD'), '/dashboard/gdpr-audit', isLast);
+          breadcrumbs.push({ label: t('navigation.gdprAudit', 'Audit RGPD'), href: isLast ? undefined : '/dashboard/gdpr-audit', current: isLast });
           break;
         case 'backup':
-          pushDashboardChild(breadcrumbs, t('navigation.backup', 'Sauvegardes'), '/dashboard/backup', isLast);
+          breadcrumbs.push({ label: t('navigation.backup', 'Sauvegardes'), href: isLast ? undefined : '/dashboard/backup', current: isLast });
           break;
         default: {
           const dynamicItem = getDynamicLabel(segment, previousSegment);

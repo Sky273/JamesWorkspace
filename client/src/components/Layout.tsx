@@ -97,7 +97,7 @@ const Layout = (): JSX.Element => {
     '/dashboard/users',
     '/dashboard/security-logs',
     '/dashboard/metrics',
-    '/dashboard/email-templates',
+    '/email-templates',
     '/dashboard/gdpr-audit',
     '/dashboard/backup',
     '/settings',

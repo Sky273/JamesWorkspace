@@ -91,7 +91,8 @@ export function AppRoutes(): JSX.Element {
         <Route path="settings" element={<AdminRoute><SettingsPage /></AdminRoute>} />
         <Route path="facts" element={<FactsPage />} />
         <Route path="metiers" element={<AdminRoute><MetiersPage /></AdminRoute>} />
-        <Route path="dashboard/email-templates" element={<AdminRoute><EmailTemplatesPage /></AdminRoute>} />
+        <Route path="email-templates" element={<AdminRoute><EmailTemplatesPage /></AdminRoute>} />
+        <Route path="dashboard/email-templates" element={<Navigate to="/email-templates" replace />} />
         <Route path="dashboard/gdpr-audit" element={<AdminRoute><GdprAuditPage /></AdminRoute>} />
         <Route path="dashboard/backup" element={<AdminRoute><BackupPage /></AdminRoute>} />
       </Route>
