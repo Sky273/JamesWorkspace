@@ -314,6 +314,7 @@ const ImprovementAnimation = ({ currentStep = 'improving', fullscreen = false }:
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm"
+        data-testid="improvement-animation-fullscreen-overlay"
       >
         <motion.div
           initial={{ scale: 0.92, opacity: 0 }}

@@ -18,7 +18,7 @@ export default function ChatbotMarkdown({ content }: ChatbotMarkdownProps) {
           ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
           li: ({ children }) => (
             <li className="flex items-start">
-              <span className="text-primary-500 mr-2">â€¢</span>
+              <span className="text-primary-500 mr-2">•</span>
               <span className="flex-1">{children}</span>
             </li>
           ),

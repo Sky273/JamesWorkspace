@@ -309,6 +309,7 @@ const ChatBot = (): JSX.Element | null => {
           }}
           className="p-4 bg-primary-500 hover:bg-primary-600 text-white rounded-full shadow-lg transition-colors"
           aria-label={t('chatbot.openChat')}
+          data-testid="chatbot-launcher"
         >
           <ChatBubbleLeftRightIcon className="h-6 w-6" />
         </motion.button>

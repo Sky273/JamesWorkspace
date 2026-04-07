@@ -1,15 +1,15 @@
 {
   "security": {
-    "title": "Logs de Sécurité",
+    "title": "Logs de sécurité",
     "subtitle": "Surveillance en temps réel des événements de sécurité",
     "loading": "Chargement des logs de sécurité...",
     "accessDenied": "Accès refusé. Vous devez être administrateur pour voir les logs de sécurité.",
     "sessionExpired": "Session expirée. Veuillez vous reconnecter.",
     "refresh": "Actualiser",
-    "autoRefresh": "Auto-actualisation (30s)",
-    "totalLogs": "Total Logs",
-    "lastHour": "Dernière Heure",
-    "last24h": "Dernières 24h",
+    "autoRefresh": "Actualisation automatique (30 s)",
+    "totalLogs": "Total des logs",
+    "lastHour": "Dernière heure",
+    "last24h": "Dernières 24 h",
     "errors": "Erreurs",
     "filters": {
       "level": "Niveau",
@@ -32,10 +32,10 @@
       "duration": "Durée"
     },
     "badges": {
-      "security": "🔒 Sécurité",
-      "proxy": "🌐 Proxy"
+      "security": "Sécurité",
+      "proxy": "Proxy"
     },
     "noLogs": "Aucun log de sécurité trouvé",
-    "logs": "logs de sécurité"
+    "logs": "journaux de sécurité"
   }
 }

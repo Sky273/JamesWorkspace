@@ -1,7 +1,7 @@
 {
   "emailTemplates": {
-    "title": "Templates d'Email",
-    "subtitle": "Gérez vos templates d'email pour l'envoi de CVs",
+    "title": "Templates email",
+    "subtitle": "Gérez vos templates d'email pour l'envoi de CV",
     "createNew": "Nouveau template",
     "editTemplate": "Modifier le template",
     "headerIntro": "Pilotez vos messages de candidature, gardez un template par défaut clair et préparez des variantes par client ou contexte sans sortir du module d'administration.",
@@ -19,7 +19,7 @@
     "noPreview": "Aucun aperçu disponible",
     "refreshPreview": "Actualiser l'aperçu",
     "nameLabel": "Nom du template",
-    "namePlaceholder": "Ex: Candidature standard",
+    "namePlaceholder": "Ex. : Candidature standard",
     "descriptionLabel": "Description",
     "descriptionPlaceholder": "Description du template...",
     "subjectLabel": "Objet de l'email",

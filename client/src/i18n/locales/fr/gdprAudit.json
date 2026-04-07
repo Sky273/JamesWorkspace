@@ -1,10 +1,10 @@
 {
   "gdprAudit": {
-    "title": "Journal RGPD",
+    "title": "Journal d'audit RGPD",
     "subtitle": "Historique des actions de conformité RGPD",
     "filters": "Filtres",
     "refresh": "Actualiser",
-    "totalActions": "Actions (30j)",
+    "totalActions": "Actions sur 30 jours",
     "consentActions": "Consentements",
     "automatedActions": "Automatisées",
     "manualActions": "Manuelles",
@@ -22,7 +22,7 @@
     "startDate": "Date début",
     "endDate": "Date fin",
     "clearFilters": "Effacer les filtres",
-    "dateTime": "Date/Heure",
+    "dateTime": "Date et heure",
     "target": "Cible",
     "details": "Détails",
     "viewDetails": "Voir",

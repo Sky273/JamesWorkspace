@@ -7,10 +7,10 @@ test.describe('Admin Quality Pages', () => {
   });
 
   test('should render email templates admin page', async ({ page }) => {
-    await page.goto('/dashboard/email-templates');
+    await page.goto('/email-templates');
     await page.waitForLoadState('networkidle');
 
-    await expect(page).toHaveURL(/\/dashboard\/email-templates$/);
+    await expect(page).toHaveURL(/\/email-templates$/);
     await expect(page.locator('#email-address')).toHaveCount(0);
     await expect(page.getByRole('heading', { name: /email templates/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /new template/i })).toBeVisible();
@@ -39,5 +39,16 @@ test.describe('Admin Quality Pages', () => {
     await expect(page.getByRole('combobox').first()).toBeVisible();
     await expect(page.getByRole('button', { name: /refresh/i }).first()).toBeVisible();
     await expect(page.getByRole('table')).toBeVisible();
+  });
+
+  test('should render gdpr audit page with stats and filters action', async ({ page }) => {
+    await page.goto('/dashboard/gdpr-audit');
+    await page.waitForLoadState('networkidle');
+
+    await expect(page).toHaveURL(/\/dashboard\/gdpr-audit$/);
+    await expect(page.locator('#email-address')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: /gdpr/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /filters/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /refresh/i })).toBeVisible();
   });
 });

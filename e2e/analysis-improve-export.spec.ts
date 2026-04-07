@@ -30,6 +30,51 @@ async function uploadResumeAndOpenAnalysis(page: Page) {
 }
 
 test.describe('Analysis Improve Export', () => {
+  test('should display a fullscreen overlay that covers footer and chatbot during resume improvement', async ({ page }) => {
+    test.setTimeout(300000);
+
+    await signInAsE2EUser(page);
+    await uploadResumeAndOpenAnalysis(page);
+
+    await expect(page.locator('body')).toContainText(/resume analysis|analyse du cv/i);
+
+    await page.getByRole('button', { name: /improve|ameliorer|améliorer/i }).first().click();
+
+    const overlay = page.getByTestId('improvement-animation-fullscreen-overlay');
+    await expect(overlay).toBeVisible({ timeout: 30000 });
+
+    const overlayBox = await overlay.boundingBox();
+    expect(overlayBox).toBeTruthy();
+
+    const viewport = page.viewportSize();
+    expect(viewport).toBeTruthy();
+
+    expect(overlayBox!.x).toBeLessThanOrEqual(0);
+    expect(overlayBox!.y).toBeLessThanOrEqual(0);
+    expect(overlayBox!.width).toBeGreaterThanOrEqual(viewport!.width - 2);
+    expect(overlayBox!.height).toBeGreaterThanOrEqual(viewport!.height - 2);
+
+    const footerCovered = await page.evaluate(() => {
+      const overlay = document.querySelector('[data-testid="improvement-animation-fullscreen-overlay"]');
+      const probe = document.elementFromPoint(window.innerWidth / 2, window.innerHeight - 8);
+      return Boolean(overlay && probe && overlay.contains(probe));
+    });
+    expect(footerCovered).toBe(true);
+
+    const launcher = page.getByTestId('chatbot-launcher');
+    if (await launcher.count()) {
+      const launcherCovered = await page.evaluate(() => {
+        const overlay = document.querySelector('[data-testid="improvement-animation-fullscreen-overlay"]');
+        const launcher = document.querySelector('[data-testid="chatbot-launcher"]');
+        if (!overlay || !launcher) return true;
+        const rect = launcher.getBoundingClientRect();
+        const probe = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        return Boolean(probe && overlay.contains(probe));
+      });
+      expect(launcherCovered).toBe(true);
+    }
+  });
+
   test('should improve an uploaded resume and export the improved version as PDF', async ({ page }) => {
     test.setTimeout(300000);
 

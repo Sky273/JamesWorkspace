@@ -64,10 +64,7 @@ const SecurityLogs = (): JSX.Element => {
         createAuthOptions(),
       );
       if (!response.ok) {
-        const message = getSecurityLoadErrorMessage(response.status, t);
-        setLoadError(message);
-        toast.error(message);
-        throw new Error(`Failed to fetch logs: ${response.status}`);
+        throw new Error(`HTTP_${response.status}`);
       }
       const data = await response.json();
       setLogs(data.logs);
@@ -75,7 +72,16 @@ const SecurityLogs = (): JSX.Element => {
       setLoadError(null);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '';
+      const statusMatch = errorMessage.match(/^HTTP_(\d+)$/);
+      const loadMessage = statusMatch
+        ? getSecurityLoadErrorMessage(Number(statusMatch[1]), t)
+        : errorMessage.includes('Session expired')
+          ? t('security.sessionExpired')
+          : t('security.loadError', { defaultValue: 'Unable to load security logs.' });
+
+      setLoadError(loadMessage);
       if (!errorMessage.includes('Session expired')) {
+        toast.error(loadMessage);
         logger.error('[SecurityLogs] Error fetching logs:', error);
       }
     }
@@ -202,7 +208,7 @@ const SecurityLogs = (): JSX.Element => {
         </div>
       )}
 
-      {loadError && (
+      {loadError && logs.length > 0 && (
         <div className="section-shell mb-6 rounded-[2rem] border border-amber-200/70 bg-amber-50/80 p-4 dark:border-amber-800/70 dark:bg-amber-900/15">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3">
@@ -254,51 +260,90 @@ const SecurityLogs = (): JSX.Element => {
         />
       </div>
 
-      <div className="section-shell mb-6 overflow-hidden rounded-[2rem]">
-        <SecurityLogsTable logs={logs} t={t} />
-        {!logs.length && (
-          <div className="border-t border-slate-200/80 px-6 py-8 text-center dark:border-slate-700/80">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              {t('security.noLogs')}
-            </p>
-            <div className="mt-4 flex flex-wrap justify-center gap-3">
-              {hasActiveFilters && (
+      {loadError && !logs.length ? (
+        <div className="section-shell rounded-[2rem] border border-amber-200/70 bg-amber-50/80 p-8 dark:border-amber-800/70 dark:bg-amber-900/15">
+          <div className="flex items-start gap-4">
+            <ExclamationTriangleIcon className="mt-1 h-6 w-6 text-amber-500" />
+            <div className="flex-1">
+              <h2 className="text-lg font-semibold text-amber-900 dark:text-amber-100">
+                {t('security.loadErrorTitle', { defaultValue: 'Unable to load security logs.' })}
+              </h2>
+              <p className="mt-2 text-sm text-amber-800 dark:text-amber-200">{loadError}</p>
+              <div className="mt-5 flex flex-wrap gap-3">
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilters({ level: '', event: '', source: '' });
+                      setCurrentPage(1);
+                    }}
+                    className="cv-ghost-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-medium"
+                  >
+                    {t('common.resetFilters')}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {
-                    setFilters({ level: '', event: '', source: '' });
-                    setCurrentPage(1);
+                    void refreshPage();
                   }}
-                  className="cv-ghost-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-medium"
+                  className="cv-gradient-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-semibold"
                 >
-                  {t('common.resetFilters')}
+                  {t('security.refresh')}
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  void refreshPage();
-                }}
-                className="cv-gradient-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-semibold"
-              >
-                {t('security.refresh')}
-              </button>
+              </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <>
+          <div className="section-shell mb-6 overflow-hidden rounded-[2rem]">
+            <SecurityLogsTable logs={logs} t={t} />
+            {!logs.length && (
+              <div className="border-t border-slate-200/80 px-6 py-8 text-center dark:border-slate-700/80">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  {t('security.noLogs')}
+                </p>
+                <div className="mt-4 flex flex-wrap justify-center gap-3">
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFilters({ level: '', event: '', source: '' });
+                        setCurrentPage(1);
+                      }}
+                      className="cv-ghost-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-medium"
+                    >
+                      {t('common.resetFilters')}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void refreshPage();
+                    }}
+                    className="cv-gradient-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-semibold"
+                  >
+                    {t('security.refresh')}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
-      <div className="section-shell rounded-[2rem] p-4">
-        <SecurityLogsPagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalCount={totalCount}
-          pageSize={pageSize}
-          onPageChange={goToPage}
-          loading={loading}
-          t={t}
-        />
-      </div>
+          <div className="section-shell rounded-[2rem] p-4">
+            <SecurityLogsPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalCount={totalCount}
+              pageSize={pageSize}
+              onPageChange={goToPage}
+              loading={loading}
+              t={t}
+            />
+          </div>
+        </>
+      )}
     </motion.div>
   );
 };
