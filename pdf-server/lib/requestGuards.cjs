@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const PDF_SERVER_AUTH_HEADER = 'x-internal-service-token';
 const DEFAULT_RATE_LIMIT_WINDOW = 60000;
 const MIN_FOOTER_HEIGHT = 10;
@@ -52,6 +53,17 @@ function resolvePdfServerInternalToken({
   }
 
   return '';
+}
+
+function tokensMatch(expectedToken, providedToken) {
+  const expected = typeof expectedToken === 'string' ? Buffer.from(expectedToken, 'utf8') : Buffer.alloc(0);
+  const provided = typeof providedToken === 'string' ? Buffer.from(providedToken, 'utf8') : Buffer.alloc(0);
+
+  if (expected.length === 0 || expected.length !== provided.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(expected, provided);
 }
 
 function sanitizeFilename(filename, extension) {
@@ -268,7 +280,7 @@ function createRequestCoordinator({
     }
 
     const providedToken = req.get(PDF_SERVER_AUTH_HEADER);
-    if (providedToken !== pdfServerInternalToken) {
+    if (!tokensMatch(pdfServerInternalToken, providedToken)) {
       logger.log('warn', 'Invalid internal service token', { path: req.path });
       return res.status(403).json({ error: 'Forbidden' });
     }
@@ -397,5 +409,6 @@ module.exports = {
   buildGenerationFailureBody,
   createRequestCoordinator,
   resolvePdfServerInternalToken,
-  sanitizeFilename
+  sanitizeFilename,
+  tokensMatch
 };

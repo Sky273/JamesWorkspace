@@ -38,7 +38,13 @@ router.post('/forgot-password', authLimiter, validateBody(forgotPasswordSchema),
             message: 'Si un compte existe avec cette adresse email, un lien de réinitialisation a été envoyé.'
         });
     } catch (error) {
-        safeLog('error', 'Forgot password error', { error: error.message });
+        if (error?.code === 'PASSWORD_RESET_EMAIL_DELIVERY_FAILED') {
+            safeLog('error', 'Password reset token created but email delivery failed', {
+                error: error.message
+            });
+        } else {
+            safeLog('error', 'Forgot password error', { error: error.message });
+        }
         // Still return 200 to prevent enumeration
         res.json({
             success: true,

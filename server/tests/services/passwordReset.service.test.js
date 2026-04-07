@@ -28,6 +28,7 @@ vi.mock('../../config/constants.js', () => ({
 import { query } from '../../config/database.js';
 import { sendEmail } from '../../services/mail/gdprMailService.js';
 import {
+    PASSWORD_RESET_EMAIL_DELIVERY_FAILED_CODE,
     requestPasswordReset,
     resetPassword,
     cleanupExpiredTokens
@@ -92,9 +93,10 @@ describe('Password Reset Service', () => {
                 .mockResolvedValueOnce({ rows: [] });
             sendEmail.mockRejectedValueOnce(new Error('SMTP down'));
 
-            const result = await requestPasswordReset('u@t.com');
-
-            expect(result.success).toBe(true);
+            await expect(requestPasswordReset('u@t.com')).rejects.toMatchObject({
+                code: PASSWORD_RESET_EMAIL_DELIVERY_FAILED_CODE,
+                statusCode: 503
+            });
         });
     });
 

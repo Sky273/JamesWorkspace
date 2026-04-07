@@ -96,7 +96,7 @@ const EmailTemplatePreview = ({ html, subject, loading }: EmailTemplatePreviewPr
         {html ? (
           <iframe
             srcDoc={sanitizedHtml}
-            title="Email Preview"
+            title={t('emailTemplates.previewFrame', { defaultValue: 'Email preview' })}
             className="w-full h-[500px] border-0"
             sandbox="allow-same-origin allow-popups"
           />

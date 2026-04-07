@@ -13,6 +13,7 @@ import { safeLog } from '../utils/logger.backend.js';
 
 const TOKEN_EXPIRY_HOURS = 1;
 const MAX_REQUESTS_PER_HOUR = 3;
+export const PASSWORD_RESET_EMAIL_DELIVERY_FAILED_CODE = 'PASSWORD_RESET_EMAIL_DELIVERY_FAILED';
 
 /**
  * Generate a cryptographically secure reset token
@@ -128,8 +129,11 @@ export async function requestPasswordReset(email) {
             userId: user.id, 
             error: emailError.message 
         });
-        // Don't expose email sending failures
-        // The token is still valid — admin can check logs
+        const deliveryError = new Error('Password reset token created, but email delivery failed');
+        deliveryError.code = PASSWORD_RESET_EMAIL_DELIVERY_FAILED_CODE;
+        deliveryError.statusCode = 503;
+        deliveryError.cause = emailError;
+        throw deliveryError;
     }
 
     return { success: true };

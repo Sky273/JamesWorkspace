@@ -19,6 +19,9 @@ import { googleAuthConfig } from '../config/oauth.config.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { query } from '../config/database.js';
 
+export const GOOGLE_AUTH_DB_ERROR_CODE = 'GOOGLE_AUTH_DB_ERROR';
+export const GOOGLE_AUTH_UPSTREAM_ERROR_CODE = 'GOOGLE_AUTH_UPSTREAM_ERROR';
+
 // Lazy-loaded googleapis module
 let google = null;
 
@@ -46,6 +49,28 @@ async function createOAuth2Client() {
         googleAuthConfig.clientSecret,
         googleAuthConfig.redirectUri
     );
+}
+
+function createGoogleAuthDbError(operation, error) {
+    const wrappedError = new Error(`Google auth database operation failed: ${operation}`);
+    wrappedError.code = GOOGLE_AUTH_DB_ERROR_CODE;
+    wrappedError.statusCode = 503;
+    wrappedError.cause = error;
+    return wrappedError;
+}
+
+function isGoogleUpstreamError(error) {
+    const retryableCodes = new Set(['ECONNRESET', 'ETIMEDOUT', 'EAI_AGAIN', 'ECONNREFUSED', 'ENOTFOUND']);
+    const responseStatus = error?.response?.status;
+    return retryableCodes.has(error?.code) || responseStatus === 429 || (Number.isInteger(responseStatus) && responseStatus >= 500);
+}
+
+function createGoogleAuthUpstreamError(operation, error) {
+    const wrappedError = new Error(`Google auth upstream service unavailable: ${operation}`);
+    wrappedError.code = GOOGLE_AUTH_UPSTREAM_ERROR_CODE;
+    wrappedError.statusCode = 503;
+    wrappedError.cause = error;
+    return wrappedError;
 }
 
 /**
@@ -91,6 +116,9 @@ export async function exchangeCodeForUserInfo(code) {
         };
     } catch (error) {
         safeLog('error', 'Failed to exchange Google code', { error: error.message });
+        if (isGoogleUpstreamError(error)) {
+            throw createGoogleAuthUpstreamError('exchangeCodeForUserInfo', error);
+        }
         throw new Error('Failed to authenticate with Google');
     }
 }
@@ -119,6 +147,9 @@ export async function verifyIdToken(idToken) {
         };
     } catch (error) {
         safeLog('error', 'Failed to verify Google ID token', { error: error.message });
+        if (isGoogleUpstreamError(error)) {
+            throw createGoogleAuthUpstreamError('verifyIdToken', error);
+        }
         throw new Error('Invalid Google token');
     }
 }
@@ -197,7 +228,7 @@ export async function findUserByGoogleId(googleId) {
         return result.rows.length > 0 ? result.rows[0] : null;
     } catch (error) {
         safeLog('error', 'Failed to find user by Google ID', { error: error.message });
-        return null;
+        throw createGoogleAuthDbError('findUserByGoogleId', error);
     }
 }
 
@@ -220,7 +251,7 @@ export async function findUserByEmail(email) {
         return result.rows.length > 0 ? result.rows[0] : null;
     } catch (error) {
         safeLog('error', 'Failed to find user by email', { error: error.message });
-        return null;
+        throw createGoogleAuthDbError('findUserByEmail', error);
     }
 }
 
@@ -248,7 +279,7 @@ export async function getGoogleLinkStatus(userId) {
         };
     } catch (error) {
         safeLog('error', 'Failed to get Google link status', { error: error.message, userId });
-        return { linked: false, email: null };
+        throw createGoogleAuthDbError('getGoogleLinkStatus', error);
     }
 }
 

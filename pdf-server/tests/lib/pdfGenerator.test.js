@@ -80,6 +80,21 @@ describe('pdfGenerator', () => {
     expect(launchSpy.mock.calls[1][0].args).toContain('--disable-setuid-sandbox');
   }, 10000);
 
+  it('does not fall back to no-sandbox for a generic launch error that merely mentions sandboxing', async () => {
+    const puppeteer = require('puppeteer');
+    const launchSpy = vi.spyOn(puppeteer, 'launch')
+      .mockRejectedValue(new Error('Sandbox bootstrap failed because the binary is missing'));
+
+    const pdfGenerator = loadPdfGenerator();
+    pdfGenerator._internal.resetBrowserState();
+
+    await expect(pdfGenerator._internal.getBrowser()).rejects.toThrow('Sandbox bootstrap failed because the binary is missing');
+    expect(launchSpy.mock.calls.length).toBeGreaterThan(0);
+    expect(
+      launchSpy.mock.calls.every(([options]) => !options.args.includes('--no-sandbox')),
+    ).toBe(true);
+  }, 10000);
+
   it('blocks external resource requests during PDF generation', async () => {
     const requestHandlers = {};
     const fakePage = {
@@ -318,6 +333,46 @@ describe('pdfGenerator', () => {
         httpFailures: [expect.objectContaining({ status: 404 })]
       })
     }));
+  }, 10000);
+
+  it('sanitizes debug artifact directories derived from request ids', () => {
+    const pdfGenerator = loadPdfGenerator();
+    expect(pdfGenerator._internal.sanitizeArtifactPathSegment('../unsafe/req-123')).toBe('unsafe_req-123');
+    expect(pdfGenerator._internal.sanitizeArtifactPathSegment('')).toBe('request');
+  });
+
+  it('preserves the original failure as error cause when PDF rendering fails', async () => {
+    const rootCause = new Error('Protocol error (Page.printToPDF): Rendering failed');
+    const fakePage = {
+      setRequestInterception: vi.fn().mockResolvedValue(),
+      on: vi.fn(),
+      setContent: vi.fn().mockResolvedValue(),
+      pdf: vi.fn().mockRejectedValue(rootCause),
+      close: vi.fn().mockResolvedValue()
+    };
+    const fakeBrowser = {
+      isConnected: vi.fn(() => true),
+      on: vi.fn(),
+      newPage: vi.fn().mockResolvedValue(fakePage),
+      close: vi.fn().mockResolvedValue()
+    };
+
+    const puppeteer = require('puppeteer');
+    vi.spyOn(puppeteer, 'launch').mockResolvedValue(fakeBrowser);
+
+    const pdfGenerator = loadPdfGenerator();
+    pdfGenerator._internal.resetBrowserState();
+
+    await expect(pdfGenerator.generatePdf({
+      htmlContent: '<p>Hello</p>',
+      stylesheet: '',
+      headerContent: '',
+      footerContent: '',
+      footerHeight: 25
+    })).rejects.toMatchObject({
+      message: expect.stringContaining('PDF generation failed:'),
+      cause: rootCause
+    });
   }, 10000);
 
   it('retries once with a fresh browser even for an unclassified first-attempt failure', async () => {

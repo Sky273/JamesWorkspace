@@ -49,6 +49,30 @@ const SecurityLogs = (): JSX.Element => {
   const [totalCount, setTotalCount] = useState<number>(0);
   const pageSize = 50;
 
+  const stopAutoRefreshOnAuthError = useCallback((status: number | null): void => {
+    if (status === 401 || status === 403) {
+      setAutoRefresh(false);
+    }
+  }, []);
+
+  const buildLoadErrorMessage = useCallback((errorMessage: string): string => {
+    const statusMatch = errorMessage.match(/^HTTP_(\d+)$/);
+    return statusMatch
+      ? getSecurityLoadErrorMessage(Number(statusMatch[1]), t)
+      : errorMessage.includes('Session expired')
+        ? t('security.sessionExpired')
+        : t('security.loadError', { defaultValue: 'Unable to load security logs.' });
+  }, [t]);
+
+  const reportLoadError = useCallback((errorMessage: string, error: unknown): void => {
+    const loadMessage = buildLoadErrorMessage(errorMessage);
+    setLoadError(loadMessage);
+    if (!errorMessage.includes('Session expired')) {
+      toast.error(loadMessage);
+      logger.error('[SecurityLogs] Error fetching logs:', error);
+    }
+  }, [buildLoadErrorMessage]);
+
   const fetchLogs = useCallback(async (): Promise<void> => {
     try {
       const offset = (currentPage - 1) * pageSize;
@@ -64,6 +88,7 @@ const SecurityLogs = (): JSX.Element => {
         createAuthOptions(),
       );
       if (!response.ok) {
+        stopAutoRefreshOnAuthError(response.status);
         throw new Error(`HTTP_${response.status}`);
       }
       const data = await response.json();
@@ -72,20 +97,9 @@ const SecurityLogs = (): JSX.Element => {
       setLoadError(null);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '';
-      const statusMatch = errorMessage.match(/^HTTP_(\d+)$/);
-      const loadMessage = statusMatch
-        ? getSecurityLoadErrorMessage(Number(statusMatch[1]), t)
-        : errorMessage.includes('Session expired')
-          ? t('security.sessionExpired')
-          : t('security.loadError', { defaultValue: 'Unable to load security logs.' });
-
-      setLoadError(loadMessage);
-      if (!errorMessage.includes('Session expired')) {
-        toast.error(loadMessage);
-        logger.error('[SecurityLogs] Error fetching logs:', error);
-      }
+      reportLoadError(errorMessage, error);
     }
-  }, [currentPage, filters, t]);
+  }, [currentPage, filters, reportLoadError, stopAutoRefreshOnAuthError]);
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
@@ -106,16 +120,21 @@ const SecurityLogs = (): JSX.Element => {
         '/api/admin/security-stats',
         createAuthOptions(),
       );
-      if (!response.ok) throw new Error(`Failed to fetch stats: ${response.status}`);
+      if (!response.ok) {
+        stopAutoRefreshOnAuthError(response.status);
+        throw new Error(`HTTP_${response.status}`);
+      }
       const data = await response.json();
       setStats(data);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '';
-      if (!errorMessage.includes('Session expired')) {
+      if (/^HTTP_(401|403)$/.test(errorMessage) || errorMessage.includes('Session expired')) {
+        reportLoadError(errorMessage, error);
+      } else if (!errorMessage.includes('Session expired')) {
         logger.error('[SecurityLogs] Error fetching stats:', error);
       }
     }
-  }, []);
+  }, [reportLoadError, stopAutoRefreshOnAuthError]);
 
   const fetchFilterOptions = useCallback(async (): Promise<void> => {
     try {
@@ -138,7 +157,8 @@ const SecurityLogs = (): JSX.Element => {
 
   const refreshPage = useCallback(async (): Promise<void> => {
     setLoading(true);
-    await Promise.all([fetchLogs(), fetchStats(), fetchFilterOptions()]);
+    await fetchLogs();
+    await Promise.all([fetchStats(), fetchFilterOptions()]);
     setLoading(false);
   }, [fetchFilterOptions, fetchLogs, fetchStats]);
 
@@ -150,7 +170,8 @@ const SecurityLogs = (): JSX.Element => {
     if (!autoRefresh) return;
     const interval = setInterval(async () => {
       try {
-        await Promise.all([fetchLogs(), fetchStats()]);
+        await fetchLogs();
+        await fetchStats();
       } catch (error: unknown) {
         if (
           error instanceof Error &&

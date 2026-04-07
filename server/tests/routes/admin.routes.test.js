@@ -333,6 +333,13 @@ describe('Admin Routes', () => {
                 role: 'admin',
                 status: 'active'
             });
+            expect(mockListUsers).toHaveBeenCalledWith({
+                search: undefined,
+                role: undefined,
+                status: undefined,
+                page: 1,
+                limit: 100
+            });
         });
 
         it('should default role and status for missing fields', async () => {

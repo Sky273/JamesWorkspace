@@ -5,7 +5,8 @@ const require = createRequire(import.meta.url);
 const {
   buildGenerationFailureBody,
   resolvePdfServerInternalToken,
-  sanitizeFilename
+  sanitizeFilename,
+  tokensMatch
 } = require('../../lib/requestGuards.cjs');
 
 describe('requestGuards', () => {
@@ -46,5 +47,12 @@ describe('requestGuards', () => {
       status: 504,
       body: { error: 'DOCX generation timed out. Try with simpler content.' }
     });
+  });
+
+  it('compares internal tokens with constant-time semantics prerequisites', () => {
+    expect(tokensMatch('x'.repeat(32), 'x'.repeat(32))).toBe(true);
+    expect(tokensMatch('x'.repeat(32), 'y'.repeat(32))).toBe(false);
+    expect(tokensMatch('x'.repeat(32), 'short')).toBe(false);
+    expect(tokensMatch('', '')).toBe(false);
   });
 });

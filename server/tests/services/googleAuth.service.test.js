@@ -41,6 +41,7 @@ vi.mock('googleapis', () => ({
 
 import { query } from '../../config/database.js';
 import {
+    GOOGLE_AUTH_DB_ERROR_CODE,
     linkGoogleAccount,
     unlinkGoogleAccount,
     findUserByGoogleId,
@@ -110,7 +111,10 @@ describe('Google Auth Service', () => {
 
         it('should return null on error', async () => {
             query.mockRejectedValueOnce(new Error('DB error'));
-            expect(await findUserByGoogleId('g1')).toBeNull();
+            await expect(findUserByGoogleId('g1')).rejects.toMatchObject({
+                code: GOOGLE_AUTH_DB_ERROR_CODE,
+                statusCode: 503
+            });
         });
     });
 
@@ -130,7 +134,10 @@ describe('Google Auth Service', () => {
 
         it('should return null on error', async () => {
             query.mockRejectedValueOnce(new Error('DB error'));
-            expect(await findUserByEmail('user@test.com')).toBeNull();
+            await expect(findUserByEmail('user@test.com')).rejects.toMatchObject({
+                code: GOOGLE_AUTH_DB_ERROR_CODE,
+                statusCode: 503
+            });
         });
     });
 
@@ -163,9 +170,10 @@ describe('Google Auth Service', () => {
         it('should return not linked on error', async () => {
             query.mockRejectedValueOnce(new Error('DB error'));
 
-            const result = await getGoogleLinkStatus('u1');
-
-            expect(result).toEqual({ linked: false, email: null });
+            await expect(getGoogleLinkStatus('u1')).rejects.toMatchObject({
+                code: GOOGLE_AUTH_DB_ERROR_CODE,
+                statusCode: 503
+            });
         });
     });
 

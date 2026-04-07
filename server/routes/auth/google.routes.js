@@ -23,6 +23,8 @@ const router = express.Router();
 
 const STATE_EXPIRY = 10 * 60 * 1000; // 10 minutes
 const ALLOWED_OAUTH_ACTIONS = new Set(['signin', 'register', 'link']);
+const GOOGLE_AUTH_DB_ERROR_CODE = googleAuthService.GOOGLE_AUTH_DB_ERROR_CODE;
+const GOOGLE_AUTH_UPSTREAM_ERROR_CODE = googleAuthService.GOOGLE_AUTH_UPSTREAM_ERROR_CODE;
 
 function hasFirmAssignment(user) {
     return Boolean(user?.firm_id && user?.firm_name);
@@ -40,6 +42,14 @@ function resolveOAuthUserId(req) {
 
     const decoded = verifyToken(accessToken);
     return decoded?.id || null;
+}
+
+function isGoogleAuthDbError(error) {
+    return error?.code === GOOGLE_AUTH_DB_ERROR_CODE;
+}
+
+function isGoogleAuthUpstreamError(error) {
+    return error?.code === GOOGLE_AUTH_UPSTREAM_ERROR_CODE;
 }
 
 // GET /api/auth/google - Initiate Google OAuth flow
@@ -251,6 +261,9 @@ router.get('/google/callback', async (req, res) => {
         
     } catch (error) {
         safeLog('error', 'Google OAuth callback error', { error: error.message });
+        if (isGoogleAuthDbError(error) || isGoogleAuthUpstreamError(error)) {
+            return res.redirect('/signin?error=service_unavailable');
+        }
         res.redirect('/signin?error=google_auth_failed');
     }
 });
@@ -343,6 +356,9 @@ router.post('/google/token', authLimiter, validateBody(googleTokenSchema), async
         
     } catch (error) {
         safeLog('error', 'Google token signin error', { error: error.message });
+        if (isGoogleAuthDbError(error) || isGoogleAuthUpstreamError(error)) {
+            return res.status(503).json({ error: 'Authentication service temporarily unavailable' });
+        }
         res.status(401).json({ error: 'Invalid Google token' });
     }
 });
@@ -354,6 +370,9 @@ router.get('/google/status', authenticateToken, async (req, res) => {
         res.json(status);
     } catch (error) {
         safeLog('error', 'Google status error', { error: error.message });
+        if (isGoogleAuthDbError(error) || isGoogleAuthUpstreamError(error)) {
+            return res.status(503).json({ error: 'Failed to get Google status' });
+        }
         res.status(500).json({ error: 'Failed to get Google status' });
     }
 });

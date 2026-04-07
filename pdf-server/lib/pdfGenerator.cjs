@@ -18,8 +18,8 @@ const SANDBOX_LAUNCH_ERROR_PATTERNS = [
   /no usable sandbox/i,
   /failed to move to new namespace/i,
   /setuid sandbox/i,
-  /zygote/i,
-  /sandbox/i
+  /zygote host/i,
+  /namespace sandbox/i
 ];
 
 const COMMON_CHROMIUM_EXECUTABLE_PATHS = process.platform === 'linux'
@@ -134,6 +134,12 @@ function truncateValue(value, maxLength = 300) {
   return text.length <= maxLength ? text : `${text.slice(0, maxLength)}...`;
 }
 
+function sanitizeArtifactPathSegment(value) {
+  const text = String(value || '').trim();
+  const sanitized = text.replace(/[^a-zA-Z0-9._-]+/g, '_').replace(/_+/g, '_').replace(/^[_./-]+|[_./-]+$/g, '');
+  return sanitized || 'request';
+}
+
 function pushLimitedEvent(events, event, limit = 8) {
   if (events.length >= limit) {
     return;
@@ -147,7 +153,7 @@ async function writeDebugArtifacts({ requestId, wrappedHtmlContent, htmlContent,
     return null;
   }
 
-  const targetDir = path.join(artifactsDir, requestId);
+  const targetDir = path.join(artifactsDir, sanitizeArtifactPathSegment(requestId));
   await fs.mkdir(targetDir, { recursive: true });
 
   const metadata = {
@@ -560,7 +566,11 @@ async function generatePdf({ htmlContent, stylesheet, headerContent, footerConte
       artifactPath,
       stackTop: error.stack?.split('\n').slice(0, 4).join(' -> ')
     });
-    throw new Error(`PDF generation failed: ${error.message}`);
+    const wrappedError = new Error(`PDF generation failed: ${error.message}`, { cause: error });
+    if (error?.launchAttempts) {
+      wrappedError.launchAttempts = error.launchAttempts;
+    }
+    throw wrappedError;
   } finally {
     if (signal && abortHandler) {
       signal.removeEventListener('abort', abortHandler);
@@ -635,6 +645,7 @@ module.exports = {
     getBrowser,
     shouldAllowChromiumNoSandbox,
     isSandboxLaunchError,
+    sanitizeArtifactPathSegment,
     getExecutablePathCandidates,
     shouldAllowRequest,
     isRetriableBrowserError,

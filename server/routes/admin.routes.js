@@ -257,14 +257,15 @@ router.get('/users', authenticateToken, requireAdmin, validateQuery({
 }), async (req, res) => {
     try {
         const {
-            page = 1,
+            page,
             limit = 100,
             search,
             role,
             status
         } = req.query;
-        const parsedPage = Number.parseInt(page, 10);
-        const parsedLimit = Math.min(Number.parseInt(limit, 10), 100);
+        const parsedPage = Number.isInteger(Number.parseInt(page, 10)) ? Number.parseInt(page, 10) : 1;
+        const parsedLimitRaw = Number.parseInt(limit, 10);
+        const parsedLimit = Number.isInteger(parsedLimitRaw) ? Math.min(parsedLimitRaw, 100) : 100;
 
         const { users: records, hasMore } = await listUsers({
             search: search || undefined,

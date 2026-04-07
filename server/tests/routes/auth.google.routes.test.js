@@ -20,6 +20,8 @@ const mockGetGoogleLinkStatus = vi.fn();
 const mockUnlinkGoogleAccount = vi.fn();
 const mockSaveGmailTokens = vi.fn();
 vi.mock('../../services/googleAuth.service.js', () => ({
+    GOOGLE_AUTH_DB_ERROR_CODE: 'GOOGLE_AUTH_DB_ERROR',
+    GOOGLE_AUTH_UPSTREAM_ERROR_CODE: 'GOOGLE_AUTH_UPSTREAM_ERROR',
     getAuthUrl: (...args) => mockGetAuthUrl(...args),
     exchangeCodeForUserInfo: (...args) => mockExchangeCodeForUserInfo(...args),
     findUserByGoogleId: (...args) => mockFindUserByGoogleId(...args),
@@ -279,6 +281,47 @@ describe('Google OAuth Routes', () => {
             expect(res.headers.location).toContain('/settings?error=not_authenticated');
             expect(mockLinkGoogleAccount).not.toHaveBeenCalled();
         });
+
+        it('should redirect to service unavailable when Google DB lookup fails', async () => {
+            mockGetAuthUrl.mockResolvedValueOnce('https://accounts.google.com/o/oauth2/auth?...');
+            await request(app).get('/api/auth/google?action=signin');
+
+            const state = mockGetAuthUrl.mock.calls[0][0];
+
+            mockExchangeCodeForUserInfo.mockResolvedValueOnce({
+                googleId: 'g-123',
+                email: 'db-failure@test.com',
+                name: 'DB Failure'
+            });
+            mockFindUserByGoogleId.mockRejectedValueOnce({
+                code: 'GOOGLE_AUTH_DB_ERROR',
+                message: 'db offline'
+            });
+
+            const res = await request(app)
+                .get(`/api/auth/google/callback?code=abc&state=${state}`);
+
+            expect(res.status).toBe(302);
+            expect(res.headers.location).toContain('/signin?error=service_unavailable');
+        });
+
+        it('should redirect to service unavailable when Google upstream fails', async () => {
+            mockGetAuthUrl.mockResolvedValueOnce('https://accounts.google.com/o/oauth2/auth?...');
+            await request(app).get('/api/auth/google?action=signin');
+
+            const state = mockGetAuthUrl.mock.calls[0][0];
+
+            mockExchangeCodeForUserInfo.mockRejectedValueOnce({
+                code: 'GOOGLE_AUTH_UPSTREAM_ERROR',
+                message: 'Google upstream unavailable'
+            });
+
+            const res = await request(app)
+                .get(`/api/auth/google/callback?code=abc&state=${state}`);
+
+            expect(res.status).toBe(302);
+            expect(res.headers.location).toContain('/signin?error=service_unavailable');
+        });
     });
 
     // ==========================================
@@ -413,6 +456,39 @@ describe('Google OAuth Routes', () => {
 
             expect(res.status).toBe(401);
         });
+
+        it('should return 503 when Google DB lookup fails', async () => {
+            mockVerifyIdToken.mockResolvedValueOnce({
+                googleId: 'g-db',
+                email: 'db@test.com',
+                name: 'DB User'
+            });
+            mockFindUserByGoogleId.mockRejectedValueOnce({
+                code: 'GOOGLE_AUTH_DB_ERROR',
+                message: 'db offline'
+            });
+
+            const res = await request(app)
+                .post('/api/auth/google/token')
+                .send({ idToken: 'valid-token' });
+
+            expect(res.status).toBe(503);
+            expect(res.body.error).toBe('Authentication service temporarily unavailable');
+        });
+
+        it('should return 503 when Google upstream fails', async () => {
+            mockVerifyIdToken.mockRejectedValueOnce({
+                code: 'GOOGLE_AUTH_UPSTREAM_ERROR',
+                message: 'Google upstream unavailable'
+            });
+
+            const res = await request(app)
+                .post('/api/auth/google/token')
+                .send({ idToken: 'valid-id-token' });
+
+            expect(res.status).toBe(503);
+            expect(res.body.error).toBe('Authentication service temporarily unavailable');
+        });
     });
 
     // ==========================================
@@ -446,6 +522,34 @@ describe('Google OAuth Routes', () => {
                 .set(AUTH);
 
             expect(res.status).toBe(500);
+        });
+
+        it('should return 503 when Google DB lookup fails', async () => {
+            mockGetGoogleLinkStatus.mockRejectedValueOnce({
+                code: 'GOOGLE_AUTH_DB_ERROR',
+                message: 'db offline'
+            });
+
+            const res = await request(app)
+                .get('/api/auth/google/status')
+                .set(AUTH);
+
+            expect(res.status).toBe(503);
+            expect(res.body.error).toBe('Failed to get Google status');
+        });
+
+        it('should return 503 when Google upstream fails', async () => {
+            mockGetGoogleLinkStatus.mockRejectedValueOnce({
+                code: 'GOOGLE_AUTH_UPSTREAM_ERROR',
+                message: 'Google upstream unavailable'
+            });
+
+            const res = await request(app)
+                .get('/api/auth/google/status')
+                .set(AUTH);
+
+            expect(res.status).toBe(503);
+            expect(res.body.error).toBe('Failed to get Google status');
         });
     });
 
