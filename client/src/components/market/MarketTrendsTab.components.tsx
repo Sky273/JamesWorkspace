@@ -72,6 +72,7 @@ export function MarketTrendsHeader({
             disabled={loading}
             className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
             title={t('marketRadar.trends.refresh')}
+            aria-label={t('marketRadar.trends.refresh')}
           >
             <ArrowPathIcon className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -84,10 +85,10 @@ export function MarketTrendsHeader({
           <button
             onClick={onCollectDynamics}
             className="inline-flex items-center px-4 py-2 border border-orange-500 rounded-md shadow-sm text-sm font-medium text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
-            title="TEMPORAIRE: Collecte uniquement DYN_1 (dynamique emploi)"
+            title={t('marketRadar.trends.collectDynamics.title')}
           >
             <SparklesIcon className="h-4 w-4 mr-2" />
-            DYN_1 Only
+            {t('marketRadar.trends.collectDynamics.button')}
           </button>
         </div>
       </div>
@@ -125,7 +126,8 @@ export function MarketTrendsSummaryCards({
         const isSumType = typeData.isSumType ?? ['embauche', 'demandeur', 'demandeur_entrant', 'offre'].includes(type);
         const valueCount = typeData.valueCount ?? 0;
         const Icon = TREND_TYPE_ICONS[type] || ChartBarIcon;
-        const isSelected = typeFilter === type || typeFilter === '';
+        const isPressed = typeFilter === type;
+        const isSelected = isPressed || typeFilter === '';
 
         const formatAggregatedValue = () => {
           if (valueCount === 0) return '-';
@@ -135,13 +137,16 @@ export function MarketTrendsSummaryCards({
         };
 
         return (
-          <div
+          <button
+            type="button"
             key={type}
             className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 cursor-pointer transition-colors ${
               isSelected
                 ? 'border-2 border-indigo-500 dark:border-indigo-400'
                 : 'border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600'
             }`}
+            aria-pressed={isPressed}
+            aria-label={`${TREND_TYPE_LABELS[type] || type} (${count})`}
             onClick={() => onTypeFilterChange(typeFilter === type ? '' : (type as TrendType))}
           >
             <div className="flex items-center gap-2 mb-2">
@@ -153,7 +158,7 @@ export function MarketTrendsSummaryCards({
               {isSumType ? 'Total' : 'Moyenne'}: {formatAggregatedValue()}
             </div>
             {latestDate && <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">Derniere collecte: {latestDate}</div>}
-          </div>
+          </button>
         );
       })}
     </div>

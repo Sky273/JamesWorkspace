@@ -36,7 +36,7 @@ import {
 
 function buildSanitizedProxyErrorResponse(provider, fallbackMessage, error) {
     const providerName = String(provider || 'llm').toLowerCase();
-    const statusCode = error?.response?.status || 500;
+    const statusCode = error?.statusCode || error?.response?.status || 500;
     const statusText = typeof error?.response?.statusText === 'string'
         ? error.response.statusText.trim()
         : '';

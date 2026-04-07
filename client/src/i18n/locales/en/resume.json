@@ -66,7 +66,8 @@
         "exportPDF": "Export as PDF",
         "exporting": "Exporting...",
         "sendEmail": "Send by email"
-      }
+      },
+      "resumeMissing": "Resume not loaded. Please refresh the page."
     },
     "actions": {
       "improveWithAI": "Improve with AI",

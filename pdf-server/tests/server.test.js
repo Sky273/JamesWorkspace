@@ -363,6 +363,18 @@ describe('PDF Server', () => {
       }));
     });
 
+    it('should handle non-Error PDF generation failures defensively', async () => {
+      pdfGen.generatePdf.mockRejectedValueOnce(null);
+
+      const res = await request(app)
+        .post('/generate-pdf')
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
+        .send({ htmlContent: '<p>X</p>', filename: 'test.pdf' });
+
+      expect(res.status).toBe(500);
+      expect(res.body).toEqual({ error: 'Failed to generate PDF' });
+    });
+
     it('should return 504 on timeout error', async () => {
       pdfGen.generatePdf.mockRejectedValue(new Error('Navigation timeout exceeded'));
 
@@ -507,6 +519,18 @@ describe('PDF Server', () => {
       expect(res.status).toBe(500);
       expect(res.body.error).toContain('Failed to generate DOCX');
       expect(res.body.details).toBeUndefined();
+    });
+
+    it('should handle non-Error DOCX generation failures defensively', async () => {
+      docxGen.generateDocx.mockRejectedValueOnce('unexpected failure');
+
+      const res = await request(app)
+        .post('/generate-docx')
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
+        .send({ htmlContent: '<p>X</p>', filename: 'test.docx' });
+
+      expect(res.status).toBe(500);
+      expect(res.body).toEqual({ error: 'Failed to generate DOCX' });
     });
   });
 

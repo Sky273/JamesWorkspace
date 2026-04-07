@@ -387,6 +387,25 @@ describe('Settings Routes', () => {
             const res = await request(app).get('/api/settings').set(authHeader);
             expect(res.status).toBe(500);
         });
+
+        it('should return 503 when canonical LLM settings are unavailable without cache', async () => {
+            mockGetSettings.mockResolvedValue({
+                id: 'set-1',
+                llm_model: 'gpt-4',
+                cv_mode: 'nominative'
+            });
+            mockGetLLMSettings.mockRejectedValue(Object.assign(
+                new Error('LLM settings are currently unavailable.'),
+                { statusCode: 503, code: 'LLM_SETTINGS_UNAVAILABLE' }
+            ));
+
+            const res = await request(app).get('/api/settings').set(authHeader);
+
+            expect(res.status).toBe(503);
+            expect(res.body).toEqual({
+                error: 'LLM settings are currently unavailable.'
+            });
+        });
     });
 
     describe('GET /api/settings/presentation', () => {

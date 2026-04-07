@@ -25,6 +25,13 @@ const LLM_SETTINGS_CACHE_KEY = CACHE_KEYS.settings.LLM_SETTINGS;
 const DEFAULT_LLM_PROVIDER = 'openai';
 let cacheTimestamp = null;
 
+function createLlmSettingsUnavailableError() {
+    const error = new Error('LLM settings are currently unavailable.');
+    error.statusCode = 503;
+    error.code = 'LLM_SETTINGS_UNAVAILABLE';
+    return error;
+}
+
 async function findCanonicalSettingsRecord() {
     const records = await selectWithTimeout('llm_settings', {
         where: 'settings_key = $1',
@@ -117,8 +124,7 @@ export async function getLLMSettings() {
             return cachedSettings;
         }
 
-        // Return empty object as fallback
-        return {};
+        throw createLlmSettingsUnavailableError();
     }
 }
 

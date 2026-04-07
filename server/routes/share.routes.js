@@ -37,6 +37,9 @@ function createShareRouteHandler(logMessage, errorMessage, handler, errorRespond
                     return handled;
                 }
             }
+            if (error?.statusCode) {
+                return res.status(error.statusCode).json({ success: false, error: error.message });
+            }
             res.status(500).json({ success: false, error: errorMessage });
         }
     };

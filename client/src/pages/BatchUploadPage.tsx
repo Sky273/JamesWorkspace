@@ -101,7 +101,7 @@ const BatchUploadPage = (): JSX.Element => {
         .catch(err => {
           if (!isCancelled && isMountedRef.current) {
             logger.error('Error fetching templates:', err);
-            toast.error('Erreur lors du chargement des modèles');
+            toast.error(t('batchUpload.loadTemplatesError'));
           }
         });
 
@@ -110,7 +110,7 @@ const BatchUploadPage = (): JSX.Element => {
       };
     }
     return undefined;
-  }, [exportOption, templates.length]);
+  }, [exportOption, t, templates.length]);
 
   const updateFileStatus = useCallback((index: number, updates: Partial<FileStatus>) => {
     if (!isMountedRef.current) return;

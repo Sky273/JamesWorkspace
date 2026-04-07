@@ -5,6 +5,15 @@
     "selectDeal": "Filter by deal",
     "allDeals": "All deals",
     "selectMission": "Select a mission",
+    "missionSelector": {
+      "title": "Select a mission",
+      "searchPlaceholder": "Search a mission...",
+      "noResultsSearch": "No missions found",
+      "noResultsEmpty": "No missions available",
+      "noDescription": "No description",
+      "clientLabel": "Client",
+      "continue": "Continue"
+    },
     "loadingMissions": "Loading missions...",
     "noMissions": "No missions available",
     "advancedOptions": "Advanced options",

@@ -74,7 +74,7 @@
       "high": "High",
       "clickToFilter": "Click on a bubble to filter by type",
       "bubbleSizeInfo": "Bubble size proportional to value",
-      "refresh": "[FR] Refresh"
+      "refresh": "Refresh"
     },
     "trends": {
       "title": "Market Trends",
@@ -89,7 +89,11 @@
         "button": "Collect trends",
         "started": "Collection started in background. Estimated duration: 30-60 minutes."
       },
-      "refresh": "[FR] Refresh"
+      "collectDynamics": {
+        "button": "DYN_1 only",
+        "title": "Collection limited to DYN_1 (employment dynamics)"
+      },
+      "refresh": "Refresh"
     },
     "facts": {
       "results": "facts",
@@ -165,7 +169,7 @@
         "updated": "updated",
         "errors": "errors"
       },
-      "refresh": "[FR] Refresh"
+      "refresh": "Refresh"
     },
     "errors": {
       "loadFailed": "Failed to load data"

@@ -58,6 +58,8 @@
     "remoteListError": "Erreur lors de la récupération des sauvegardes",
     "restore": "Restaurer",
     "restoreConfirm": "Êtes-vous sûr de vouloir restaurer cette sauvegarde ? Cette action écrasera toutes les données actuelles de la base de données.",
+    "restoreConfirmTextPrompt": "Saisissez RESTORE pour confirmer cette restauration de base de données.",
+    "restoreCancelled": "Restauration annulée : le texte de confirmation ne correspond pas.",
     "restoreSuccess": "Base de données restaurée avec succès",
     "restoreError": "Erreur lors de la restauration",
     "restoreWarningTitle": "Attention - zone dangereuse",

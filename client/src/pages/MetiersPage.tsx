@@ -3,8 +3,9 @@
  * Interface for querying Rome 4.0 API and managing IT metiers.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { collectITMetiers, getStoredMetiers, type Metier } from '../services/romeService';
 import {
@@ -20,6 +21,7 @@ import {
 import { buildMetiersStats } from './MetiersPage.utils';
 
 export default function MetiersPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -32,13 +34,9 @@ export default function MetiersPage() {
   const [collecting, setCollecting] = useState(false);
   const [collectingSuccess, setCollectingSuccess] = useState(false);
 
-  useEffect(() => {
-    loadMetiers();
-  }, []);
-
   const stats = useMemo(() => buildMetiersStats(metiers), [metiers]);
 
-  const loadMetiers = async (search?: string) => {
+  const loadMetiers = useCallback(async (search?: string) => {
     try {
       setLoading(true);
       setError(null);
@@ -46,12 +44,16 @@ export default function MetiersPage() {
       setMetiers(data);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Erreur lors du chargement des metiers',
+        err instanceof Error ? err.message : t('marketRadar.errors.loadFailed'),
       );
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    void loadMetiers();
+  }, [loadMetiers]);
 
   const handleSearch = async (event: React.FormEvent) => {
     event.preventDefault();

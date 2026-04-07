@@ -114,7 +114,7 @@ const ResetPasswordPage = (): JSX.Element => {
                 placeholder={t('auth.resetPassword.newPasswordPlaceholder')}
                 minLength={8}
               />
-              <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute inset-y-0 right-0 top-7 flex items-center px-3 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200" aria-label={showPassword ? 'Hide password' : 'Show password'}>
+              <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute inset-y-0 right-0 top-7 flex items-center px-3 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200" aria-label={showPassword ? t('auth.togglePassword.hide') : t('auth.togglePassword.show')}>
                 {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
               </button>
             </div>
@@ -133,7 +133,7 @@ const ResetPasswordPage = (): JSX.Element => {
                 placeholder={t('auth.resetPassword.confirmPasswordPlaceholder')}
                 minLength={8}
               />
-              <button type="button" onClick={() => setShowConfirmPassword((value) => !value)} className="absolute inset-y-0 right-0 top-7 flex items-center px-3 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200" aria-label={showConfirmPassword ? 'Hide password confirmation' : 'Show password confirmation'}>
+              <button type="button" onClick={() => setShowConfirmPassword((value) => !value)} className="absolute inset-y-0 right-0 top-7 flex items-center px-3 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200" aria-label={showConfirmPassword ? t('auth.togglePassword.hideConfirmation') : t('auth.togglePassword.showConfirmation')}>
                 {showConfirmPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
               </button>
             </div>

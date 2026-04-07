@@ -31,6 +31,7 @@
     "exportOption": "Export CVs after processing (ZIP)",
     "exportTemplate": "Export template",
     "loadingTemplates": "Loading templates...",
+    "loadTemplatesError": "Error loading templates",
     "exportFormat": "Export format",
     "exportFormats": "Export formats (multiple selection)",
     "selectAtLeastOneFormat": "Select at least one format",

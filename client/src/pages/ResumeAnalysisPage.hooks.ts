@@ -98,7 +98,7 @@ export function useResumeAnalysisPage() {
 
     if (!currentResume) {
       logger.error('[ResumeAnalysisPage] No currentResume available for improvement');
-      toast.error('CV non charge. Veuillez rafraichir la page.');
+      toast.error(t('resume.analysis.resumeMissing', { defaultValue: 'Resume not loaded. Please refresh the page.' }));
       return;
     }
 

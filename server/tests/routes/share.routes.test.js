@@ -337,6 +337,20 @@ describe('Share Routes', () => {
         expect(mockCreateReadStream).not.toHaveBeenCalled();
     });
 
+    it('returns 503 when shared PDF lookup fails', async () => {
+        mockGetSharedPdfByToken.mockRejectedValueOnce(Object.assign(new Error('db down'), {
+            code: 'SHARE_PDF_LOOKUP_FAILED',
+            statusCode: 503
+        }));
+
+        const res = await request(app).get(`/api/share/pdf/${VALID_TOKEN}`);
+
+        expect(res.status).toBe(503);
+        expect(res.body.success).toBe(false);
+        expect(res.body.error).toBe('db down');
+        expect(mockCreateReadStream).not.toHaveBeenCalled();
+    });
+
     it('serves an original file only by file token', async () => {
         mockGetResumeFileMetadataByToken.mockResolvedValueOnce({
             id: 'r-1',
@@ -386,5 +400,21 @@ describe('Share Routes', () => {
         const res = await request(app).get(`/api/share/file/${VALID_TOKEN}`);
 
         expect(res.status).toBe(404);
+    });
+
+    it('returns 503 when original file info lookup fails on the authenticated route', async () => {
+        mockGetOriginalFileInfo.mockRejectedValueOnce(Object.assign(new Error('db down'), {
+            code: 'SHARE_ORIGINAL_FILE_LOOKUP_FAILED',
+            statusCode: 503
+        }));
+
+        const res = await request(app)
+            .get('/api/share/resume/res-1/original')
+            .set(AUTH);
+
+        expect(res.status).toBe(503);
+        expect(res.body.success).toBe(false);
+        expect(res.body.error).toBe('db down');
+        expect(mockGetOrCreateOriginalFileToken).not.toHaveBeenCalled();
     });
 });

@@ -31,6 +31,7 @@
     "exportOption": "Exporter les CV apres traitement (ZIP)",
     "exportTemplate": "Modele d'export",
     "loadingTemplates": "Chargement des modeles...",
+    "loadTemplatesError": "Erreur lors du chargement des modeles",
     "exportFormat": "Format d'export",
     "exportFormats": "Formats d'export (selection multiple)",
     "selectAtLeastOneFormat": "Selectionnez au moins un format",

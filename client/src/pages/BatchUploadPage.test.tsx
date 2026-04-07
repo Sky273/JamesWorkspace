@@ -150,6 +150,18 @@ describe('BatchUploadPage', () => {
     expect(screen.getByTestId('batch-options')).toHaveTextContent('admin');
   });
 
+  it('shows a localized error toast when template loading fails', async () => {
+    templateGetAllMock.mockRejectedValueOnce(new Error('network down'));
+    render(<BatchUploadPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'toggle-export-option' }));
+
+    await waitFor(() => {
+      expect(templateGetAllMock).toHaveBeenCalled();
+    });
+    expect(toastErrorMock).toHaveBeenCalledWith('batchUpload.loadTemplatesError');
+  });
+
   it('adds dropped files and starts processing from the action button', async () => {
     render(<BatchUploadPage />);
 

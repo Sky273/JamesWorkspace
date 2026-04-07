@@ -58,6 +58,8 @@
     "remoteListError": "Error fetching backups",
     "restore": "Restore",
     "restoreConfirm": "Are you sure you want to restore this backup? This will overwrite all current database data.",
+    "restoreConfirmTextPrompt": "Type RESTORE to confirm this database restore.",
+    "restoreCancelled": "Restore cancelled: confirmation text did not match.",
     "restoreSuccess": "Database restored successfully",
     "restoreError": "Restore failed",
     "restoreWarningTitle": "Warning - Danger Zone",

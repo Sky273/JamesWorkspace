@@ -229,9 +229,9 @@ const BackupPage = (): JSX.Element => {
             return;
         }
 
-        const confirmation = window.prompt('Type RESTORE to confirm this database restore.');
+        const confirmation = window.prompt(t('backup.restoreConfirmTextPrompt'));
         if (confirmation !== 'RESTORE') {
-            toast.error('Restore cancelled: confirmation text did not match.');
+            toast.error(t('backup.restoreCancelled'));
             return;
         }
         

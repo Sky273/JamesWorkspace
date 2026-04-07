@@ -3,6 +3,7 @@ const { promisify } = require('util');
 const { execFile } = require('child_process');
 
 const execFileAsync = promisify(execFile);
+const TRANSIENT_CLEANUP_ERROR_CODES = new Set(['EBUSY', 'EPERM']);
 
 function createTempArtifactPaths({ tempDir, prefix, outputs }) {
   const tempId = `${prefix}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -30,6 +31,32 @@ async function runExternalCommand({ command, args = [], cwd, timeout, failureMes
   }
 }
 
+function isTransientCleanupError(error) {
+  return TRANSIENT_CLEANUP_ERROR_CODES.has(error?.code);
+}
+
+async function removeTempFileWithRetry({ fs, filePath, maxAttempts = 2 }) {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await fs.unlink(filePath);
+      return null;
+    } catch (error) {
+      if (error?.code === 'ENOENT') {
+        return null;
+      }
+
+      lastError = error;
+      if (!isTransientCleanupError(error) || attempt === maxAttempts) {
+        break;
+      }
+    }
+  }
+
+  return lastError;
+}
+
 async function cleanupTempFiles({ fs, log, filePaths }) {
   const cleanupErrors = [];
 
@@ -38,15 +65,13 @@ async function cleanupTempFiles({ fs, log, filePaths }) {
       continue;
     }
 
-    try {
-      await fs.unlink(filePath);
-    } catch (error) {
-      if (error?.code !== 'ENOENT') {
-        cleanupErrors.push({
-          filePath,
-          error: error.message
-        });
-      }
+    const cleanupError = await removeTempFileWithRetry({ fs, filePath });
+    if (cleanupError) {
+      cleanupErrors.push({
+        filePath,
+        error: cleanupError.message,
+        code: cleanupError.code
+      });
     }
   }
 
@@ -61,5 +86,9 @@ async function cleanupTempFiles({ fs, log, filePaths }) {
 module.exports = {
   cleanupTempFiles,
   createTempArtifactPaths,
-  runExternalCommand
+  runExternalCommand,
+  _internal: {
+    isTransientCleanupError,
+    removeTempFileWithRetry
+  }
 };

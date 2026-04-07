@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { BriefcaseIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { useTranslation } from 'react-i18next';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
@@ -25,6 +26,7 @@ interface MissionSelectorProps {
 }
 
 const MissionSelector = ({ onSelect, onClose, selectedMissionId: _selectedMissionId = null }: MissionSelectorProps): JSX.Element => {
+  const { t } = useTranslation();
   const { authGet } = useAuthFetch();
   const [missions, setMissions] = useState<Mission[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -41,11 +43,11 @@ const MissionSelector = ({ onSelect, onClose, selectedMissionId: _selectedMissio
       setMissions(Array.isArray(data) ? data : (data.data || []));
     } catch (error) {
       logger.error('Error fetching missions:', error);
-      toast.error('Erreur lors du chargement des missions');
+      toast.error(t('profileMatching.errors.loadMissions'));
     } finally {
       setLoading(false);
     }
-  }, [authGet]);
+  }, [authGet, t]);
 
   useEffect(() => { fetchMissions(); }, [fetchMissions]);
 
@@ -64,14 +66,14 @@ const MissionSelector = ({ onSelect, onClose, selectedMissionId: _selectedMissio
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Sélectionner une Mission</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><XMarkIcon className="w-6 h-6" /></button>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('profileMatching.missionSelector.title')}</h2>
+          <button onClick={onClose} aria-label={t('common.close')} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><XMarkIcon className="w-6 h-6" /></button>
         </div>
 
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <SearchField
             containerClassName="relative"
-            placeholder="Rechercher une mission..."
+            placeholder={t('profileMatching.missionSelector.searchPlaceholder')}
             value={searchTerm}
             onChange={setSearchTerm}
           />
@@ -83,17 +85,21 @@ const MissionSelector = ({ onSelect, onClose, selectedMissionId: _selectedMissio
           ) : filteredMissions.length === 0 ? (
             <div className="text-center py-12">
               <BriefcaseIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500 dark:text-gray-400">{searchTerm ? 'Aucune mission trouvée' : 'Aucune mission disponible'}</p>
+              <p className="text-gray-500 dark:text-gray-400">
+                {searchTerm
+                  ? t('profileMatching.missionSelector.noResultsSearch')
+                  : t('profileMatching.missionSelector.noResultsEmpty')}
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
               {filteredMissions.map((mission) => (
-                <motion.div key={mission.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${selectedMission?.id === mission.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700'}`} onClick={() => handleSelectMission(mission)}>
+                <motion.button type="button" key={mission.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`w-full p-4 border-2 rounded-lg text-left transition-all ${selectedMission?.id === mission.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700'}`} aria-pressed={selectedMission?.id === mission.id} onClick={() => handleSelectMission(mission)}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">{mission.Title || 'Sans titre'}</h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{mission.Content || 'Pas de description'}</p>
-                      {mission.Customer && <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">Client: {mission.Customer}</p>}
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">{mission.Title || t('profileMatching.noTitle')}</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{mission.Content || t('profileMatching.missionSelector.noDescription')}</p>
+                      {mission.Customer && <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">{t('profileMatching.missionSelector.clientLabel')}: {mission.Customer}</p>}
                     </div>
                     {selectedMission?.id === mission.id && (
                       <div className="ml-4">
@@ -103,15 +109,15 @@ const MissionSelector = ({ onSelect, onClose, selectedMissionId: _selectedMissio
                       </div>
                     )}
                   </div>
-                </motion.div>
+                </motion.button>
               ))}
             </div>
           )}
         </div>
 
         <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
-          <button onClick={onClose} className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">Annuler</button>
-          <button onClick={handleConfirm} disabled={!selectedMission} className={`px-6 py-2 rounded-lg font-medium transition-colors ${selectedMission ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-500 cursor-not-allowed'}`}>Continuer</button>
+          <button onClick={onClose} className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">{t('common.cancel')}</button>
+          <button onClick={handleConfirm} disabled={!selectedMission} className={`px-6 py-2 rounded-lg font-medium transition-colors ${selectedMission ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-500 cursor-not-allowed'}`}>{t('profileMatching.missionSelector.continue')}</button>
         </div>
       </motion.div>
     </div>

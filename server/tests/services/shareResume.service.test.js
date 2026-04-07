@@ -162,6 +162,15 @@ describe('shareResume.service', () => {
         });
     });
 
+    it('throws a typed 503 when shared PDF lookup fails', async () => {
+        query.mockRejectedValueOnce(new Error('db down'));
+
+        await expect(getSharedPdfByToken('valid-token')).rejects.toMatchObject({
+            code: 'SHARE_PDF_LOOKUP_FAILED',
+            statusCode: 503
+        });
+    });
+
     it('rejects shared PDF paths outside the managed directory', async () => {
         query.mockResolvedValueOnce({
             rows: [{
@@ -200,6 +209,15 @@ describe('shareResume.service', () => {
             filename: 'original.pdf',
             name: 'John Doe',
             hasFile: true
+        });
+    });
+
+    it('throws a typed 503 when original file lookup fails', async () => {
+        query.mockRejectedValueOnce(new Error('db down'));
+
+        await expect(getOriginalFileInfo('resume-123')).rejects.toMatchObject({
+            code: 'SHARE_ORIGINAL_FILE_LOOKUP_FAILED',
+            statusCode: 503
         });
     });
 

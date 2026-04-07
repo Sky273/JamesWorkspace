@@ -211,9 +211,10 @@ describe('Settings Service', () => {
             invalidateSettingsCache();
             selectWithTimeout.mockRejectedValueOnce(new Error('DB error'));
             
-            // Should return empty object (no cache after invalidation)
-            const result = await getLLMSettings();
-            expect(result).toEqual({});
+            await expect(getLLMSettings()).rejects.toMatchObject({
+                statusCode: 503,
+                code: 'LLM_SETTINGS_UNAVAILABLE'
+            });
         });
     });
 

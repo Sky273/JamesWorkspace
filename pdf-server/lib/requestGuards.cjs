@@ -75,15 +75,19 @@ function sanitizeFilename(filename, extension) {
 }
 
 function buildGenerationFailureBody(formatLabel, error) {
-  if (error?.name === 'AbortError' || error?.code === 'ABORT_ERR') {
+  const normalizedError = error && typeof error === 'object'
+    ? error
+    : { message: String(error || ''), code: null, name: null };
+
+  if (normalizedError?.name === 'AbortError' || normalizedError?.code === 'ABORT_ERR') {
     return { status: 504, body: { error: `${formatLabel} generation timed out. Try with simpler content.` } };
   }
 
-  if (error.code === 'OUTPUT_TOO_LARGE') {
+  if (normalizedError?.code === 'OUTPUT_TOO_LARGE') {
     return { status: 413, body: { error: `Generated ${formatLabel} too large.` } };
   }
 
-  if (error.message?.toLowerCase().includes('timeout')) {
+  if (String(normalizedError?.message || '').toLowerCase().includes('timeout')) {
     return { status: 504, body: { error: `${formatLabel} generation timed out. Try with simpler content.` } };
   }
 

@@ -5,6 +5,15 @@
     "selectDeal": "Filtrer par affaire",
     "allDeals": "Toutes les affaires",
     "selectMission": "Sélectionnez une mission",
+    "missionSelector": {
+      "title": "Sélectionner une mission",
+      "searchPlaceholder": "Rechercher une mission...",
+      "noResultsSearch": "Aucune mission trouvée",
+      "noResultsEmpty": "Aucune mission disponible",
+      "noDescription": "Pas de description",
+      "clientLabel": "Client",
+      "continue": "Continuer"
+    },
     "loadingMissions": "Chargement des missions...",
     "noMissions": "Aucune mission disponible",
     "advancedOptions": "Options avancées",

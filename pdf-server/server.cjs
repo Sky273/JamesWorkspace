@@ -140,6 +140,16 @@ function isTimeoutAbort(signal, error) {
   return message.toLowerCase().includes('timed out');
 }
 
+function normalizeThrownError(error) {
+  if (error instanceof Error) {
+    return error;
+  }
+
+  const normalized = new Error(typeof error === 'string' ? error : 'Unknown error');
+  normalized.originalError = error;
+  return normalized;
+}
+
 function sanitizeRequestDebugId(value) {
   const text = String(value || '').trim();
   if (!text) {
@@ -214,16 +224,17 @@ app.post('/generate-pdf', internalServiceAuthMiddleware, requestTimeoutMiddlewar
       size: `${Math.round(pdfBuffer.length / 1024)}KB`
     });
   } catch (error) {
+    const normalizedError = normalizeThrownError(error);
     if (isClientDisconnectAbort(abortSignal)) {
       return;
     }
 
-    if (isAbortError(error) || isTimeoutAbort(abortSignal, error)) {
+    if (isAbortError(normalizedError) || isTimeoutAbort(abortSignal, normalizedError)) {
       const duration = Date.now() - startTime;
       logger.log('warn', 'PDF generation aborted', {
         ...debugContext,
         duration: `${duration}ms`,
-        reason: abortSignal?.reason?.message || error.message
+        reason: abortSignal?.reason?.message || normalizedError.message
       });
       if (!res.headersSent) {
         res.status(504).json({ error: 'PDF generation timed out.' });
@@ -234,12 +245,12 @@ app.post('/generate-pdf', internalServiceAuthMiddleware, requestTimeoutMiddlewar
     const duration = Date.now() - startTime;
     logger.log('error', 'Error generating PDF', {
       ...debugContext,
-      error: error.message,
+      error: normalizedError.message,
       duration: `${duration}ms`,
-      stack: error.stack?.split('\n').slice(0, 3).join(' -> ')
+      stack: normalizedError.stack?.split('\n').slice(0, 3).join(' -> ')
     });
 
-    const failure = buildGenerationFailureBody('PDF', error);
+    const failure = buildGenerationFailureBody('PDF', normalizedError);
     res.status(failure.status).json(failure.body);
   } finally {
     cleanupAbortContext?.();
@@ -286,16 +297,17 @@ app.post('/generate-docx', internalServiceAuthMiddleware, requestTimeoutMiddlewa
       size: `${Math.round(docxBuffer.length / 1024)}KB`
     });
   } catch (error) {
+    const normalizedError = normalizeThrownError(error);
     if (isClientDisconnectAbort(abortSignal)) {
       return;
     }
 
-    if (isAbortError(error) || isTimeoutAbort(abortSignal, error)) {
+    if (isAbortError(normalizedError) || isTimeoutAbort(abortSignal, normalizedError)) {
       const duration = Date.now() - startTime;
       logger.log('warn', 'DOCX generation aborted', {
         ...debugContext,
         duration: `${duration}ms`,
-        reason: abortSignal?.reason?.message || error.message
+        reason: abortSignal?.reason?.message || normalizedError.message
       });
       if (!res.headersSent) {
         res.status(504).json({ error: 'Document generation timed out.' });
@@ -306,12 +318,12 @@ app.post('/generate-docx', internalServiceAuthMiddleware, requestTimeoutMiddlewa
     const duration = Date.now() - startTime;
     logger.log('error', 'Error generating DOCX', {
       ...debugContext,
-      error: error.message,
+      error: normalizedError.message,
       duration: `${duration}ms`,
-      stack: error.stack?.split('\n').slice(0, 3).join(' -> ')
+      stack: normalizedError.stack?.split('\n').slice(0, 3).join(' -> ')
     });
 
-    const failure = buildGenerationFailureBody('DOCX', error);
+    const failure = buildGenerationFailureBody('DOCX', normalizedError);
     res.status(failure.status).json(failure.body);
   } finally {
     cleanupAbortContext?.();

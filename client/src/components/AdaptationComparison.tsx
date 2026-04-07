@@ -3,7 +3,7 @@
  * TypeScript version
  */
 
-import { useState, useEffect, ChangeEvent } from 'react';
+import { useState, useEffect, ChangeEvent, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowsRightLeftIcon, DocumentTextIcon, SparklesIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { templateService } from '../utils/templateService';
@@ -49,9 +49,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
   const [exportLoading, setExportLoading] = useState<boolean>(false);
   const [showExportModal, setShowExportModal] = useState<boolean>(false);
 
-  useEffect(() => { fetchTemplates(); }, []);
-
-  const fetchTemplates = async (): Promise<void> => {
+  const fetchTemplates = useCallback(async (): Promise<void> => {
     try {
       setLoadingTemplates(true);
       const fetchedTemplates = await templateService.getAllTemplates();
@@ -59,16 +57,18 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
       if (fetchedTemplates.length > 0) setSelectedTemplate(fetchedTemplates[0].id);
     } catch (error) {
       logger.error('Error fetching templates:', error);
-      toast.error('Erreur lors du chargement des templates');
+      toast.error(t('adaptations.messages.loadError'));
     } finally {
       setLoadingTemplates(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => { void fetchTemplates(); }, [fetchTemplates]);
 
   const handleExportToPDF = async (): Promise<void> => {
     try {
       setExportLoading(true);
-      if (!selectedTemplate) { toast.error('Veuillez sélectionner un template'); return; }
+      if (!selectedTemplate) { toast.error(t('templates.selectTemplate')); return; }
 
       const template = await templateService.getTemplateById(selectedTemplate);
       if (!template) throw new Error('Template not found');
@@ -129,7 +129,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
       toast.success('PDF exporté avec succès');
     } catch (error) {
       logger.error('Error exporting PDF:', error);
-      toast.error('Erreur lors de l\'export PDF');
+      toast.error(t('adaptations.messages.exportError'));
     } finally {
       setExportLoading(false);
     }

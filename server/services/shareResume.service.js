@@ -162,7 +162,11 @@ export async function getSharedPdfByToken(token) {
         safeLog('error', 'Failed to get shared PDF', {
             error: error.message
         });
-        return null;
+        const serviceError = new Error('Failed to get shared PDF');
+        serviceError.code = 'SHARE_PDF_LOOKUP_FAILED';
+        serviceError.statusCode = 503;
+        serviceError.cause = error;
+        throw serviceError;
     }
 }
 
@@ -196,7 +200,11 @@ export async function getOriginalFileInfo(resumeId) {
             resumeId,
             error: error.message
         });
-        return null;
+        const serviceError = new Error('Failed to get original file info');
+        serviceError.code = 'SHARE_ORIGINAL_FILE_LOOKUP_FAILED';
+        serviceError.statusCode = 503;
+        serviceError.cause = error;
+        throw serviceError;
     }
 }
 

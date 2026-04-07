@@ -66,7 +66,8 @@
         "exportPDF": "Exporter en PDF",
         "exporting": "Exportation...",
         "sendEmail": "Envoyer par email"
-      }
+      },
+      "resumeMissing": "CV non charge. Veuillez rafraichir la page."
     },
     "actions": {
       "improveWithAI": "Améliorer avec l'IA",

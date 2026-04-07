@@ -89,6 +89,10 @@
         "button": "Collecter les tendances",
         "started": "Collecte lancée en arrière-plan. Durée estimée : 30-60 minutes."
       },
+      "collectDynamics": {
+        "button": "Collecte DYN_1",
+        "title": "Collecte limitée à DYN_1 (dynamique emploi)"
+      },
       "refresh": "Actualiser"
     },
     "facts": {

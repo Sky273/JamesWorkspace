@@ -372,4 +372,5 @@ describe('ResumeAnalysisPage', () => {
     expect(await screen.findByText('errors.loadResume')).toBeInTheDocument();
     expect(toastErrorMock).toHaveBeenCalledWith('errors.loadResume');
   });
+
 });
