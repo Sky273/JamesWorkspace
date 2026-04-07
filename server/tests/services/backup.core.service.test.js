@@ -13,11 +13,10 @@ const {
 } = vi.hoisted(() => ({
     mockExecAsync: vi.fn(),
     mockFs: {
-        existsSync: vi.fn(() => true),
-        mkdirSync: vi.fn(),
         createReadStream: vi.fn(() => ({ pipe: vi.fn().mockReturnThis() })),
         createWriteStream: vi.fn(() => ({ pipe: vi.fn().mockReturnThis() })),
         promises: {
+            mkdir: vi.fn(() => Promise.resolve()),
             access: vi.fn(() => Promise.resolve()),
             open: vi.fn(() => Promise.resolve({
                 read: vi.fn((buffer) => {
@@ -64,8 +63,6 @@ vi.mock('child_process', () => ({
 
 vi.mock('fs', () => ({
     default: mockFs,
-    existsSync: (...a) => mockFs.existsSync(...a),
-    mkdirSync: (...a) => mockFs.mkdirSync(...a),
     createReadStream: (...a) => mockFs.createReadStream(...a),
     createWriteStream: (...a) => mockFs.createWriteStream(...a),
     promises: mockFs.promises
@@ -110,8 +107,8 @@ import {
 describe('Backup Core Service', () => {
     beforeEach(() => {
         vi.resetAllMocks();
-        mockFs.existsSync.mockReturnValue(true);
         mockFs.promises.access.mockResolvedValue();
+        mockFs.promises.mkdir.mockResolvedValue();
         mockFs.promises.readdir.mockResolvedValue([]);
         mockFs.promises.stat.mockResolvedValue({ size: 1024, mtime: new Date('2024-06-01') });
         mockFs.promises.unlink.mockResolvedValue();

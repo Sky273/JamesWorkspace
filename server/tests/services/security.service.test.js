@@ -3,7 +3,7 @@
  * Tests circular buffer logging, log levels, events, and request metadata
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../utils/logger.backend.js', () => ({
     createModuleLogger: vi.fn(() => ({
@@ -15,23 +15,15 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
-vi.mock('fs', () => ({
-    default: {
-        existsSync: vi.fn(() => true),
-        mkdirSync: vi.fn(),
-        statSync: vi.fn(() => ({ size: 0 })),
-        renameSync: vi.fn(),
-        unlinkSync: vi.fn()
-    }
-}));
-
 vi.mock('fs/promises', () => ({
     default: {
+        mkdir: vi.fn(() => Promise.resolve()),
         appendFile: vi.fn(() => Promise.resolve()),
         stat: vi.fn(() => Promise.resolve({ size: 0 })),
         rename: vi.fn(() => Promise.resolve()),
         unlink: vi.fn(() => Promise.resolve())
     },
+    mkdir: vi.fn(() => Promise.resolve()),
     appendFile: vi.fn(() => Promise.resolve()),
     stat: vi.fn(() => Promise.resolve({ size: 0 })),
     rename: vi.fn(() => Promise.resolve()),
@@ -51,6 +43,15 @@ import {
 } from '../../services/security.service.js';
 
 describe('Security Service', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        fsPromises.mkdir.mockResolvedValue();
+        fsPromises.stat.mockResolvedValue({ size: 0 });
+        fsPromises.rename.mockResolvedValue();
+        fsPromises.unlink.mockResolvedValue();
+        fsPromises.appendFile.mockResolvedValue();
+    });
+
     describe('LOG_LEVELS', () => {
         it('should define standard log levels', () => {
             expect(LOG_LEVELS.INFO).toBe('INFO');
@@ -170,6 +171,19 @@ describe('Security Service', () => {
             await flushSecurityLogPersistenceForTests();
 
             expect(fsPromises.appendFile).not.toHaveBeenCalled();
+        });
+
+        it('should skip rotation checks when the log file does not exist yet', async () => {
+            fsPromises.stat
+                .mockRejectedValueOnce(Object.assign(new Error('missing'), { code: 'ENOENT' }))
+                .mockResolvedValueOnce({ size: 0 });
+
+            securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.AUTH_BLOCKED, {
+                ip: '5.5.5.5'
+            });
+            await flushSecurityLogPersistenceForTests();
+
+            expect(fsPromises.appendFile).toHaveBeenCalled();
         });
     });
 

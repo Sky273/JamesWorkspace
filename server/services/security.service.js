@@ -1,5 +1,4 @@
 import { MAX_LOGS } from '../config/constants.js';
-import fs from 'fs';
 import fsPromises from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -21,15 +20,6 @@ const LOG_DIR = path.join(__dirname, '../../logs');
 const SECURITY_LOG_FILE = path.join(LOG_DIR, 'security.log');
 const MAX_LOG_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_LOG_FILES = 5; // Keep 5 rotated files
-
-// Ensure log directory exists
-try {
-    if (!fs.existsSync(LOG_DIR)) {
-        fs.mkdirSync(LOG_DIR, { recursive: true });
-    }
-} catch (err) {
-    log.error('Failed to create log directory', { error: err.message });
-}
 
 // Log levels
 export const LOG_LEVELS = {
@@ -73,6 +63,16 @@ const securityLogBuffer = new Array(MAX_LOGS).fill(null);
 let securityLogWriteIndex = 0;
 let securityLogCount = 0;
 let securityLogPersistenceQueue = Promise.resolve();
+let securityLogDirectoryReady = false;
+
+async function ensureSecurityLogDirectory() {
+    if (securityLogDirectoryReady) {
+        return;
+    }
+
+    await fsPromises.mkdir(LOG_DIR, { recursive: true });
+    securityLogDirectoryReady = true;
+}
 
 /**
  * Get security logs as array (ordered by timestamp, newest first)
@@ -181,6 +181,7 @@ function shouldPersistLog(level, event) {
 function queueSecurityLogPersistence(logEntry) {
     securityLogPersistenceQueue = securityLogPersistenceQueue
         .then(async () => {
+            await ensureSecurityLogDirectory();
             await rotateLogFileIfNeeded();
             const logLine = JSON.stringify(logEntry) + '\n';
             await fsPromises.appendFile(SECURITY_LOG_FILE, logLine, 'utf8');
@@ -197,16 +198,26 @@ function queueSecurityLogPersistence(logEntry) {
  */
 async function rotateLogFileIfNeeded() {
     try {
-        if (!fs.existsSync(SECURITY_LOG_FILE)) return;
-        
-        const stats = await fsPromises.stat(SECURITY_LOG_FILE);
+        const stats = await fsPromises.stat(SECURITY_LOG_FILE).catch((error) => {
+            if (error?.code === 'ENOENT') {
+                return null;
+            }
+            throw error;
+        });
+        if (!stats) return;
         if (stats.size < MAX_LOG_FILE_SIZE) return;
         
         // Rotate existing files
         for (let i = MAX_LOG_FILES - 1; i >= 1; i--) {
             const oldFile = `${SECURITY_LOG_FILE}.${i}`;
             const newFile = `${SECURITY_LOG_FILE}.${i + 1}`;
-            if (fs.existsSync(oldFile)) {
+            const oldFileExists = await fsPromises.stat(oldFile).then(() => true).catch((error) => {
+                if (error?.code === 'ENOENT') {
+                    return false;
+                }
+                throw error;
+            });
+            if (oldFileExists) {
                 if (i === MAX_LOG_FILES - 1) {
                     await fsPromises.unlink(oldFile); // Delete oldest
                 } else {

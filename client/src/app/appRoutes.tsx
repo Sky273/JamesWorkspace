@@ -20,6 +20,7 @@ import {
   ResumeExportPage,
   ResumeAdaptPage,
   MissionViewPage,
+  DealViewPage,
   AdaptationViewPage,
   UserGuidePage,
   FactsPage,
@@ -74,6 +75,7 @@ export function AppRoutes(): JSX.Element {
         <Route path="missions" element={<MissionsPage />} />
         <Route path="missions/:id" element={<MissionViewPage />} />
         <Route path="clients" element={<ClientsPage />} />
+        <Route path="deals/:id" element={<DealViewPage />} />
         <Route path="adaptations" element={<AdaptationsPage />} />
         <Route path="adaptations/:id" element={<AdaptationViewPage />} />
         <Route path="profile-matching" element={<ProfileMatchingPage />} />

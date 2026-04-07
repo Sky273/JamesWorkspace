@@ -82,7 +82,7 @@ export default function FranceMapCanvas({
   mapRef,
   isDarkMode,
   dataSource,
-  selectedMetier,
+  selectedMetier: _selectedMetier,
   selectedRegion,
   hoveredRegion,
   currentRegionData,
@@ -124,6 +124,7 @@ export default function FranceMapCanvas({
       return undefined;
     }
 
+    const regionButtons = regionButtonsRef.current;
     const initialStyle = isDarkMode ? MAP_STYLES.dark : MAP_STYLES.light;
     const map = new maplibregl.Map({
       container: containerRef.current,
@@ -145,7 +146,7 @@ export default function FranceMapCanvas({
       popupRef.current = null;
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = [];
-      regionButtonsRef.current.clear();
+      regionButtons.clear();
       navControlRef.current = null;
       appliedStyleRef.current = null;
       mapRef.current = null;

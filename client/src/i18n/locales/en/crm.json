@@ -73,6 +73,7 @@
       "createTitle": "New deal",
       "editTitle": "Edit deal",
       "add": "New deal",
+      "createFirst": "Create a deal",
       "selectClientFirst": "Select a client first",
       "startDate": "Expected start date",
       "endDate": "Expected end date",
@@ -84,7 +85,23 @@
       "errorDeleting": "Error while deleting",
       "confirmDelete": "Confirm deletion",
       "deleteWarning": "Are you sure you want to delete the deal",
-      "resumesAssociatedWarning": "{{count}} CV(s) are associated with this deal."
+      "resumesAssociatedWarning": "{{count}} CV(s) are associated with this deal.",
+      "details": "Deal details",
+      "backToDeals": "Back to deals",
+      "associatedMissions": "Associated missions",
+      "associatedResumes": "Associated resumes",
+      "noAssociatedMissions": "No associated missions",
+      "noAssociatedResumes": "No associated resumes",
+      "notes": "Notes",
+      "budget": "Budget",
+      "dates": "Timeline",
+      "expectedStart": "Expected start",
+      "expectedEnd": "Expected end",
+      "createdAt": "Created on",
+      "updatedAt": "Updated on",
+      "notFound": "Deal not found",
+      "notFoundDescription": "This deal does not exist or is no longer accessible.",
+      "loadError": "Unable to load deal"
     }
   }
 }

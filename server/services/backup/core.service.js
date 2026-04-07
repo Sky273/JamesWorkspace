@@ -35,24 +35,26 @@ const PG_BIN_PATHS = [
 
 const SAFE_BACKUP_FILENAME_PATTERN = /^backup-(daily|weekly|monthly|manual)-[A-Za-z0-9_-]+-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.sql\.gz$/;
 
-// Ensure directories exist
-if (!fs.existsSync(BACKUP_DIR)) {
-    fs.mkdirSync(BACKUP_DIR, { recursive: true });
-}
-if (!fs.existsSync(TEMP_DIR)) {
-    fs.mkdirSync(TEMP_DIR, { recursive: true });
+async function ensureBackupDirectories() {
+    await Promise.all([
+        fs.promises.mkdir(BACKUP_DIR, { recursive: true }),
+        fs.promises.mkdir(TEMP_DIR, { recursive: true })
+    ]);
 }
 
 /**
  * Find PostgreSQL binary (pg_dump or psql)
  */
-function findPgBinary(binaryName) {
+async function findPgBinary(binaryName) {
     for (const binPath of PG_BIN_PATHS) {
         const fullPath = binPath ? path.join(binPath, binaryName) : binaryName;
         try {
-            if (binPath && fs.existsSync(fullPath)) {
+            if (!binPath) {
                 return fullPath;
             }
+
+            await fs.promises.access(fullPath);
+            return fullPath;
         } catch {
             // Continue to next path
         }
@@ -138,6 +140,7 @@ async function getBackupFilesMatching(pattern) {
  */
 export async function cleanupOldLocalBackups(type, retention) {
     try {
+        await ensureBackupDirectories();
         const pattern = new RegExp(`^backup-${type}-.*\\.sql\\.gz$`);
         const matchingFiles = await getBackupFilesMatching(pattern);
         
@@ -193,11 +196,12 @@ export async function createBackup(type = 'manual') {
     let historyEntry = null;
     
     try {
+        await ensureBackupDirectories();
         historyEntry = await createHistoryEntry(type, compressedFilename);
         
         safeLog('info', 'Starting database backup', { type, filename: compressedFilename });
         
-        const pgDumpBin = findPgBinary('pg_dump');
+        const pgDumpBin = await findPgBinary('pg_dump');
         
         try {
             await execFileAsync(pgDumpBin, ['--version']);
@@ -356,6 +360,7 @@ export async function restoreBackup(filename) {
     const localPath = buildSafePath(TEMP_DIR, safeFilename.replace(/\.gz$/i, ''));
     
     try {
+        await ensureBackupDirectories();
         safeLog('info', 'Starting database restore', { filename });
         
         await downloadFile(settings, remotePath, localCompressedPath);
@@ -369,7 +374,7 @@ export async function restoreBackup(filename) {
         
         await safeUnlink(localCompressedPath);
         
-        const psqlBin = findPgBinary('psql');
+        const psqlBin = await findPgBinary('psql');
         
         try {
             await execFileAsync(psqlBin, ['--version']);
@@ -445,6 +450,8 @@ export async function cleanupAllLocalBackups() {
         safeLog('debug', 'Backup target is remote, skipping local backup cleanup');
         return results;
     }
+
+    await ensureBackupDirectories();
     
     const types = [
         { type: 'daily', retention: settings.daily_retention || 7 },
@@ -493,6 +500,7 @@ export async function cleanupAllLocalBackups() {
  */
 export async function getLocalBackupStats() {
     try {
+        await ensureBackupDirectories();
         const files = await fs.promises.readdir(BACKUP_DIR);
         const stats = {
             daily: { count: 0, totalSize: 0, oldest: null, newest: null },

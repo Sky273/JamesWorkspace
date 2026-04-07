@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import {
   BriefcaseIcon,
+  EyeIcon,
   PencilSquareIcon,
   TrashIcon,
   UserIcon,
@@ -13,11 +14,12 @@ import { Deal, STATUS_CONFIG, PRIORITY_CONFIG } from './dealsTab.types';
 interface DealCardProps {
   deal: Deal;
   index: number;
+  onView: (deal: Deal) => void;
   onEdit: (deal: Deal) => void;
   onDelete: (deal: Deal) => void;
 }
 
-export default function DealCard({ deal, index, onEdit, onDelete }: DealCardProps) {
+export default function DealCard({ deal, index, onView, onEdit, onDelete }: DealCardProps) {
   const { t } = useTranslation();
 
   return (
@@ -81,6 +83,13 @@ export default function DealCard({ deal, index, onEdit, onDelete }: DealCardProp
         </div>
 
         <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
+          <button
+            onClick={() => onView(deal)}
+            className="p-2 text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 transition-colors"
+            title={t('common.view')}
+          >
+            <EyeIcon className="w-5 h-5" />
+          </button>
           <button
             onClick={() => onEdit(deal)}
             className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"

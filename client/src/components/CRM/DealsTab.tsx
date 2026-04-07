@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   BriefcaseIcon,
@@ -23,6 +23,8 @@ import SearchField from '../page/SearchField';
 
 const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
   const { t } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   
   // State
@@ -245,7 +247,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
     setContacts([]);
   };
 
-  const openEditModal = (deal: Deal) => {
+  const openEditModal = useCallback((deal: Deal) => {
     setSelectedDeal(deal);
     setFormData({
       title: deal.title,
@@ -261,7 +263,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
       fetchContacts(deal.client_id);
     }
     setFormModalOpen(true);
-  };
+  }, [fetchContacts]);
 
   const openCreateModal = () => {
     setSelectedDeal(null);
@@ -273,6 +275,63 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
     }
     setFormModalOpen(true);
   };
+
+  const openDealView = (deal: Deal) => {
+    navigate(`/deals/${deal.id}`);
+  };
+
+  const openEditModalById = useCallback(async (dealId: string) => {
+    const existingDeal = deals.find((deal) => deal.id === dealId);
+    if (existingDeal) {
+      openEditModal(existingDeal);
+      return;
+    }
+
+    try {
+      const options = await createAuthOptionsWithCsrf({ method: 'GET' });
+      const response = await fetchWithAuth(`/api/deals/${dealId}`, options);
+      if (!response.ok) {
+        throw new Error('Failed to fetch deal');
+      }
+
+      const data = await response.json();
+      openEditModal({
+        id: data.id,
+        title: data.title || data.Title || '',
+        description: data.description || data.Description || '',
+        status: data.status || data.Status || 'open',
+        priority: data.priority || data.Priority || 'medium',
+        client_id: data.client_id || data.clientId || '',
+        client_name: data.client_name || data.clientName,
+        client_type: data.client_type || data.clientType,
+        contact_id: data.contact_id || data.contactId || '',
+        contact_name: data.contact_name || data.contactName,
+        contact_email: data.contact_email || data.contactEmail,
+        contact_role: data.contact_role || data.contactRole,
+        expected_start_date: data.expected_start_date || data.expectedStartDate || '',
+        expected_end_date: data.expected_end_date || data.expectedEndDate || '',
+        budget_min: data.budget_min ?? data.budgetMin,
+        budget_max: data.budget_max ?? data.budgetMax,
+        resumes_count: data.resumes_count || data.resumesCount || 0,
+        missions_count: data.missions_count || data.missionsCount || 0,
+        created_at: data.created_at || data.createdAt || '',
+        updated_at: data.updated_at || data.updatedAt || ''
+      });
+    } catch (error) {
+      logger.error('Error fetching deal for edit:', error);
+      toast.error(t('crm.deals.messages.errorFetching'));
+    }
+  }, [deals, openEditModal, t]);
+
+  useEffect(() => {
+    const editDealId = (location.state as { editDealId?: string } | null)?.editDealId;
+    if (!editDealId) {
+      return;
+    }
+
+    void openEditModalById(editDealId);
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+  }, [location.pathname, location.search, location.state, navigate, openEditModalById]);
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
@@ -386,6 +445,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
               key={deal.id}
               deal={deal}
               index={index}
+              onView={openDealView}
               onEdit={openEditModal}
               onDelete={(d) => { setSelectedDeal(d); setDeleteModalOpen(true); }}
             />

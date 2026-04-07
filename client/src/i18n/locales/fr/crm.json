@@ -85,7 +85,23 @@
       "errorDeleting": "Erreur lors de la suppression",
       "confirmDelete": "Confirmer la suppression",
       "deleteWarning": "Êtes-vous sûr de vouloir supprimer l'affaire",
-      "resumesAssociatedWarning": "{{count}} CV(s) sont associés à cette affaire."
+      "resumesAssociatedWarning": "{{count}} CV(s) sont associés à cette affaire.",
+      "details": "Détail de l'affaire",
+      "backToDeals": "Retour aux affaires",
+      "associatedMissions": "Missions associées",
+      "associatedResumes": "CV associés",
+      "noAssociatedMissions": "Aucune mission associée",
+      "noAssociatedResumes": "Aucun CV associé",
+      "notes": "Notes",
+      "budget": "Budget",
+      "dates": "Planning",
+      "expectedStart": "Début prévu",
+      "expectedEnd": "Fin prévue",
+      "createdAt": "Créée le",
+      "updatedAt": "Mise à jour le",
+      "notFound": "Affaire introuvable",
+      "notFoundDescription": "Cette affaire n'existe pas ou vous n'y avez plus accès.",
+      "loadError": "Impossible de charger l'affaire"
     }
   }
 }

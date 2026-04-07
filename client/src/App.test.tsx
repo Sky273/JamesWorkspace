@@ -53,6 +53,7 @@ vi.mock('./pages/ResumeImprovePage', () => ({ default: renderPage('resume-improv
 vi.mock('./pages/ResumeExportPage', () => ({ default: renderPage('resume-export-page') }));
 vi.mock('./pages/ResumeAdaptPage', () => ({ default: renderPage('resume-adapt-page') }));
 vi.mock('./pages/MissionViewPage', () => ({ default: renderPage('mission-view-page') }));
+vi.mock('./pages/DealViewPage', () => ({ default: renderPage('deal-view-page') }));
 vi.mock('./pages/AdaptationViewPage', () => ({ default: renderPage('adaptation-view-page') }));
 vi.mock('./pages/UserGuidePage', () => ({ default: renderPage('guide-page') }));
 vi.mock('./pages/FactsPage', () => ({ default: renderPage('facts-page') }));

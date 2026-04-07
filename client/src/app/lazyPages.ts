@@ -19,6 +19,7 @@ export const ResumeImprovePage = lazy(() => import('../pages/ResumeImprovePage')
 export const ResumeExportPage = lazy(() => import('../pages/ResumeExportPage'));
 export const ResumeAdaptPage = lazy(() => import('../pages/ResumeAdaptPage'));
 export const MissionViewPage = lazy(() => import('../pages/MissionViewPage'));
+export const DealViewPage = lazy(() => import('../pages/DealViewPage'));
 export const AdaptationViewPage = lazy(() => import('../pages/AdaptationViewPage'));
 export const UserGuidePage = lazy(() => import('../pages/UserGuidePage'));
 export const FactsPage = lazy(() => import('../pages/FactsPage'));
