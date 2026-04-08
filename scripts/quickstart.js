@@ -9,16 +9,44 @@
  *   node scripts/quickstart.js --prod       # Production mode
  */
 
-import { spawn, exec } from 'child_process';
+import { spawn, exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.join(__dirname, '..');
+const NODE_EXECUTABLE = process.execPath;
+
+function resolveNpmCliPath() {
+    const nodeDir = path.dirname(NODE_EXECUTABLE);
+    const candidates = [
+        path.join(nodeDir, 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+        path.join(nodeDir, '..', 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js')
+    ];
+
+    for (const candidate of candidates) {
+        if (fs.existsSync(candidate)) {
+            return candidate;
+        }
+    }
+
+    throw new Error(`Unable to locate npm-cli.js for current Node runtime: ${NODE_EXECUTABLE}`);
+}
+
+const NPM_CLI_PATH = resolveNpmCliPath();
+
+async function runNpm(args, options = {}) {
+    return execFileAsync(NODE_EXECUTABLE, [NPM_CLI_PATH, ...args], options);
+}
+
+function spawnNpm(args, options = {}) {
+    return spawn(NODE_EXECUTABLE, [NPM_CLI_PATH, ...args], options);
+}
 
 // Parse arguments
 const args = process.argv.slice(2);
@@ -95,7 +123,7 @@ async function stopExistingServers() {
             }
         }
         log('  ✅ Existing servers stopped', 'green');
-    } catch (error) {
+    } catch {
         log('  ⚠️  Could not stop existing servers (may not be running)', 'yellow');
     }
     
@@ -132,6 +160,14 @@ async function checkPrerequisites() {
     }
     log(`  ✅ Node.js ${nodeVersion}`, 'green');
     
+    try {
+        const { stdout } = await runNpm(['--version'], { cwd: ROOT_DIR });
+        log(`  npm ${stdout.trim()} detected`, 'green');
+    } catch (error) {
+        log(`Unable to run npm from current Node installation: ${error.message}`, 'red');
+        process.exit(1);
+    }
+
     // Check if .env exists
     const envPath = path.join(ROOT_DIR, '.env');
     if (!fs.existsSync(envPath)) {
@@ -177,7 +213,7 @@ async function installDependencies() {
     if (needsInstall) {
         log('  📦 Running npm install...', 'cyan');
         try {
-            await execAsync('npm install', { cwd: ROOT_DIR });
+            await runNpm(['install'], { cwd: ROOT_DIR });
             log('  ✅ Dependencies installed', 'green');
         } catch (error) {
             log(`  ❌ npm install failed: ${error.message}`, 'red');
@@ -232,7 +268,7 @@ async function buildFrontend() {
     if (isProd) {
         logStep('4/6', 'Building frontend for production...');
         try {
-            await execAsync('npm run build', { cwd: ROOT_DIR });
+            await runNpm(['run', 'build'], { cwd: ROOT_DIR });
             log('  ✅ Frontend built successfully', 'green');
         } catch (error) {
             log(`  ❌ Build failed: ${error.message}`, 'red');
@@ -291,10 +327,9 @@ async function startServices() {
         const viteProtocol = viteHttpsEnabled ? 'https' : 'http';
         
         log(`  🚀 Starting Vite dev server (${viteProtocol}://localhost:${vitePort})...`, 'cyan');
-        const viteServer = spawn('npm', ['run', 'dev'], {
+        const viteServer = spawnNpm(['run', 'dev'], {
             cwd: ROOT_DIR,
-            stdio: ['ignore', 'pipe', 'pipe'],
-            shell: true
+            stdio: ['ignore', 'pipe', 'pipe']
         });
         pipeOutput(viteServer);
         services.push({ name: 'Vite Dev Server', process: viteServer, hasIpc: false, port: vitePort, protocol: viteProtocol });
