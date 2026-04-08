@@ -113,8 +113,7 @@ const ProfileMatchingPage = (): JSX.Element => {
       const data = await findMatchingProfiles(selectedMissionId, {
         limit,
         minScore,
-        weights,
-        dealId: selectedDealId || undefined
+        weights
       });
 
       setResults(data);

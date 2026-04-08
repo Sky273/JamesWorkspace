@@ -16,7 +16,6 @@ import {
 import type { Resume } from '../types/entities';
 import {
   RESUMES_PAGE_SIZE,
-  type ExpandedCategories,
   type ResumeStats,
   type ResumeViewMode,
   type TagsByCategory,
@@ -53,7 +52,6 @@ export function ResumesViewModeToggle({
 
 export function ResumesListPanel({
   authUserRole,
-  expandedCategories,
   filteredResumes,
   formatResumeDate,
   getTagCategory,
@@ -67,7 +65,6 @@ export function ResumesListPanel({
   loading,
   onRefresh,
   onToggleFilter,
-  onToggleTagExpansion,
   onDeleteResume,
   searchQuery,
   selectedTags,
@@ -82,7 +79,6 @@ export function ResumesListPanel({
   authUserRole?: string;
   clearFilters: () => void;
   currentPage: number;
-  expandedCategories: ExpandedCategories;
   filteredResumes: Resume[];
   formatResumeDate: (dateString?: string) => string;
   getTagCategory: (tag: string) => string;
@@ -97,7 +93,6 @@ export function ResumesListPanel({
   onDeleteResume: (resume: Resume, event: React.MouseEvent) => void;
   onRefresh: () => Promise<void>;
   onToggleFilter: () => void;
-  onToggleTagExpansion: (category: string) => void;
   searchQuery: string;
   selectedTags: string[];
   setSearchQuery: (value: string) => void;
@@ -127,11 +122,9 @@ export function ResumesListPanel({
         {totalCount > 0 ? (
           <ResumeFiltersPanel
             clearFilters={clearFilters}
-            expandedCategories={expandedCategories}
             getTagCategory={getTagCategory}
             handleTagClick={handleTagClick}
             isFilterExpanded={isFilterExpanded}
-            onToggleTagExpansion={onToggleTagExpansion}
             selectedTags={selectedTags}
             tagsByCategory={tagsByCategory}
           />

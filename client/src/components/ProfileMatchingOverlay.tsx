@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MagnifyingGlassIcon,
@@ -301,12 +302,12 @@ const ProfileMatchingOverlay = ({ mode }: ProfileMatchingOverlayProps): JSX.Elem
     ? t('profileMatching.searchingEstimatedTime')
     : t('profileMatching.analyzingProfileDescription');
 
-  return (
+  const overlay = (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm"
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm"
     >
       <motion.div
         initial={{ scale: 0.92, opacity: 0 }}
@@ -385,6 +386,12 @@ const ProfileMatchingOverlay = ({ mode }: ProfileMatchingOverlayProps): JSX.Elem
       </motion.div>
     </motion.div>
   );
+
+  if (typeof document === 'undefined') {
+    return overlay;
+  }
+
+  return createPortal(overlay, document.body);
 };
 
 export default ProfileMatchingOverlay;

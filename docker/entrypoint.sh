@@ -32,6 +32,23 @@ cleanup_stale_postgres_state() {
     fi
 }
 
+prepare_log_paths() {
+    mkdir -p /var/log/supervisor
+    mkdir -p /var/log/postgresql
+    mkdir -p /app/logs
+
+    touch /var/log/supervisor/supervisord.log
+    touch /var/log/supervisor/redis.out.log
+    touch /var/log/supervisor/redis.err.log
+    touch /var/log/supervisor/proxy-server.out.log
+    touch /var/log/supervisor/proxy-server.err.log
+    touch /var/log/supervisor/pdf-server.out.log
+    touch /var/log/supervisor/pdf-server.err.log
+    touch /var/log/postgresql/postgresql-18-main.log
+}
+
+prepare_log_paths
+
 # =============================================================================
 # Generate SSL Certificates (if not mounted)
 # =============================================================================

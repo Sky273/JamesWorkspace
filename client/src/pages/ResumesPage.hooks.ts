@@ -16,10 +16,6 @@ export interface TagsByCategory {
   [key: string]: string[];
 }
 
-export interface ExpandedCategories {
-  [key: string]: boolean;
-}
-
 export interface ResumeStats {
   total: number;
   improved: number;
@@ -83,10 +79,9 @@ export function useResumesDashboard() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [isFilterExpanded, setIsFilterExpanded] = useState(true);
+  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [resumeToDelete, setResumeToDelete] = useState<Resume | null>(null);
-  const [expandedCategories, setExpandedCategories] = useState<ExpandedCategories>({});
   const [allTags, setAllTags] = useState<TagsByCategory>(EMPTY_TAGS);
   const [viewMode, setViewMode] = useState<ResumeViewMode>(
     (location.state as { viewMode?: string } | null)?.viewMode === 'list' ? 'list' : 'byDeal'
@@ -319,7 +314,6 @@ export function useResumesDashboard() {
     confirmDeleteResume,
     currentPage,
     deleting,
-    expandedCategories,
     fetchResumes,
     filteredResumes,
     formatResumeDate,
@@ -335,7 +329,6 @@ export function useResumesDashboard() {
     resumeToDelete,
     searchQuery,
     selectedTags,
-    setExpandedCategories,
     setIsFilterExpanded,
     setSearchQuery,
     setViewMode,

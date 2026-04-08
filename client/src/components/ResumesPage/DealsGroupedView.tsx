@@ -45,8 +45,7 @@ const DealsGroupedView = ({ allTags, stats }: DealsGroupedViewProps): JSX.Elemen
   const { authGet } = useAuthFetch();
   const navigate = useNavigate();
 
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
-  const [isFilterExpanded, setIsFilterExpanded] = useState(true);
+  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [resumeToDelete, setResumeToDelete] = useState<ResumeBasic | null>(null);
   const [exportingDeal, setExportingDeal] = useState<{ id: string; title: string; resumeCount: number; adaptationCount: number } | null>(null);
@@ -206,12 +205,10 @@ const DealsGroupedView = ({ allTags, stats }: DealsGroupedViewProps): JSX.Elemen
         />
         <FilterPanel
           allTags={allTags}
-          expandedCategories={expandedCategories}
           getTagCategory={getTagCategory}
           handleTagClick={handleTagClick}
           isFilterExpanded={isFilterExpanded}
           selectedTags={selectedTags}
-          setExpandedCategories={setExpandedCategories}
           t={t}
           visibleData={visibleData}
         />

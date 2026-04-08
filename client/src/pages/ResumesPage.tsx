@@ -18,7 +18,6 @@ const ResumesPage = (): JSX.Element => {
     confirmDeleteResume,
     currentPage,
     deleting,
-    expandedCategories,
     fetchResumes,
     filteredResumes,
     formatResumeDate,
@@ -35,7 +34,6 @@ const ResumesPage = (): JSX.Element => {
     resumeToDelete,
     searchQuery,
     selectedTags,
-    setExpandedCategories,
     setIsFilterExpanded,
     setSearchQuery,
     setViewMode,
@@ -64,7 +62,6 @@ const ResumesPage = (): JSX.Element => {
           authUserRole={authUser?.role}
           clearFilters={clearFilters}
           currentPage={currentPage}
-          expandedCategories={expandedCategories}
           filteredResumes={filteredResumes}
           formatResumeDate={formatResumeDate}
           getTagCategory={getTagCategory}
@@ -79,12 +76,6 @@ const ResumesPage = (): JSX.Element => {
           onDeleteResume={openDeleteConfirm}
           onRefresh={fetchResumes}
           onToggleFilter={() => setIsFilterExpanded(!isFilterExpanded)}
-          onToggleTagExpansion={(category) =>
-            setExpandedCategories((previousState) => ({
-              ...previousState,
-              [category]: !previousState[category],
-            }))
-          }
           searchQuery={searchQuery}
           selectedTags={selectedTags}
           setSearchQuery={setSearchQuery}
