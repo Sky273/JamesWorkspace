@@ -211,11 +211,11 @@ export function startServer(app, serverDir) {
         };
         
         server = https.createServer(httpsOptions, app);
-        server.listen(HTTPS_PORT, async () => {
+        server.listen(HTTPS_PORT, '0.0.0.0', async () => {
             await onServerStart(server, 'HTTPS', HTTPS_PORT);
         });
     } else {
-        server = app.listen(PORT, async () => {
+        server = app.listen(PORT, '0.0.0.0', async () => {
             await onServerStart(server, 'HTTP', PORT);
         });
     }
