@@ -214,26 +214,48 @@ export async function purgeExpiredResumes() {
     `);
 
     let purgedCount = 0;
+    let skippedCount = 0;
 
     for (const resume of result.rows) {
         try {
-            await purgeResume(resume.id, { ...resume, isAutomated: true });
-            purgedCount++;
+            const purged = await purgeResume(resume.id, { ...resume, isAutomated: true });
+
+            if (purged) {
+                purgedCount++;
+            } else {
+                skippedCount++;
+                safeLog('warn', 'Resume selected for purge was not deleted', {
+                    resumeId: resume.id,
+                    consentStatus: resume.consent_status
+                });
+            }
         } catch (error) {
             safeLog('error', 'Failed to purge resume', { 
                 resumeId: resume.id, 
                 error: error.message 
             });
+            skippedCount++;
         }
     }
 
-    if (purgedCount > 0) {
-        safeLog('info', 'Resumes purged', { count: purgedCount });
+    if (result.rows.length > 0) {
+        safeLog('info', 'Purge batch completed', {
+            attemptedCount: result.rows.length,
+            purgedCount,
+            skippedCount
+        });
+    }
 
+    if (purgedCount > 0) {
         // Log batch purge action
         await logGdprAction({
             action: GDPR_ACTIONS.AUTO_PURGE_EXECUTED,
-            details: { purgedCount, reason: 'scheduled_cleanup' },
+            details: {
+                attemptedCount: result.rows.length,
+                purgedCount,
+                skippedCount,
+                reason: 'scheduled_cleanup'
+            },
             isAutomated: true
         });
     }

@@ -10,6 +10,7 @@ import {
   InformationCircleIcon,
   CheckCircleIcon,
   ClockIcon,
+  TrashIcon,
   XCircleIcon
 } from '@heroicons/react/24/outline';
 import PageHeader from '../components/page/PageHeader';
@@ -146,10 +147,13 @@ const GdprAuditPage = (): JSX.Element => {
   };
 
   const getActionIcon = (action: string, category: string): JSX.Element => {
+    if (action.includes('purged') || action === 'auto_purge_executed') {
+      return <TrashIcon className="h-5 w-5 text-amber-500" />;
+    }
     if (action.includes('granted') || action.includes('active')) {
       return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
     }
-    if (action.includes('refused') || action.includes('expired') || action.includes('purge')) {
+    if (action.includes('refused') || action.includes('expired')) {
       return <XCircleIcon className="h-5 w-5 text-red-500" />;
     }
     if (action.includes('reminder') || action.includes('request')) {

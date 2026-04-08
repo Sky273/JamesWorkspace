@@ -180,6 +180,36 @@ describe('Consent Scheduler Tasks', () => {
             expect(transaction).toHaveBeenCalledTimes(2);
         });
 
+        it('should not count resumes that were selected but not deleted', async () => {
+            query.mockResolvedValueOnce({
+                rows: [
+                    { id: 'r1', consent_status: 'refused', candidate_name: 'A' },
+                    { id: 'r2', consent_status: 'expired', candidate_name: 'B' }
+                ]
+            });
+
+            const mockClient = {
+                query: vi
+                    .fn()
+                    .mockImplementationOnce(() => ({ rows: [{ id: 'r1' }] }))
+                    .mockImplementationOnce(() => ({ rows: [{ id: 'r1' }] }))
+                    .mockImplementationOnce(() => ({ rows: [{ id: 'r1' }] }))
+                    .mockImplementationOnce(() => ({ rows: [{ id: 'r1' }] }))
+                    .mockImplementationOnce(() => ({ rows: [{ id: 'r2' }] }))
+                    .mockImplementationOnce(() => ({ rows: [{ id: 'r2' }] }))
+                    .mockImplementationOnce(() => ({ rows: [{ id: 'r2' }] }))
+                    .mockImplementationOnce(() => ({ rows: [] }))
+            };
+            transaction
+                .mockImplementationOnce(async (fn) => fn(mockClient))
+                .mockImplementationOnce(async (fn) => fn(mockClient));
+
+            const count = await purgeExpiredResumes();
+
+            expect(count).toBe(1);
+            expect(transaction).toHaveBeenCalledTimes(2);
+        });
+
         it('should return 0 if nothing to purge', async () => {
             query.mockResolvedValueOnce({ rows: [] });
             expect(await purgeExpiredResumes()).toBe(0);
