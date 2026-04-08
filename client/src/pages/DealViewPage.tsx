@@ -1,9 +1,10 @@
-import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import DealDetailView from '../components/CRM/DealDetailView';
 
 const DealViewPage = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   if (!id) {
     return <Navigate to="/clients?tab=deals" replace />;
@@ -26,6 +27,7 @@ const DealViewPage = (): JSX.Element => {
       dealId={id}
       onBack={handleBack}
       onEdit={handleEdit}
+      restoreScrollY={(location.state as { restoreScrollY?: number } | null)?.restoreScrollY ?? null}
     />
   );
 };

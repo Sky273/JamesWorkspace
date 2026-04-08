@@ -4,7 +4,27 @@
     "subtitle": "Manage your clients, prospects and deals",
     "tabs": {
       "clients": "Clients & Prospects",
-      "deals": "Deals"
+      "deals": "Deals",
+      "interviews": "Interviews"
+    },
+    "interviews": {
+      "kicker": "CRM Calendar",
+      "title": "Scheduled interviews",
+      "subtitle": "Track pipeline meetings in a monthly calendar view.",
+      "refresh": "Refresh",
+      "today": "Today",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "monthSummary_one": "{{count}} scheduled interview this month",
+      "monthSummary_other": "{{count}} scheduled interviews this month",
+      "dayDetails": "Day details",
+      "loading": "Loading scheduled interviews...",
+      "emptyDay": "No interview scheduled for this day.",
+      "emptyMonth": "No upcoming interview scheduled.",
+      "openMeeting": "Open meeting link",
+      "unknownCandidate": "Unknown candidate",
+      "loadError": "Unable to load scheduled interviews",
+      "more": "more"
     },
     "deals": {
       "title": "Deals",
@@ -77,6 +97,11 @@
       "selectClientFirst": "Select a client first",
       "startDate": "Expected start date",
       "endDate": "Expected end date",
+      "budgetMin": "Min budget (€)",
+      "budgetMax": "Max budget (€)",
+      "budgetMinPlaceholder": "E.g. 45000",
+      "budgetMaxPlaceholder": "E.g. 60000",
+      "notesPlaceholder": "Internal notes, client context, attention points...",
       "titleRequired": "Deal name is required",
       "created": "Deal created",
       "updated": "Deal updated",

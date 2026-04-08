@@ -26,6 +26,7 @@ const ResumeAnalysisPage = (): JSX.Element => {
     isImproving,
     processingStep,
     fromDealsView,
+    fromDealDetailView,
     hasImprovedText,
     resumeName,
     showShareModal,
@@ -76,13 +77,13 @@ const ResumeAnalysisPage = (): JSX.Element => {
   return (
     <div className="editorial-migrated-shell min-h-screen px-4 py-6 sm:px-6 sm:py-8">
       <div className="cv-surface mx-auto max-w-7xl rounded-[2.5rem] p-6 sm:p-8">
-        {fromDealsView && (
+        {(fromDealsView || fromDealDetailView) && (
           <button
             onClick={handleBackToDealsView}
             className="cv-ghost-button mb-4 inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium"
           >
             <ArrowLeftIcon className="h-4 w-4" />
-            {t('resumes.backToDealsView')}
+            {t('common.back')}
           </button>
         )}
 

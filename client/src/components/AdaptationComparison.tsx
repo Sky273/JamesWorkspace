@@ -19,6 +19,7 @@ import {
   normalizeTemplateStylesheet,
   summarizeTemplatePayload,
 } from '../utils/templateFragments';
+import type { ExportFormat } from './ResumeAnalysis/ExportTab';
 
 interface Template {
   id: string;
@@ -48,6 +49,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
   const [loadingTemplates, setLoadingTemplates] = useState<boolean>(false);
   const [exportLoading, setExportLoading] = useState<boolean>(false);
   const [showExportModal, setShowExportModal] = useState<boolean>(false);
+  const [selectedExportFormat, setSelectedExportFormat] = useState<ExportFormat>('pdf');
 
   const fetchTemplates = useCallback(async (): Promise<void> => {
     try {
@@ -65,7 +67,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
 
   useEffect(() => { void fetchTemplates(); }, [fetchTemplates]);
 
-  const handleExportToPDF = async (): Promise<void> => {
+  const handleExport = async (): Promise<void> => {
     try {
       setExportLoading(true);
       if (!selectedTemplate) { toast.error(t('templates.selectTemplate')); return; }
@@ -77,7 +79,8 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
       const content = removeSuggestionMarkers(adaptedText);
       const name = candidateName || 'Candidat';
       const title = candidateTitle || 'Titre Professionnel';
-      const simplifiedFilename = name.replace(/[^a-zA-Z]/g, '_') + '_adapted.pdf';
+      const fileExtension = selectedExportFormat === 'pdf' ? 'pdf' : selectedExportFormat;
+      const simplifiedFilename = `${name.replace(/[^a-zA-Z]/g, '_')}_adapted.${fileExtension}`;
 
       const stylesheet = normalizeTemplateStylesheet(template.Stylesheet);
       const processedBody = applyTemplatePlaceholders(template.TemplateContent, {
@@ -93,7 +96,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
         normalizeTemplateFragment(template.FooterContent, 'footer'),
         { name, title }
       );
-      logger.warn('Adaptation PDF export payload normalized', {
+      logger.warn('Adaptation export payload normalized', {
         templateId: template.id,
         filename: simplifiedFilename,
         htmlLength: processedBody.length,
@@ -109,26 +112,27 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
           stylesheet: stylesheet,
           headerContent: processedHeader || undefined,
           footerContent: processedFooter || undefined,
-          footerHeight: template.FooterHeight || 25
+          footerHeight: template.FooterHeight || 25,
+          format: selectedExportFormat,
         })
       });
 
-      const response = await fetchWithCsrfRetry('/generate-pdf', exportOptions, 300000);
+      const response = await fetchWithCsrfRetry(selectedExportFormat === 'pdf' ? '/generate-pdf' : '/generate-docx', exportOptions, 300000);
 
-      if (!response.ok) throw new Error('Failed to generate PDF');
+      if (!response.ok) throw new Error(`Failed to generate ${selectedExportFormat.toUpperCase()}`);
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${name.replace(/\s+/g, '_')}_adapted_${template.Name}.pdf`;
+      a.download = `${name.replace(/\s+/g, '_')}_adapted_${template.Name}.${fileExtension}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-      toast.success('PDF exporté avec succès');
+      toast.success(t('adaptations.messages.exportSuccess'));
     } catch (error) {
-      logger.error('Error exporting PDF:', error);
+      logger.error('Error exporting adaptation:', error);
       toast.error(t('adaptations.messages.exportError'));
     } finally {
       setExportLoading(false);
@@ -148,8 +152,8 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
               <select value={selectedTemplate} onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedTemplate(e.target.value)} disabled={loadingTemplates} className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
                 {templates.map(template => (<option key={template.id} value={template.id}>{template.Name}</option>))}
               </select>
-              <button onClick={handleExportToPDF} disabled={exportLoading || loadingTemplates || !selectedTemplate} className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors">
-                <ArrowDownTrayIcon className="w-4 h-4" />{exportLoading ? t('resume.actions.exporting') : t('adaptations.exportPDF')}
+              <button onClick={handleExport} disabled={exportLoading || loadingTemplates || !selectedTemplate} className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors">
+                <ArrowDownTrayIcon className="w-4 h-4" />{exportLoading ? t('resume.actions.exporting') : t('common.export')}
               </button>
             </div>
             <div className="flex items-center gap-2">
@@ -202,7 +206,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 transition-colors"
           >
             <ArrowDownTrayIcon className="w-4 h-4" />
-            {t('adaptations.exportPDF')}
+            {t('common.export')}
           </button>
         </div>
       )}
@@ -228,7 +232,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
             className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6"
           >
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              {t('adaptations.exportPDF')}
+              {t('common.export')}
             </h3>
             
             <div className="mb-6">
@@ -250,6 +254,21 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
               )}
             </div>
 
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('resume.analysis.exportOptions.format', 'Format')}
+              </label>
+              <select
+                value={selectedExportFormat}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedExportFormat(e.target.value as ExportFormat)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="pdf">PDF</option>
+                <option value="docx">DOCX (Word)</option>
+                <option value="doc">DOC (Word 97-2003)</option>
+              </select>
+            </div>
+
             <div className="flex justify-end gap-3">
               <button 
                 onClick={() => setShowExportModal(false)}
@@ -258,7 +277,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
                 {t('common.cancel')}
               </button>
               <button 
-                onClick={() => { handleExportToPDF(); setShowExportModal(false); }}
+                onClick={() => { void handleExport(); setShowExportModal(false); }}
                 disabled={exportLoading || loadingTemplates || !selectedTemplate}
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
               >

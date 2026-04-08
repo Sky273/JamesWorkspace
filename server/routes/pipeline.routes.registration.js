@@ -32,7 +32,7 @@ function createPipelineRouteHandler(logMessage, errorMessage, handler) {
 
 async function createPipelineEntry(req, res, access, services) {
     const normalizedEntry = normalizePipelineEntryPayload(req.body);
-    const { resumeId, missionId, clientId, stage, notes } = normalizedEntry;
+    const { resumeId, adaptationId, missionId, clientId, stage, notes } = normalizedEntry;
 
     if (!resumeId) {
         res.status(400).json({ error: 'Resume ID is required' });
@@ -41,6 +41,7 @@ async function createPipelineEntry(req, res, access, services) {
 
     const associationCheck = await services.validatePipelineAssociations({
         resumeId,
+        adaptationId: adaptationId || null,
         missionId: missionId || null,
         clientId: clientId || null,
         expectedFirmId: access.isAdmin ? null : access.userFirmId
@@ -52,6 +53,7 @@ async function createPipelineEntry(req, res, access, services) {
 
     return services.addToPipeline({
         resumeId,
+        adaptationId: adaptationId || null,
         missionId: missionId || null,
         clientId: clientId || null,
         stage: stage || 'new',

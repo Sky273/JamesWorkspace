@@ -58,6 +58,7 @@
     "viewList": "Liste",
     "viewByDeal": "Par affaire",
     "backToDealsView": "Retour à la vue par affaire",
+    "backToDealDetail": "Retour à l'affaire",
     "groupedView": {
       "deals": "affaires",
       "assigned": "CVs affectés",

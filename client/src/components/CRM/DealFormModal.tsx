@@ -168,6 +168,43 @@ export default function DealFormModal({
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('crm.deals.budgetMin')}
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="100"
+                      value={formData.budget_min ?? ''}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        budget_min: e.target.value === '' ? '' : Number(e.target.value)
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      placeholder={t('crm.deals.budgetMinPlaceholder')}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('crm.deals.budgetMax')}
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="100"
+                      value={formData.budget_max ?? ''}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        budget_max: e.target.value === '' ? '' : Number(e.target.value)
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      placeholder={t('crm.deals.budgetMaxPlaceholder')}
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     {t('crm.deals.description')}
@@ -177,6 +214,20 @@ export default function DealFormModal({
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    placeholder={t('crm.deals.descriptionPlaceholder')}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('crm.deals.notes')}
+                  </label>
+                  <textarea
+                    value={formData.notes || ''}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    rows={5}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    placeholder={t('crm.deals.notesPlaceholder')}
                   />
                 </div>
 

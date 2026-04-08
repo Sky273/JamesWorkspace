@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import {
   BriefcaseIcon,
+  CurrencyEuroIcon,
   EyeIcon,
   PencilSquareIcon,
   TrashIcon,
@@ -21,6 +22,7 @@ interface DealCardProps {
 
 export default function DealCard({ deal, index, onView, onEdit, onDelete }: DealCardProps) {
   const { t } = useTranslation();
+  const hasBudget = deal.budget_min != null || deal.budget_max != null;
 
   return (
     <motion.div
@@ -81,6 +83,23 @@ export default function DealCard({ deal, index, onView, onEdit, onDelete }: Deal
             <span>{deal.missions_count || 0} {t('crm.deals.missions')}</span>
           </div>
         </div>
+
+        {hasBudget && (
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <CurrencyEuroIcon className="w-4 h-4 flex-shrink-0" />
+            <span className="truncate">
+              {deal.budget_min != null && deal.budget_max != null
+                ? `${deal.budget_min.toLocaleString()} - ${deal.budget_max.toLocaleString()} €`
+                : `${(deal.budget_min ?? deal.budget_max ?? 0).toLocaleString()} €`}
+            </span>
+          </div>
+        )}
+
+        {deal.notes && (
+          <p className="mb-3 line-clamp-2 text-sm text-gray-600 dark:text-gray-400">
+            {deal.notes}
+          </p>
+        )}
 
         <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
           <button

@@ -7,13 +7,20 @@ import {
   BriefcaseIcon,
   BuildingOfficeIcon,
   CalendarIcon,
+  ChartBarIcon,
   CurrencyEuroIcon,
   DocumentTextIcon,
+  EyeIcon,
+  FolderIcon,
   PencilSquareIcon,
+  TagIcon,
   UserIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { useAuthFetch } from '../../hooks/useAuthFetch';
+import ConsentBadge, { type ConsentStatus } from '../ConsentBadge';
+import { getResumePreviewTags } from '../../pages/ResumesPage.hooks';
+import type { Resume } from '../../types/entities';
 import logger from '../../utils/logger.frontend';
 import { formatDate } from '../../utils/dateFormatter';
 import i18n from '../../i18n';
@@ -23,13 +30,19 @@ interface DealMission {
   id: string;
   title: string;
   status?: string;
+  client_name?: string;
+  contact_name?: string;
+  contact_role?: string;
+  created_at?: string;
+  adaptations_count?: number;
 }
 
-interface DealResume {
-  id: string;
-  filename: string;
-  status?: string;
-}
+type DealResume = Resume & {
+  deal_status?: string;
+  deal_notes?: string;
+  added_at?: string;
+  added_by_name?: string;
+};
 
 interface DealDetail extends Deal {
   notes?: string;
@@ -39,6 +52,7 @@ interface DealDetailViewProps {
   dealId: string;
   onBack?: () => void;
   onEdit?: (dealId: string) => void;
+  restoreScrollY?: number | null;
 }
 
 function formatDealDate(value?: string): string {
@@ -62,6 +76,12 @@ function getNumber(source: Record<string, unknown>, keys: string[]): number | un
     const value = source[key];
     if (typeof value === 'number' && Number.isFinite(value)) {
       return value;
+    }
+    if (typeof value === 'string' && value.trim()) {
+      const normalizedValue = Number.parseFloat(value.replace(',', '.'));
+      if (Number.isFinite(normalizedValue)) {
+        return normalizedValue;
+      }
     }
   }
   return undefined;
@@ -98,14 +118,37 @@ function normalizeMission(payload: Record<string, unknown>): DealMission {
     id: getString(payload, ['id', 'ID']) || '',
     title: getString(payload, ['title', 'Title']) || '',
     status: getString(payload, ['status', 'Status']),
+    client_name: getString(payload, ['client_name', 'clientName', 'Client Name']),
+    contact_name: getString(payload, ['contact_name', 'contactName', 'Contact Name']),
+    contact_role: getString(payload, ['contact_role', 'contactRole', 'Contact Role']),
+    created_at: getString(payload, ['created_at', 'createdAt', 'Created At']),
+    adaptations_count: getNumber(payload, ['adaptations_count', 'adaptationsCount']),
   };
 }
 
 function normalizeResume(payload: Record<string, unknown>): DealResume {
   return {
     id: getString(payload, ['id', 'ID']) || '',
-    filename: getString(payload, ['filename', 'Filename', 'title', 'Title', 'file_name']) || '',
-    status: getString(payload, ['status', 'Status']),
+    Name: getString(payload, ['name', 'Name', 'filename', 'Filename', 'file_name', 'File Name']) || '',
+    Title: getString(payload, ['title', 'Title']),
+    Status: (getString(payload, ['status', 'Status']) as Resume['Status']) || undefined,
+    'Global Rating': getString(payload, ['global_rating', 'globalRating', 'Global Rating']),
+    'Improved Global Rating': getString(payload, ['improved_global_rating', 'improvedGlobalRating', 'Improved Global Rating']),
+    Skills: getString(payload, ['skills', 'Skills']),
+    Industries: getString(payload, ['industries', 'Industries']),
+    Tools: getString(payload, ['tools', 'Tools']),
+    'Soft Skills': getString(payload, ['soft_skills', 'softSkills', 'Soft Skills']),
+    FirmName: getString(payload, ['firm_name', 'firmName', 'FirmName']),
+    'Created At': getString(payload, ['created_at', 'createdAt', 'Created At']),
+    candidate_name: getString(payload, ['candidate_name', 'candidateName']),
+    candidate_email: getString(payload, ['candidate_email', 'candidateEmail']),
+    consent_status: (getString(payload, ['consent_status', 'consentStatus']) as Resume['consent_status']) || undefined,
+    consent_token_expires_at: getString(payload, ['consent_token_expires_at', 'consentTokenExpiresAt']) || null,
+    retention_until: getString(payload, ['retention_until', 'retentionUntil']) || null,
+    deal_status: getString(payload, ['deal_status', 'dealStatus']),
+    deal_notes: getString(payload, ['deal_notes', 'dealNotes']),
+    added_at: getString(payload, ['added_at', 'addedAt']),
+    added_by_name: getString(payload, ['added_by_name', 'addedByName']),
   };
 }
 
@@ -122,7 +165,24 @@ function formatBudget(min?: number, max?: number): string | null {
   return formatter.format(min ?? max ?? 0);
 }
 
-export default function DealDetailView({ dealId, onBack, onEdit }: DealDetailViewProps): JSX.Element {
+function getResumeStatusBadgeClass(status?: string): string {
+  switch (status?.toLowerCase()) {
+    case 'improved':
+      return 'cv-status-pill cv-status-success';
+    case 'analyzed':
+      return 'cv-status-pill cv-status-primary';
+    case 'processing':
+    case 'pending':
+      return 'cv-status-pill cv-status-warning';
+    case 'error':
+    case 'failed':
+      return 'cv-status-pill cv-status-danger';
+    default:
+      return 'cv-status-pill cv-status-neutral';
+  }
+}
+
+export default function DealDetailView({ dealId, onBack, onEdit, restoreScrollY = null }: DealDetailViewProps): JSX.Element {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { authGet } = useAuthFetch();
@@ -181,6 +241,16 @@ export default function DealDetailView({ dealId, onBack, onEdit }: DealDetailVie
       active = false;
     };
   }, [authGet, dealId, t]);
+
+  useEffect(() => {
+    if (loading || !deal || restoreScrollY == null) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      window.scrollTo({ top: restoreScrollY, behavior: 'auto' });
+    });
+  }, [deal, loading, restoreScrollY]);
 
   const budgetLabel = useMemo(
     () => formatBudget(deal?.budget_min, deal?.budget_max),
@@ -378,19 +448,68 @@ export default function DealDetailView({ dealId, onBack, onEdit }: DealDetailVie
                   {t('crm.deals.noAssociatedMissions')}
                 </p>
               ) : (
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 gap-4">
                   {missions.map((mission) => (
-                    <div key={mission.id} className="rounded-[1.5rem] bg-white/60 p-4 ring-1 ring-slate-200/70 dark:bg-white/[0.03] dark:ring-white/10">
-                      <button
-                        onClick={() => navigate(`/missions/${mission.id}`)}
-                        className="text-left font-semibold text-slate-900 transition-colors hover:text-[var(--cv-primary)] dark:text-[var(--cv-text)]"
-                      >
-                        {mission.title || mission.id}
-                      </button>
-                      {mission.status ? (
-                        <p className="mt-1 text-sm text-slate-500 dark:text-[var(--cv-muted)]">{mission.status}</p>
-                      ) : null}
-                    </div>
+                    <article
+                      key={mission.id}
+                      className="cv-card group flex h-full flex-col overflow-hidden rounded-[2rem] border border-slate-200/70 bg-white/85 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl dark:border-white/8 dark:bg-[rgba(15,23,42,0.72)]"
+                    >
+                      <div className="border-b border-slate-200/70 p-5 dark:border-white/6">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-[var(--cv-primary-soft)] text-[var(--cv-primary)] shadow-sm">
+                            <BriefcaseIcon className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-2 flex flex-wrap items-center gap-2">
+                              {mission.status ? (
+                                <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700 dark:bg-white/6 dark:text-[var(--cv-muted)]">
+                                  {mission.status}
+                                </span>
+                              ) : null}
+                              {mission.adaptations_count != null ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-600 dark:bg-white/6 dark:text-[var(--cv-muted)]">
+                                  <TagIcon className="h-3.5 w-3.5" />
+                                  {mission.adaptations_count} adaptation(s)
+                                </span>
+                              ) : null}
+                            </div>
+                            <h3 className="cv-display line-clamp-2 text-xl font-semibold leading-tight text-slate-950 dark:text-[var(--cv-text)]">
+                              {mission.title || mission.id}
+                            </h3>
+                            <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-500 dark:text-[var(--cv-muted)]">
+                              {mission.client_name ? (
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 dark:bg-white/6">
+                                  <BuildingOfficeIcon className="h-4 w-4" />
+                                  {mission.client_name}
+                                </span>
+                              ) : null}
+                              {mission.contact_name ? (
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 dark:bg-white/6">
+                                  <UserIcon className="h-4 w-4" />
+                                  <span>{mission.contact_name}</span>
+                                  {mission.contact_role ? <span className="text-slate-400 dark:text-[#7f8ab0]">· {mission.contact_role}</span> : null}
+                                </span>
+                              ) : null}
+                              {mission.created_at ? (
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 dark:bg-white/6">
+                                  <CalendarIcon className="h-4 w-4" />
+                                  {formatDealDate(mission.created_at)}
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-5">
+                        <button
+                          onClick={() => navigate(`/missions/${mission.id}`)}
+                          className="cv-ghost-button inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold"
+                        >
+                          <EyeIcon className="h-5 w-5" />
+                          {t('missions.view')}
+                        </button>
+                      </div>
+                    </article>
                   ))}
                 </div>
               )}
@@ -408,20 +527,124 @@ export default function DealDetailView({ dealId, onBack, onEdit }: DealDetailVie
                   {t('crm.deals.noAssociatedResumes')}
                 </p>
               ) : (
-                <div className="space-y-3">
-                  {resumes.map((resume) => (
-                    <div key={resume.id} className="rounded-[1.5rem] bg-white/60 p-4 ring-1 ring-slate-200/70 dark:bg-white/[0.03] dark:ring-white/10">
-                      <button
-                        onClick={() => navigate(`/resumes/${resume.id}/analysis`)}
-                        className="text-left font-semibold text-slate-900 transition-colors hover:text-[var(--cv-primary)] dark:text-[var(--cv-text)]"
+                <div className="grid grid-cols-1 gap-4">
+                  {resumes.map((resume) => {
+                    const displayName = resume.Name || resume.name || t('resumes.untitled');
+                    const rating = Number(resume['Improved Global Rating'] ?? resume['Global Rating'] ?? 0);
+                    const tags = (['Skills', 'Industries', 'Tools', 'Soft Skills'] as const).flatMap((category) =>
+                      getResumePreviewTags(resume, category).slice(0, 2)
+                    );
+
+                    return (
+                      <article
+                        key={resume.id}
+                        className="cv-card group overflow-hidden rounded-[2rem] transition-all"
                       >
-                        {resume.filename || resume.id}
-                      </button>
-                      {resume.status ? (
-                        <p className="mt-1 text-sm text-slate-500 dark:text-[var(--cv-muted)]">{resume.status}</p>
-                      ) : null}
-                    </div>
-                  ))}
+                        <div className="border-b border-slate-200/70 p-5 dark:border-white/6">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-[var(--cv-primary-soft)] text-[var(--cv-primary)]">
+                                  <DocumentTextIcon className="h-5 w-5" />
+                                </div>
+                                <h3 className="cv-display truncate text-lg font-bold text-slate-950 dark:text-[#dee5ff]">
+                                  {displayName}
+                                </h3>
+                              </div>
+                              {resume.Title ? (
+                                <p className="mt-2 truncate pl-12 text-sm text-slate-600 dark:text-[#a3aac4]">
+                                  {resume.Title}
+                                </p>
+                              ) : null}
+                            </div>
+                            <span className={`cv-pill inline-flex w-fit flex-shrink-0 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${getResumeStatusBadgeClass(resume.Status)}`}>
+                              {t(`resumes.status.${resume.Status?.toLowerCase() || 'new'}`)}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="p-5">
+                          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex items-center gap-2">
+                              <ChartBarIcon className="h-5 w-5 text-slate-400 dark:text-[#7f8ab0]" />
+                              <span className="text-sm text-slate-600 dark:text-[#a3aac4]">{t('resumes.score_label')}</span>
+                            </div>
+                            <span className="cv-display text-2xl font-bold text-slate-950 dark:text-[#dee5ff]">
+                              {Number.isFinite(rating) ? `${rating}%` : '0%'}
+                            </span>
+                          </div>
+
+                          <div className="cv-score-track mb-4 h-2 overflow-hidden rounded-full">
+                            <div className="cv-score-fill h-full rounded-full" style={{ width: `${Math.max(0, Math.min(rating, 100))}%` }} />
+                          </div>
+
+                          <div className="mb-3 flex flex-col gap-2 text-sm text-slate-500 dark:text-[#a3aac4]">
+                            {resume['Created At'] ? (
+                              <div className="flex items-center gap-2">
+                                <CalendarIcon className="h-4 w-4" />
+                                {formatDealDate(String(resume['Created At']))}
+                              </div>
+                            ) : null}
+                            {resume.FirmName ? (
+                              <div className="flex items-center gap-2">
+                                <BuildingOfficeIcon className="h-4 w-4" />
+                                <span>{resume.FirmName}</span>
+                              </div>
+                            ) : null}
+                            {resume.consent_status ? (
+                              <ConsentBadge
+                                status={resume.consent_status as ConsentStatus}
+                                candidateName={resume.candidate_name}
+                                candidateEmail={resume.candidate_email}
+                                consentTokenExpiresAt={resume.consent_token_expires_at}
+                                retentionUntil={resume.retention_until}
+                                compact={true}
+                              />
+                            ) : null}
+                            {resume.deal_notes ? (
+                              <p className="rounded-[1rem] bg-slate-50 px-3 py-2 text-sm text-slate-600 dark:bg-white/[0.03] dark:text-[var(--cv-muted)]">
+                                {resume.deal_notes}
+                              </p>
+                            ) : null}
+                          </div>
+
+                          {tags.length > 0 ? (
+                            <div className="mb-4 flex flex-wrap gap-2">
+                              {tags.map((tag, index) => (
+                                <span key={`${resume.id}-${tag}-${index}`} className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] text-slate-700 dark:bg-white/6 dark:text-[var(--cv-muted)]">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              onClick={() => navigate(`/resumes/${resume.id}/analysis`, {
+                                state: {
+                                  from: 'dealDetailView',
+                                  dealReturnContext: {
+                                    dealId,
+                                    scrollY: window.scrollY,
+                                  },
+                                },
+                              })}
+                              className="cv-ghost-button inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold"
+                            >
+                              <EyeIcon className="h-5 w-5" />
+                              {t('resumes.view')}
+                            </button>
+                            {resume.added_at ? (
+                              <span className="inline-flex min-h-12 items-center gap-2 rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-600 dark:bg-white/6 dark:text-[var(--cv-muted)]">
+                                <FolderIcon className="h-4 w-4" />
+                                {formatDealDate(resume.added_at)}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
               )}
             </div>

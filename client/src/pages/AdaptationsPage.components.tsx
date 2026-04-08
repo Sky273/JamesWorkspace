@@ -15,6 +15,7 @@ import {
   type AdaptationsViewMode,
   type Template,
 } from './AdaptationsPage.hooks';
+import type { ExportFormat } from '../components/ResumeAnalysis/ExportTab';
 
 export function AdaptationsHeader() {
   const { t } = useTranslation();
@@ -196,7 +197,9 @@ export function AdaptationsExportDialog({
   loadingTemplates,
   onClose,
   onConfirm,
+  selectedFormat,
   selectedTemplate,
+  setSelectedFormat,
   setSelectedTemplate,
   templates,
 }: {
@@ -206,7 +209,9 @@ export function AdaptationsExportDialog({
   loadingTemplates: boolean;
   onClose: () => void;
   onConfirm: () => Promise<void>;
+  selectedFormat: ExportFormat;
   selectedTemplate: string;
+  setSelectedFormat: (value: ExportFormat) => void;
   setSelectedTemplate: (value: string) => void;
   templates: Template[];
 }) {
@@ -217,6 +222,8 @@ export function AdaptationsExportDialog({
       templates={templates}
       selectedTemplate={selectedTemplate}
       setSelectedTemplate={setSelectedTemplate}
+      selectedFormat={selectedFormat}
+      setSelectedFormat={setSelectedFormat}
       onConfirm={() => {
         void onConfirm();
       }}

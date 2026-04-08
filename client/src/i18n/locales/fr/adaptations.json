@@ -35,7 +35,7 @@
     "noAdaptationsPrompt": "Adaptez un CV à une mission pour commencer.",
     "viewAdaptation": "Voir l'adaptation",
     "delete": "Supprimer",
-    "exportPDF": "Exporter PDF",
+    "exportPDF": "Exporter",
     "sendEmail": "Envoyer par email",
     "mission": "Mission",
     "searchPlaceholder": "Rechercher par CV ou mission...",
@@ -90,8 +90,8 @@
       "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette adaptation ?",
       "deleteSuccess": "Adaptation supprimée",
       "deleteError": "Erreur lors de la suppression",
-      "exportSuccess": "PDF exporté avec succès",
-      "exportError": "Erreur lors de l'export PDF"
+      "exportSuccess": "Export effectué avec succès",
+      "exportError": "Erreur lors de l'export"
     },
     "card": {
       "noName": "CV sans nom",

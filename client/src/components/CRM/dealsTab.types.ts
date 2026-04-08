@@ -20,6 +20,7 @@ export interface Deal {
   expected_end_date?: string;
   budget_min?: number;
   budget_max?: number;
+  notes?: string;
   resumes_count: number;
   missions_count: number;
   created_at: string;
@@ -48,6 +49,8 @@ export interface DealFormData {
   priority: string;
   expected_start_date?: string;
   expected_end_date?: string;
+  budget_min?: number | '';
+  budget_max?: number | '';
   notes?: string;
 }
 

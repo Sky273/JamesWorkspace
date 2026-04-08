@@ -163,6 +163,8 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
         description: formData.description || null,
         expected_start_date: formData.expected_start_date || null,
         expected_end_date: formData.expected_end_date || null,
+        budget_min: formData.budget_min === '' ? null : (formData.budget_min ?? null),
+        budget_max: formData.budget_max === '' ? null : (formData.budget_max ?? null),
         notes: formData.notes || null
       };
       
@@ -242,6 +244,8 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
       priority: 'medium',
       expected_start_date: '',
       expected_end_date: '',
+      budget_min: '',
+      budget_max: '',
       notes: ''
     });
     setContacts([]);
@@ -257,7 +261,10 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
       status: deal.status,
       priority: deal.priority,
       expected_start_date: deal.expected_start_date?.split('T')[0] || '',
-      expected_end_date: deal.expected_end_date?.split('T')[0] || ''
+      expected_end_date: deal.expected_end_date?.split('T')[0] || '',
+      budget_min: deal.budget_min ?? '',
+      budget_max: deal.budget_max ?? '',
+      notes: deal.notes || ''
     });
     if (deal.client_id) {
       fetchContacts(deal.client_id);
@@ -312,6 +319,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
         expected_end_date: data.expected_end_date || data.expectedEndDate || '',
         budget_min: data.budget_min ?? data.budgetMin,
         budget_max: data.budget_max ?? data.budgetMax,
+        notes: data.notes || data.Notes || '',
         resumes_count: data.resumes_count || data.resumesCount || 0,
         missions_count: data.missions_count || data.missionsCount || 0,
         created_at: data.created_at || data.createdAt || '',

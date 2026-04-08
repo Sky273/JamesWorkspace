@@ -5,7 +5,7 @@
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 
-import { DealsTab } from '../components/CRM';
+import { DealsTab, InterviewsTab } from '../components/CRM';
 import {
   ClientDetailModal,
   ClientFormModal,
@@ -31,9 +31,15 @@ const CRMPage = (): JSX.Element => {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="cv-surface app-page-shell">
       <CRMHeader />
 
-      <CRMMainTabs crmTab={dashboard.crmTab} onClientsClick={dashboard.goToClientsTab} onDealsClick={dashboard.goToDealsTab} />
+      <CRMMainTabs
+        crmTab={dashboard.crmTab}
+        onClientsClick={dashboard.goToClientsTab}
+        onDealsClick={dashboard.goToDealsTab}
+        onInterviewsClick={dashboard.goToInterviewsTab}
+      />
 
       {dashboard.crmTab === 'deals' && <DealsTab preFilterClientId={dashboard.searchParams.get('clientId') || undefined} />}
+      {dashboard.crmTab === 'interviews' && <InterviewsTab />}
 
       {dashboard.crmTab === 'clients' && (
         <>

@@ -274,6 +274,7 @@ CREATE TABLE public.batch_jobs (
 CREATE TABLE public.candidate_pipeline (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     resume_id uuid NOT NULL,
+    adaptation_id uuid,
     mission_id uuid,
     client_id uuid,
     stage character varying(50) DEFAULT 'new'::character varying NOT NULL,
@@ -2016,6 +2017,13 @@ CREATE INDEX idx_candidate_pipeline_client_id ON public.candidate_pipeline USING
 
 
 --
+-- Name: idx_candidate_pipeline_adaptation_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_candidate_pipeline_adaptation_id ON public.candidate_pipeline USING btree (adaptation_id);
+
+
+--
 -- Name: idx_candidate_pipeline_mission_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2898,6 +2906,14 @@ ALTER TABLE ONLY public.batch_jobs
 
 ALTER TABLE ONLY public.batch_jobs
     ADD CONSTRAINT batch_jobs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: candidate_pipeline candidate_pipeline_adaptation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.candidate_pipeline
+    ADD CONSTRAINT candidate_pipeline_adaptation_id_fkey FOREIGN KEY (adaptation_id) REFERENCES public.resume_adaptations(id) ON DELETE SET NULL;
 
 
 --

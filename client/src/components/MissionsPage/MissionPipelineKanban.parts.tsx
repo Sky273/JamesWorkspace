@@ -50,7 +50,6 @@ interface KanbanBoardProps {
   entries: PipelineEntry[];
   formatDate: (dateStr: string) => string;
   isEnglish: boolean;
-  noEntriesLabel: string;
   onDragLeave: () => void;
   onDragOver: (event: React.DragEvent, stageId: string) => void;
   onDragStart: (entry: PipelineEntry) => void;
@@ -85,6 +84,12 @@ function renderScore(score?: number) {
   );
 }
 
+function getEntryAnalysisPath(entry: PipelineEntry) {
+  return entry.adaptation_id
+    ? `/adaptations/${entry.adaptation_id}`
+    : `/resumes/${entry.resume_id}/analysis`;
+}
+
 function CandidateCard({
   draggedEntry,
   entry,
@@ -116,23 +121,46 @@ function CandidateCard({
           : 'hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_22px_50px_-28px_rgba(37,99,235,0.28)] dark:hover:border-white/15'
       }`}
     >
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
+      <div className="mb-4">
+        <div className="min-w-0">
           <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:bg-white/5 dark:text-[var(--cv-muted)]">
             <ArrowsRightLeftIcon className="h-3.5 w-3.5" />
             {texts.dragAndDrop}
           </div>
+          {entry.adaptation_id ? (
+            <div className="mb-2">
+              <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20">
+                Adapté
+              </span>
+            </div>
+          ) : entry.has_mission_adaptation ? (
+            <div className="mb-2">
+              <span className="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-500/20">
+                Original
+              </span>
+            </div>
+          ) : null}
           <Link
-            to={`/resumes/${entry.resume_id}/analysis`}
-            className="flex items-start gap-2 text-left text-sm font-semibold text-slate-900 transition-colors hover:text-[var(--cv-primary)] dark:text-[var(--cv-text)] dark:hover:text-white"
+            to={getEntryAnalysisPath(entry)}
+            className="flex w-full min-w-0 flex-1 items-start gap-2 text-left text-sm font-semibold text-slate-900 transition-colors hover:text-[var(--cv-primary)] dark:text-[var(--cv-text)] dark:hover:text-white"
           >
             <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20">
               <UserIcon className="h-4 w-4" />
             </span>
-            <span className="min-w-0 truncate text-base">{entry.resume_name || texts.unknownCandidate}</span>
+            <span className="block min-w-0 flex-1 text-base leading-tight">{entry.resume_name || texts.unknownCandidate}</span>
           </Link>
         </div>
-        {renderScore(entry.global_score)}
+        <div className="mt-3 flex items-start justify-between gap-2">
+          {renderScore(entry.global_score)}
+          <button
+            onClick={() => onRemove(entry)}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:text-[var(--cv-muted)] dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
+            title={texts.remove}
+            aria-label={texts.remove}
+          >
+            <TrashIcon className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {entry.tags && entry.tags.length > 0 ? (
@@ -182,19 +210,12 @@ function CandidateCard({
             <ChatBubbleLeftRightIcon className="h-4 w-4" />
           </button>
           <Link
-            to={`/resumes/${entry.resume_id}/analysis`}
+            to={getEntryAnalysisPath(entry)}
             className="inline-flex h-9 w-9 items-center justify-center rounded-2xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-[var(--cv-muted)] dark:hover:bg-white/10 dark:hover:text-white"
             title={texts.viewResume}
           >
             <EyeIcon className="h-4 w-4" />
           </Link>
-          <button
-            onClick={() => onRemove(entry)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-2xl text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:text-[var(--cv-muted)] dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
-            title={texts.remove}
-          >
-            <TrashIcon className="h-4 w-4" />
-          </button>
         </div>
       </div>
 
@@ -220,7 +241,6 @@ function StageColumn({
   entries,
   formatDate,
   isEnglish,
-  noEntriesLabel,
   onDragLeave,
   onDragOver,
   onDragStart,
@@ -236,7 +256,6 @@ function StageColumn({
   entries: PipelineEntry[];
   formatDate: (dateStr: string) => string;
   isEnglish: boolean;
-  noEntriesLabel: string;
   onDragLeave: () => void;
   onDragOver: (event: React.DragEvent, stageId: string) => void;
   onDragStart: (entry: PipelineEntry) => void;
@@ -290,7 +309,6 @@ function StageColumn({
         {stageEntries.length === 0 ? (
           <div className="flex min-h-[220px] flex-1 flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-slate-300 bg-slate-50/70 px-6 text-center dark:border-white/10 dark:bg-white/[0.02]">
             <SparklesIcon className="mb-3 h-8 w-8 text-slate-300 dark:text-slate-600" />
-            <p className="text-sm font-medium text-slate-500 dark:text-[var(--cv-muted)]">{noEntriesLabel}</p>
           </div>
         ) : (
           stageEntries.map((entry) => (
@@ -379,7 +397,6 @@ export function KanbanBoard({
   entries,
   formatDate,
   isEnglish,
-  noEntriesLabel,
   onDragLeave,
   onDragOver,
   onDragStart,
@@ -409,7 +426,6 @@ export function KanbanBoard({
               entries={entries}
               formatDate={formatDate}
               isEnglish={isEnglish}
-              noEntriesLabel={noEntriesLabel}
               onDragLeave={onDragLeave}
               onDragOver={onDragOver}
               onDragStart={onDragStart}

@@ -152,7 +152,7 @@ export function AdaptationActionBar({
         className="btn btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"
       >
         <ArrowDownTrayIcon className="h-4 w-4" />
-        {t('adaptations.exportPDF')}
+        {t('common.export')}
       </button>
       <button
         onClick={onSendEmail}

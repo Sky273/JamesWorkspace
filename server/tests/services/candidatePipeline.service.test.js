@@ -26,6 +26,7 @@ import {
     getPipelineByResumeId,
     getPipelineByMissionId,
     getPipelineOverview,
+    getAdaptationContext,
     getResumeFirmId,
     moveToStage,
     updatePipelineNotes,
@@ -84,14 +85,15 @@ describe('Candidate Pipeline Service', () => {
                 }
                 if (sql.includes('information_schema.columns')) {
                     if (params[0] === 'candidate_pipeline') {
-                        expect(params).toEqual(['candidate_pipeline', ['client_id']]);
-                        return Promise.resolve({ rows: [{ column_name: 'client_id' }] });
+                        expect(params).toEqual(['candidate_pipeline', ['client_id', 'adaptation_id']]);
+                        return Promise.resolve({ rows: [{ column_name: 'client_id' }, { column_name: 'adaptation_id' }] });
                     }
                     expect(params).toEqual(['pipeline_interviews', ['scheduled_at']]);
                     return Promise.resolve({ rows: [{ column_name: 'scheduled_at' }] });
                 }
                 if (sql.includes('pg_indexes')) {
                     return Promise.resolve({ rows: [
+                        { indexname: 'idx_candidate_pipeline_adaptation_id' },
                         { indexname: 'idx_candidate_pipeline_resume_id' },
                         { indexname: 'idx_candidate_pipeline_mission_id' },
                         { indexname: 'idx_candidate_pipeline_client_id' },
@@ -127,7 +129,7 @@ describe('Candidate Pipeline Service', () => {
                 .mockResolvedValueOnce({ rows: [] }); // history
 
             const result = await addToPipeline({
-                resumeId: 'r1', missionId: 'm1', clientId: 'c1',
+                resumeId: 'r1', adaptationId: 'a1', missionId: 'm1', clientId: 'c1',
                 stage: 'new', notes: 'Added', createdBy: 'u1'
             });
 
@@ -299,6 +301,11 @@ describe('Candidate Pipeline Service', () => {
             await expect(getResumeFirmId('r1')).resolves.toBe('f1');
         });
 
+        it('should return adaptation context', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'a1', firm_id: 'f1', resume_id: 'r1', mission_id: 'm1' }] });
+            await expect(getAdaptationContext('a1')).resolves.toEqual({ id: 'a1', firm_id: 'f1', resume_id: 'r1', mission_id: 'm1' });
+        });
+
         it('should return mission context', async () => {
             query.mockResolvedValueOnce({ rows: [{ firm_id: 'f1', client_id: 'c1' }] });
             await expect(getMissionContext('m1')).resolves.toEqual({ firm_id: 'f1', client_id: 'c1' });
@@ -322,15 +329,77 @@ describe('Candidate Pipeline Service', () => {
         it('should validate coherent pipeline associations', async () => {
             query
                 .mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] })
+                .mockResolvedValueOnce({ rows: [{ id: 'a1', firm_id: 'f1', resume_id: 'r1', mission_id: 'm1' }] })
                 .mockResolvedValueOnce({ rows: [{ firm_id: 'f1', client_id: 'c1' }] })
                 .mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] });
 
             await expect(validatePipelineAssociations({
                 resumeId: 'r1',
+                adaptationId: 'a1',
                 missionId: 'm1',
                 clientId: 'c1',
                 expectedFirmId: 'f1'
             })).resolves.toEqual({ ok: true, firmId: 'f1' });
+        });
+
+        it('should reject client mismatch with mission', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] })
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1', client_id: 'c1' }] })
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] });
+
+            await expect(validatePipelineAssociations({
+                resumeId: 'r1',
+                adaptationId: 'missing',
+                missionId: 'm1',
+                clientId: 'c1',
+                expectedFirmId: 'f1'
+            })).resolves.toEqual({
+                ok: false,
+                status: 400,
+                error: 'Adaptation not found'
+            });
+        });
+
+        it('should reject adaptation mismatch with mission', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] })
+                .mockResolvedValueOnce({ rows: [{ id: 'a1', firm_id: 'f1', resume_id: 'r1', mission_id: 'm2' }] })
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1', client_id: 'c1' }] })
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] });
+
+            await expect(validatePipelineAssociations({
+                resumeId: 'r1',
+                adaptationId: 'a1',
+                missionId: 'm1',
+                clientId: 'c1',
+                expectedFirmId: 'f1'
+            })).resolves.toEqual({
+                ok: false,
+                status: 400,
+                error: 'Adaptation does not match mission'
+            });
+        });
+
+        it('should reject client mismatch with mission', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] })
+                .mockResolvedValueOnce({ rows: [{ id: 'a1', firm_id: 'f1', resume_id: 'r1', mission_id: 'm1' }] })
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1', client_id: 'c1' }] })
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] });
+
+            await expect(validatePipelineAssociations({
+                resumeId: 'r1',
+                adaptationId: 'a1',
+                missionId: 'm1',
+                clientId: 'c2',
+                expectedFirmId: 'f1'
+            })).resolves.toEqual({
+                ok: false,
+                status: 400,
+                error: 'Client does not match mission'
+            });
         });
 
         it('should reject client mismatch with mission', async () => {

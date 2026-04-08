@@ -106,7 +106,9 @@ export const GET_DEALS_FOR_RESUME_SQL = `
 `;
 
 export const GET_RESUMES_FOR_DEAL_SQL = `
-    SELECT r.id, r.name, r.title, r.global_rating, r.industries, r.skills,
+    SELECT r.id, r.name, r.title, r.status, r.global_rating, r.improved_global_rating,
+           r.industries, r.skills, r.tools, r.soft_skills, r.firm_name, r.created_at,
+           r.candidate_name, r.candidate_email, r.consent_status, r.consent_token_expires_at, r.retention_until,
            dr.status as deal_status,
            dr.notes as deal_notes,
            dr.added_at,

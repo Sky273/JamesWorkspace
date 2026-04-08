@@ -4,6 +4,7 @@ import {
   BuildingOfficeIcon,
   EyeIcon,
   FolderIcon,
+  CalendarDaysIcon,
   GlobeAltIcon,
   MapPinIcon,
   PaperAirplaneIcon,
@@ -36,7 +37,17 @@ export function CRMHeader() {
   return <PageHeader title={t('crm.title')} subtitle={t('crm.subtitle')} />;
 }
 
-export function CRMMainTabs({ crmTab, onClientsClick, onDealsClick }: { crmTab: CRMTab; onClientsClick: () => void; onDealsClick: () => void }) {
+export function CRMMainTabs({
+  crmTab,
+  onClientsClick,
+  onDealsClick,
+  onInterviewsClick,
+}: {
+  crmTab: CRMTab;
+  onClientsClick: () => void;
+  onDealsClick: () => void;
+  onInterviewsClick: () => void;
+}) {
   const { t } = useTranslation();
 
   return (
@@ -48,6 +59,10 @@ export function CRMMainTabs({ crmTab, onClientsClick, onDealsClick }: { crmTab: 
       <button onClick={onDealsClick} className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition-colors ${crmTab === 'deals' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}>
         <FolderIcon className="w-5 h-5" />
         {t('crm.tabs.deals')}
+      </button>
+      <button onClick={onInterviewsClick} className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition-colors ${crmTab === 'interviews' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}>
+        <CalendarDaysIcon className="w-5 h-5" />
+        {t('crm.tabs.interviews')}
       </button>
     </div>
   );

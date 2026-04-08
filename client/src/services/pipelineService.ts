@@ -25,6 +25,8 @@ export interface PipelineStage {
 export interface PipelineEntry {
   id: string;
   resume_id: string;
+  adaptation_id?: string | null;
+  has_mission_adaptation?: boolean;
   mission_id: string | null;
   client_id: string | null;
   stage: string;
@@ -133,6 +135,7 @@ export async function getStages(): Promise<PipelineStage[]> {
  */
 export async function addToPipeline(data: {
   resumeId: string;
+  adaptationId?: string;
   missionId?: string;
   clientId?: string;
   stage?: string;

@@ -29,9 +29,11 @@ const AdaptationsPage = (): JSX.Element => {
     loadingTemplates,
     navigateToAdaptation,
     searchTerm,
+    selectedExportFormat,
     selectedTemplate,
     setFilterStatus,
     setSearchTerm,
+    setSelectedExportFormat,
     setSelectedTemplate,
     setViewMode,
     showExportModal,
@@ -84,7 +86,9 @@ const AdaptationsPage = (): JSX.Element => {
         loadingTemplates={loadingTemplates}
         onClose={closeExportModal}
         onConfirm={handleConfirmExport}
+        selectedFormat={selectedExportFormat}
         selectedTemplate={selectedTemplate}
+        setSelectedFormat={setSelectedExportFormat}
         setSelectedTemplate={setSelectedTemplate}
         templates={templates}
       />

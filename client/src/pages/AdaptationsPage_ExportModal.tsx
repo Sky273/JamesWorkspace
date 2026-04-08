@@ -7,6 +7,7 @@ import { ChangeEvent } from 'react';
 import { motion } from 'framer-motion';
 import { XMarkIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
+import type { ExportFormat } from '../components/ResumeAnalysis/ExportTab';
 
 interface Template {
   id: string;
@@ -19,12 +20,14 @@ interface ExportModalProps {
   templates: Template[];
   selectedTemplate: string;
   setSelectedTemplate: (templateId: string) => void;
+  selectedFormat: ExportFormat;
+  setSelectedFormat: (format: ExportFormat) => void;
   onConfirm: () => void;
   loading: boolean;
   loadingTemplates: boolean;
 }
 
-const ExportModal = ({ show, onClose, templates, selectedTemplate, setSelectedTemplate, onConfirm, loading, loadingTemplates }: ExportModalProps): JSX.Element | null => {
+const ExportModal = ({ show, onClose, templates, selectedTemplate, setSelectedTemplate, selectedFormat, setSelectedFormat, onConfirm, loading, loadingTemplates }: ExportModalProps): JSX.Element | null => {
   const { t } = useTranslation();
   if (!show) return null;
 
@@ -32,7 +35,7 @@ const ExportModal = ({ show, onClose, templates, selectedTemplate, setSelectedTe
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('adaptations.exportPDF')}</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('common.export')}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><XMarkIcon className="w-6 h-6" /></button>
         </div>
 
@@ -42,6 +45,12 @@ const ExportModal = ({ show, onClose, templates, selectedTemplate, setSelectedTe
             {templates.map(template => (<option key={template.id} value={template.id}>{template.Name}</option>))}
           </select>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t('adaptations.exportModal.description')}</p>
+          <label className="mt-5 block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('resume.analysis.exportOptions.format', 'Format')}</label>
+          <select value={selectedFormat} onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedFormat(e.target.value as ExportFormat)} className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
+            <option value="pdf">PDF</option>
+            <option value="docx">DOCX (Word)</option>
+            <option value="doc">DOC (Word 97-2003)</option>
+          </select>
         </div>
 
         <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">

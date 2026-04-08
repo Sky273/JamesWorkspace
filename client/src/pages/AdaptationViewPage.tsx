@@ -32,6 +32,7 @@ import {
   buildTemplateHtml,
   formatAdaptationDate,
 } from './AdaptationViewPage.utils';
+import type { ExportFormat } from '../components/ResumeAnalysis/ExportTab';
 
 const AdaptationViewPage = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
@@ -58,6 +59,7 @@ const AdaptationViewPage = (): JSX.Element => {
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  const [selectedExportFormat, setSelectedExportFormat] = useState<ExportFormat>('pdf');
 
   const [showEmailModal, setShowEmailModal] = useState(false);
 
@@ -190,7 +192,7 @@ const AdaptationViewPage = (): JSX.Element => {
     }
   };
 
-  const handleExportToPDF = async (): Promise<void> => {
+  const handleExport = async (): Promise<void> => {
     if (!adaptation || !selectedTemplate) return;
 
     try {
@@ -205,34 +207,38 @@ const AdaptationViewPage = (): JSX.Element => {
         adaptation,
         content,
       );
-      logger.warn('Adaptation view PDF export payload normalized', {
+      logger.warn('Adaptation view export payload normalized', {
         templateId: template.id,
-        filename: `${name.replace(/[^a-zA-Z]/g, '_')}_adapted.pdf`,
+        filename: `${name.replace(/[^a-zA-Z]/g, '_')}_adapted.${selectedExportFormat}`,
         htmlLength: processedBody.length,
         ...summarizeTemplatePayload(template),
       });
+
+      const endpoint = selectedExportFormat === 'pdf' ? '/generate-pdf' : '/generate-docx';
+      const fileExtension = selectedExportFormat === 'pdf' ? 'pdf' : selectedExportFormat;
 
       const exportOptions = await createAuthOptionsWithCsrf({
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify({
           htmlContent: processedBody,
-          filename: `${name.replace(/[^a-zA-Z]/g, '_')}_adapted.pdf`,
+          filename: `${name.replace(/[^a-zA-Z]/g, '_')}_adapted.${fileExtension}`,
           stylesheet: normalizeTemplateStylesheet(template.Stylesheet),
           headerContent: processedHeader || undefined,
           footerContent: processedFooter || undefined,
           footerHeight: template.FooterHeight || 25,
+          format: selectedExportFormat,
         }),
       });
 
-      const response = await fetchWithCsrfRetry('/generate-pdf', exportOptions, 300000);
-      if (!response.ok) throw new Error('Failed to generate PDF');
+      const response = await fetchWithCsrfRetry(endpoint, exportOptions, 300000);
+      if (!response.ok) throw new Error(`Failed to generate ${selectedExportFormat.toUpperCase()}`);
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
-      anchor.download = `${name.replace(/\s+/g, '_')}_adapted_${template.Name}.pdf`;
+      anchor.download = `${name.replace(/\s+/g, '_')}_adapted_${template.Name}.${fileExtension}`;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
@@ -309,9 +315,11 @@ const AdaptationViewPage = (): JSX.Element => {
           templates={templates}
           selectedTemplate={selectedTemplate}
           setSelectedTemplate={setSelectedTemplate}
+          selectedFormat={selectedExportFormat}
+          setSelectedFormat={setSelectedExportFormat}
           loadingTemplates={loadingTemplates}
           exportLoading={exportLoading}
-          onExport={handleExportToPDF}
+          onExport={handleExport}
           onClose={() => setShowExportModal(false)}
         />
       )}

@@ -1,6 +1,6 @@
 {
   "pipeline": {
-    "title": "Pipeline de Sélection",
+    "title": "Pipeline de sélection",
     "description": "Gérez le processus de sélection pour ce candidat",
     "addToProcess": "Ajouter au processus",
     "addToProcessTitle": "Ajouter au pipeline de sélection",
@@ -77,13 +77,23 @@
       "historyFailed": "Erreur lors du chargement de l'historique",
       "interviewRequired": "Le titre et la date sont requis",
       "outcomeRequired": "Le résultat est requis",
-      "selectResume": "Veuillez sélectionner un CV"
+      "selectResume": "Veuillez sélectionner un CV",
+      "selectCandidate": "Veuillez sélectionner un candidat"
     },
     "candidates": "candidat(s)",
     "addCandidate": "Ajouter un candidat",
     "searchResumes": "Rechercher un CV...",
+    "searchCandidates": "Rechercher un CV ou une adaptation...",
     "noResumesAvailable": "Aucun CV disponible",
+    "noCandidatesAvailable": "Aucun CV ou adaptation disponible",
+    "resume": "CV",
+    "adaptation": "Adaptation",
+    "original": "Original",
+    "adapted": "Adapté",
     "unknownCandidate": "Candidat inconnu",
+    "selectCandidate": "Sélectionnez un candidat",
+    "selectCandidateHelp": "Choisissez un CV ou une adaptation dans la liste pour l'ajouter au pipeline.",
+    "selectedAdaptationNote": "Adaptation sélectionnée : {{adaptation}}",
     "editNotes": "Modifier les notes",
     "viewResume": "Voir le CV",
     "notesUpdated": "Notes mises à jour",

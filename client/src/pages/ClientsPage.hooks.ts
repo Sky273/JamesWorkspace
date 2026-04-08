@@ -21,7 +21,7 @@ export interface DeleteTarget {
   clientId?: string;
 }
 
-export type CRMTab = 'clients' | 'deals';
+export type CRMTab = 'clients' | 'deals' | 'interviews';
 export type ClientFilter = 'all' | 'client' | 'prospect';
 export const CLIENTS_PAGE_SIZE = 12;
 
@@ -196,6 +196,14 @@ export function useClientsDashboard() {
     setSearchParams(nextParams);
   }, [searchParams, setSearchParams]);
 
+  const goToInterviewsTab = useCallback(() => {
+    setCrmTab('interviews');
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('tab', 'interviews');
+    nextParams.delete('clientId');
+    setSearchParams(nextParams);
+  }, [searchParams, setSearchParams]);
+
   return {
     activeTab,
     clientModalOpen,
@@ -209,6 +217,7 @@ export function useClientsDashboard() {
     fetchData,
     goToClientsTab,
     goToDealsTab,
+    goToInterviewsTab,
     goToPage,
     handleClientSubmit,
     handleContactSubmit,

@@ -1,21 +1,21 @@
 /**
- * PipelineAddCandidateModal - Modal for adding a resume to the pipeline
+ * PipelineAddCandidateModal - Modal for adding a candidate to the pipeline
  */
 
 import { useTranslation } from 'react-i18next';
-import { CheckCircleIcon, MagnifyingGlassIcon, XMarkIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon, CheckCircleIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { StarIcon } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import SearchField from '../page/SearchField';
-import type { Resume } from './MissionPipelineKanban.types';
+import type { CandidateOption } from './MissionPipelineKanban.types';
 
 interface PipelineAddCandidateModalProps {
-  availableResumes: Resume[];
+  availableCandidates: CandidateOption[];
   loadingResumes: boolean;
   searchQuery: string;
   setSearchQuery: (v: string) => void;
-  selectedResumeId: string;
-  setSelectedResumeId: (v: string) => void;
+  selectedCandidateId: string;
+  setSelectedCandidateId: (v: string) => void;
   addNotes: string;
   setAddNotes: (v: string) => void;
   onAdd: () => void;
@@ -46,12 +46,12 @@ const renderScore = (score?: number) => {
 };
 
 export default function PipelineAddCandidateModal({
-  availableResumes,
+  availableCandidates,
   loadingResumes,
   searchQuery,
   setSearchQuery,
-  selectedResumeId,
-  setSelectedResumeId,
+  selectedCandidateId,
+  setSelectedCandidateId,
   addNotes,
   setAddNotes,
   onAdd,
@@ -59,14 +59,15 @@ export default function PipelineAddCandidateModal({
 }: PipelineAddCandidateModalProps) {
   const { t } = useTranslation();
 
-  const filteredResumes = availableResumes.filter(
-    (resume) =>
-      resume.Name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      resume.Title?.toLowerCase().includes(searchQuery.toLowerCase())
+  const normalizedQuery = searchQuery.toLowerCase();
+  const filteredCandidates = availableCandidates.filter(
+    (candidate) =>
+      candidate.name.toLowerCase().includes(normalizedQuery) ||
+      (candidate.title || '').toLowerCase().includes(normalizedQuery)
   );
 
-  const selectedResume = filteredResumes.find((resume) => resume.id === selectedResumeId)
-    ?? availableResumes.find((resume) => resume.id === selectedResumeId)
+  const selectedCandidate = filteredCandidates.find((candidate) => candidate.id === selectedCandidateId)
+    ?? availableCandidates.find((candidate) => candidate.id === selectedCandidateId)
     ?? null;
 
   return (
@@ -77,7 +78,7 @@ export default function PipelineAddCandidateModal({
             <div className="cv-kicker mb-2">Pipeline mission</div>
             <h3 className="text-2xl font-bold text-slate-950 dark:text-[var(--cv-text)]">{t('pipeline.addCandidate')}</h3>
             <p className="mt-2 text-sm text-slate-600 dark:text-[var(--cv-muted)]">
-              {t('pipeline.searchResumes')} — sélectionnez un profil puis ajoutez du contexte si nécessaire.
+              {t('pipeline.searchCandidates')}
             </p>
           </div>
           <button
@@ -96,7 +97,7 @@ export default function PipelineAddCandidateModal({
                 containerClassName="relative"
                 value={searchQuery}
                 onChange={setSearchQuery}
-                placeholder={t('pipeline.searchResumes')}
+                placeholder={t('pipeline.searchCandidates')}
               />
             </div>
 
@@ -105,22 +106,22 @@ export default function PipelineAddCandidateModal({
                 <div className="flex h-full min-h-[240px] items-center justify-center">
                   <ArrowPathIcon className="h-7 w-7 animate-spin text-[var(--cv-primary)]" />
                 </div>
-              ) : filteredResumes.length === 0 ? (
+              ) : filteredCandidates.length === 0 ? (
                 <div className="flex min-h-[260px] flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-slate-300 bg-slate-50/70 px-6 text-center dark:border-white/10 dark:bg-white/[0.03]">
                   <MagnifyingGlassIcon className="mb-3 h-8 w-8 text-slate-300 dark:text-slate-600" />
                   <p className="text-sm font-medium text-slate-600 dark:text-[var(--cv-muted)]">
-                    {t('pipeline.noResumesAvailable')}
+                    {t('pipeline.noCandidatesAvailable')}
                   </p>
                 </div>
               ) : (
                 <div className="grid gap-3">
-                  {filteredResumes.map((resume) => {
-                    const isSelected = selectedResumeId === resume.id;
+                  {filteredCandidates.map((candidate) => {
+                    const isSelected = selectedCandidateId === candidate.id;
 
                     return (
                       <button
-                        key={resume.id}
-                        onClick={() => setSelectedResumeId(resume.id)}
+                        key={candidate.id}
+                        onClick={() => setSelectedCandidateId(candidate.id)}
                         className={`w-full rounded-[1.5rem] border p-4 text-left transition-all ${
                           isSelected
                             ? 'border-[var(--cv-primary)] bg-blue-50 shadow-[0_20px_40px_-28px_rgba(37,99,235,0.45)] dark:bg-blue-500/10'
@@ -133,20 +134,29 @@ export default function PipelineAddCandidateModal({
                               <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${isSelected ? 'bg-blue-600 text-white dark:bg-blue-400 dark:text-slate-950' : 'bg-slate-100 text-slate-400 dark:bg-white/5 dark:text-slate-500'}`}>
                                 {isSelected ? <CheckCircleIcon className="h-4 w-4" /> : <span className="h-2.5 w-2.5 rounded-full bg-current" />}
                               </span>
-                              <div className="truncate text-base font-semibold text-slate-900 dark:text-[var(--cv-text)]">{resume.Name}</div>
+                              <div className="truncate text-base font-semibold text-slate-900 dark:text-[var(--cv-text)]">{candidate.name}</div>
+                              {candidate.hasMissionAdaptation ? (
+                                <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
+                                  candidate.source === 'adaptation'
+                                    ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20'
+                                    : 'bg-amber-50 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-500/20'
+                                }`}>
+                                  {candidate.source === 'adaptation' ? t('pipeline.adapted') : t('pipeline.original')}
+                                </span>
+                              ) : null}
                             </div>
-                            {resume.Title ? (
-                              <div className="mt-1 truncate text-sm text-slate-500 dark:text-[var(--cv-muted)]">{resume.Title}</div>
+                            {candidate.title ? (
+                              <div className="mt-1 truncate text-sm text-slate-500 dark:text-[var(--cv-muted)]">{candidate.title}</div>
                             ) : null}
                           </div>
-                          {renderScore(resume['Global Score'])}
+                          {renderScore(candidate.score)}
                         </div>
 
-                        {resume.Tags && resume.Tags.length > 0 ? (
+                        {candidate.tags && candidate.tags.length > 0 ? (
                           <div className="mt-3 flex flex-wrap gap-1.5">
-                            {resume.Tags.slice(0, 6).map((tag, idx) => (
+                            {candidate.tags.slice(0, 6).map((tag, idx) => (
                               <span
-                                key={`${resume.id}-${tag}-${idx}`}
+                                key={`${candidate.id}-${tag}-${idx}`}
                                 className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600 dark:bg-white/5 dark:text-[var(--cv-muted)]"
                               >
                                 {tag}
@@ -166,10 +176,10 @@ export default function PipelineAddCandidateModal({
             <div>
               <div className="cv-kicker mb-2">Sélection</div>
               <h4 className="text-base font-semibold text-slate-900 dark:text-[var(--cv-text)]">
-                {selectedResume ? selectedResume.Name : t('pipeline.selectResume')}
+                {selectedCandidate ? selectedCandidate.name : t('pipeline.selectCandidate')}
               </h4>
               <p className="mt-1 text-sm text-slate-600 dark:text-[var(--cv-muted)]">
-                {selectedResume?.Title || 'Choisissez un profil dans la liste pour l’ajouter au pipeline.'}
+                {selectedCandidate?.title || t('pipeline.selectCandidateHelp')}
               </p>
             </div>
 
@@ -185,7 +195,7 @@ export default function PipelineAddCandidateModal({
                 placeholder={t('pipeline.notesPlaceholder')}
               />
               <p className="mt-2 text-xs text-slate-500 dark:text-[var(--cv-muted)]">
-                Ajoutez quelques repères utiles pour la suite du pipeline : contexte, points d’attention, prochaine action.
+                Ajoutez quelques repères utiles pour la suite du pipeline : contexte, points d'attention, prochaine action.
               </p>
             </div>
           </aside>
@@ -200,7 +210,7 @@ export default function PipelineAddCandidateModal({
           </button>
           <button
             onClick={onAdd}
-            disabled={!selectedResumeId}
+            disabled={!selectedCandidateId}
             className="cv-gradient-button inline-flex min-h-12 items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
           >
             {t('pipeline.add')}

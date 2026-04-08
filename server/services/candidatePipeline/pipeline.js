@@ -2,20 +2,21 @@ import { query } from '../../config/database.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { addToHistory } from './history.js';
 
-async function addToPipeline({ resumeId, missionId, clientId, stage = 'new', notes, createdBy }) {
+async function addToPipeline({ resumeId, adaptationId = null, missionId, clientId, stage = 'new', notes, createdBy }) {
     try {
         const result = await query(
             `
-            INSERT INTO candidate_pipeline (resume_id, mission_id, client_id, stage, notes, created_by)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO candidate_pipeline (resume_id, adaptation_id, mission_id, client_id, stage, notes, created_by)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             ON CONFLICT (resume_id, mission_id) DO UPDATE SET
+                adaptation_id = EXCLUDED.adaptation_id,
                 stage = EXCLUDED.stage,
                 client_id = COALESCE(EXCLUDED.client_id, candidate_pipeline.client_id),
                 notes = COALESCE(EXCLUDED.notes, candidate_pipeline.notes),
                 updated_at = CURRENT_TIMESTAMP
             RETURNING *
         `,
-            [resumeId, missionId, clientId, stage, notes, createdBy]
+            [resumeId, adaptationId, missionId, clientId, stage, notes, createdBy]
         );
 
         const pipeline = result.rows[0];
@@ -27,7 +28,7 @@ async function addToPipeline({ resumeId, missionId, clientId, stage = 'new', not
             notes: 'Ajouté au pipeline'
         });
 
-        safeLog('info', 'Resume added to pipeline', { resumeId, missionId, stage });
+        safeLog('info', 'Resume added to pipeline', { resumeId, adaptationId, missionId, stage });
         return pipeline;
     } catch (error) {
         safeLog('error', 'Failed to add resume to pipeline', { error: error.message });

@@ -23,10 +23,11 @@ import {
   cancelInterview
 } from '../../services/pipelineService';
 import { fetchWithAuth } from '../../utils/apiInterceptor';
+import resumeAdaptationService from '../../utils/resumeAdaptationService';
 import logger from '../../utils/logger.frontend';
 import PipelineAddCandidateModal from './PipelineAddCandidateModal';
 import { KanbanBoard, KanbanHeader, LoadingState } from './MissionPipelineKanban.parts';
-import type { InterviewFormValues, MissionPipelineKanbanProps, Resume } from './MissionPipelineKanban.types';
+import type { AdaptationOption, CandidateOption, InterviewFormValues, MissionPipelineKanbanProps, Resume } from './MissionPipelineKanban.types';
 import PipelineNotesModal from './PipelineNotesModal';
 import { PipelineInterviewsListModal, PipelineScheduleInterviewModal } from './PipelineInterviewModals';
 
@@ -45,10 +46,10 @@ export default function MissionPipelineKanban({
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
 
   const [showAddModal, setShowAddModal] = useState(false);
-  const [availableResumes, setAvailableResumes] = useState<Resume[]>([]);
+  const [availableCandidates, setAvailableCandidates] = useState<CandidateOption[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingResumes, setLoadingResumes] = useState(false);
-  const [selectedResumeId, setSelectedResumeId] = useState<string>('');
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string>('');
   const [addNotes, setAddNotes] = useState('');
 
   const [showNotesModal, setShowNotesModal] = useState(false);
@@ -73,9 +74,27 @@ export default function MissionPipelineKanban({
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      const [stagesData, entriesData] = await Promise.all([getStages(), getPipelineByMissionId(missionId)]);
+      const [stagesData, entriesData, adaptations] = await Promise.all([
+        getStages(),
+        getPipelineByMissionId(missionId),
+        resumeAdaptationService.getAdaptationsByMission(missionId),
+      ]);
+      const missionAdaptedResumeIds = new Set(
+        adaptations
+          .map((adaptation) => {
+            const rawAdaptation = adaptation as typeof adaptation & Record<string, unknown>;
+            return String(rawAdaptation['Resume ID'] || adaptation.resumeId || '');
+          })
+          .filter(Boolean)
+      );
+
       setStages(stagesData);
-      setEntries(entriesData);
+      setEntries(
+        entriesData.map((entry) => ({
+          ...entry,
+          has_mission_adaptation: missionAdaptedResumeIds.has(String(entry.resume_id)),
+        }))
+      );
     } catch (error) {
       logger.error('[MissionPipelineKanban] Error loading data:', error);
       toast.error(t('pipeline.errors.loadFailed'));
@@ -88,45 +107,139 @@ export default function MissionPipelineKanban({
     loadData();
   }, [loadData]);
 
-  const loadAvailableResumes = useCallback(async () => {
+  const loadAvailableCandidates = useCallback(async () => {
     try {
       setLoadingResumes(true);
-      const response = await fetchWithAuth('/api/resumes?limit=100');
+      const [response, adaptations] = await Promise.all([
+        fetchWithAuth('/api/resumes?limit=100'),
+        resumeAdaptationService.getAdaptationsByMission(missionId),
+      ]);
+
+      const existingResumeIds = new Set(entries.map((entry) => String(entry.resume_id)));
+      const existingAdaptationIds = new Set(
+        entries
+          .map((entry) => entry.adaptation_id)
+          .filter((adaptationId): adaptationId is string => Boolean(adaptationId))
+      );
+      const candidates: CandidateOption[] = [];
+      const resumeNameById = new Map<string, string>();
 
       if (response.ok) {
         const data = await response.json();
         const resumes = data.data || data || [];
-        const existingResumeIds = new Set(entries.map((entry) => entry.resume_id));
-        const available = resumes.filter((resume: Resume) => !existingResumeIds.has(resume.id));
-        setAvailableResumes(available);
+        for (const resume of resumes as Resume[]) {
+          resumeNameById.set(String(resume.id), resume.Name);
+        }
+        const availableResumes = resumes.filter((resume: Resume) => !existingResumeIds.has(String(resume.id)));
+        candidates.push(
+          ...availableResumes.map((resume: Resume) => {
+            const resumeId = String(resume.id);
+
+            return {
+            id: `resume:${resumeId}`,
+            resumeId,
+            name: resume.Name,
+            title: resume.Title,
+            score: resume['Global Score'],
+            tags: resume.Tags,
+            source: 'resume' as const,
+            };
+          })
+        );
       }
+
+      const missionAdaptations = adaptations
+        .map((adaptation) => {
+          const rawAdaptation = adaptation as typeof adaptation & Record<string, unknown>;
+          return {
+          id: adaptation.id,
+          resumeId: String(rawAdaptation['Resume ID'] || adaptation.resumeId || ''),
+          missionId: String(rawAdaptation['Mission ID'] || adaptation.missionId || ''),
+          resumeName: String(rawAdaptation['Resume Name'] || ''),
+          candidateName: rawAdaptation['Candidate Name'] as string | undefined,
+          adaptedTitle: rawAdaptation['Adapted Title'] as string | undefined,
+          matchScore: rawAdaptation['Match Score'] != null ? Number(rawAdaptation['Match Score']) : undefined,
+          status: (rawAdaptation.Status as string | undefined) || adaptation.status,
+        } satisfies AdaptationOption & { missionId: string };
+        })
+        .filter((adaptation) =>
+          adaptation.resumeId &&
+          adaptation.missionId === missionId
+        );
+
+      const availableAdaptations = missionAdaptations.filter(
+        (adaptation) => !existingAdaptationIds.has(adaptation.id)
+      );
+
+      const adaptedResumeIds = new Set(missionAdaptations.map((adaptation) => adaptation.resumeId));
+
+      candidates.push(
+        ...availableAdaptations.map((adaptation) => ({
+          id: `adaptation:${adaptation.id}`,
+          resumeId: adaptation.resumeId,
+          name: resumeNameById.get(adaptation.resumeId) || adaptation.resumeName || t('pipeline.unknownCandidate'),
+          title: adaptation.adaptedTitle,
+          score: adaptation.matchScore,
+          source: 'adaptation' as const,
+          hasMissionAdaptation: true,
+          adaptationId: adaptation.id,
+          adaptationStatus: adaptation.status,
+        }))
+      );
+
+      for (const candidate of candidates) {
+        if (candidate.source === 'resume' && adaptedResumeIds.has(candidate.resumeId)) {
+          candidate.hasMissionAdaptation = true;
+        }
+      }
+
+      candidates.sort((left, right) => {
+        if (left.source !== right.source) {
+          return left.source === 'adaptation' ? -1 : 1;
+        }
+
+        return left.name.localeCompare(right.name, undefined, { sensitivity: 'base' });
+      });
+
+      setAvailableCandidates(candidates);
     } catch (error) {
-      logger.error('[MissionPipelineKanban] Error loading resumes:', error);
+      logger.error('[MissionPipelineKanban] Error loading candidates:', error);
     } finally {
       setLoadingResumes(false);
     }
-  }, [entries]);
+  }, [entries, missionId, t]);
 
   const handleOpenAddModal = () => {
     setShowAddModal(true);
-    void loadAvailableResumes();
+    void loadAvailableCandidates();
   };
 
   const handleAddToPipeline = async () => {
-    if (!selectedResumeId) {
-      toast.error(t('pipeline.errors.selectResume'));
+    if (!selectedCandidateId) {
+      toast.error(t('pipeline.errors.selectCandidate'));
+      return;
+    }
+
+    const selectedCandidate = availableCandidates.find((candidate) => candidate.id === selectedCandidateId);
+    if (!selectedCandidate) {
+      toast.error(t('pipeline.errors.selectCandidate'));
       return;
     }
 
     try {
       await addToPipeline({
-        resumeId: selectedResumeId,
+        resumeId: selectedCandidate.resumeId,
+        adaptationId: selectedCandidate.source === 'adaptation' ? selectedCandidate.adaptationId : undefined,
         missionId,
-        notes: addNotes || undefined
+        notes: selectedCandidate.source === 'adaptation'
+          ? [addNotes.trim(), t('pipeline.selectedAdaptationNote', { adaptation: selectedCandidate.title || selectedCandidate.name })]
+            .filter(Boolean)
+            .join('\n\n')
+          : (addNotes || undefined)
       });
       toast.success(t('pipeline.addedSuccess'));
       setShowAddModal(false);
-      setSelectedResumeId('');
+      setSelectedCandidateId('');
       setAddNotes('');
       await loadData();
     } catch (error) {
@@ -331,7 +444,6 @@ export default function MissionPipelineKanban({
         entries={entries}
         formatDate={formatDate}
         isEnglish={isEnglish}
-        noEntriesLabel={t('pipeline.noEntries')}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
         onDragStart={handleDragStart}
@@ -356,12 +468,12 @@ export default function MissionPipelineKanban({
 
       {showAddModal && (
         <PipelineAddCandidateModal
-          availableResumes={availableResumes}
+          availableCandidates={availableCandidates}
           loadingResumes={loadingResumes}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          selectedResumeId={selectedResumeId}
-          setSelectedResumeId={setSelectedResumeId}
+          selectedCandidateId={selectedCandidateId}
+          setSelectedCandidateId={setSelectedCandidateId}
           addNotes={addNotes}
           setAddNotes={setAddNotes}
           onAdd={handleAddToPipeline}

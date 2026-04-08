@@ -13,6 +13,7 @@ export function normalizePipelineEntryPayload(payload = {}) {
     return {
         ...payload,
         resumeId: getFirstDefinedValue(payload, ['resumeId', 'resume_id']),
+        adaptationId: getFirstDefinedValue(payload, ['adaptationId', 'adaptation_id']),
         missionId: getFirstDefinedValue(payload, ['missionId', 'mission_id']),
         clientId: getFirstDefinedValue(payload, ['clientId', 'client_id']),
         stage: getFirstDefinedValue(payload, ['stage', 'Stage']),
@@ -24,6 +25,7 @@ export function buildPipelineEntryCreatePayload(payload = {}) {
     const normalized = normalizePipelineEntryPayload(payload);
     return {
         resumeId: normalized.resumeId,
+        adaptationId: normalized.adaptationId || null,
         missionId: normalized.missionId || null,
         clientId: normalized.clientId || null,
         stage: normalized.stage || 'new',

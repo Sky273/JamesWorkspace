@@ -231,6 +231,8 @@ const pipelineStageSchema = z.enum(['new', 'sourced', 'screening', 'interview', 
 export const createPipelineEntrySchema = z.object({
   resume_id: z.string().uuid().optional(),
   resumeId: z.string().uuid().optional(),
+  adaptation_id: z.string().uuid().optional().nullable(),
+  adaptationId: z.string().uuid().optional().nullable(),
   mission_id: z.string().uuid().optional().nullable(),
   missionId: z.string().uuid().optional().nullable(),
   client_id: z.string().uuid().optional().nullable(),

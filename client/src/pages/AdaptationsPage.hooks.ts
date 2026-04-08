@@ -16,6 +16,7 @@ import {
   normalizeTemplateStylesheet,
   summarizeTemplatePayload,
 } from '../utils/templateFragments';
+import type { ExportFormat } from '../components/ResumeAnalysis/ExportTab';
 
 export interface Adaptation {
   id: string;
@@ -91,6 +92,7 @@ export function useAdaptationsDashboard() {
   const [totalCount, setTotalCount] = useState(0);
   const [, setHasMore] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [selectedExportFormat, setSelectedExportFormat] = useState<ExportFormat>('pdf');
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -238,7 +240,7 @@ export function useAdaptationsDashboard() {
 
   const handleConfirmExport = useCallback(async () => {
     if (!adaptationToExport || !selectedTemplate) {
-      toast.error(t('adaptations.exportPDF'));
+      toast.error(t('common.export'));
       return;
     }
 
@@ -277,49 +279,53 @@ export function useAdaptationsDashboard() {
         normalizeTemplateFragment(template.FooterContent, 'footer'),
         { name: candidateName, title: candidateTitle }
       );
-      logger.warn('PDF export payload normalized', {
+      logger.warn('Adaptation export payload normalized', {
         templateId: template.id,
-        filename: `${baseFilename.replace(/[^a-zA-Z0-9_]/g, '')}.pdf`,
+        filename: `${baseFilename.replace(/[^a-zA-Z0-9_]/g, '')}.${selectedExportFormat}`,
         htmlLength: processedBody.length,
         ...summarizeTemplatePayload(template),
       });
+
+      const endpoint = selectedExportFormat === 'pdf' ? '/generate-pdf' : '/generate-docx';
+      const fileExtension = selectedExportFormat === 'pdf' ? 'pdf' : selectedExportFormat;
 
       const exportOptions = await createAuthOptionsWithCsrf({
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify({
           htmlContent: processedBody,
-          filename: `${baseFilename.replace(/[^a-zA-Z0-9_]/g, '')}.pdf`,
+          filename: `${baseFilename.replace(/[^a-zA-Z0-9_]/g, '')}.${fileExtension}`,
           stylesheet,
           headerContent: processedHeader || undefined,
           footerContent: processedFooter || undefined,
           footerHeight: template.FooterHeight || 25,
+          format: selectedExportFormat,
         }),
       });
 
-      const response = await fetchWithCsrfRetry('/generate-pdf', exportOptions, 300000);
+      const response = await fetchWithCsrfRetry(endpoint, exportOptions, 300000);
       if (!response.ok) {
-        throw new Error('Failed to generate PDF');
+        throw new Error(`Failed to generate ${selectedExportFormat.toUpperCase()}`);
       }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${baseFilename.replace(/[^a-zA-Z0-9_]/g, '')}.pdf`;
+      link.download = `${baseFilename.replace(/[^a-zA-Z0-9_]/g, '')}.${fileExtension}`;
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      toast.success(t('adaptations.messages.exportSuccess', 'PDF exporte avec succes'));
+      toast.success(t('adaptations.messages.exportSuccess', 'Export effectue avec succes'));
       closeExportModal();
     } catch (error) {
       logger.error('Error exporting PDF:', error);
-      toast.error(t('adaptations.messages.exportError', 'Erreur lors de l export PDF'));
+      toast.error(t('adaptations.messages.exportError', 'Erreur lors de l export'));
     } finally {
       setExportLoading(false);
     }
-  }, [adaptationToExport, closeExportModal, resumes, selectedTemplate, t]);
+  }, [adaptationToExport, closeExportModal, resumes, selectedExportFormat, selectedTemplate, t]);
 
   const getResumeName = useCallback((adaptation: Adaptation) => {
     if (adaptation['Resume Name']) {
@@ -383,9 +389,11 @@ export function useAdaptationsDashboard() {
     loadingTemplates,
     navigateToAdaptation: (adaptationId: string) => navigate(`/adaptations/${adaptationId}`),
     searchTerm,
+    selectedExportFormat,
     selectedTemplate,
     setFilterStatus,
     setSearchTerm,
+    setSelectedExportFormat,
     setSelectedTemplate,
     setViewMode,
     showExportModal,

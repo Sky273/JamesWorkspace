@@ -197,6 +197,28 @@ describe('Pipeline Routes', () => {
             expect(mockValidatePipelineAssociations).toHaveBeenCalled();
         });
 
+        it('should pass adaptationId when adding an adaptation to the pipeline', async () => {
+            const entry = { id: 'pipe-3', resumeId: 'r-3', adaptationId: 'a-1', stage: 'new' };
+            mockAddToPipeline.mockResolvedValue(entry);
+
+            const res = await request(app)
+                .post('/api/pipeline')
+                .set(authHeader)
+                .send({ resumeId: 'r-3', adaptationId: 'a-1', missionId: 'm-1', stage: 'new' });
+
+            expect(res.status).toBe(201);
+            expect(mockValidatePipelineAssociations).toHaveBeenCalledWith(expect.objectContaining({
+                resumeId: 'r-3',
+                adaptationId: 'a-1',
+                missionId: 'm-1'
+            }));
+            expect(mockAddToPipeline).toHaveBeenCalledWith(expect.objectContaining({
+                resumeId: 'r-3',
+                adaptationId: 'a-1',
+                missionId: 'm-1'
+            }));
+        });
+
         it('should add to pipeline with snake_case payload', async () => {
             const entry = { id: 'pipe-2', resumeId: 'r-2', stage: 'screening' };
             mockAddToPipeline.mockResolvedValue(entry);

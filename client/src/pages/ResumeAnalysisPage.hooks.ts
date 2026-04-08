@@ -12,6 +12,13 @@ import { buildSharePayload } from './resumeDocumentPayload';
 import { resolveResumeForPage } from './resumeLoader';
 
 type AnalysisTab = 'overview' | 'skills' | 'original' | 'pipeline';
+type ResumeAnalysisLocationState = {
+  from?: string;
+  dealReturnContext?: {
+    dealId: string;
+    scrollY: number;
+  };
+} | null;
 
 export function useResumeAnalysisPage() {
   const { id } = useParams<{ id: string }>();
@@ -34,8 +41,11 @@ export function useResumeAnalysisPage() {
   const [shareUrl, setShareUrl] = useState('');
   const [shareLoading, setShareLoading] = useState(false);
 
-  const fromDealsView = (location.state as { from?: string } | null)?.from === 'dealsGroupedView'
+  const locationState = location.state as ResumeAnalysisLocationState;
+  const fromDealsView = locationState?.from === 'dealsGroupedView'
     || sessionStorage.getItem('dealsGroupedViewState') !== null;
+  const dealReturnContext = locationState?.dealReturnContext ?? null;
+  const fromDealDetailView = locationState?.from === 'dealDetailView' && !!dealReturnContext;
   const hasImprovedText = !!currentResume?.['Improved Text'];
   const resumeName = currentResume?.['Name'] || currentResume?.['File Name'] || 'CV';
   const currentResumeForPage = currentResume?.id === id ? currentResume as Resume : null;
@@ -178,8 +188,15 @@ export function useResumeAnalysisPage() {
   }, [currentResume, hasImprovedText, id, t]);
 
   const handleBackToDealsView = useCallback(() => {
+    if (dealReturnContext) {
+      navigate(`/deals/${dealReturnContext.dealId}`, {
+        state: { restoreScrollY: dealReturnContext.scrollY }
+      });
+      return;
+    }
+
     navigate('/resumes', { state: { viewMode: 'byDeal' } });
-  }, [navigate]);
+  }, [dealReturnContext, navigate]);
 
   return {
     id,
@@ -191,6 +208,7 @@ export function useResumeAnalysisPage() {
     isImproving,
     processingStep,
     fromDealsView,
+    fromDealDetailView,
     hasImprovedText,
     resumeName,
     showShareModal,

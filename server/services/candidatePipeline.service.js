@@ -46,10 +46,11 @@ export async function initCandidatePipelineTable() {
             context: 'candidate pipeline',
             tables: ['candidate_pipeline', 'pipeline_history', 'pipeline_interviews'],
             columns: {
-                candidate_pipeline: ['client_id'],
+                candidate_pipeline: ['client_id', 'adaptation_id'],
                 pipeline_interviews: ['scheduled_at']
             },
             indexes: [
+                'idx_candidate_pipeline_adaptation_id',
                 'idx_candidate_pipeline_resume_id',
                 'idx_candidate_pipeline_mission_id',
                 'idx_candidate_pipeline_client_id',
@@ -97,6 +98,14 @@ export async function scheduleInterview(args) {
 export async function getResumeFirmId(resumeId) {
     const result = await query('SELECT firm_id FROM resumes WHERE id = $1', [resumeId]);
     return result.rows[0]?.firm_id || null;
+}
+
+export async function getAdaptationContext(adaptationId) {
+    const result = await query(
+        'SELECT id, firm_id, resume_id, mission_id FROM resume_adaptations WHERE id = $1',
+        [adaptationId]
+    );
+    return result.rows[0] || null;
 }
 
 export async function getClientFirmId(clientId) {
@@ -151,10 +160,15 @@ export async function getInterviewAccessContext(interviewId) {
     return result.rows[0] || null;
 }
 
-export async function validatePipelineAssociations({ resumeId, missionId, clientId, expectedFirmId = null }) {
+export async function validatePipelineAssociations({ resumeId, adaptationId, missionId, clientId, expectedFirmId = null }) {
     const resumeFirmId = resumeId ? await getResumeFirmId(resumeId) : null;
     if (resumeId && !resumeFirmId) {
         return { ok: false, status: 400, error: 'Resume not found' };
+    }
+
+    const adaptationContext = adaptationId ? await getAdaptationContext(adaptationId) : null;
+    if (adaptationId && !adaptationContext) {
+        return { ok: false, status: 400, error: 'Adaptation not found' };
     }
 
     const missionContext = missionId ? await getMissionContext(missionId) : null;
@@ -167,7 +181,15 @@ export async function validatePipelineAssociations({ resumeId, missionId, client
         return { ok: false, status: 400, error: 'Client not found' };
     }
 
-    const firmIds = [resumeFirmId, missionContext?.firm_id || null, clientFirmId].filter(Boolean);
+    if (adaptationContext && adaptationContext.resume_id !== resumeId) {
+        return { ok: false, status: 400, error: 'Adaptation does not match resume' };
+    }
+
+    if (adaptationContext && missionId && adaptationContext.mission_id !== missionId) {
+        return { ok: false, status: 400, error: 'Adaptation does not match mission' };
+    }
+
+    const firmIds = [resumeFirmId, adaptationContext?.firm_id || null, missionContext?.firm_id || null, clientFirmId].filter(Boolean);
     const targetFirmId = expectedFirmId || firmIds[0] || null;
 
     if (targetFirmId && firmIds.some((firmId) => firmId !== targetFirmId)) {
