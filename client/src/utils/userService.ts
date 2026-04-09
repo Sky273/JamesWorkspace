@@ -3,7 +3,7 @@
  * TypeScript service for managing users and firms
  */
 
-import { fetchWithAuth, createAuthOptions, createAuthOptionsWithCsrf, fetchCsrfToken } from './apiInterceptor';
+import { authDelete, authPost, authPut, fetchWithAuth, createAuthOptions, fetchCsrfToken } from './apiInterceptor';
 import logger from './logger.frontend';
 
 // ============================================
@@ -202,14 +202,7 @@ const userService = {
 
   async createUser(userData: UserFormData): Promise<User> {
     try {
-      const authOptions = await createAuthOptionsWithCsrf({
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(userData)
-      });
-      const response = await fetchWithAuth('/api/auth/users', authOptions);
+      const response = await authPost('/api/auth/users', userData);
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to create user');
@@ -223,14 +216,7 @@ const userService = {
 
   async updateUser(userId: string, userData: UserFormData): Promise<User> {
     try {
-      const authOptions = await createAuthOptionsWithCsrf({
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(userData)
-      });
-      const response = await fetchWithAuth(`/api/auth/users/${userId}`, authOptions);
+      const response = await authPut(`/api/auth/users/${userId}`, userData);
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to update user');
@@ -244,10 +230,7 @@ const userService = {
 
   async deleteUser(userId: string): Promise<{ message: string }> {
     try {
-      const authOptions = await createAuthOptionsWithCsrf({
-        method: 'DELETE'
-      });
-      const response = await fetchWithAuth(`/api/auth/users/${userId}`, authOptions);
+      const response = await authDelete(`/api/auth/users/${userId}`);
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to delete user');
@@ -261,14 +244,7 @@ const userService = {
 
   async updateFirm(firmId: string, firmData: FirmFormData): Promise<Firm> {
     try {
-      const authOptions = await createAuthOptionsWithCsrf({
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(firmData)
-      });
-      const response = await fetchWithAuth(`/api/firms/${firmId}`, authOptions);
+      const response = await authPut(`/api/firms/${firmId}`, firmData);
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to update firm');
@@ -286,14 +262,7 @@ const userService = {
 
   async createFirm(firmData: FirmFormData): Promise<Firm> {
     try {
-      const authOptions = await createAuthOptionsWithCsrf({
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(firmData)
-      });
-      const response = await fetchWithAuth('/api/firms', authOptions);
+      const response = await authPost('/api/firms', firmData);
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to create firm');
@@ -311,10 +280,7 @@ const userService = {
 
   async deleteFirm(firmId: string): Promise<{ message: string }> {
     try {
-      const authOptions = await createAuthOptionsWithCsrf({
-        method: 'DELETE'
-      });
-      const response = await fetchWithAuth(`/api/firms/${firmId}`, authOptions);
+      const response = await authDelete(`/api/firms/${firmId}`);
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to delete firm');
@@ -360,10 +326,7 @@ const userService = {
 
   async deleteFirmLogo(firmId: string): Promise<{ success: boolean; message: string }> {
     try {
-      const authOptions = await createAuthOptionsWithCsrf({
-        method: 'DELETE'
-      });
-      const response = await fetchWithAuth(`/api/firms/${firmId}/logo`, authOptions);
+      const response = await authDelete(`/api/firms/${firmId}/logo`);
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to delete logo');
@@ -377,14 +340,7 @@ const userService = {
 
   async changeUserPassword(userId: string, newPassword: string): Promise<{ message: string }> {
     try {
-      const authOptions = await createAuthOptionsWithCsrf({
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ password: newPassword })
-      });
-      const response = await fetchWithAuth(`/api/auth/users/${userId}/password`, authOptions);
+      const response = await authPut(`/api/auth/users/${userId}/password`, { password: newPassword });
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to change password');

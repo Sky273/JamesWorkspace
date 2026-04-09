@@ -40,13 +40,17 @@ export const createUserSchema = z.object({
   phone: z.string().max(50).optional(),
   role: z.preprocess(v => typeof v === 'string' ? v.toLowerCase() : v, z.enum(['user', 'admin'])).optional(),
   status: z.preprocess(v => typeof v === 'string' ? v.toLowerCase() : v, z.enum(['active', 'inactive', 'pending'])).optional(),
+  firmId: z.string().uuid().optional().nullable(),
+  firm_id: z.string().uuid().optional().nullable(),
+  FirmId: z.string().uuid().optional().nullable(),
+  'Firm ID': z.string().uuid().optional().nullable(),
   customer: z.string().optional(),
   Customer: z.string().optional(),
   firm: z.string().optional(),
   Firm: z.string().optional()
 }).refine(
   (data) => Boolean(
-    [data.firm, data.Firm, data.customer, data.Customer]
+    [data.firmId, data.firm_id, data.FirmId, data['Firm ID'], data.firm, data.Firm, data.customer, data.Customer]
       .some((value) => typeof value === 'string' && value.trim())
   ),
   { message: 'Firm is required', path: ['firm'] }
@@ -229,13 +233,17 @@ export const updateAdminUserSchema = z.object({
   jobTitle: z.string().max(255).optional().nullable(),
   job_title: z.string().max(255).optional().nullable(),
   phone: z.string().max(50).optional().nullable(),
+  firmId: z.string().uuid().optional().nullable(),
+  firm_id: z.string().uuid().optional().nullable(),
+  FirmId: z.string().uuid().optional().nullable(),
+  'Firm ID': z.string().uuid().optional().nullable(),
   firm: z.string().max(255).optional(),
   Firm: z.string().max(255).optional(),
   customer: z.string().max(255).optional(),
   Customer: z.string().max(255).optional()
 }).strip().refine(
   (data) => Boolean(
-    [data.firm, data.Firm, data.customer, data.Customer]
+    [data.firmId, data.firm_id, data.FirmId, data['Firm ID'], data.firm, data.Firm, data.customer, data.Customer]
       .some((value) => typeof value === 'string' && value.trim())
   ),
   { message: 'Firm is required', path: ['firm'] }

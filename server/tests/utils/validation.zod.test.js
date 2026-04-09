@@ -296,6 +296,19 @@ describe('Zod Validation Schemas', () => {
 
             expect(result.success).toBe(true);
         });
+
+        it('should accept admin user payload with firmId', () => {
+            const result = createUserSchema.safeParse({
+                email: 'user@example.com',
+                password: 'Password123!',
+                name: 'New User',
+                firmId: '123e4567-e89b-12d3-a456-426614174000',
+                role: 'User',
+                status: 'Active'
+            });
+
+            expect(result.success).toBe(true);
+        });
     });
 
     describe('updateAdminUserSchema', () => {
@@ -303,6 +316,15 @@ describe('Zod Validation Schemas', () => {
             const result = updateAdminUserSchema.safeParse({
                 job_title: 'Director',
                 Customer: 'Acme'
+            });
+
+            expect(result.success).toBe(true);
+        });
+
+        it('should accept admin user update payload with firmId', () => {
+            const result = updateAdminUserSchema.safeParse({
+                firmId: '123e4567-e89b-12d3-a456-426614174000',
+                status: 'Active'
             });
 
             expect(result.success).toBe(true);

@@ -157,6 +157,17 @@ describe('Zod Schemas', () => {
         expect(() => createUserSchema.parse(data)).not.toThrow();
       });
     });
+
+    it('should validate user creation with firmId', () => {
+      const validData = {
+        email: 'admin@example.com',
+        password: 'securepass123',
+        name: 'Admin User',
+        status: 'Active',
+        firmId: '123e4567-e89b-12d3-a456-426614174000'
+      };
+      expect(() => createUserSchema.parse(validData)).not.toThrow();
+    });
   });
 
   describe('createMissionSchema', () => {
