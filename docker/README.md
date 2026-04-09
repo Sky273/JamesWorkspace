@@ -135,6 +135,8 @@ After starting the container:
 - **Email**: `admin@resumeconverter.local`
 - **Password**: `admin123`
 
+If this account does not exist yet, Docker initialization now creates it automatically if missing.
+
 ⚠️ **Change these credentials immediately in production!**
 
 ## 📝 Available Commands

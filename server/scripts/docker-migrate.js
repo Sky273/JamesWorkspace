@@ -60,6 +60,7 @@ loadEnvironment();
 const [
     { query, testConnection, closePool },
     { safeLog },
+    { ensureDefaultAdminAccount },
     { initGdprAuditTable },
     { initResumeCommentsTable },
     { initShareResumeTable },
@@ -71,6 +72,7 @@ const [
 ] = await Promise.all([
     import('../config/database.js'),
     import('../utils/logger.backend.js'),
+    import('./ensure-default-admin.js'),
     import('../services/gdprAudit.service.js'),
     import('../services/resumeComments.service.js'),
     import('../services/shareResume.service.js'),
@@ -392,6 +394,7 @@ export async function runDockerMigrate() {
     }
     await seedIndustryAliases();
     await ensureAuxiliarySchema();
+    await ensureDefaultAdminAccount();
 
     safeLog('info', 'docker-migrate completed successfully');
 }

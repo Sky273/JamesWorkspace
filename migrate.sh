@@ -11,3 +11,4 @@ fi
 
 cd "${ROOT_DIR}"
 node server/scripts/docker-migrate.js "$@"
+node server/scripts/ensure-default-admin.js

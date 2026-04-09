@@ -145,7 +145,8 @@ fi
 # Initialize / migrate database schema outside the web runtime
 # =============================================================================
 echo "[4/5] Running docker-migrate..."
-npm run docker-migrate
+node server/scripts/docker-migrate.js
+node server/scripts/ensure-default-admin.js
 
 # =============================================================================
 # Start all services via Supervisor
