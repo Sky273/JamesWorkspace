@@ -138,6 +138,9 @@ export function securityLog(level, event, details = {}) {
     if (details.resourceType) logEntry.resourceType = details.resourceType;
     if (details.action) logEntry.action = details.action;
     if (details.duration) logEntry.duration = details.duration;
+    if (typeof details.stack === 'string' && details.stack.trim().length > 0) {
+        logEntry.stack = details.stack;
+    }
 
     // O(1) circular buffer write
     securityLogBuffer[securityLogWriteIndex] = logEntry;

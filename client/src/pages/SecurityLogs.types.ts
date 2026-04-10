@@ -17,6 +17,7 @@ export interface SecurityLogEntry {
   statusCode?: number;
   message?: string;
   duration?: number;
+  stack?: string;
 }
 
 export interface SecurityLogStats {

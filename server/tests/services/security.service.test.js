@@ -92,6 +92,17 @@ describe('Security Service', () => {
             expect(latest.email).toBe('a@b.com');
             expect(latest.customer).toBeUndefined(); // not provided
         });
+
+        it('should keep the stack trace when provided', () => {
+            securityLog(LOG_LEVELS.ERROR, SECURITY_EVENTS.AUTH_FAILURE, {
+                ip: '1.2.3.4',
+                message: 'Unexpected error',
+                stack: 'Error: boom\n    at handler (server.js:10:2)'
+            });
+
+            const logs = getSecurityLogs();
+            expect(logs[0].stack).toContain('Error: boom');
+        });
     });
 
     describe('getSecurityLogs', () => {

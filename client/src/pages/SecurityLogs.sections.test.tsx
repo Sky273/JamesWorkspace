@@ -130,6 +130,7 @@ describe('SecurityLogs sections', () => {
               statusCode: 401,
               message: 'Invalid credentials',
               duration: 120,
+              stack: 'Error: Invalid credentials\n    at signin (auth.js:42:1)',
             },
           ]}
           t={t}
@@ -149,6 +150,8 @@ describe('SecurityLogs sections', () => {
     expect(screen.getByText('auth_failed')).toBeInTheDocument();
     expect(screen.getByText('admin@example.com')).toBeInTheDocument();
     expect(screen.getByText('Invalid credentials')).toBeInTheDocument();
+    expect(screen.getByText('security.table.stackTrace')).toBeInTheDocument();
+    expect(screen.getByText(/Error: Invalid credentials/)).toBeInTheDocument();
     expect(screen.getByText('security.logs:2/4:40')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('next-page'));

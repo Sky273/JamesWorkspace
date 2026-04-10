@@ -275,7 +275,22 @@ export function SecurityLogsTable({ logs, t }: { logs: SecurityLogEntry[]; t: TF
                 <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-gray-300">{log.ip}</td>
                 <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900 dark:text-gray-300"><div>{log.action && <div className="font-medium">{log.action}</div>}{log.method && log.endpoint && <div className="text-xs text-gray-500 dark:text-gray-400">{log.method} {log.endpoint}</div>}{log.resourceType && log.resourceId && <div className="text-xs text-gray-500 dark:text-gray-400">{log.resourceType}: {log.resourceId.substring(0, 8)}...</div>}</div></td>
                 <td className="whitespace-nowrap px-4 py-3 text-sm">{log.statusCode && <span className={`rounded px-2 py-1 text-xs font-semibold ${getSecurityStatusCodeClass(log.statusCode)}`}>{log.statusCode}</span>}</td>
-                <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-300"><div><div>{log.message}</div>{log.duration && <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('security.table.duration')}: {log.duration}ms</div>}</div></td>
+                <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">
+                  <div>
+                    <div>{log.message}</div>
+                    {log.duration && <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('security.table.duration')}: {log.duration}ms</div>}
+                    {typeof log.stack === 'string' && log.stack.trim().length > 0 && (
+                      <details className="mt-3 rounded-2xl border border-rose-200/70 bg-rose-50/70 p-3 dark:border-rose-900/60 dark:bg-rose-950/20">
+                        <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.18em] text-rose-700 dark:text-rose-300">
+                          {t('security.table.stackTrace', { defaultValue: 'Stacktrace' })}
+                        </summary>
+                        <pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-words rounded-xl bg-slate-950/90 p-3 text-xs leading-6 text-slate-100">
+                          {log.stack}
+                        </pre>
+                      </details>
+                    )}
+                  </div>
+                </td>
               </motion.tr>
             ))}
           </tbody>
