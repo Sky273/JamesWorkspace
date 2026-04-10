@@ -102,6 +102,11 @@ vi.mock('../../services/resumeVersions.service.js', () => ({
     hasImprovedTextChanged: vi.fn(() => false)
 }));
 
+const mockPersistResumeSkillEvidence = vi.fn();
+vi.mock('../../services/skillEvidence.service.js', () => ({
+    persistResumeSkillEvidence: (...args) => mockPersistResumeSkillEvidence(...args)
+}));
+
 // Mock validation middleware
 vi.mock('../../utils/validation.js', () => ({
     validateBody: () => (req, res, next) => next(),

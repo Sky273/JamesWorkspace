@@ -180,6 +180,222 @@ describe('OpenAI Resume Operations', () => {
             expect(result.suggestions.skills).toEqual(['Group keywords']);
         });
 
+        it('should normalize evidence-backed skills and tools while preserving keyword names', async () => {
+            callBusinessChatCompletion.mockResolvedValueOnce({
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            name: 'Jane',
+                            globalRating: '84%',
+                            tags: {
+                                skills: [
+                                    {
+                                        skill: 'Java',
+                                        evidence_score: 0.82,
+                                        confidence: 0.91,
+                                        evidence: {
+                                            mentions: 7,
+                                            contexts: 3,
+                                            years_of_experience_estimated: 5,
+                                            recency: 'recent',
+                                            depth: 'advanced',
+                                            source_types: ['experience', 'skills_section'],
+                                            projects: ['Projet A', 'Projet C']
+                                        }
+                                    }
+                                ],
+                                tools: [
+                                    {
+                                        name: 'Docker',
+                                        evidenceScore: 0.74,
+                                        confidence: 0.88,
+                                        evidence: {
+                                            mentions: 4,
+                                            contexts: 2,
+                                            yearsOfExperienceEstimated: 3,
+                                            recency: 'recent',
+                                            depth: 'intermediate',
+                                            sourceTypes: ['experience'],
+                                            projects: ['Projet B']
+                                        }
+                                    }
+                                ]
+                            }
+                        })
+                    }
+                }]
+            });
+
+            const result = await analyzeResume('resume text', 'gpt-4o', '{TEXT} {FILENAME}');
+
+            expect(result.tags.skills).toEqual(['Java']);
+            expect(result.tags.tools).toEqual(['Docker']);
+            expect(result.tags.skillsEvidence).toEqual([
+                expect.objectContaining({
+                    name: 'Java',
+                    evidenceScore: 0.82,
+                    confidence: 0.91,
+                    evidence: expect.objectContaining({
+                        mentions: 7,
+                        contexts: 3,
+                        yearsOfExperienceEstimated: 5,
+                        recency: 'recent',
+                        depth: 'advanced',
+                        sourceTypes: ['experience', 'skills_section'],
+                        projects: ['Projet A', 'Projet C']
+                    })
+                })
+            ]);
+            expect(result.tags.toolsEvidence).toEqual([
+                expect.objectContaining({
+                    name: 'Docker',
+                    evidenceScore: 0.74,
+                    confidence: 0.88
+                })
+            ]);
+        });
+
+        it('should normalize the prompt proof structure for detected skills', async () => {
+            callBusinessChatCompletion.mockResolvedValueOnce({
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            name: 'Jane',
+                            globalRating: '84%',
+                            tags: {
+                                skills: [
+                                    {
+                                        name: 'Java',
+                                        category: 'technical_skill',
+                                        proof: {
+                                            proof_level: 'high',
+                                            proof_score: 0.84,
+                                            evidence_sources: ['skills_section', 'experience', 'project_context'],
+                                            occurrence_count_estimate: 4,
+                                            context_count_estimate: 3,
+                                            recency: 'recent',
+                                            usage_depth: 'central',
+                                            justification: 'Java est mentionné dans plusieurs expériences backend.'
+                                        }
+                                    }
+                                ]
+                            }
+                        })
+                    }
+                }]
+            });
+
+            const result = await analyzeResume('resume text', 'gpt-4o', '{TEXT} {FILENAME}');
+
+            expect(result.tags.skills).toEqual(['Java']);
+            expect(result.tags.skillsEvidence).toEqual([
+                expect.objectContaining({
+                    name: 'Java',
+                    category: 'skill',
+                    proofLevel: 'high',
+                    proofScore: 0.84,
+                    confidence: 0.84,
+                    justification: 'Java est mentionné dans plusieurs expériences backend.',
+                    proof: expect.objectContaining({
+                        occurrenceCountEstimate: 4,
+                        contextCountEstimate: 3,
+                        recency: 'recent',
+                        usageDepth: 'central'
+                    }),
+                    evidence: expect.objectContaining({
+                        mentions: 4,
+                        contexts: 3,
+                        recency: 'recent',
+                        depth: 'central',
+                        sourceTypes: ['skills_section', 'experience', 'project_context']
+                    })
+                })
+            ]);
+        });
+
+        it('should normalize the new skillsDetailed format into tags and evidence buckets', async () => {
+            callBusinessChatCompletion.mockResolvedValueOnce({
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            name: 'Jane',
+                            title: 'Backend Engineer',
+                            globalRating: '84%',
+                            structuredText: '<h2>Compétences</h2>',
+                            skillsDetailed: [
+                                {
+                                    name: 'Java',
+                                    category: 'technical_skill',
+                                    proof: {
+                                        proof_level: 'high',
+                                        proof_score: 0.84,
+                                        evidence_sources: ['skills_section', 'experience'],
+                                        occurrence_count_estimate: 4,
+                                        context_count_estimate: 3,
+                                        recency: 'recent',
+                                        usage_depth: 'central',
+                                        estimated_experience_years: 3.5,
+                                        estimated_experience_confidence: 'medium',
+                                        experience_estimation_basis: 'Java apparaît dans plusieurs expériences datées.',
+                                        justification: 'Java est récurrent dans plusieurs expériences.'
+                                    }
+                                },
+                                {
+                                    name: 'Docker',
+                                    category: 'tool',
+                                    proof: {
+                                        proof_level: 'medium',
+                                        proof_score: 0.63,
+                                        evidence_sources: ['skills_section', 'project_context'],
+                                        occurrence_count_estimate: 2,
+                                        context_count_estimate: 2,
+                                        recency: 'mid',
+                                        usage_depth: 'contextual',
+                                        justification: 'Docker est cité dans des contextes projet.'
+                                    }
+                                }
+                            ],
+                            tags: {
+                                skills: ['Java'],
+                                tools: ['Docker'],
+                                industries: ['IT'],
+                                softSkills: ['Communication']
+                            }
+                        })
+                    }
+                }]
+            });
+
+            const result = await analyzeResume('resume text', 'gpt-4o', '{TEXT} {FILENAME}');
+
+            expect(result.tags.skills).toContain('Java');
+            expect(result.tags.tools).toContain('Docker');
+            expect(result.tags.skillsEvidence).toEqual([
+                expect.objectContaining({
+                    name: 'Java',
+                    category: 'skill',
+                    proofLevel: 'high',
+                    proofScore: 0.84,
+                    proof: expect.objectContaining({
+                        estimatedExperienceYears: 3.5,
+                        estimatedExperienceConfidence: 'medium',
+                        experienceEstimationBasis: 'Java apparaît dans plusieurs expériences datées.'
+                    }),
+                    evidence: expect.objectContaining({
+                        yearsOfExperienceEstimated: 3.5
+                    })
+                })
+            ]);
+            expect(result.tags.toolsEvidence).toEqual([
+                expect.objectContaining({
+                    name: 'Docker',
+                    category: 'tool',
+                    proofLevel: 'medium',
+                    proofScore: 0.63
+                })
+            ]);
+        });
+
         it('should inject filename into prompt', async () => {
             callBusinessChatCompletion.mockResolvedValueOnce({
                 choices: [{ message: { content: JSON.stringify(mockAnalysis) } }]
@@ -373,6 +589,145 @@ describe('OpenAI Resume Operations', () => {
             expect(result.analysis.tags.softSkills).toEqual(['Communication', 'Leadership']);
             expect(result.analysis.languages).toEqual(['French', 'English']);
             expect(result.analysis.certifications).toEqual(['AWS']);
+        });
+
+        it('should preserve evidence-backed skills and tools after improvement analysis', async () => {
+            callBusinessChatCompletion.mockResolvedValueOnce({
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            improvedText: '<p>Improved CV</p>',
+                            tags: {
+                                skills: [{
+                                    skill: 'Java',
+                                    evidence_score: 0.8,
+                                    confidence: 0.9,
+                                    evidence: {
+                                        mentions: 6,
+                                        contexts: 2,
+                                        years_of_experience_estimated: 5,
+                                        recency: 'recent',
+                                        depth: 'advanced',
+                                        source_types: ['experience']
+                                    }
+                                }],
+                                tools: [{
+                                    tool: 'Kubernetes',
+                                    evidenceScore: 0.71,
+                                    confidence: 0.83,
+                                    evidence: {
+                                        mentions: 3,
+                                        contexts: 2,
+                                        yearsOfExperienceEstimated: 2,
+                                        depth: 'intermediate'
+                                    }
+                                }]
+                            },
+                            summary: {}
+                        })
+                    }
+                }]
+            });
+
+            const result = await improveResume(
+                'A'.repeat(200),
+                { name: 'John' },
+                'gpt-4o',
+                '{TEXT} {ANALYSIS} {FILENAME}'
+            );
+
+            expect(result.analysis.tags.skills).toEqual(['Java']);
+            expect(result.analysis.tags.tools).toEqual(['Kubernetes']);
+            expect(result.analysis.tags.skillsEvidence?.[0]).toEqual(expect.objectContaining({
+                name: 'Java',
+                evidenceScore: 0.8,
+                confidence: 0.9
+            }));
+            expect(result.analysis.tags.toolsEvidence?.[0]).toEqual(expect.objectContaining({
+                name: 'Kubernetes',
+                evidenceScore: 0.71,
+                confidence: 0.83
+            }));
+        });
+
+        it('should normalize skillsDetailed in the improvement response', async () => {
+            callBusinessChatCompletion.mockResolvedValueOnce({
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            improvedText: '<p>Improved CV</p>',
+                            skillsDetailed: [
+                                {
+                                    name: 'Java',
+                                    category: 'technical_skill',
+                                    proof: {
+                                        proof_level: 'high',
+                                        proof_score: 0.88,
+                                        evidence_sources: ['experience'],
+                                        occurrence_count_estimate: 5,
+                                        context_count_estimate: 3,
+                                        recency: 'recent',
+                                        usage_depth: 'central',
+                                        estimated_experience_years: 4,
+                                        estimated_experience_confidence: 'high',
+                                        experience_estimation_basis: 'Java est présent dans plusieurs expériences backend successives.',
+                                        justification: 'Java reste central dans le profil.'
+                                    }
+                                },
+                                {
+                                    name: 'Docker',
+                                    category: 'tool',
+                                    proof: {
+                                        proof_level: 'medium',
+                                        proof_score: 0.61,
+                                        evidence_sources: ['project_context'],
+                                        occurrence_count_estimate: 2,
+                                        context_count_estimate: 2,
+                                        recency: 'mid',
+                                        usage_depth: 'contextual',
+                                        justification: 'Docker est documenté dans les projets.'
+                                    }
+                                }
+                            ],
+                            tags: {
+                                skills: ['Java'],
+                                tools: ['Docker']
+                            },
+                            summary: {}
+                        })
+                    }
+                }]
+            });
+
+            const result = await improveResume(
+                'A'.repeat(200),
+                { name: 'John' },
+                'gpt-4o',
+                '{TEXT} {ANALYSIS} {FILENAME}'
+            );
+
+            expect(result.analysis.tags.skills).toContain('Java');
+            expect(result.analysis.tags.tools).toContain('Docker');
+            expect(result.analysis.tags.skillsEvidence?.[0]).toEqual(expect.objectContaining({
+                name: 'Java',
+                category: 'skill',
+                proofLevel: 'high',
+                proofScore: 0.88,
+                proof: expect.objectContaining({
+                    estimatedExperienceYears: 4,
+                    estimatedExperienceConfidence: 'high',
+                    experienceEstimationBasis: 'Java est présent dans plusieurs expériences backend successives.'
+                }),
+                evidence: expect.objectContaining({
+                    yearsOfExperienceEstimated: 4
+                })
+            }));
+            expect(result.analysis.tags.toolsEvidence?.[0]).toEqual(expect.objectContaining({
+                name: 'Docker',
+                category: 'tool',
+                proofLevel: 'medium',
+                proofScore: 0.61
+            }));
         });
 
         it('should handle HTML fallback response', async () => {

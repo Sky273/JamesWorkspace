@@ -8,6 +8,24 @@ import { normalizeRequestBodyAliases } from '../../utils/validation.js';
 import { getUserFirmId, isUserAdmin } from '../../utils/firmHelpers.js';
 import * as resumesService from '../../services/resumes.service.js';
 
+function parseJsonObject(value) {
+    if (!value) return null;
+    if (typeof value === 'object') return value;
+    if (typeof value !== 'string') return null;
+
+    try {
+        return JSON.parse(value);
+    } catch {
+        return null;
+    }
+}
+
+function extractTagEvidence(record, key) {
+    const analysisDetails = parseJsonObject(record.analysis_details);
+    const evidence = analysisDetails?.tags?.[key];
+    return Array.isArray(evidence) ? evidence : [];
+}
+
 /**
  * Check if user has access to a specific resume
  * Admins can access all resumes, users can only access resumes from their firm
@@ -147,6 +165,12 @@ const buildResumeFile = (record) => (
 
 export function mapResumeToFrontend(record) {
     const resumeFile = buildResumeFile(record);
+    const skillsEvidence = extractTagEvidence(record, 'skillsEvidence');
+    const toolsEvidence = extractTagEvidence(record, 'toolsEvidence');
+    const softSkillsEvidence = extractTagEvidence(record, 'softSkillsEvidence');
+    const improvedSkillsEvidence = record.improved_text ? skillsEvidence : [];
+    const improvedToolsEvidence = record.improved_text ? toolsEvidence : [];
+    const improvedSoftSkillsEvidence = record.improved_text ? softSkillsEvidence : [];
 
     return {
         id: record.id,
@@ -201,6 +225,12 @@ export function mapResumeToFrontend(record) {
         tools: record.tools,
         'Soft Skills': record.soft_skills,
         softSkills: record.soft_skills,
+        'Skills Evidence': skillsEvidence,
+        skillsEvidence,
+        'Tools Evidence': toolsEvidence,
+        toolsEvidence,
+        'Soft Skills Evidence': softSkillsEvidence,
+        softSkillsEvidence,
         'Skills_cleaned': record.skills_cleaned,
         skillsCleaned: record.skills_cleaned,
         'Industries_cleaned': record.industries_cleaned,
@@ -225,6 +255,12 @@ export function mapResumeToFrontend(record) {
         improvedTools: record.improved_tools,
         'Improved Soft Skills': record.improved_soft_skills,
         improvedSoftSkills: record.improved_soft_skills,
+        'Improved Skills Evidence': improvedSkillsEvidence,
+        improvedSkillsEvidence,
+        'Improved Tools Evidence': improvedToolsEvidence,
+        improvedToolsEvidence,
+        'Improved Soft Skills Evidence': improvedSoftSkillsEvidence,
+        improvedSoftSkillsEvidence,
         'Key Improvements': record.key_improvements,
         keyImprovements: record.key_improvements,
         'Improved Key Improvements': record.improved_key_improvements,

@@ -6,6 +6,7 @@ import { query } from '../../../services/database.service.js';
 import { safeLog } from '../../../utils/logger.backend.js';
 import { parseScore } from '../helpers.js';
 import * as resumesService from '../../../services/resumes.service.js';
+import { persistResumeSkillEvidence } from '../../../services/skillEvidence.service.js';
 
 function hasSuggestionContent(suggestions) {
     if (!suggestions || typeof suggestions !== 'object') return false;
@@ -135,6 +136,11 @@ async function persistDeferredPostImprovementAnalysis({ resumeId, improvedText, 
     improvedAnalysis = await calculateWeightedGlobalRating(improvedAnalysis, settings);
 
     const updatedResume = await resumesService.updateResume(resumeId, buildImprovedResumeUpdateData(improvedText, improvedAnalysis));
+    await persistResumeSkillEvidence({
+        candidateId: resumeId,
+        analysis: improvedAnalysis,
+        phase: 'improved'
+    });
 
     if (currentVersion) {
         await updateResumeVersionWithPostAnalysis(resumeId, currentVersion, improvedAnalysis);

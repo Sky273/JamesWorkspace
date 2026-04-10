@@ -17,6 +17,7 @@ import { processImprovement, processImproveItem } from './processors/improvement
 import { processAdaptItem, processMatchItem, processProfileSearchItem, processProfileAnalysisItem } from './processors/profileAndMatching.js';
 import { metrics } from '../metrics.service.js';
 import { getLLMSettings } from '../settings.service.js';
+import { persistResumeSkillEvidence } from '../skillEvidence.service.js';
 
 function buildOcrMetricsMetadata(extractionResult, baseMetadata = {}) {
     return {
@@ -294,10 +295,11 @@ export async function processImportItem(item, job, options) {
                     tools_cleaned = $15,
                     soft_skills_cleaned = $16,
                     key_improvements = $17,
-                    title = $18,
+                    analysis_details = $18,
+                    title = $19,
                     status = 'pending_name',
                     analyzed_at = NOW()
-                WHERE id = $19
+                WHERE id = $20
             `, [
                 originalExtractedText,
                 parseScore(analysis.globalRating),
@@ -316,9 +318,16 @@ export async function processImportItem(item, job, options) {
                 JSON.stringify(pendingCleanedTags.tools),
                 JSON.stringify(pendingCleanedTags.softSkills),
                 JSON.stringify(analysis.suggestions || {}),
+                JSON.stringify(analysis),
                 analysis.title,
                 resumeId
             ]);
+
+            await persistResumeSkillEvidence({
+                candidateId: resumeId,
+                analysis,
+                phase: 'initial'
+            });
 
             await updateJobItemStatus(item.id, ITEM_STATUS.PENDING_NAME, {
                 progress: 60,
@@ -378,12 +387,13 @@ export async function processImportItem(item, job, options) {
                 tools_cleaned = $15,
                 soft_skills_cleaned = $16,
                 key_improvements = $17,
-                name = COALESCE($18, name),
-                title = $19,
-                trigram = $20,
+                analysis_details = $18,
+                name = COALESCE($19, name),
+                title = $20,
+                trigram = $21,
                 status = 'analyzed',
                 analyzed_at = NOW()
-            WHERE id = $21
+            WHERE id = $22
         `, [
                 originalExtractedText,
             parseScore(analysis.globalRating),
@@ -402,11 +412,18 @@ export async function processImportItem(item, job, options) {
             JSON.stringify(cleanedTags.tools),
             JSON.stringify(cleanedTags.softSkills),
             JSON.stringify(analysis.suggestions || {}),
+            JSON.stringify(analysis),
             displayName,
             analysis.title,
             trigram,
             resumeId
         ]);
+
+        await persistResumeSkillEvidence({
+            candidateId: resumeId,
+            analysis,
+            phase: 'initial'
+        });
 
         await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, {
             progress: 70,

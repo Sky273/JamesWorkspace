@@ -9,7 +9,15 @@ const mockToastSuccess = vi.fn();
 const mockGetResume = vi.fn();
 const mockImproveCurrentResume = vi.fn();
 
-const resumeContextState = {
+const resumeContextState: {
+  currentResume: Record<string, unknown> | null;
+  setCurrentResume: ReturnType<typeof vi.fn>;
+  resumes: Array<Record<string, unknown>>;
+  improveCurrentResume: typeof mockImproveCurrentResume;
+  updateImprovedContent: ReturnType<typeof vi.fn>;
+  loading: boolean;
+  processingStep: string | null;
+} = {
   currentResume: null,
   setCurrentResume: vi.fn(),
   resumes: [] as Array<Record<string, unknown>>,
@@ -125,9 +133,17 @@ vi.mock('../components/page/PageHeader', () => ({
 }));
 
 vi.mock('../components/TiptapEditor', () => ({
-  DeferredTiptapEditor: ({ content, onReady }: { content: string; onReady: () => void }) => {
+  DeferredTiptapEditor: ({
+    content,
+    onReady,
+    skillProofs,
+  }: {
+    content: string;
+    onReady: () => void;
+    skillProofs?: Array<{ name: string }>;
+  }) => {
     onReady();
-    return <div>editor:{content}</div>;
+    return <div>editor:{content}:{skillProofs?.map((proof) => proof.name).join(',') || 'none'}</div>;
   },
   parseSuggestions: () => [],
   removeSuggestionMarkers: (value: string) => value,
@@ -210,6 +226,8 @@ describe('ResumeImprovePage', () => {
       Name: 'Ada Lovelace',
       'Improved Text': 'Contenu amélioré',
       'Improved Key Improvements': 'Point 1',
+      improvedSkillsEvidence: [{ name: 'Java', evidenceScore: 0.91 }],
+      improvedToolsEvidence: [{ tool: 'Docker', evidence_score: 0.83 }],
     };
     resumeContextState.currentResume = improvedResume;
     resumeContextState.resumes = [improvedResume];
@@ -218,7 +236,7 @@ describe('ResumeImprovePage', () => {
 
     expect(await screen.findByText('header-improved')).toBeInTheDocument();
     expect(screen.getByText('improved-tab')).toBeInTheDocument();
-    expect(screen.getByText('editor:Contenu amélioré')).toBeInTheDocument();
+    expect(screen.getByText('editor:Contenu amélioré:Docker,Java')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Comparer'));
     expect(screen.getByText('compare-tab')).toBeInTheDocument();

@@ -13,6 +13,7 @@ import {
   removeSuggestionMarkers,
 } from '../TiptapEditor';
 import type { TiptapEditorRef } from '../TiptapEditor';
+import { extractCurrentSkillProofs } from './skillProofs';
 import toast from 'react-hot-toast';
 import logger from '../../utils/logger.frontend';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterceptor';
@@ -227,6 +228,7 @@ const OriginalTextTab = ({ resume, onAIModify }: OriginalTextTabProps): JSX.Elem
         onReady={() => setEditorReady(true)}
         height={500}
         suggestions={parseSuggestions(resume['Key Improvements'])}
+        skillProofs={extractCurrentSkillProofs(resume)}
       />
 
       {/* AI Modification Section */}

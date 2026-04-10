@@ -45,10 +45,12 @@ vi.mock('../TiptapEditor', () => {
     content,
     onChange,
     onReady,
+    skillProofs,
   }: {
     content: string;
     onChange: (value: string) => void;
     onReady: () => void;
+    skillProofs?: Array<{ name: string }>;
   }, ref: React.Ref<{ getContent: () => string; setContent: (value: string) => void }>) => {
     const [value, setValue] = React.useState(content);
 
@@ -62,14 +64,17 @@ vi.mock('../TiptapEditor', () => {
     }), [value]);
 
     return (
-      <textarea
-        aria-label="original-editor"
-        value={value}
-        onChange={(e) => {
-          setValue(e.target.value);
-          onChange(e.target.value);
-        }}
-      />
+      <div>
+        <div data-testid="original-skill-proofs">{skillProofs?.map((proof) => proof.name).join(',') || 'none'}</div>
+        <textarea
+          aria-label="original-editor"
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value);
+            onChange(e.target.value);
+          }}
+        />
+      </div>
     );
   });
   DeferredTiptapEditor.displayName = 'DeferredTiptapEditorMock';
@@ -157,5 +162,22 @@ describe('OriginalTextTab', () => {
 
     expect(screen.getByLabelText('original-editor')).toHaveValue('AI updated content');
     expect(screen.getByText('AI update applied')).toBeInTheDocument();
+  });
+
+  it('passes current skill proofs to the editor', () => {
+    render(
+      <OriginalTextTab
+        resume={{
+          id: 'resume-1',
+          Name: 'Ada',
+          Title: 'Engineer',
+          'Original Text': 'Initial content',
+          skillsEvidence: [{ name: 'Java', evidenceScore: 0.8 }],
+          toolsEvidence: [{ tool: 'Docker', evidence_score: 0.7 }],
+        }}
+      />
+    );
+
+    expect(screen.getByTestId('original-skill-proofs')).toHaveTextContent('Docker,Java');
   });
 });

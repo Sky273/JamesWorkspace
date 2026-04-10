@@ -38,6 +38,9 @@ import { ImageToolbar } from './ImageToolbar';
 import { TableToolbar } from './TableToolbar';
 import { SuggestionsExtension } from './SuggestionsExtension';
 import type { SuggestionsBySection } from './suggestions.shared';
+import { ProofExtension } from './ProofExtension';
+import type { SkillProofEntry } from './proof.shared';
+import { getSkillProofCount } from './proof.shared';
 import { normalizeEditorContent } from './contentNormalization';
 import './TiptapEditor.css';
 
@@ -68,6 +71,8 @@ export interface TiptapEditorProps {
   className?: string;
   /** Improvement suggestions to display as ProseMirror decorations */
   suggestions?: SuggestionsBySection;
+  /** Evidence-backed skills/tools to display in the skills section */
+  skillProofs?: SkillProofEntry[];
 }
 
 // ============================================
@@ -87,12 +92,14 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
       extraToolbarContent,
       className = '',
       suggestions,
+      skillProofs = [],
     },
     ref
   ) => {
     const [_ready, setReady] = useState(false);
     const lastSyncedContentRef = useRef('');
     const [suggestionsVisible, setSuggestionsVisible] = useState(true);
+    const [skillProofsVisible, setSkillProofsVisible] = useState(false);
     const [htmlMode, setHtmlMode] = useState(false);
     const [htmlSource, setHtmlSource] = useState('');
     const normalizedContent = normalizeEditorContent(content);
@@ -129,6 +136,7 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
         CharacterCount,
         Placeholder.configure({ placeholder }),
         SuggestionsExtension.configure({ suggestions: suggestions || {} }),
+        ProofExtension.configure({ proofs: skillProofs || [] }),
       ],
       editable,
       content: normalizedContent,
@@ -150,6 +158,12 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
         editor.commands.setSuggestions(suggestions);
       }
     }, [editor, suggestions]);
+
+    useEffect(() => {
+      if (editor) {
+        editor.commands.setSkillProofs(skillProofs || []);
+      }
+    }, [editor, skillProofs]);
 
     // Keep editor content in sync with external updates without re-emitting change events.
     useEffect(() => {
@@ -242,6 +256,12 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
       setSuggestionsVisible((v) => !v);
     }, [editor]);
 
+    const handleToggleSkillProofs = useCallback(() => {
+      if (!editor) return;
+      editor.commands.toggleSkillProofs();
+      setSkillProofsVisible((v) => !v);
+    }, [editor]);
+
     // Toggle HTML source mode
     const handleToggleHtmlMode = useCallback(() => {
       if (!editor) return;
@@ -258,6 +278,7 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
     const hasSuggestions =
       suggestions &&
       Object.values(suggestions).flat().filter(Boolean).length > 0;
+    const hasSkillProofs = getSkillProofCount(skillProofs || []) > 0;
 
     if (!editor) return null;
 
@@ -293,6 +314,19 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
                     title={suggestionsVisible ? 'Masquer les suggestions' : 'Afficher les suggestions'}
                   >
                     💡
+                  </button>
+                  <div className="tiptap-toolbar-divider" />
+                </>
+              )}
+              {hasSkillProofs && (
+                <>
+                  <button
+                    type="button"
+                    className={`tiptap-toolbar-btn proof-toggle-btn ${skillProofsVisible ? 'is-active' : ''}`}
+                    onClick={handleToggleSkillProofs}
+                    title={skillProofsVisible ? 'Masquer les preuves de compétences' : 'Afficher les preuves de compétences'}
+                  >
+                    Preuves
                   </button>
                   <div className="tiptap-toolbar-divider" />
                 </>

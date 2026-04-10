@@ -39,6 +39,7 @@ import {
   removeSuggestionMarkers,
 } from '../components/TiptapEditor';
 import type { TiptapEditorRef } from '../components/TiptapEditor';
+import { extractImprovedSkillProofs } from '../components/ResumeAnalysis/skillProofs';
 
 const ResumeImprovePage = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
@@ -459,6 +460,7 @@ const ResumeImprovePage = (): JSX.Element => {
                           localResume?.['Improved Key Improvements'] ||
                           localResume?.['Key Improvements']
                         )}
+                        skillProofs={extractImprovedSkillProofs(localResume)}
                       />
                     }
                   />

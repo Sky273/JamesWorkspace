@@ -13,6 +13,7 @@ import {
     persistDeferredPostImprovementAnalysis
 } from './improvementHelpers.js';
 import { setSafeFileResponseHeaders } from '../../../utils/fileResponseSecurity.js';
+import { persistResumeSkillEvidence } from '../../../services/skillEvidence.service.js';
 import {
     buildDeferredPostAnalysisDecision,
     buildResumeUpdateData,
@@ -226,6 +227,23 @@ function createUpdateResumeHandler() {
             }
 
             let updatedResume = await resumesService.updateResume(id, updateData);
+
+            if (updateData.analysis_details) {
+                const analysisPhase = (
+                    updateData.improved_text !== undefined
+                    || updateData.improvement_date !== undefined
+                    || updateData.status === 'improved'
+                    || updateData.improved_skills !== undefined
+                    || updateData.improved_tools !== undefined
+                    || updateData.improved_soft_skills !== undefined
+                ) ? 'improved' : 'initial';
+
+                await persistResumeSkillEvidence({
+                    candidateId: id,
+                    analysis: updateData.analysis_details,
+                    phase: analysisPhase
+                });
+            }
 
             if (shouldCreateVersion && updateData.improved_text) {
                 try {

@@ -454,7 +454,7 @@ Exemples de simplification autorisée :
 La sortie doit ressembler à un CV texte propre, cohérent, stable d’un document à l’autre, et directement exploitable par une étape d’analyse automatique.
 `;
 
-export const DEFAULT_ANALYSIS_PROMPT = `# Prompt d'analyse CV — ResumeConverter
+export const DEFAULT_ANALYSIS_PROMPT = `# Prompt d'analyse CV — ResumeConverter (version avancée avec preuve et expérience estimée)
 
 ## Rôle
 
@@ -470,9 +470,11 @@ Tu dois :
 
 1. produire des scores par section ;
 2. extraire des tags utiles et courts ;
-3. proposer 2 à 3 suggestions concrètes par section ;
-4. restructurer le CV en HTML propre ;
-5. retourner uniquement un JSON strictement valide.
+3. analyser la preuve des compétences ;
+4. estimer l'expérience par compétence ;
+5. proposer 2 à 3 suggestions concrètes par section ;
+6. restructurer le CV en HTML propre ;
+7. retourner uniquement un JSON strictement valide.
 
 ---
 
@@ -488,17 +490,40 @@ Tu dois :
 ## Règles absolues
 
 - N'invente jamais d'informations.
-- N'ajoute jamais de nom, titre, années d'expérience, dates, employeurs, clients, diplômes, certifications, technologies, outils, résultats, chiffres ou secteurs non explicitement présents.
+- N'ajoute jamais de nom, titre, années d'expérience globales, dates, employeurs, clients, diplômes, certifications, technologies, outils, résultats, chiffres ou secteurs non explicitement présents.
 - N'utilise jamais de placeholder comme NRE, TBD, TODO, ?? ou équivalent.
-- Si une donnée est inconnue, absente ou non prouvable, n'invente pas. Omet l'information ou retourne un tableau vide selon le champ attendu.
+- Si une donnée est inconnue ou non prouvable -> ne pas l'inventer.
 - Évalue uniquement sur la base des éléments présents dans le CV.
 - Réponds uniquement avec un JSON valide, sans texte avant ni après.
 
 ---
 
+## Ordre de priorité
+
+1. Respect strict des règles absolues
+2. Analyse des expériences
+3. Analyse de la preuve des compétences
+4. Estimation de l'expérience par compétence
+5. Extraction des tags
+6. Scoring
+7. Suggestions
+8. HTML
+
+---
+
+## Cohérence globale
+
+- Les scores, les tags et les preuves doivent être cohérents entre eux.
+- Une compétence avec \`proof_level = high\` doit apparaître dans les expériences.
+- Une compétence uniquement mentionnée ne doit pas être surévaluée.
+- Une estimation élevée d'expérience doit être cohérente avec les expériences datées.
+- Un faible niveau global de preuve doit impacter negativement experiencesRating.
+
+---
+
 ## Objectifs d'analyse
 
-### 1. Produire les scores suivants au format string "XX%"
+### 1. Produire les scores (format "XX%")
 
 - globalRating
 - executiveSummaryRating
@@ -508,272 +533,235 @@ Tu dois :
 - hobbiesLanguagesRating
 - atsOptimizationRating
 
-### 2. Extraire les tags suivants
+---
+
+### 2. Extraction des tags
 
 - tags.skills
 - tags.tools
 - tags.softSkills
 - tags.industries
 
-### 3. Produire 2 à 3 suggestions actionnables pour chaque section
+---
 
-- executiveSummary
-- skills
-- experiences
-- education
-- hobbiesLanguages
-- atsOptimization
+### 3. Analyse détaillée des compétences
 
-### 4. Retourner le CV restructuré en HTML propre dans structuredText
+Produire \`skillsDetailed\` avec preuve et estimation d'expérience.
+
+---
+
+### 4. Suggestions
+
+2 à 3 suggestions par section.
+
+---
+
+### 5. HTML
+
+Retourner le CV restructuré en HTML propre.
 
 ---
 
 ## Format des scores
 
-- Tous les scores doivent être des strings au format "XX%".
-- Utilise toute l'échelle 0–100%.
-- Si une section est absente ou quasi vide : score = "0%".
-- Le score global doit être cohérent avec les scores détaillés.
+- Format obligatoire : "XX%"
+- Échelle complète 0-100%
+- Section absente -> "0%"
+- Score global cohérent
 
 ---
 
-## Critères d'évaluation par section
+## Analyse des expériences
 
-### A. executiveSummaryRating
+Évaluer :
 
-Évalue le résumé exécutif.
+- structure
+- contexte
+- livrables
+- responsabilités
+- impact
 
-- 90–100 : cible claire, proposition de valeur, spécialités, cohérence, concision.
-- 70–89 : présent mais générique ou insuffisamment ciblé.
-- 40–69 : vague, confus, trop long ou peu orienté poste.
-- 0–39 : absent ou inutilisable.
-
----
-
-### B. skillsRating
-
-Évalue la clarté, la structuration, l'exhaustivité et la cohérence des compétences.
-
-- Une stack technique riche et clairement exprimée améliore cette note.
-- Ne pas confondre cette note avec la qualité de l'expérience.
-
----
-
-### C. experiencesRating
-
-Attention : ne pas confondre l'environnement technique avec la qualité de l'expérience.
-
-Une liste de technologies améliore surtout skillsRating et atsOptimizationRating.
-
-experiencesRating doit refléter avant tout la qualité des preuves observables.
-
-#### Évalue chaque expérience selon les dimensions suivantes
-
-##### 1) Lisibilité et structure (0–25)
-
-- rôle, entreprise, dates lisibles et cohérentes ;
-- chronologie exploitable ;
-- descriptions compréhensibles ;
-- distinction claire entre mission, produit, stage, CDI, freelance, etc.
-
-##### 2) Contexte et cadrage (0–20)
-
-- type de projet ou mission ;
-- domaine métier si explicitement mentionné ;
-- contraintes ou échelle si présentes.
-
-##### 3) Livrables et réalisations (0–30)
-
-- fonctionnalités, modules, intégrations, refonte, pipeline, tests, monitoring, etc. ;
-- éléments concrets, même non chiffrés ;
-- si la description reste générique (développement, support, conception), score faible.
-
-##### 4) Responsabilités et niveau de contribution (0–15)
-
-- verbes d'action ;
-- périmètre ;
-- autonomie ;
-- coordination ;
-- management uniquement s'il est explicitement décrit.
-
-##### 5) Impact et preuves (0–10)
-
-- impact chiffré si présent ;
-- sinon impact qualitatif explicite ;
-- si aucun impact ou preuve : score faible.
-
-#### Barème guide
-
-- 90–100 : expériences très détaillées, livrables concrets, responsabilités claires, progression lisible, preuves ou impacts présents au moins partiellement.
-- 75–89 : expériences solides, livrables présents mais inégaux, impact peu documenté.
-- 55–74 : structure correcte mais descriptions trop génériques, livrables rares, périmètre flou.
-- 35–54 : expérience difficile à évaluer, chronologie confuse, peu de faits.
-- 0–34 : expérience absente, incohérente ou quasi illisible.
-
-#### Exigences de stabilité
-
-- n'évalue que sur les éléments présents ;
-- ne récompense pas une longue liste de technologies si les missions restent vagues ;
-- si une expérience ne contient que 1 à 2 lignes génériques, suggère d'ajouter 1 à 2 livrables concrets.
-
----
-
-### D. educationRating
-
-Évalue la clarté et la pertinence de la formation.
-
-- 90–100 : diplômes ou certifications clairs, pertinents, datés, éventuellement formation continue.
-- 70–89 : présent mais peu détaillé ou partiellement pertinent.
-- 40–69 : flou, incomplet ou mal structuré.
-- 0–39 : absent ou quasi vide.
-
----
-
-### E. hobbiesLanguagesRating
-
-Évalue langues et centres d'intérêt.
-
-- Langues : noter plus haut si niveaux, certifications ou contextes d'usage sont précisés.
-- Centres d'intérêt : valoriser s'ils sont structurés et utiles.
-- 0% si absent.
-
----
-
-### F. atsOptimizationRating
-
-Évalue :
-
-- structure ;
-- titres de section ;
-- lisibilité ;
-- cohérence ;
-- qualité des mots-clés ;
-- propreté du texte ;
-- robustesse ATS.
-
-Réduire la note si le CV contient des artefacts nuisibles à l'ATS :
-
-- caractères parasites ;
-- mots cassés ;
-- dates abîmées ;
-- symboles incohérents ;
-- texte bruité.
+Ne pas confondre stack technique et qualité réelle de l'expérience.
 
 ---
 
 ## Extraction des tags
 
-Les tags doivent être courts, utiles, non redondants et factuels.
+### tags.skills
 
-### 1. tags.skills
+Domaines fonctionnels
 
-Domaines techniques ou capacités fonctionnelles.
+### tags.tools
 
-Exemples :
-- API REST
-- tests automatisés
-- développement web
+Technologies avec type
 
-### 2. tags.tools
+### tags.softSkills
 
-Technologies spécifiques avec leur type entre parenthèses.
+Soft skills réalistes uniquement
 
-Exemples :
-- Java (langage)
-- Spring Boot (framework)
-- Angular (framework)
-- Docker (outil)
+### tags.industries
 
-### 3. tags.softSkills
+- 1 à 3 max
+- uniquement si prouvées
+- valeurs autorisées uniquement
 
-Exemples :
-- autonomie
-- communication
-- organisation
-- travail en équipe
-
-### 4. tags.industries
-
-Extraire de 1 à 3 industries maximum, uniquement si elles sont prouvables.
-
----
-
-## Quantités recommandées
-
-- skills : 6 à 12
-- tools : 8 à 20
-- softSkills : 5 à 10
-- industries : 1 à 3
-
----
-
-## Industries — règles strictes
-
-Tu dois choisir uniquement des valeurs présentes dans :
-
-{ACCEPTED_INDUSTRIES}
-
-Une industrie est sélectionnable uniquement s'il existe au moins un indice explicite dans le CV :
-
-- secteur écrit ;
-- contexte métier clairement sectoriel ;
-- type de client ou d'organisation identifiable.
-
-Tu peux mapper un indice métier vers une industrie autorisée.
-
-### Lexique de mapping (alias → industrie canonique)
+Mapping via :
 
 {INDUSTRY_MAPPING}
 
-### Règles
+---
 
-- sélectionner 1 à 3 industries maximum ;
-- privilégier celles qui reviennent le plus ou structurent la carrière ;
-- si aucune industrie n'est prouvable : tags.industries = []
+## Analyse de la preuve des compétences
+
+### Limitation
+
+- Maximum 15 compétences dans \`skillsDetailed\`
+- Prioriser les compétences structurantes
 
 ---
 
-## Suggestions
+### Objectif
 
-- Produire 2 à 3 suggestions par section.
-- Elles doivent être actionnables, concrètes et réalistes.
-- Elles doivent dire quoi améliorer et comment.
-- Ne jamais demander d'ajouter des informations impossibles à fournir.
-- Ne pas exiger des chiffres s'ils ne sont pas mesurables à partir du vécu décrit.
-
-### Préférer par exemple
-
-- préciser les livrables
-- clarifier le périmètre
-- ajouter le contexte métier
-- mieux structurer les compétences
+Évaluer le niveau de preuve réel.
 
 ---
 
-## StructuredText — restructuration HTML obligatoire
+### Niveaux
 
-Retourne le CV restructuré en HTML propre dans le champ structuredText.
-
-### Contraintes
-
-- utiliser <h2> pour les sections principales ;
-- utiliser <h3> pour les sous-sections ;
-- utiliser <p> pour les paragraphes ;
-- utiliser <ul><li> pour les listes ;
-- utiliser <strong> pour les éléments importants ;
-- ne jamais inventer de contenu ;
-- conserver tout le contenu existant ;
-- uniquement restructurer et reformater.
+- low
+- medium
+- high
 
 ---
 
-## Format de réponse attendu
+### Score
 
-Réponds uniquement avec un JSON strictement valide au format suivant :
+- 0 à 1
+- cohérent avec niveau
 
+---
+
+### Dimensions
+
+- evidence_sources
+- occurrence_count_estimate
+- context_count_estimate
+- recency
+- usage_depth
+
+---
+
+### Valeurs possibles
+
+#### evidence_sources
+
+- skills_section
+- experience
+- project_context
+- responsibility
+- achievement
+- education
+- certification
+
+#### recency
+
+- recent
+- mid
+- old
+- unknown
+
+#### usage_depth
+
+- mentioned_only
+- contextual
+- substantive
+- central
+
+---
+
+## Estimation de l'expérience par compétence
+
+### Objectif
+
+Produire une estimation prudente de la durée d'usage réelle d'une compétence.
+
+---
+
+### Règles absolues
+
+- Ne jamais inventer de durée
+- Ne jamais extrapoler sans base factuelle
+- Ne jamais supposer qu'une compétence couvre toute une expérience
+- En cas de doute -> retourner null
+- Toujours sous-estimer plutôt que surestimer
+
+---
+
+### Conditions d'estimation
+
+Estimation possible seulement si :
+
+- compétence présente dans une expérience datée
+- contexte d'usage identifiable
+- répétition cohérente
+
+---
+
+### Gestion des cas complexes
+
+- éviter double comptage
+- ne pas sommer aveuglément
+- ne pas utiliser les listes de compétences seules
+
+---
+
+### Champs à produire
+
+- \`estimated_experience_years\` (float ou null)
+- \`estimated_experience_confidence\` (low | medium | high)
+- \`experience_estimation_basis\` (justification courte)
+
+---
+
+### Heuristiques
+
+- simple mention -> null ou très faible
+- 1 expérience -> estimation partielle
+- plusieurs expériences -> estimation prudente cumulée
+- compétence centrale -> augmente la confiance, pas la durée
+
+---
+
+### Principe clé
+
+Mieux vaut null que faux.
+
+---
+
+## Justification
+
+- courte
+- factuelle
+- basée uniquement sur le CV
+
+---
+
+## StructuredText (HTML)
+
+Contraintes :
+
+- \`<h2>\`, \`<h3>\`, \`<p>\`, \`<ul>\`, \`<li>\`, \`<strong>\`
+- aucun contenu inventé
+- restructuration uniquement
+
+---
+
+## Format de sortie
+
+\`\`\`json
 {
-  "name": "Nom du candidat ou trigramme",
-  "title": "Titre professionnel",
+  "name": "",
+  "title": "",
   "globalRating": "XX%",
   "executiveSummaryRating": "XX%",
   "skillsRating": "XX%",
@@ -781,23 +769,42 @@ Réponds uniquement avec un JSON strictement valide au format suivant :
   "educationRating": "XX%",
   "hobbiesLanguagesRating": "XX%",
   "atsOptimizationRating": "XX%",
-  "structuredText": "<h2>Sommaire</h2><p>...</p><h2>Compétences</h2>...(HTML complet du CV restructuré)",
+  "structuredText": "<h2>...</h2>",
+  "skillsDetailed": [
+    {
+      "name": "",
+      "category": "",
+      "proof": {
+        "proof_level": "",
+        "proof_score": 0,
+        "evidence_sources": [],
+        "occurrence_count_estimate": 0,
+        "context_count_estimate": 0,
+        "recency": "",
+        "usage_depth": "",
+        "estimated_experience_years": null,
+        "estimated_experience_confidence": "",
+        "experience_estimation_basis": "",
+        "justification": ""
+      }
+    }
+  ],
   "tags": {
-    "skills": ["..."],
-    "industries": ["..."],
-    "tools": ["..."],
-    "softSkills": ["..."]
+    "skills": [],
+    "industries": [],
+    "tools": [],
+    "softSkills": []
   },
   "suggestions": {
-    "executiveSummary": ["...", "..."],
-    "skills": ["...", "..."],
-    "experiences": ["...", "..."],
-    "education": ["...", "..."],
-    "hobbiesLanguages": ["...", "..."],
-    "atsOptimization": ["...", "..."]
+    "executiveSummary": [],
+    "skills": [],
+    "experiences": [],
+    "education": [],
+    "hobbiesLanguages": [],
+    "atsOptimization": []
   }
-}`;
-
+}
+\`\`\``;
 export const DEFAULT_MATCH_ANALYSIS_PROMPT = `## Rôle
 
 Tu es un expert senior en recrutement, en optimisation de CV, en ATS (Applicant Tracking System) et en reformulation professionnelle de candidatures.

@@ -85,6 +85,11 @@ vi.mock('../../services/resumeAdaptation.service.js', () => ({
     executeResumeAdaptation: (...args) => mockExecuteResumeAdaptation(...args)
 }));
 
+const mockPersistResumeSkillEvidence = vi.fn();
+vi.mock('../../services/skillEvidence.service.js', () => ({
+    persistResumeSkillEvidence: (...args) => mockPersistResumeSkillEvidence(...args)
+}));
+
 vi.mock('../../services/openai.service.js', () => ({
     matchResumeWithMission: vi.fn()
 }));
@@ -112,6 +117,7 @@ describe('Batch Jobs Worker - Item Processors', () => {
         mockExecuteResumeAdaptation.mockReset();
         mockTrackBatchImportActivity.mockReset();
         mockTrackOcrActivity.mockReset();
+        mockPersistResumeSkillEvidence.mockReset();
         vi.mocked(getJobItemFilePayload).mockReset();
         vi.mocked(clearJobItemFileData).mockReset();
         vi.mocked(getJobItemFilePayload).mockResolvedValue({
@@ -162,6 +168,22 @@ describe('Batch Jobs Worker - Item Processors', () => {
                 executiveSummaryRating: 78,
                 hobbiesLanguagesRating: 60,
                 structuredText: '<p>structured</p>',
+                tags: {
+                    skills: ['Java'],
+                    industries: ['IT'],
+                    tools: ['Docker'],
+                    softSkills: ['Communication'],
+                    skillsEvidence: [{
+                        name: 'Java',
+                        evidenceScore: 0.82,
+                        confidence: 0.91
+                    }],
+                    toolsEvidence: [{
+                        name: 'Docker',
+                        evidenceScore: 0.74,
+                        confidence: 0.88
+                    }]
+                },
                 suggestions: { tip: 'improve skills' }
             });
 
@@ -176,6 +198,35 @@ describe('Batch Jobs Worker - Item Processors', () => {
             expect(mockAnalyze).toHaveBeenCalledWith(expect.any(String), 'firm-1', 'cv.pdf', expect.objectContaining({ ocrUsed: false }));
             // Should update resume with analysis
             expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('UPDATE resumes SET'), expect.any(Array));
+            const finalUpdateCall = mockQuery.mock.calls.find(
+                ([sql]) => typeof sql === 'string' && sql.includes("status = 'analyzed'")
+            );
+            const persistedAnalysis = finalUpdateCall?.[1].find((value) => {
+                if (typeof value !== 'string') return false;
+                try {
+                    const parsed = JSON.parse(value);
+                    return Array.isArray(parsed?.tags?.skillsEvidence) || Array.isArray(parsed?.tags?.toolsEvidence);
+                } catch {
+                    return false;
+                }
+            });
+            expect(persistedAnalysis).toBeTruthy();
+            expect(JSON.parse(persistedAnalysis)).toEqual(expect.objectContaining({
+                tags: expect.objectContaining({
+                    skillsEvidence: [expect.objectContaining({ name: 'Java' })],
+                    toolsEvidence: [expect.objectContaining({ name: 'Docker' })]
+                })
+            }));
+            expect(mockPersistResumeSkillEvidence).toHaveBeenCalledWith({
+                candidateId: 'res-1',
+                analysis: expect.objectContaining({
+                    tags: expect.objectContaining({
+                        skillsEvidence: [expect.objectContaining({ name: 'Java' })],
+                        toolsEvidence: [expect.objectContaining({ name: 'Docker' })]
+                    })
+                }),
+                phase: 'initial'
+            });
             expect(clearJobItemFileData).toHaveBeenCalledWith('item-1');
             expect(mockTrackBatchImportActivity).toHaveBeenCalledWith(expect.objectContaining({ event: 'run', mimeType: 'application/pdf' }));
             expect(mockTrackBatchImportActivity).toHaveBeenCalledWith(expect.objectContaining({ event: 'completed', successfulRuns: 1 }));

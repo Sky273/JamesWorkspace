@@ -108,7 +108,7 @@ function normalizeStringArray(value) {
     }
 
     if (typeof value === 'object') {
-        const directValues = ['label', 'name', 'title', 'text', 'value']
+        const directValues = ['label', 'name', 'title', 'text', 'value', 'skill', 'tool']
             .map((key) => value[key])
             .filter((candidate) => typeof candidate === 'string' && candidate.trim())
             .map((candidate) => candidate.trim());
@@ -121,6 +121,24 @@ function normalizeStringArray(value) {
     }
 
     return [];
+}
+
+function normalizeKeywordEvidenceArray(value) {
+    if (!Array.isArray(value)) return [];
+
+    return value
+        .filter((item) => item && typeof item === 'object' && !Array.isArray(item))
+        .map((item) => ({
+            ...item,
+            name: typeof item.name === 'string'
+                ? item.name.trim()
+                : typeof item.skill === 'string'
+                    ? item.skill.trim()
+                    : typeof item.tool === 'string'
+                        ? item.tool.trim()
+                    : ''
+        }))
+        .filter((item) => item.name);
 }
 
 export function pickFirstNonEmptyArray(...values) {
@@ -249,6 +267,15 @@ export function extractImprovementEnvelope(parsedInput) {
                 envelope?.soft_skills,
                 parsed?.summary?.softSkills,
                 envelope?.summary?.softSkills
+            ),
+            skillsEvidence: normalizeKeywordEvidenceArray(
+                parsed?.tags?.skillsEvidence?.length ? parsed?.tags?.skillsEvidence : envelope?.tags?.skillsEvidence
+            ),
+            toolsEvidence: normalizeKeywordEvidenceArray(
+                parsed?.tags?.toolsEvidence?.length ? parsed?.tags?.toolsEvidence : envelope?.tags?.toolsEvidence
+            ),
+            softSkillsEvidence: normalizeKeywordEvidenceArray(
+                parsed?.tags?.softSkillsEvidence?.length ? parsed?.tags?.softSkillsEvidence : envelope?.tags?.softSkillsEvidence
             )
         },
         name: parsed?.name || envelope?.name || '',
@@ -334,11 +361,15 @@ export function normalizeAnalysisResponse(analysisInput) {
         educationRating: analysis.educationRating || analysis['Education'] || '0%',
         hobbiesLanguagesRating: hobbiesRating,
         atsOptimizationRating: analysis.atsOptimizationRating || analysis['ATS Compatibility'] || analysis['ATS'] || '0%',
-        tags: analysis.tags || {
-            skills: analysis['Top Skills'] || [],
-            industries: analysis['Top Industries'] || [],
-            tools: analysis['Top Tools'] || [],
-            softSkills: analysis['Top Soft Skills'] || []
+        tags: {
+            ...(analysis.tags || {}),
+            skills: analysis.tags?.skills || analysis['Top Skills'] || [],
+            industries: analysis.tags?.industries || analysis['Top Industries'] || [],
+            tools: analysis.tags?.tools || analysis['Top Tools'] || [],
+            softSkills: analysis.tags?.softSkills || analysis['Top Soft Skills'] || [],
+            skillsEvidence: normalizeKeywordEvidenceArray(analysis.tags?.skillsEvidence),
+            toolsEvidence: normalizeKeywordEvidenceArray(analysis.tags?.toolsEvidence),
+            softSkillsEvidence: normalizeKeywordEvidenceArray(analysis.tags?.softSkillsEvidence)
         },
         suggestions: normalizedSuggestions
     };
@@ -376,7 +407,10 @@ export function buildImprovementAnalysisResult(improvementPayload, analysis = {}
             skills: pickFirstNonEmptyArray(tags.skills, summary.skills),
             industries: pickFirstNonEmptyArray(tags.industries, summary.industries),
             tools: pickFirstNonEmptyArray(tags.tools, summary.tools),
-            softSkills: pickFirstNonEmptyArray(tags.softSkills, tags.soft_skills, summary.softSkills)
+            softSkills: pickFirstNonEmptyArray(tags.softSkills, tags.soft_skills, summary.softSkills),
+            skillsEvidence: normalizeKeywordEvidenceArray(tags.skillsEvidence),
+            toolsEvidence: normalizeKeywordEvidenceArray(tags.toolsEvidence),
+            softSkillsEvidence: normalizeKeywordEvidenceArray(tags.softSkillsEvidence)
         },
         name: improvementPayload.name || summary.name || analysis?.name || '',
         title: summary.targetRole || summary.title || improvementPayload.title || analysis?.title || '',
@@ -416,7 +450,7 @@ export function buildEmptyImprovementAnalysis() {
         atsOptimizationRating: 0,
         hobbiesLanguagesRating: 0,
         suggestions: {},
-        tags: { skills: [], industries: [], tools: [], softSkills: [] },
+        tags: { skills: [], industries: [], tools: [], softSkills: [], skillsEvidence: [], toolsEvidence: [], softSkillsEvidence: [] },
         name: '',
         title: ''
     };

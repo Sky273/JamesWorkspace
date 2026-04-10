@@ -112,7 +112,7 @@ export const PROMPT_REGISTRY = Object.freeze({
   DEFAULT_ANALYSIS_PROMPT: Object.freeze({
     key: 'DEFAULT_ANALYSIS_PROMPT',
     id: 'resume.analysis.default',
-    version: '1.8.8',
+    version: '1.9.0',
     domain: 'resume',
     operation: 'resume-analysis',
     contractId: 'resume_analysis_v1',
