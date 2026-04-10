@@ -12,6 +12,7 @@ import { extractTextFromWordBuffer } from '../wordTextExtraction.service.js';
  * Improved to better preserve structure, trigrams, and candidate names
  */
 export async function extractTextFromPDFBuffer(buffer) {
+    const startedAt = Date.now();
     const result = await extractPdfTextWithOcr(buffer, {
         forceDocumentOcrTextLength: 50,
         onOcrVariantAttempt: ({ pageNum, variant, confidence, textLength, engine, psm }) => {
@@ -59,7 +60,8 @@ export async function extractTextFromPDFBuffer(buffer) {
         ocrUsed: result.ocrUsed,
         ocrPageCount: result.ocrPageCount,
         failedOcrPages: result.failedOcrPages,
-        avgOcrConfidence: result.avgOcrConfidence
+        avgOcrConfidence: result.avgOcrConfidence,
+        durationMs: Date.now() - startedAt
     });
     return result;
 }

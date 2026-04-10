@@ -1,31 +1,24 @@
+import { normalizeRequestBodyAliases } from '../../utils/validation.js';
 import * as missionsService from '../../services/missions.service.js';
 import { getResumeForAccessCheck } from '../../services/resumes.service.js';
 
-export function getFirstDefinedValue(source, keys) {
-    for (const key of keys) {
-        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
-            return source[key];
-        }
-    }
-    return undefined;
-}
-
 export function normalizeBatchJobPayload(payload = {}) {
+    const normalized = normalizeRequestBodyAliases(payload);
+
     return {
-        ...payload,
-        firm_id: getFirstDefinedValue(payload, ['firm_id', 'firmId']),
-        templateId: getFirstDefinedValue(payload, ['templateId', 'template_id']),
-        exportFormat: getFirstDefinedValue(payload, ['exportFormat', 'export_format']),
-        exportFormats: getFirstDefinedValue(payload, ['exportFormats', 'export_formats']),
-        deleteAfterExport: getFirstDefinedValue(payload, ['deleteAfterExport', 'delete_after_export']),
-        relativePaths: getFirstDefinedValue(payload, ['relativePaths', 'relative_paths']),
-        resumeIds: getFirstDefinedValue(payload, ['resumeIds', 'resume_ids']),
-        resumeId: getFirstDefinedValue(payload, ['resumeId', 'resume_id']),
-        dealId: getFirstDefinedValue(payload, ['dealId', 'deal_id']),
-        profileType: getFirstDefinedValue(payload, ['profileType', 'profile_type']),
-        candidateName: getFirstDefinedValue(payload, ['candidateName', 'candidate_name']),
-        candidateEmail: getFirstDefinedValue(payload, ['candidateEmail', 'candidate_email']),
-        missionId: getFirstDefinedValue(payload, ['missionId', 'mission_id'])
+        ...normalized,
+        templateId: normalized.templateId,
+        exportFormat: normalized.exportFormat,
+        exportFormats: normalized.exportFormats,
+        deleteAfterExport: normalized.deleteAfterExport,
+        relativePaths: normalized.relativePaths,
+        resumeIds: normalized.resumeIds,
+        resumeId: normalized.resumeId,
+        dealId: normalized.dealId,
+        profileType: normalized.profileType,
+        candidateName: normalized.candidateName,
+        candidateEmail: normalized.candidateEmail,
+        missionId: normalized.missionId
     };
 }
 
@@ -89,8 +82,8 @@ export function getUserContext(req) {
 }
 
 export function resolveFirmId({ isAdmin, userFirmId }, normalizedPayload) {
-    if (isAdmin && normalizedPayload.firm_id) {
-        return normalizedPayload.firm_id;
+    if (isAdmin && normalizedPayload.firmId) {
+        return normalizedPayload.firmId;
     }
     return userFirmId;
 }

@@ -44,7 +44,30 @@ vi.mock('../../utils/validation.js', () => ({
     validateParams: () => (req, res, next) => next(),
     validateBody: () => (req, res, next) => next(),
     createSubmissionSchema: {},
-    updateSubmissionSchema: {}
+    updateSubmissionSchema: {},
+    normalizeRequestBodyAliases: (value) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+            return value;
+        }
+
+        const normalized = { ...value };
+        if (Object.prototype.hasOwnProperty.call(normalized, 'resume_id') && normalized.resumeId === undefined) {
+            normalized.resumeId = normalized.resume_id;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'client_id') && normalized.clientId === undefined) {
+            normalized.clientId = normalized.client_id;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'contact_id') && normalized.contactId === undefined) {
+            normalized.contactId = normalized.contact_id;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'mission_id') && normalized.missionId === undefined) {
+            normalized.missionId = normalized.mission_id;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'sent_at') && normalized.sentAt === undefined) {
+            normalized.sentAt = normalized.sent_at;
+        }
+        return normalized;
+    }
 }));
 
 // Mock firmHelpers

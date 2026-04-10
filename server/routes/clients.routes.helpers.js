@@ -1,34 +1,31 @@
-export function getFirstDefinedValue(source, keys) {
-    for (const key of keys) {
-        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
-            return source[key];
-        }
-    }
-    return undefined;
-}
+import { normalizeRequestBodyAliases } from '../utils/validation.js';
 
 export function normalizeClientPayload(payload = {}) {
+    const normalized = normalizeRequestBodyAliases(payload);
+
     return {
-        ...payload,
-        name: getFirstDefinedValue(payload, ['name', 'Name']),
-        type: getFirstDefinedValue(payload, ['type', 'Type']),
-        status: getFirstDefinedValue(payload, ['status', 'Status']),
-        address: getFirstDefinedValue(payload, ['address', 'Address']),
-        website: getFirstDefinedValue(payload, ['website', 'Website']),
-        industry: getFirstDefinedValue(payload, ['industry', 'Industry']),
-        notes: getFirstDefinedValue(payload, ['notes', 'Notes']),
-        firm_id: getFirstDefinedValue(payload, ['firm_id', 'firmId', 'FirmId'])
+        ...normalized,
+        name: normalized.name,
+        type: normalized.type,
+        status: normalized.status,
+        address: normalized.address,
+        website: normalized.website,
+        industry: normalized.industry,
+        notes: normalized.notes,
+        firm_id: normalized.firmId
     };
 }
 
 export function normalizeContactPayload(payload = {}) {
+    const normalized = normalizeRequestBodyAliases(payload);
+
     return {
-        ...payload,
-        name: getFirstDefinedValue(payload, ['name', 'Name']),
-        role: getFirstDefinedValue(payload, ['role', 'Role']),
-        email: getFirstDefinedValue(payload, ['email', 'Email']),
-        phone: getFirstDefinedValue(payload, ['phone', 'Phone']),
-        is_primary: getFirstDefinedValue(payload, ['is_primary', 'isPrimary', 'IsPrimary'])
+        ...normalized,
+        name: normalized.name,
+        role: normalized.role,
+        email: normalized.email,
+        phone: normalized.phone,
+        is_primary: normalized.isPrimary
     };
 }
 

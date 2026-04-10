@@ -80,6 +80,40 @@ function containsDangerousResourceReference(content) {
   return DANGEROUS_RESOURCE_PATTERNS.some((pattern) => pattern.test(content) || pattern.test(decodedContent));
 }
 
+function extractEmbeddedCssFragments(content) {
+  if (typeof content !== 'string' || content.length === 0) {
+    return [];
+  }
+
+  const fragments = [];
+  const styleTagPattern = /<style\b[^>]*>([\s\S]*?)<\/style>/gi;
+  const styleAttrPattern = /\bstyle\s*=\s*(['"])([\s\S]*?)\1/gi;
+
+  for (const match of content.matchAll(styleTagPattern)) {
+    if (match[1]) {
+      fragments.push(match[1]);
+    }
+  }
+
+  for (const match of content.matchAll(styleAttrPattern)) {
+    if (match[2]) {
+      fragments.push(match[2]);
+    }
+  }
+
+  return fragments;
+}
+
+function containsDangerousEmbeddedCss(content) {
+  if (!content) {
+    return false;
+  }
+
+  return extractEmbeddedCssFragments(content).some((fragment) => (
+    DANGEROUS_CSS_PATTERNS.some((pattern) => pattern.test(fragment) || pattern.test(decodeHtmlEntities(fragment)))
+  ));
+}
+
 function resolvePdfServerInternalToken({
   configuredToken = '',
 } = {}) {
@@ -217,6 +251,11 @@ function createRequestCoordinator({
       return res.status(400).json({ error: 'htmlContent contains unsupported external resources' });
     }
 
+    if (containsDangerousEmbeddedCss(htmlContent)) {
+      logger.log('warn', 'Dangerous htmlContent CSS rejected');
+      return res.status(400).json({ error: 'htmlContent contains unsupported CSS' });
+    }
+
     if (!validateOptionalStringField(stylesheet, 'stylesheet', maxStylesheetSize, DANGEROUS_CSS_PATTERNS, res)) {
       return;
     }
@@ -230,6 +269,11 @@ function createRequestCoordinator({
       return res.status(400).json({ error: 'headerContent contains unsupported external resources' });
     }
 
+    if (headerContent && containsDangerousEmbeddedCss(headerContent)) {
+      logger.log('warn', 'Dangerous headerContent CSS rejected');
+      return res.status(400).json({ error: 'headerContent contains unsupported CSS' });
+    }
+
     if (!validateOptionalStringField(footerContent, 'footerContent', maxFragmentSize, DANGEROUS_HTML_PATTERNS, res)) {
       return;
     }
@@ -237,6 +281,11 @@ function createRequestCoordinator({
     if (footerContent && containsDangerousResourceReference(footerContent)) {
       logger.log('warn', 'External footerContent resource rejected');
       return res.status(400).json({ error: 'footerContent contains unsupported external resources' });
+    }
+
+    if (footerContent && containsDangerousEmbeddedCss(footerContent)) {
+      logger.log('warn', 'Dangerous footerContent CSS rejected');
+      return res.status(400).json({ error: 'footerContent contains unsupported CSS' });
     }
 
     const normalizedFooterHeight = normalizeFooterHeight(footerHeight);

@@ -99,4 +99,33 @@ describe('requestGuards', () => {
     expect(next).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(400);
   });
+
+  it('rejects dangerous embedded CSS while preserving inline-style support in principle', () => {
+    const coordinator = createRequestCoordinator({
+      logger: { log: () => {} },
+      pdfServerInternalToken: 't'.repeat(32),
+      pdfGenerationTimeout: 30000,
+      rateLimitMax: 10,
+      maxActiveJobs: 2,
+      maxHtmlSize: 1024 * 1024,
+      maxStylesheetSize: 50_000,
+      maxFragmentSize: 50_000
+    });
+    const req = {
+      body: {
+        htmlContent: '<p style="background-image:url(https://evil.test/a.png)">Hello</p>',
+        filename: 'test.pdf'
+      }
+    };
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn()
+    };
+    const next = vi.fn();
+
+    coordinator.middlewares.validatePdfRequest(req, res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
 });

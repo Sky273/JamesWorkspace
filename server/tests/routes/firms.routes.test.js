@@ -65,7 +65,18 @@ vi.mock('../../utils/validation.js', () => ({
     validateBody: () => (req, res, next) => next(),
     validateParams: () => (req, res, next) => next(),
     createFirmSchema: {},
-    updateFirmSchema: {}
+    updateFirmSchema: {},
+    normalizeRequestBodyAliases: (value) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+            return value;
+        }
+
+        const normalized = { ...value };
+        if (Object.prototype.hasOwnProperty.call(normalized, 'logo_url') && normalized.logoUrl === undefined) {
+            normalized.logoUrl = normalized.logo_url;
+        }
+        return normalized;
+    }
 }));
 
 // Mock auth middleware
@@ -250,6 +261,21 @@ describe('Firms Routes', () => {
             expect(res.body.name).toBe('New Firm');
         });
 
+        it('should create a firm with legacy logo_url payload', async () => {
+            mockCreateFirm.mockResolvedValue({ id: 'f-new', name: 'New Firm', status: 'active', logo_url: 'https://cdn.test/logo.png' });
+
+            const res = await request(app)
+                .post('/api/firms')
+                .set(authHeader)
+                .send({ name: 'New Firm', logo_url: 'https://cdn.test/logo.png' });
+
+            expect(res.status).toBe(200);
+            expect(mockCreateFirm).toHaveBeenCalledWith(expect.objectContaining({
+                name: 'New Firm',
+                logo_url: 'https://cdn.test/logo.png'
+            }));
+        });
+
         it('should return 400 on duplicate name', async () => {
             const err = new Error('duplicate');
             err.code = '23505';
@@ -285,6 +311,21 @@ describe('Firms Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.name).toBe('Updated');
+        });
+
+        it('should clear a firm logo with canonical payload normalization', async () => {
+            mockUpdateFirm.mockResolvedValue({ id: 'f-1', name: 'Updated', status: 'active', logo_url: null });
+
+            const res = await request(app)
+                .put('/api/firms/f-1')
+                .set(authHeader)
+                .send({ name: 'Updated', logo_url: '' });
+
+            expect(res.status).toBe(200);
+            expect(mockUpdateFirm).toHaveBeenCalledWith('f-1', expect.objectContaining({
+                name: 'Updated',
+                logo_url: null
+            }));
         });
 
         it('should return 404 if not found', async () => {

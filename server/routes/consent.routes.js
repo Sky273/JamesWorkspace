@@ -6,7 +6,7 @@
 
 import express from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
-import { validateBody, validateParams, initializeConsentSchema, respondConsentSchema } from '../utils/validation.js';
+import { validateBody, validateParams, initializeConsentSchema, normalizeRequestBodyAliases, respondConsentSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getResumeForAccessCheck } from '../services/resumes.service.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
@@ -59,22 +59,15 @@ async function assertResumeAccess(req, res, resumeId) {
     return resume;
 }
 
-function getFirstDefinedValue(source, keys) {
-    for (const key of keys) {
-        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
-            return source[key];
-        }
-    }
-    return undefined;
-}
-
 function normalizeConsentInitializationPayload(payload = {}) {
+    const normalized = normalizeRequestBodyAliases(payload);
+
     return {
-        ...payload,
-        resumeId: getFirstDefinedValue(payload, ['resumeId', 'resume_id']),
-        profileType: getFirstDefinedValue(payload, ['profileType', 'profile_type']),
-        candidateName: getFirstDefinedValue(payload, ['candidateName', 'candidate_name']),
-        candidateEmail: getFirstDefinedValue(payload, ['candidateEmail', 'candidate_email'])
+        ...normalized,
+        resumeId: normalized.resumeId,
+        profileType: normalized.profileType,
+        candidateName: normalized.candidateName,
+        candidateEmail: normalized.candidateEmail
     };
 }
 

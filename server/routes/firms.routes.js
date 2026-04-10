@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
-import { validateBody, validateParams, createFirmSchema, updateFirmSchema } from '../utils/validation.js';
+import { validateBody, validateParams, createFirmSchema, normalizeRequestBodyAliases, updateFirmSchema } from '../utils/validation.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../services/security.service.js';
 import { invalidateFirmsCaches } from '../services/cache.service.js';
 import { safeLog } from '../utils/logger.backend.js';
@@ -16,6 +16,15 @@ const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 200;
 
 const router = express.Router();
+
+function normalizeFirmPayload(payload = {}) {
+    const normalized = normalizeRequestBodyAliases(payload);
+
+    return {
+        ...normalized,
+        logoUrl: normalized.logoUrl
+    };
+}
 
 function parsePaginationParams(pageInput, limitInput) {
     const parsedPage = pageInput === undefined ? DEFAULT_PAGE : Number.parseInt(pageInput, 10);
@@ -106,15 +115,16 @@ router.get('/:id', authenticateToken, requireAdmin, validateParams('id'), async 
 router.post('/', authenticateToken, requireAdmin, validateBody(createFirmSchema), async (req, res) => {
     try {
         await invalidateFirmsCaches();
+        const normalizedPayload = normalizeFirmPayload(req.body);
         
         const firmData = {
-            name: req.body.name,
-            status: (req.body.status || 'active').toLowerCase()
+            name: normalizedPayload.name,
+            status: (normalizedPayload.status || 'active').toLowerCase()
         };
         
         // Add logo_url if provided
-        if (req.body.logo_url || req.body.logoUrl) {
-            firmData.logo_url = req.body.logo_url || req.body.logoUrl;
+        if (normalizedPayload.logoUrl) {
+            firmData.logo_url = normalizedPayload.logoUrl;
         }
 
         const firm = await firmsService.createFirm(firmData);
@@ -137,16 +147,17 @@ router.post('/', authenticateToken, requireAdmin, validateBody(createFirmSchema)
 router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), validateBody(updateFirmSchema), async (req, res) => {
     try {
         await invalidateFirmsCaches();
+        const normalizedPayload = normalizeFirmPayload(req.body);
         
         const { id } = req.params;
         const firmData = {
-            name: req.body.name,
-            status: (req.body.status || 'active').toLowerCase()
+            name: normalizedPayload.name,
+            status: (normalizedPayload.status || 'active').toLowerCase()
         };
         
         // Add logo_url if provided
-        if (req.body.logo_url !== undefined || req.body.logoUrl !== undefined) {
-            firmData.logo_url = req.body.logo_url || req.body.logoUrl || null;
+        if (normalizedPayload.logoUrl !== undefined) {
+            firmData.logo_url = normalizedPayload.logoUrl || null;
         }
 
         const firm = await firmsService.updateFirm(id, firmData);

@@ -53,7 +53,27 @@ vi.mock('../../utils/logger.backend.js', () => ({
 vi.mock('../../utils/validation.js', () => ({
     validateBody: () => (req, res, next) => next(),
     validateParams: () => (req, res, next) => next(),
-    updateAdaptationSchema: {}
+    updateAdaptationSchema: {},
+    normalizeRequestBodyAliases: (value) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+            return value;
+        }
+
+        const normalized = { ...value };
+        if (Object.prototype.hasOwnProperty.call(normalized, 'adapted_text') && normalized.adaptedText === undefined) {
+            normalized.adaptedText = normalized.adapted_text;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'adapted_title') && normalized.adaptedTitle === undefined) {
+            normalized.adaptedTitle = normalized.adapted_title;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'match_score') && normalized.matchScore === undefined) {
+            normalized.matchScore = normalized.match_score;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'match_analysis') && normalized.matchAnalysis === undefined) {
+            normalized.matchAnalysis = normalized.match_analysis;
+        }
+        return normalized;
+    }
 }));
 
 // Mock auth middleware
@@ -411,6 +431,45 @@ describe('Adaptations Routes - PUT /api/adaptations/:id', () => {
             status: 'completed',
             match_score: 88,
             match_analysis: 'Strong match'
+        }));
+    });
+
+    it('should update adaptation with snake_case payload', async () => {
+        mockGetAdaptationById.mockResolvedValueOnce({
+            id: 'adapt-124',
+            status: 'pending',
+            firm: 'Test Firm',
+            firm_id: 'firm-123'
+        });
+        mockUpdateAdaptation.mockResolvedValueOnce({
+            id: 'adapt-124',
+            status: 'completed',
+            adapted_title: 'Legacy Title',
+            adapted_text: 'Legacy adapted text',
+            match_score: 72,
+            match_analysis: 'Legacy strong match',
+            firm: 'Test Firm',
+            firm_id: 'firm-123'
+        });
+
+        const res = await request(app)
+            .put('/api/adaptations/adapt-124')
+            .set('Authorization', 'Bearer valid-token')
+            .send({
+                adapted_title: 'Legacy Title',
+                adapted_text: 'Legacy adapted text',
+                status: 'completed',
+                match_score: 72,
+                match_analysis: 'Legacy strong match'
+            });
+
+        expect(res.status).toBe(200);
+        expect(mockUpdateAdaptation).toHaveBeenCalledWith('adapt-124', expect.objectContaining({
+            adapted_title: 'Legacy Title',
+            adapted_text: 'Legacy adapted text',
+            status: 'completed',
+            match_score: 72,
+            match_analysis: 'Legacy strong match'
         }));
     });
 

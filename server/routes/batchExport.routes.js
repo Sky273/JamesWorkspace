@@ -10,7 +10,7 @@ import os from 'os';
 import path from 'path';
 import { pipeline } from 'stream/promises';
 import { authenticateToken, isUserAdmin } from '../middleware/auth.middleware.js';
-import { validateBody, batchExportSchema } from '../utils/validation.js';
+import { validateBody, batchExportSchema, normalizeRequestBodyAliases } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import * as batchExportService from '../services/batchExport.service.js';
 import { metrics } from '../services/metrics.service.js';
@@ -37,21 +37,14 @@ async function persistBatchExportArtifact(tempDir, fileName, content) {
     return artifactPath;
 }
 
-function getFirstDefinedValue(source, keys) {
-    for (const key of keys) {
-        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
-            return source[key];
-        }
-    }
-    return undefined;
-}
-
 function normalizeBatchExportPayload(payload = {}) {
+    const normalized = normalizeRequestBodyAliases(payload);
+
     return {
-        ...payload,
-        resumeIds: getFirstDefinedValue(payload, ['resumeIds', 'resume_ids']),
-        templateId: getFirstDefinedValue(payload, ['templateId', 'template_id']),
-        format: getFirstDefinedValue(payload, ['format', 'exportFormat', 'export_format'])
+        ...normalized,
+        resumeIds: normalized.resumeIds,
+        templateId: normalized.templateId,
+        format: normalized.format || normalized.exportFormat
     };
 }
 
@@ -165,12 +158,14 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
         const exportFormat = format || 'pdf';
         const batchExportConcurrency = getBatchExportConcurrency();
         const batchExportBatchDelayMs = getBatchExportBatchDelayMs();
+        const totalBatches = Math.ceil(resumeIds.length / batchExportConcurrency);
         safeLog('info', 'Starting batch export', { 
             resumeCount: resumeIds.length, 
             templateId, 
             format: exportFormat,
             pdfServerUrl: PDF_SERVER_URL,
-            batchExportConcurrency
+            batchExportConcurrency,
+            totalBatches
         });
 
         try {
@@ -298,6 +293,14 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
 
         const resumeBatches = chunkArray(resumeIds, batchExportConcurrency);
         for (const [batchIndex, batch] of resumeBatches.entries()) {
+            safeLog('debug', 'Batch export HTTP progress', {
+                requestedResumeCount: resumeIds.length,
+                resolvedResumeCount: resumesById.size,
+                batchNumber: batchIndex + 1,
+                totalBatches,
+                batchSize: batch.length,
+                format: exportFormat
+            });
             const batchResults = await Promise.all(batch.map((resumeId) => processResumeExport(resumeId)));
 
             for (const result of batchResults) {
@@ -370,6 +373,8 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
                 successfulRuns: 1
             });
             safeLog('info', 'Batch export completed', { 
+                templateId,
+                format: exportFormat,
                 requestedResumeCount: resumeIds.length,
                 resolvedResumeCount: resumesById.size,
                 inaccessibleResumeCount,
@@ -395,6 +400,8 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
             successfulRuns: 1
         });
         safeLog('info', 'Batch export completed', { 
+            templateId,
+            format: exportFormat,
             requestedResumeCount: resumeIds.length,
             resolvedResumeCount: resumesById.size,
             inaccessibleResumeCount,

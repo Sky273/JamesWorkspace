@@ -1,27 +1,22 @@
-export function getFirstDefinedValue(source, keys) {
-    for (const key of keys) {
-        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
-            return source[key];
-        }
-    }
-    return undefined;
-}
+import { normalizeRequestBodyAliases } from '../utils/validation.js';
 
 export function normalizeDealPayload(payload = {}) {
+    const normalized = normalizeRequestBodyAliases(payload);
+
     return {
-        ...payload,
-        title: getFirstDefinedValue(payload, ['title', 'Title']),
-        description: getFirstDefinedValue(payload, ['description', 'Description']),
-        client_id: getFirstDefinedValue(payload, ['client_id', 'clientId']),
-        contact_id: getFirstDefinedValue(payload, ['contact_id', 'contactId']),
-        status: getFirstDefinedValue(payload, ['status', 'Status']),
-        expected_start_date: getFirstDefinedValue(payload, ['expected_start_date', 'expectedStartDate']),
-        expected_end_date: getFirstDefinedValue(payload, ['expected_end_date', 'expectedEndDate']),
-        budget_min: getFirstDefinedValue(payload, ['budget_min', 'budgetMin']),
-        budget_max: getFirstDefinedValue(payload, ['budget_max', 'budgetMax']),
-        priority: getFirstDefinedValue(payload, ['priority', 'Priority']),
-        tags: getFirstDefinedValue(payload, ['tags', 'Tags']),
-        notes: getFirstDefinedValue(payload, ['notes', 'Notes'])
+        ...normalized,
+        title: normalized.title,
+        description: normalized.description,
+        client_id: normalized.clientId,
+        contact_id: normalized.contactId,
+        status: normalized.status,
+        expected_start_date: normalized.expectedStartDate,
+        expected_end_date: normalized.expectedEndDate,
+        budget_min: normalized.budgetMin,
+        budget_max: normalized.budgetMax,
+        priority: normalized.priority,
+        tags: normalized.tags,
+        notes: normalized.notes
     };
 }
 

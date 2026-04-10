@@ -41,6 +41,31 @@ function parseJobOptions(job) {
     return job.options;
 }
 
+async function finalizeCompletedJob(job, outcome) {
+    const latestStatus = await getJobStatus(job.id);
+    if (latestStatus === JOB_STATUS.CANCELLED) {
+        safeLog('info', 'Batch job remained cancelled after processing cycle', { jobId: job.id });
+        return false;
+    }
+
+    await updateJobStatus(job.id, outcome.status, {
+        processed_items: outcome.counters.processed_items,
+        success_count: outcome.counters.success_count,
+        error_count: outcome.counters.error_count,
+        ...(outcome.status === JOB_STATUS.FAILED ? { error_message: 'One or more batch items failed' } : {})
+    });
+
+    safeLog('info', outcome.status === JOB_STATUS.FAILED ? 'Batch job failed with item errors' : 'Batch job completed', {
+        jobId: job.id,
+        jobType: job.job_type,
+        totalItems: job.total_items,
+        exportRequested: Boolean(parseJobOptions(job).export),
+        ...outcome.counters
+    });
+
+    return true;
+}
+
 async function ensureBatchJobsSchemaReady() {
     const result = await query(
         `
@@ -225,21 +250,7 @@ async function processNextBatch() {
                     }
                     
                     const outcome = await getFinalJobOutcome(job.id);
-                    const latestStatus = await getJobStatus(job.id);
-                    if (latestStatus === JOB_STATUS.CANCELLED) {
-                        safeLog('info', 'Batch job remained cancelled after processing cycle', { jobId: job.id });
-                        continue;
-                    }
-                    await updateJobStatus(job.id, outcome.status, {
-                        processed_items: outcome.counters.processed_items,
-                        success_count: outcome.counters.success_count,
-                        error_count: outcome.counters.error_count,
-                        ...(outcome.status === JOB_STATUS.FAILED ? { error_message: 'One or more batch items failed' } : {})
-                    });
-                    safeLog('info', outcome.status === JOB_STATUS.FAILED ? 'Batch job failed with item errors' : 'Batch job completed', {
-                        jobId: job.id,
-                        ...outcome.counters
-                    });
+                    await finalizeCompletedJob(job, outcome);
                 }
                 continue;
             }
@@ -269,21 +280,7 @@ async function processNextBatch() {
                 }
                 
                 const outcome = await getFinalJobOutcome(job.id);
-                const latestStatus = await getJobStatus(job.id);
-                if (latestStatus === JOB_STATUS.CANCELLED) {
-                    safeLog('info', 'Batch job remained cancelled after processing cycle', { jobId: job.id });
-                    continue;
-                }
-                await updateJobStatus(job.id, outcome.status, {
-                    processed_items: outcome.counters.processed_items,
-                    success_count: outcome.counters.success_count,
-                    error_count: outcome.counters.error_count,
-                    ...(outcome.status === JOB_STATUS.FAILED ? { error_message: 'One or more batch items failed' } : {})
-                });
-                safeLog('info', outcome.status === JOB_STATUS.FAILED ? 'Batch job failed with item errors' : 'Batch job completed', {
-                    jobId: job.id,
-                    ...outcome.counters
-                });
+                await finalizeCompletedJob(job, outcome);
             }
         } catch (error) {
             safeLog('error', 'Error processing job', { jobId: job.id, error: error.message });
@@ -355,6 +352,7 @@ async function processItem(item, job, jobOptions = null) {
 
 export const _internal = {
     parseJobOptions,
+    finalizeCompletedJob,
     processNextBatch,
     processItem,
     resetState() {

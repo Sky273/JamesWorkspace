@@ -79,7 +79,21 @@ vi.mock('../../utils/validation.js', () => ({
     createClientSchema: {},
     updateClientSchema: {},
     createContactSchema: {},
-    updateContactSchema: {}
+    updateContactSchema: {},
+    normalizeRequestBodyAliases: (value) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+            return value;
+        }
+
+        const normalized = { ...value };
+        if (Object.prototype.hasOwnProperty.call(normalized, 'firm_id') && normalized.firmId === undefined) {
+            normalized.firmId = normalized.firm_id;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'is_primary') && normalized.isPrimary === undefined) {
+            normalized.isPrimary = normalized.is_primary;
+        }
+        return normalized;
+    }
 }));
 
 // Mock auth middleware

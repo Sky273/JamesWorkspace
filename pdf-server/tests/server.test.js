@@ -244,6 +244,19 @@ describe('PDF Server', () => {
       expect(res.status).toBe(200);
     });
 
+    it('should reject dangerous CSS inside htmlContent style attributes', async () => {
+      const res = await request(app)
+        .post('/generate-pdf')
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
+        .send({
+          htmlContent: '<p style="background-image:url(https://evil.test/a.png)">Hello</p>',
+          filename: 'test.pdf'
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('unsupported CSS');
+    });
+
     it('should allow embedded style tags in htmlContent', async () => {
       pdfGen.generatePdf.mockResolvedValue(Buffer.from('fake'));
 
@@ -271,6 +284,20 @@ describe('PDF Server', () => {
         });
 
       expect(res.status).toBe(200);
+    });
+
+    it('should reject dangerous CSS inside headerContent style blocks', async () => {
+      const res = await request(app)
+        .post('/generate-pdf')
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
+        .send({
+          htmlContent: '<p>Hello</p>',
+          filename: 'test.pdf',
+          headerContent: '<style>@import url(https://evil.test/header.css);</style><div>Header</div>'
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('unsupported CSS');
     });
 
     it('should reject external resources embedded in htmlContent tags', async () => {

@@ -63,6 +63,7 @@ import { getPendingJobs, getJobStatus, updateJobStatus, updateJobCounters, isJob
 import { claimPendingItems, updateJobItemStatus } from '../../services/batchJobs/itemCrud.js';
 import { processImportItem, processImproveItem, processAdaptItem, processMatchItem } from '../../services/batchJobsWorker/itemProcessors.js';
 import { resetLLMQueue } from '../../services/batchJobsWorker/llmIntegration.js';
+import { safeLog } from '../../utils/logger.backend.js';
 
 describe('Batch Jobs Worker - Worker Lifecycle', () => {
     afterEach(async () => {
@@ -247,6 +248,12 @@ describe('Batch Jobs Worker - Worker Lifecycle', () => {
 
             expect(updateJobCounters).toHaveBeenCalledWith('j4');
             expect(updateJobStatus).toHaveBeenLastCalledWith('j4', 'completed', expect.objectContaining({ processed_items: 0, success_count: 0, error_count: 0 }));
+            expect(safeLog).toHaveBeenCalledWith('info', 'Batch job completed', expect.objectContaining({
+                jobId: 'j4',
+                jobType: 'import',
+                totalItems: 0,
+                exportRequested: false
+            }));
         }, 10000);
 
         it('should preserve cancelled status when a job completes after cancellation', async () => {

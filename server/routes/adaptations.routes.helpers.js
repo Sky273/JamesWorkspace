@@ -1,19 +1,14 @@
-export function getFirstDefinedValue(source, keys) {
-    for (const key of keys) {
-        if (source[key] !== undefined) {
-            return source[key];
-        }
-    }
-    return undefined;
-}
+import { normalizeRequestBodyAliases } from '../utils/validation.js';
 
 export function normalizeAdaptationPayload(payload = {}) {
+    const normalized = normalizeRequestBodyAliases(payload);
+
     return {
-        adaptedText: getFirstDefinedValue(payload, ['adaptedText', 'adapted_text', 'Adapted Text']),
-        adaptedTitle: getFirstDefinedValue(payload, ['adaptedTitle', 'adapted_title', 'Adapted Title']),
-        status: getFirstDefinedValue(payload, ['status', 'Status']),
-        matchScore: getFirstDefinedValue(payload, ['matchScore', 'match_score', 'Match Score']),
-        matchAnalysis: getFirstDefinedValue(payload, ['matchAnalysis', 'match_analysis', 'Match Analysis'])
+        adaptedText: normalized.adaptedText,
+        adaptedTitle: normalized.adaptedTitle,
+        status: normalized.status,
+        matchScore: normalized.matchScore,
+        matchAnalysis: normalized.matchAnalysis
     };
 }
 

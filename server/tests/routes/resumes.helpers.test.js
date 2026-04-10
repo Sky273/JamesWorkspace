@@ -20,7 +20,7 @@ vi.mock('../../utils/firmHelpers.js', () => ({
     isUserAdmin: (...a) => mockIsUserAdmin(...a)
 }));
 
-import { checkResumeAccess, parseScore, stringifyIfNeeded, mapResumeToFrontend } from '../../routes/resumes/helpers.js';
+import { checkResumeAccess, parseScore, stringifyIfNeeded, mapResumeToFrontend, normalizeResumeUpdatePayload } from '../../routes/resumes/helpers.js';
 
 describe('resumes/helpers', () => {
     beforeEach(() => vi.resetAllMocks());
@@ -106,6 +106,26 @@ describe('resumes/helpers', () => {
         it('should return empty array for Resume File when no URL', () => {
             const result = mapResumeToFrontend({ id: 'r2', resume_file_url: null });
             expect(result['Resume File']).toEqual([]);
+        });
+    });
+
+    describe('normalizeResumeUpdatePayload', () => {
+        it('should normalize canonical and legacy resume update aliases', () => {
+            const result = normalizeResumeUpdatePayload({
+                Name: 'Alice',
+                'Improved Text': 'Updated content',
+                soft_skills: ['Communication'],
+                'Skills Score': 88,
+                analyzed_at: '2026-04-10T09:00:00Z'
+            });
+
+            expect(result).toMatchObject({
+                name: 'Alice',
+                improvedText: 'Updated content',
+                softSkills: ['Communication'],
+                skillsScore: 88,
+                analysisDate: '2026-04-10T09:00:00Z'
+            });
         });
     });
 

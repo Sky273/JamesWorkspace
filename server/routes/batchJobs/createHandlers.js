@@ -215,7 +215,7 @@ export async function createProfileSearchJob(req, res) {
             status: normalizedPayload.status ?? null,
             weights: normalizedPayload.weights,
             dealId: normalizedPayload.dealId || null,
-            searchFirmId: userContext.isAdmin && !normalizedPayload.firm_id ? null : firmId
+            searchFirmId: userContext.isAdmin && !normalizedPayload.firmId ? null : firmId
         }),
         stageItemsBuilder: ({ missionId, accessibleMission }) => [{
             fileName: accessibleMission.title || `Mission ${missionId}`,

@@ -66,6 +66,7 @@ vi.mock('fs', async () => {
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
+const { safeLog } = await import('../../utils/logger.backend.js');
 
 const mockTrackBatchExportActivity = vi.fn();
 vi.mock('../../services/metrics.service.js', () => ({
@@ -77,7 +78,24 @@ vi.mock('../../services/metrics.service.js', () => ({
 // Mock validation
 vi.mock('../../utils/validation.js', () => ({
     validateBody: () => (req, res, next) => next(),
-    batchExportSchema: {}
+    batchExportSchema: {},
+    normalizeRequestBodyAliases: (value) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+            return value;
+        }
+
+        const normalized = { ...value };
+        if (Object.prototype.hasOwnProperty.call(normalized, 'resume_ids') && normalized.resumeIds === undefined) {
+            normalized.resumeIds = normalized.resume_ids;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'template_id') && normalized.templateId === undefined) {
+            normalized.templateId = normalized.template_id;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'export_format') && normalized.exportFormat === undefined) {
+            normalized.exportFormat = normalized.export_format;
+        }
+        return normalized;
+    }
 }));
 
 // Mock auth middleware
@@ -272,6 +290,11 @@ describe('Batch Export Routes', () => {
                 format: 'pdf',
                 successfulRuns: 1,
                 generatedFiles: 1
+            }));
+            expect(safeLog).toHaveBeenCalledWith('info', 'Batch export completed', expect.objectContaining({
+                templateId: TEMPLATE_UUID,
+                format: 'pdf',
+                filesCount: 1
             }));
         });
 

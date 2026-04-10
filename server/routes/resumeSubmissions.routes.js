@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateToken, isUserAdmin } from '../middleware/auth.middleware.js';
-import { validateBody, validateParams, createSubmissionSchema, updateSubmissionSchema } from '../utils/validation.js';
+import { validateBody, validateParams, createSubmissionSchema, normalizeRequestBodyAliases, updateSubmissionSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
 import * as submissionsService from '../services/resumeSubmissions.service.js';
@@ -19,25 +19,18 @@ function parsePositiveInteger(value, fallback, max = null) {
     };
 }
 
-function getFirstDefinedValue(source, keys) {
-    for (const key of keys) {
-        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
-            return source[key];
-        }
-    }
-    return undefined;
-}
-
 function normalizeSubmissionPayload(payload = {}) {
+    const normalized = normalizeRequestBodyAliases(payload);
+
     return {
-        ...payload,
-        resume_id: getFirstDefinedValue(payload, ['resume_id', 'resumeId']),
-        client_id: getFirstDefinedValue(payload, ['client_id', 'clientId']),
-        contact_id: getFirstDefinedValue(payload, ['contact_id', 'contactId']),
-        mission_id: getFirstDefinedValue(payload, ['mission_id', 'missionId']),
-        notes: getFirstDefinedValue(payload, ['notes', 'Notes']),
-        sent_at: getFirstDefinedValue(payload, ['sent_at', 'sentAt']),
-        status: getFirstDefinedValue(payload, ['status', 'Status'])
+        ...normalized,
+        resume_id: normalized.resumeId,
+        client_id: normalized.clientId,
+        contact_id: normalized.contactId,
+        mission_id: normalized.missionId,
+        notes: normalized.notes,
+        sent_at: normalized.sentAt,
+        status: normalized.status
     };
 }
 

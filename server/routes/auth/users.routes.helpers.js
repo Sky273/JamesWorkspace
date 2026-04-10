@@ -1,25 +1,20 @@
-export function getFirstDefinedValue(source, keys) {
-    for (const key of keys) {
-        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
-            return source[key];
-        }
-    }
-    return undefined;
-}
+import { normalizeRequestBodyAliases } from '../../utils/validation.js';
 
 export function normalizeAdminUserPayload(payload = {}) {
+    const normalized = normalizeRequestBodyAliases(payload);
+
     return {
-        ...payload,
-        email: getFirstDefinedValue(payload, ['email', 'Email']),
-        password: getFirstDefinedValue(payload, ['password', 'Password']),
-        name: getFirstDefinedValue(payload, ['name', 'Name']),
-        jobTitle: getFirstDefinedValue(payload, ['jobTitle', 'job_title', 'JobTitle']),
-        phone: getFirstDefinedValue(payload, ['phone', 'Phone']),
-        status: getFirstDefinedValue(payload, ['status', 'Status']),
-        firm: getFirstDefinedValue(payload, ['firm', 'Firm']),
-        firmId: getFirstDefinedValue(payload, ['firmId', 'firm_id', 'FirmId', 'Firm ID']),
-        customer: getFirstDefinedValue(payload, ['customer', 'Customer']),
-        role: getFirstDefinedValue(payload, ['role', 'Role'])
+        ...normalized,
+        email: normalized.email,
+        password: normalized.password,
+        name: normalized.name,
+        jobTitle: normalized.jobTitle,
+        phone: normalized.phone,
+        status: normalized.status,
+        firm: normalized.firm,
+        firmId: normalized.firmId,
+        customer: normalized.customer,
+        role: normalized.role
     };
 }
 

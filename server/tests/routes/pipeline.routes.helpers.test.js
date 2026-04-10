@@ -4,6 +4,32 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+vi.mock('../../utils/validation.js', () => ({
+    normalizeRequestBodyAliases: (value) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+            return value;
+        }
+
+        const normalized = { ...value };
+        if (Object.prototype.hasOwnProperty.call(normalized, 'resume_id') && normalized.resumeId === undefined) {
+            normalized.resumeId = normalized.resume_id;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'mission_id') && normalized.missionId === undefined) {
+            normalized.missionId = normalized.mission_id;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'client_id') && normalized.clientId === undefined) {
+            normalized.clientId = normalized.client_id;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'Stage') && normalized.stage === undefined) {
+            normalized.stage = normalized.Stage;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'Notes') && normalized.notes === undefined) {
+            normalized.notes = normalized.Notes;
+        }
+        return normalized;
+    }
+}));
+
 import {
     buildInterviewCompletionPayload,
     buildInterviewSchedulePayload,
@@ -23,6 +49,7 @@ describe('Pipeline route helpers', () => {
             Notes: 'legacy'
         })).toEqual({
             resumeId: 'r-1',
+            adaptationId: null,
             missionId: null,
             clientId: 'c-1',
             stage: 'screening',

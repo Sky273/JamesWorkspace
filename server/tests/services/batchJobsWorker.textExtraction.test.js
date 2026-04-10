@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { safeLog } from '../../utils/logger.backend.js';
 
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
@@ -269,6 +270,31 @@ describe('Batch Jobs Worker - Text Extraction', () => {
 
             expect(result.text).toContain('Texte OCR extrait depuis une image de CV');
             expect(result.ocrUsed).toBe(true);
+        });
+
+        it('should log a summary with extraction duration', async () => {
+            const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+
+            pdfjsLib.getDocument.mockReturnValue({
+                promise: Promise.resolve({
+                    numPages: 1,
+                    getPage: vi.fn().mockResolvedValue({
+                        getTextContent: vi.fn().mockResolvedValue({
+                            items: [
+                                { str: 'Visible native content with enough text to exceed the OCR fallback threshold safely', transform: [1, 0, 0, 1, 50, 700] }
+                            ]
+                        })
+                    })
+                })
+            });
+
+            const buf = Buffer.from('fake-pdf');
+            await extractTextFromPDFBuffer(buf);
+
+            expect(safeLog).toHaveBeenCalledWith('info', 'Batch PDF extraction completed', expect.objectContaining({
+                textLength: expect.any(Number),
+                durationMs: expect.any(Number)
+            }));
         });
     });
 });

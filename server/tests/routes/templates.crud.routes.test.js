@@ -66,7 +66,29 @@ vi.mock('../../utils/validation.js', () => ({
     validateBody: () => (req, res, next) => next(),
     validateParams: () => (req, res, next) => next(),
     createTemplateSchema: {},
-    updateTemplateSchema: {}
+    updateTemplateSchema: {},
+    normalizeRequestBodyAliases: (value) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+            return value;
+        }
+
+        const normalized = { ...value };
+        if (normalized.Name !== undefined && normalized.name === undefined) normalized.name = normalized.Name;
+        if (normalized.Description !== undefined && normalized.description === undefined) normalized.description = normalized.Description;
+        if (normalized.Popular !== undefined && normalized.popular === undefined) normalized.popular = normalized.Popular;
+        if (normalized.Status !== undefined && normalized.status === undefined) normalized.status = normalized.Status;
+        if (normalized.Tags !== undefined && normalized.tags === undefined) normalized.tags = normalized.Tags;
+        if (normalized.PreviewImage !== undefined && normalized.previewImage === undefined) normalized.previewImage = normalized.PreviewImage;
+        if (normalized.HeaderContent !== undefined && normalized.headerContent === undefined) normalized.headerContent = normalized.HeaderContent;
+        if (normalized.TemplateContent !== undefined && normalized.templateContent === undefined) normalized.templateContent = normalized.TemplateContent;
+        if (normalized.FooterContent !== undefined && normalized.footerContent === undefined) normalized.footerContent = normalized.FooterContent;
+        if (normalized.FooterHeight !== undefined && normalized.footerHeight === undefined) normalized.footerHeight = normalized.FooterHeight;
+        if (normalized.Stylesheet !== undefined && normalized.stylesheet === undefined) normalized.stylesheet = normalized.Stylesheet;
+        if (normalized['Firm ID'] !== undefined && normalized.firmId === undefined) normalized.firmId = normalized['Firm ID'];
+        if (normalized.FirmId !== undefined && normalized.firmId === undefined) normalized.firmId = normalized.FirmId;
+        if (normalized.firm_id !== undefined && normalized.firmId === undefined) normalized.firmId = normalized.firm_id;
+        return normalized;
+    }
 }));
 
 // Mock auth middleware

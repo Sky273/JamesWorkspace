@@ -51,7 +51,27 @@ vi.mock('../../utils/validation.js', () => ({
     validateBody: () => (req, res, next) => next(),
     validateParams: () => (req, res, next) => next(),
     initializeConsentSchema: {},
-    respondConsentSchema: {}
+    respondConsentSchema: {},
+    normalizeRequestBodyAliases: (value) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+            return value;
+        }
+
+        const normalized = { ...value };
+        if (Object.prototype.hasOwnProperty.call(normalized, 'resume_id') && normalized.resumeId === undefined) {
+            normalized.resumeId = normalized.resume_id;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'profile_type') && normalized.profileType === undefined) {
+            normalized.profileType = normalized.profile_type;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'candidate_name') && normalized.candidateName === undefined) {
+            normalized.candidateName = normalized.candidate_name;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'candidate_email') && normalized.candidateEmail === undefined) {
+            normalized.candidateEmail = normalized.candidate_email;
+        }
+        return normalized;
+    }
 }));
 
 // Mock auth middleware

@@ -1,23 +1,17 @@
+import { normalizeRequestBodyAliases } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 
-export function getFirstDefinedValue(source, keys) {
-    for (const key of keys) {
-        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
-            return source[key];
-        }
-    }
-    return undefined;
-}
-
 export function normalizePipelineEntryPayload(payload = {}) {
+    const normalized = normalizeRequestBodyAliases(payload);
+
     return {
-        ...payload,
-        resumeId: getFirstDefinedValue(payload, ['resumeId', 'resume_id']),
-        adaptationId: getFirstDefinedValue(payload, ['adaptationId', 'adaptation_id']),
-        missionId: getFirstDefinedValue(payload, ['missionId', 'mission_id']),
-        clientId: getFirstDefinedValue(payload, ['clientId', 'client_id']),
-        stage: getFirstDefinedValue(payload, ['stage', 'Stage']),
-        notes: getFirstDefinedValue(payload, ['notes', 'Notes'])
+        ...normalized,
+        resumeId: normalized.resumeId,
+        adaptationId: normalized.adaptationId,
+        missionId: normalized.missionId,
+        clientId: normalized.clientId,
+        stage: normalized.stage,
+        notes: normalized.notes
     };
 }
 

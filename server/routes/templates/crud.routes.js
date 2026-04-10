@@ -5,7 +5,7 @@
 
 import express from 'express';
 import { authenticateToken, requireAdmin, isUserAdmin } from '../../middleware/auth.middleware.js';
-import { validateBody, validateParams, createTemplateSchema, updateTemplateSchema } from '../../utils/validation.js';
+import { validateBody, validateParams, createTemplateSchema, updateTemplateSchema, normalizeRequestBodyAliases } from '../../utils/validation.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../services/security.service.js';
 import { invalidateTemplatesCaches } from '../../services/cache.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
@@ -15,30 +15,23 @@ import * as templatesService from '../../services/templates.service.js';
 
 const router = express.Router();
 
-function getFirstDefinedValue(source, keys) {
-    for (const key of keys) {
-        if (Object.prototype.hasOwnProperty.call(source, key) && source[key] !== undefined) {
-            return source[key];
-        }
-    }
-    return undefined;
-}
-
 function normalizeTemplatePayload(payload = {}) {
+    const normalized = normalizeRequestBodyAliases(payload);
+
     return {
-        ...payload,
-        Name: getFirstDefinedValue(payload, ['Name', 'name']),
-        Description: getFirstDefinedValue(payload, ['Description', 'description']),
-        Popular: getFirstDefinedValue(payload, ['Popular', 'popular']),
-        Status: getFirstDefinedValue(payload, ['Status', 'status']),
-        Tags: getFirstDefinedValue(payload, ['Tags', 'tags']),
-        PreviewImage: getFirstDefinedValue(payload, ['PreviewImage', 'previewImage']),
-        HeaderContent: getFirstDefinedValue(payload, ['HeaderContent', 'headerContent']),
-        TemplateContent: getFirstDefinedValue(payload, ['TemplateContent', 'templateContent']),
-        FooterContent: getFirstDefinedValue(payload, ['FooterContent', 'footerContent']),
-        FooterHeight: getFirstDefinedValue(payload, ['FooterHeight', 'footerHeight']),
-        Stylesheet: getFirstDefinedValue(payload, ['Stylesheet', 'stylesheet']),
-        firm_id: getFirstDefinedValue(payload, ['firm_id', 'Firm ID', 'FirmId', 'firmId'])
+        ...normalized,
+        Name: normalized.name,
+        Description: normalized.description,
+        Popular: normalized.popular,
+        Status: normalized.status,
+        Tags: normalized.tags,
+        PreviewImage: normalized.previewImage,
+        HeaderContent: normalized.headerContent,
+        TemplateContent: normalized.templateContent,
+        FooterContent: normalized.footerContent,
+        FooterHeight: normalized.footerHeight,
+        Stylesheet: normalized.stylesheet,
+        firm_id: normalized.firmId
     };
 }
 
