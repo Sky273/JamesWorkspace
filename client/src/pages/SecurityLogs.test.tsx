@@ -423,6 +423,9 @@ describe('SecurityLogs', () => {
       expect(screen.getByText('Observabilité')).toBeInTheDocument();
     });
 
+    expect(fetchWithAuthMock).not.toHaveBeenCalledWith('/health', expect.anything());
+    expect(fetchWithAuthMock).not.toHaveBeenCalledWith('/api/metrics/operations', expect.anything());
+
     fireEvent.click(screen.getAllByText('Observabilité')[0]);
 
     await waitFor(() => {
@@ -436,6 +439,9 @@ describe('SecurityLogs', () => {
       expect(screen.getByText('10')).toBeInTheDocument();
       expect(screen.getAllByText('Export batch').length).toBeGreaterThan(0);
     });
+
+    expect(fetchWithAuthMock).toHaveBeenCalledWith('/health', expect.anything());
+    expect(fetchWithAuthMock).toHaveBeenCalledWith('/api/metrics/operations', expect.anything());
 
     fireEvent.click(screen.getByText('Copier le diagnostic'));
 

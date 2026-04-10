@@ -52,6 +52,8 @@ const SecurityLogs = (): JSX.Element => {
   const [activeTab, setActiveTab] = useState<SecurityLogsTab>('logs');
   const [health, setHealth] = useState<ObservabilityHealthResponse | null>(null);
   const [operationsMetrics, setOperationsMetrics] = useState<ObservabilityOperationsMetrics | null>(null);
+  const [observabilityLoading, setObservabilityLoading] = useState<boolean>(false);
+  const [hasLoadedObservability, setHasLoadedObservability] = useState<boolean>(false);
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalCount, setTotalCount] = useState<number>(0);
@@ -201,28 +203,48 @@ const SecurityLogs = (): JSX.Element => {
     }
   }, [reportLoadError, stopAutoRefreshOnAuthError]);
 
+  const fetchObservabilityData = useCallback(async (): Promise<void> => {
+    setObservabilityLoading(true);
+    try {
+      await Promise.all([
+        fetchObservability(),
+        fetchObservabilityMetrics(),
+      ]);
+      setHasLoadedObservability(true);
+    } finally {
+      setObservabilityLoading(false);
+    }
+  }, [fetchObservability, fetchObservabilityMetrics]);
+
   const refreshPage = useCallback(async (): Promise<void> => {
     setLoading(true);
     await fetchLogs();
     await Promise.all([
       fetchStats(),
       fetchFilterOptions(),
-      fetchObservability(),
-      fetchObservabilityMetrics(),
     ]);
     setLoading(false);
-  }, [fetchFilterOptions, fetchLogs, fetchObservability, fetchObservabilityMetrics, fetchStats]);
+  }, [fetchFilterOptions, fetchLogs, fetchStats]);
 
   useEffect(() => {
     void refreshPage();
   }, [refreshPage]);
 
   useEffect(() => {
+    if (activeTab === 'observability' && !hasLoadedObservability) {
+      void fetchObservabilityData();
+    }
+  }, [activeTab, fetchObservabilityData, hasLoadedObservability]);
+
+  useEffect(() => {
     if (!autoRefresh) return;
     const interval = setInterval(async () => {
       try {
         await fetchLogs();
-        await Promise.all([fetchStats(), fetchObservability(), fetchObservabilityMetrics()]);
+        await fetchStats();
+        if (activeTab === 'observability' && hasLoadedObservability) {
+          await Promise.all([fetchObservability(), fetchObservabilityMetrics()]);
+        }
       } catch (error: unknown) {
         if (
           error instanceof Error &&
@@ -233,7 +255,7 @@ const SecurityLogs = (): JSX.Element => {
       }
     }, 60000);
     return () => clearInterval(interval);
-  }, [autoRefresh, fetchLogs, fetchObservability, fetchObservabilityMetrics, fetchStats]);
+  }, [activeTab, autoRefresh, fetchLogs, fetchObservability, fetchObservabilityMetrics, fetchStats, hasLoadedObservability]);
 
   const copyObservabilityDiagnostics = useCallback(() => {
     if (!health) {
@@ -448,10 +470,10 @@ const SecurityLogs = (): JSX.Element => {
         <div className="section-shell rounded-[2rem] p-6">
           <ObservabilityOverview
             health={health}
-            loading={loading}
+            loading={observabilityLoading}
             operationsMetrics={operationsMetrics}
             onRefresh={() => {
-              void refreshPage();
+              void fetchObservabilityData();
             }}
             onCopy={copyObservabilityDiagnostics}
             t={t}
