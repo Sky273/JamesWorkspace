@@ -189,14 +189,14 @@ describe('Zod Validation Schemas', () => {
     });
 
     describe('createMissionSchema', () => {
-        it('should accept legacy mission payload', () => {
+        it('should reject legacy mission payload aliases at schema level', () => {
             const result = createMissionSchema.safeParse({
                 Title: 'Legacy Mission',
                 Content: 'Description',
                 Status: 'Active'
             });
 
-            expect(result.success).toBe(true);
+            expect(result.success).toBe(false);
         });
 
         it('should accept camelCase mission payload', () => {
@@ -227,7 +227,7 @@ describe('Zod Validation Schemas', () => {
     });
 
     describe('createDealSchema', () => {
-        it('should accept snake_case deal payload', () => {
+        it('should ignore snake_case deal aliases at schema level and keep canonical data only', () => {
             const result = createDealSchema.safeParse({
                 title: 'Legacy Deal',
                 client_id: '123e4567-e89b-12d3-a456-426614174000',
@@ -235,6 +235,10 @@ describe('Zod Validation Schemas', () => {
             });
 
             expect(result.success).toBe(true);
+            expect(result.data).toEqual({
+                title: 'Legacy Deal',
+                status: 'open'
+            });
         });
 
         it('should accept camelCase deal payload', () => {
@@ -265,12 +269,23 @@ describe('Zod Validation Schemas', () => {
     });
 
     describe('initializeConsentSchema', () => {
-        it('should accept snake_case consent initialization payload', () => {
+        it('should reject snake_case consent initialization payload at schema level', () => {
             const result = initializeConsentSchema.safeParse({
                 resume_id: '123e4567-e89b-12d3-a456-426614174000',
                 profile_type: 'nominative',
                 candidate_name: 'John Doe',
                 candidate_email: 'john@example.com'
+            });
+
+            expect(result.success).toBe(false);
+        });
+
+        it('should accept canonical consent initialization payload', () => {
+            const result = initializeConsentSchema.safeParse({
+                resumeId: '123e4567-e89b-12d3-a456-426614174000',
+                profileType: 'nominative',
+                candidateName: 'John Doe',
+                candidateEmail: 'john@example.com'
             });
 
             expect(result.success).toBe(true);
@@ -285,7 +300,7 @@ describe('Zod Validation Schemas', () => {
     });
 
     describe('createUserSchema', () => {
-        it('should accept admin user payload with legacy aliases', () => {
+        it('should reject admin user payload with legacy aliases at schema level', () => {
             const result = createUserSchema.safeParse({
                 email: 'user@example.com',
                 password: 'Password123!',
@@ -294,7 +309,7 @@ describe('Zod Validation Schemas', () => {
                 Firm: 'Acme'
             });
 
-            expect(result.success).toBe(true);
+            expect(result.success).toBe(false);
         });
 
         it('should accept admin user payload with firmId', () => {
@@ -312,13 +327,13 @@ describe('Zod Validation Schemas', () => {
     });
 
     describe('updateAdminUserSchema', () => {
-        it('should accept admin user update payload with legacy aliases', () => {
+        it('should reject admin user update payload with legacy aliases at schema level', () => {
             const result = updateAdminUserSchema.safeParse({
                 job_title: 'Director',
                 Customer: 'Acme'
             });
 
-            expect(result.success).toBe(true);
+            expect(result.success).toBe(false);
         });
 
         it('should accept admin user update payload with firmId', () => {
@@ -332,14 +347,14 @@ describe('Zod Validation Schemas', () => {
     });
 
     describe('batchExportSchema', () => {
-        it('should accept snake_case batch export payload', () => {
+        it('should reject snake_case batch export aliases at schema level', () => {
             const result = batchExportSchema.safeParse({
                 resume_ids: ['123e4567-e89b-12d3-a456-426614174000'],
                 template_id: '123e4567-e89b-12d3-a456-426614174001',
                 export_format: 'pdf'
             });
 
-            expect(result.success).toBe(true);
+            expect(result.success).toBe(false);
         });
 
         it('should reject batch export payloads above the resume limit', () => {
@@ -381,7 +396,7 @@ describe('Zod Validation Schemas', () => {
     });
 
     describe('createMailDraftSchema', () => {
-        it('should accept snake_case draft payload aliases', () => {
+        it('should ignore snake_case draft aliases at schema level and keep canonical data only', () => {
             const result = createMailDraftSchema.safeParse({
                 to: 'client@example.com',
                 subject: 'Hello',
@@ -394,26 +409,55 @@ describe('Zod Validation Schemas', () => {
             });
 
             expect(result.success).toBe(true);
+            expect(result.data).toEqual({
+                to: 'client@example.com',
+                subject: 'Hello'
+            });
         });
-    });
 
-    describe('batchImproveSchema', () => {
-        it('should accept resume_ids and firmId', () => {
-            const result = batchImproveSchema.safeParse({
-                resume_ids: ['123e4567-e89b-12d3-a456-426614174000'],
-                firmId: 'firm-123'
+        it('should accept canonical draft payload', () => {
+            const result = createMailDraftSchema.safeParse({
+                to: 'client@example.com',
+                subject: 'Hello',
+                pdfBase64: 'ZmFrZQ==',
+                pdfFilename: 'cv.pdf',
+                resumeId: '123e4567-e89b-12d3-a456-426614174000',
+                clientId: '123e4567-e89b-12d3-a456-426614174001',
+                contactId: '123e4567-e89b-12d3-a456-426614174002',
+                templateId: '123e4567-e89b-12d3-a456-426614174003'
             });
 
             expect(result.success).toBe(true);
         });
     });
 
+    describe('batchImproveSchema', () => {
+        it('should ignore legacy batch improve aliases at schema level', () => {
+            const result = batchImproveSchema.safeParse({
+                resume_ids: ['123e4567-e89b-12d3-a456-426614174000'],
+                firmId: 'firm-123'
+            });
+
+            expect(result.success).toBe(false);
+        });
+    });
+
     describe('batchDealExportSchema', () => {
-        it('should accept snake_case deal export payload', () => {
+        it('should ignore snake_case deal export aliases at schema level', () => {
             const result = batchDealExportSchema.safeParse({
                 deal_id: '123e4567-e89b-12d3-a456-426614174000',
                 template_id: '123e4567-e89b-12d3-a456-426614174001',
                 export_formats: ['pdf']
+            });
+
+            expect(result.success).toBe(false);
+        });
+
+        it('should accept canonical deal export payload', () => {
+            const result = batchDealExportSchema.safeParse({
+                dealId: '123e4567-e89b-12d3-a456-426614174000',
+                templateId: '123e4567-e89b-12d3-a456-426614174001',
+                exportFormats: ['pdf']
             });
 
             expect(result.success).toBe(true);
@@ -433,7 +477,7 @@ describe('Zod Validation Schemas', () => {
             expect(result.success).toBe(true);
         });
 
-        it('should accept snake_case pipeline payload', () => {
+        it('should reject snake_case pipeline payload at schema level', () => {
             const result = createPipelineEntrySchema.safeParse({
                 resume_id: '123e4567-e89b-12d3-a456-426614174000',
                 mission_id: '123e4567-e89b-12d3-a456-426614174001',
@@ -441,7 +485,7 @@ describe('Zod Validation Schemas', () => {
                 stage: 'screening'
             });
 
-            expect(result.success).toBe(true);
+            expect(result.success).toBe(false);
         });
     });
 
@@ -494,14 +538,14 @@ describe('Zod Validation Schemas', () => {
     });
 
     describe('createSubmissionSchema', () => {
-        it('should accept snake_case submission payload', () => {
+        it('should reject snake_case submission payload at schema level', () => {
             const result = createSubmissionSchema.safeParse({
                 resume_id: '123e4567-e89b-12d3-a456-426614174000',
                 client_id: '123e4567-e89b-12d3-a456-426614174001',
                 contact_id: '123e4567-e89b-12d3-a456-426614174002'
             });
 
-            expect(result.success).toBe(true);
+            expect(result.success).toBe(false);
         });
 
         it('should accept camelCase submission payload', () => {
@@ -529,14 +573,14 @@ describe('Zod Validation Schemas', () => {
     });
 
     describe('createTemplateSchema', () => {
-        it('should accept legacy template payload', () => {
+        it('should reject legacy template payload aliases at schema level', () => {
             const result = createTemplateSchema.safeParse({
                 Name: 'Legacy Template',
                 TemplateContent: '<main>Legacy</main>',
                 Status: 'Active'
             });
 
-            expect(result.success).toBe(true);
+            expect(result.success).toBe(false);
         });
 
         it('should accept camelCase template payload', () => {
@@ -567,14 +611,14 @@ describe('Zod Validation Schemas', () => {
     });
 
     describe('updateAdaptationSchema', () => {
-        it('should accept legacy adaptation payload', () => {
+        it('should reject legacy adaptation payload aliases at schema level', () => {
             const result = updateAdaptationSchema.safeParse({
                 'Adapted Text': 'Legacy text',
                 'Adapted Title': 'Legacy title',
                 Status: 'completed'
             });
 
-            expect(result.success).toBe(true);
+            expect(result.success).toBe(false);
         });
 
         it('should accept camelCase adaptation payload', () => {

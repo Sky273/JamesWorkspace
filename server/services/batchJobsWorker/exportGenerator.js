@@ -40,7 +40,7 @@ function getBatchExportBatchSize() {
         return 100;
     }
 
-    return configuredValue;
+    return Math.min(configuredValue, 100);
 }
 
 function buildSafeArchiveFilePath(relativePath, generatedFileName) {
@@ -377,6 +377,7 @@ export async function generateJobExport(jobId, options) {
     
     // Process items in bounded batches to keep upstream load controlled.
     const exportBatchSize = getBatchExportBatchSize();
+    const totalBatches = Math.ceil(successfulItems.length / exportBatchSize);
     
     // Calculate total operations: items × formats
     const totalOperations = successfulItems.length * exportFormats.length;
@@ -403,6 +404,7 @@ export async function generateJobExport(jobId, options) {
         formats: exportFormats,
         totalOperations,
         batchSize: exportBatchSize,
+        totalBatches,
         maxOperations
     });
     
@@ -415,7 +417,16 @@ export async function generateJobExport(jobId, options) {
         
         for (let i = 0; i < successfulItems.length; i += exportBatchSize) {
             const batch = successfulItems.slice(i, i + exportBatchSize);
+            const batchNumber = Math.floor(i / exportBatchSize) + 1;
             safeLog('debug', `Processing ${format.toUpperCase()} batch`, { jobId, batchStart: i, batchSize: batch.length });
+            safeLog('debug', 'Batch export progress', {
+                jobId,
+                format,
+                batchNumber,
+                totalBatches,
+                processedItems: i,
+                totalItems: successfulItems.length
+            });
             
             const batchResults = await Promise.all(batch.map(item => processExportItemForFormat(item, format)));
             

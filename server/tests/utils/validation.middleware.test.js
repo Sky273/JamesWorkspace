@@ -11,6 +11,7 @@ vi.mock('../../utils/logger.backend.js', () => ({
 
 import {
     validateBody,
+    normalizeRequestBodyAliases,
     validateParams,
     validateQuery,
     isValidId,
@@ -22,6 +23,10 @@ import {
     createUserSchema,
     createMissionSchema,
     createTemplateSchema,
+    createPipelineEntrySchema,
+    batchExportSchema,
+    batchImproveSchema,
+    batchDealExportSchema,
     createFirmSchema,
     restoreBackupSchema
 } from '../../utils/validation.js';
@@ -142,6 +147,220 @@ describe('Validation Middleware', () => {
             );
             const logPayload = mockSafeLog.mock.calls.at(-1)?.[2];
             expect(logPayload.bodyPreview).toBeUndefined();
+        });
+
+        it('should normalize common alias keys before validation', () => {
+            const middleware = validateBody(createUserSchema);
+            const req = {
+                body: {
+                    email: 'test@example.com',
+                    password: 'password123',
+                    name: 'Test User',
+                    job_title: 'Consultant',
+                    'Firm ID': '123e4567-e89b-12d3-a456-426614174000'
+                },
+                path: '/api/auth/users'
+            };
+            const res = {
+                status: vi.fn().mockReturnThis(),
+                json: vi.fn()
+            };
+            const next = vi.fn();
+
+            middleware(req, res, next);
+
+            expect(next).toHaveBeenCalled();
+            expect(req.body.jobTitle).toBe('Consultant');
+            expect(req.body.firmId).toBe('123e4567-e89b-12d3-a456-426614174000');
+            expect(req.body.job_title).toBeUndefined();
+            expect(req.body['Firm ID']).toBeUndefined();
+        });
+
+        it('should keep legacy mission payloads compatible through middleware normalization', () => {
+            const middleware = validateBody(createMissionSchema);
+            const req = {
+                body: {
+                    Title: 'Legacy Mission',
+                    Content: 'Description',
+                    Status: 'Active',
+                    client_id: '123e4567-e89b-12d3-a456-426614174000',
+                    required_skills: ['React']
+                },
+                path: '/api/missions'
+            };
+            const res = {
+                status: vi.fn().mockReturnThis(),
+                json: vi.fn()
+            };
+            const next = vi.fn();
+
+            middleware(req, res, next);
+
+            expect(next).toHaveBeenCalled();
+            expect(req.body).toMatchObject({
+                title: 'Legacy Mission',
+                content: 'Description',
+                status: 'Active',
+                clientId: '123e4567-e89b-12d3-a456-426614174000',
+                requiredSkills: ['React']
+            });
+        });
+
+        it('should keep legacy template payloads compatible through middleware normalization', () => {
+            const middleware = validateBody(createTemplateSchema);
+            const req = {
+                body: {
+                    Name: 'Legacy Template',
+                    TemplateContent: '<main>Legacy</main>',
+                    Status: 'Active'
+                },
+                path: '/api/templates'
+            };
+            const res = {
+                status: vi.fn().mockReturnThis(),
+                json: vi.fn()
+            };
+            const next = vi.fn();
+
+            middleware(req, res, next);
+
+            expect(next).toHaveBeenCalled();
+            expect(req.body).toMatchObject({
+                name: 'Legacy Template',
+                templateContent: '<main>Legacy</main>',
+                status: 'active'
+            });
+        });
+
+        it('should keep legacy pipeline payloads compatible through middleware normalization', () => {
+            const middleware = validateBody(createPipelineEntrySchema);
+            const req = {
+                body: {
+                    resume_id: '123e4567-e89b-12d3-a456-426614174000',
+                    mission_id: '123e4567-e89b-12d3-a456-426614174001',
+                    client_id: '123e4567-e89b-12d3-a456-426614174002',
+                    Notes: 'Legacy notes'
+                },
+                path: '/api/pipeline'
+            };
+            const res = {
+                status: vi.fn().mockReturnThis(),
+                json: vi.fn()
+            };
+            const next = vi.fn();
+
+            middleware(req, res, next);
+
+            expect(next).toHaveBeenCalled();
+            expect(req.body).toMatchObject({
+                resumeId: '123e4567-e89b-12d3-a456-426614174000',
+                missionId: '123e4567-e89b-12d3-a456-426614174001',
+                clientId: '123e4567-e89b-12d3-a456-426614174002',
+                notes: 'Legacy notes'
+            });
+        });
+
+        it('should keep legacy batch export payloads compatible through middleware normalization', () => {
+            const middleware = validateBody(batchExportSchema);
+            const req = {
+                body: {
+                    resume_ids: ['123e4567-e89b-12d3-a456-426614174000'],
+                    template_id: '123e4567-e89b-12d3-a456-426614174001',
+                    export_format: 'pdf'
+                },
+                path: '/api/batch/export'
+            };
+            const res = {
+                status: vi.fn().mockReturnThis(),
+                json: vi.fn()
+            };
+            const next = vi.fn();
+
+            middleware(req, res, next);
+
+            expect(next).toHaveBeenCalled();
+            expect(req.body).toMatchObject({
+                resumeIds: ['123e4567-e89b-12d3-a456-426614174000'],
+                templateId: '123e4567-e89b-12d3-a456-426614174001'
+            });
+        });
+
+        it('should keep legacy batch improve payloads compatible through middleware normalization', () => {
+            const middleware = validateBody(batchImproveSchema);
+            const req = {
+                body: {
+                    resume_ids: ['123e4567-e89b-12d3-a456-426614174000'],
+                    firm_id: 'firm-123'
+                },
+                path: '/api/batch/improve'
+            };
+            const res = {
+                status: vi.fn().mockReturnThis(),
+                json: vi.fn()
+            };
+            const next = vi.fn();
+
+            middleware(req, res, next);
+
+            expect(next).toHaveBeenCalled();
+            expect(req.body).toMatchObject({
+                resumeIds: ['123e4567-e89b-12d3-a456-426614174000'],
+                firmId: 'firm-123'
+            });
+        });
+
+        it('should keep legacy batch deal export payloads compatible through middleware normalization', () => {
+            const middleware = validateBody(batchDealExportSchema);
+            const req = {
+                body: {
+                    deal_id: '123e4567-e89b-12d3-a456-426614174000',
+                    template_id: '123e4567-e89b-12d3-a456-426614174001',
+                    export_formats: ['pdf']
+                },
+                path: '/api/batch/deals/export'
+            };
+            const res = {
+                status: vi.fn().mockReturnThis(),
+                json: vi.fn()
+            };
+            const next = vi.fn();
+
+            middleware(req, res, next);
+
+            expect(next).toHaveBeenCalled();
+            expect(req.body).toMatchObject({
+                dealId: '123e4567-e89b-12d3-a456-426614174000',
+                templateId: '123e4567-e89b-12d3-a456-426614174001',
+                exportFormats: ['pdf']
+            });
+        });
+    });
+
+    describe('normalizeRequestBodyAliases', () => {
+        it('should normalize nested objects and arrays without touching unrelated keys', () => {
+            const normalized = normalizeRequestBodyAliases({
+                mission_id: 'm1',
+                nested: {
+                    adapted_title: 'PM',
+                    untouched: 'ok'
+                },
+                items: [
+                    { resume_id: 'r1' },
+                    { adaptation_id: 'a1' }
+                ]
+            });
+
+            expect(normalized).toEqual({
+                missionId: 'm1',
+                nested: {
+                    adaptedTitle: 'PM',
+                    untouched: 'ok'
+                },
+                items: [
+                    { resumeId: 'r1' },
+                    { adaptationId: 'a1' }
+                ]
+            });
         });
     });
 
@@ -380,7 +599,7 @@ describe('Zod Schemas', () => {
                 password: 'password123',
                 name: 'John Doe',
                 role: 'user',
-                firm: 'Acme Corp'
+                firmId: '123e4567-e89b-12d3-a456-426614174000'
             };
             expect(() => createUserSchema.parse(data)).not.toThrow();
         });
@@ -391,7 +610,7 @@ describe('Zod Schemas', () => {
                 password: 'password123',
                 name: 'Admin User',
                 role: 'admin',
-                firm: 'Acme Corp'
+                firmId: '123e4567-e89b-12d3-a456-426614174000'
             };
             expect(() => createUserSchema.parse(data)).not.toThrow();
         });
@@ -400,16 +619,16 @@ describe('Zod Schemas', () => {
     describe('createMissionSchema', () => {
         it('should accept valid mission data', () => {
             const data = {
-                Title: 'Test Mission',
-                Content: 'Mission description',
-                Status: 'Active'
+                title: 'Test Mission',
+                content: 'Mission description',
+                status: 'Active'
             };
             expect(() => createMissionSchema.parse(data)).not.toThrow();
         });
 
         it('should reject missing title', () => {
             const data = {
-                Content: 'Mission description'
+                content: 'Mission description'
             };
             expect(() => createMissionSchema.parse(data)).toThrow();
         });
@@ -418,16 +637,16 @@ describe('Zod Schemas', () => {
     describe('createTemplateSchema', () => {
         it('should accept valid template data', () => {
             const data = {
-                Name: 'Test Template',
-                TemplateContent: '<html>Template</html>',
-                Status: 'Active'
+                name: 'Test Template',
+                templateContent: '<html>Template</html>',
+                status: 'Active'
             };
             expect(() => createTemplateSchema.parse(data)).not.toThrow();
         });
 
         it('should reject missing template content', () => {
             const data = {
-                Name: 'Test Template'
+                name: 'Test Template'
             };
             expect(() => createTemplateSchema.parse(data)).toThrow();
         });

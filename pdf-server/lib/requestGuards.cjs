@@ -16,7 +16,9 @@ const DANGEROUS_HTML_PATTERNS = [
 
 const DANGEROUS_RESOURCE_PATTERNS = [
   /<(?:img|iframe|object|embed|source|audio|video|track)\b[^>]*(?:src|data|poster)\s*=\s*['"]?\s*(?:https?:|file:|ftp:|chrome:|blob:|\/\/)/i,
+  /<(?:img|source)\b[^>]*\bsrcset\s*=\s*['"][^'"]*(?:https?:|file:|ftp:|chrome:|blob:|\/\/)/i,
   /<link\b[^>]*href\s*=\s*['"]?\s*(?:https?:|file:|ftp:|chrome:|blob:|\/\/)/i,
+  /<base\b[^>]*href\s*=\s*['"]?\s*(?:https?:|file:|ftp:|chrome:|blob:|\/\/)/i,
   /<meta\b[^>]*http-equiv\s*=\s*['"]?refresh['"]?[^>]*content\s*=\s*['"][^"]*url\s*=\s*(?:https?:|file:|ftp:|chrome:|blob:|\/\/)/i,
   /\b(?:src|href|data|poster|action|formaction|xlink:href)\s*=\s*['"]?\s*(?:https?:|file:|ftp:|chrome:|blob:|\/\/)/i
 ];

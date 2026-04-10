@@ -54,17 +54,14 @@ const documentStylesheetSchema = z.string()
 
 export const batchExportSchema = z.object({
   resumeIds: z.array(z.string().uuid()).min(1).max(MAX_BATCH_EXPORT_RESUMES).optional(),
-  resume_ids: z.array(z.string().uuid()).min(1).max(MAX_BATCH_EXPORT_RESUMES).optional(),
   templateId: z.string().uuid().optional(),
-  template_id: z.string().uuid().optional(),
   format: z.enum(['pdf', 'docx']).optional(),
-  exportFormat: z.enum(['pdf', 'docx']).optional(),
-  export_format: z.enum(['pdf', 'docx']).optional()
+  exportFormat: z.enum(['pdf', 'docx']).optional()
 }).strip().refine(
-  (data) => Boolean(data.resumeIds || data.resume_ids),
+  (data) => Boolean(data.resumeIds),
   { message: 'resumeIds is required', path: ['resumeIds'] }
 ).refine(
-  (data) => Boolean(data.templateId || data.template_id),
+  (data) => Boolean(data.templateId),
   { message: 'templateId is required', path: ['templateId'] }
 );
 

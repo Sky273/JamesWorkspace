@@ -68,6 +68,19 @@ export default tseslint.config(
       ],
     },
   },
+
+  // CommonJS files used by pdf-server and legacy tooling
+  {
+    files: ['**/*.cjs'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'commonjs',
+      globals: {
+        ...globals.node,
+        ...globals.es2020,
+      },
+    },
+  },
   
   // TypeScript files
   {

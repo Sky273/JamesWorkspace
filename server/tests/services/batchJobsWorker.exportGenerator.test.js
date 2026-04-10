@@ -520,4 +520,50 @@ describe('Batch Jobs Worker - Export Generator', () => {
             generatedFiles: 205
         }));
     });
+
+    it('should cap configured batch size to 100', async () => {
+        process.env.BATCH_EXPORT_BATCH_SIZE = '250';
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce(Array.from({ length: 105 }, (_, index) => ({
+            id: `i${index + 1}`,
+            status: 'success',
+            resume_id: `r${index + 1}`,
+            file_name: `cv-${index + 1}.pdf`
+        })));
+        mockQuery
+            .mockResolvedValueOnce({ rows: [template] })
+            .mockImplementation((sql, params) => Promise.resolve({
+                rows: [{
+                    id: params[0],
+                    improved_text: '<p>CV</p>',
+                    name: `Candidate ${params[0]}`,
+                    title: 'Dev',
+                    trigram: `T${String(params[0]).replace(/\D/g, '').padStart(3, '0')}`
+                }]
+            }));
+
+        mockFetch.mockResolvedValue({
+            ok: true,
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(32))
+        });
+
+        await generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] });
+
+        expect(safeLog).toHaveBeenCalledWith('info', 'Starting batched export processing', expect.objectContaining({
+            jobId: 'j1',
+            batchSize: 100,
+            totalBatches: 2
+        }));
+        expect(safeLog).toHaveBeenCalledWith('debug', 'Batch export progress', expect.objectContaining({
+            jobId: 'j1',
+            format: 'pdf',
+            batchNumber: 1,
+            totalBatches: 2
+        }));
+        expect(safeLog).toHaveBeenCalledWith('debug', 'Processing PDF batch', expect.objectContaining({
+            jobId: 'j1',
+            batchStart: 100,
+            batchSize: 5
+        }));
+    });
 });

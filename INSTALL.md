@@ -183,6 +183,14 @@ HTTPS_ENABLED=false
 # Répertoire des uploads (relatif à la racine du projet)
 UPLOAD_DIR=./uploads
 
+# Exports batch de fichiers
+# Valeur par défaut : 300 opérations maximum par export
+# Plafond dur : 300 même si une valeur supérieure est configurée
+BATCH_EXPORT_MAX_OPERATIONS=300
+# Taille d'un lot de traitement pendant la génération
+# Valeur par défaut si non configuré : 100
+BATCH_EXPORT_BATCH_SIZE=100
+
 # ==============================================================================
 # CORS - ORIGINES AUTORISÉES [OPTIONNEL]
 # ==============================================================================
@@ -601,6 +609,17 @@ La configuration complète du fichier `.env` est détaillée dans la section [In
 | **Emails GDPR via SMTP** | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` |
 | **Market Radar FR** | `FRANCE_TRAVAIL_CLIENT_ID`, `FRANCE_TRAVAIL_CLIENT_SECRET` |
 | **Market Radar INT** | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` |
+
+#### Réglages de traitement par lot des exports
+
+| Variable | Description | Valeur par défaut |
+|----------|-------------|-------------------|
+| `BATCH_EXPORT_MAX_OPERATIONS` | Nombre maximum d'opérations d'export par job | `300` |
+| `BATCH_EXPORT_BATCH_SIZE` | Nombre de fichiers traités par lot pendant la génération | `100` |
+
+Notes :
+- `BATCH_EXPORT_MAX_OPERATIONS` est plafonné à `300` même si vous configurez une valeur supérieure
+- si `BATCH_EXPORT_BATCH_SIZE` n'est pas renseigné, ResumeConverter traite les exports par lots de `100`
 
 ### Notes LLM supplémentaires
 

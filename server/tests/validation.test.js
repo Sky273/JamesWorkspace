@@ -130,7 +130,7 @@ describe('Zod Schemas', () => {
         password: 'securepass123',
         name: 'Admin User',
         status: 'Active',
-        firm: 'Acme Corp'
+        firmId: '123e4567-e89b-12d3-a456-426614174000'
       };
       expect(() => createUserSchema.parse(validData)).not.toThrow();
     });
@@ -152,7 +152,7 @@ describe('Zod Schemas', () => {
           password: 'password123',
           name: 'Test User',
           status,
-          firm: 'Acme Corp'
+          firmId: '123e4567-e89b-12d3-a456-426614174000'
         };
         expect(() => createUserSchema.parse(data)).not.toThrow();
       });
@@ -173,24 +173,24 @@ describe('Zod Schemas', () => {
   describe('createMissionSchema', () => {
     it('should validate mission creation', () => {
       const validData = {
-        Title: 'Software Engineer Position',
-        Content: 'Job description here...',
-        Status: 'Active'
+        title: 'Software Engineer Position',
+        content: 'Job description here...',
+        status: 'active'
       };
       expect(() => createMissionSchema.parse(validData)).not.toThrow();
     });
 
-    it('should require Title', () => {
+    it('should require title', () => {
       const invalidData = {
-        Content: 'Job description'
+        content: 'Job description'
       };
       expect(() => createMissionSchema.parse(invalidData)).toThrow();
     });
 
-    it('should reject empty Title', () => {
+    it('should reject empty title', () => {
       const invalidData = {
-        Title: '',
-        Content: 'Job description'
+        title: '',
+        content: 'Job description'
       };
       expect(() => createMissionSchema.parse(invalidData)).toThrow();
     });

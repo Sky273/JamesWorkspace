@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 const {
   buildGenerationFailureBody,
+  createRequestCoordinator,
   decodeHtmlEntities,
   resolvePdfServerInternalToken,
   sanitizeFilename,
@@ -68,5 +69,34 @@ describe('requestGuards', () => {
   it('decodes common HTML entities before inspection', () => {
     expect(decodeHtmlEntities('java&#x73;cript:alert(1)')).toBe('javascript:alert(1)');
     expect(decodeHtmlEntities('Tom &amp; Jerry')).toBe('Tom & Jerry');
+  });
+
+  it('rejects external srcset resources during document validation', () => {
+    const coordinator = createRequestCoordinator({
+      logger: { log: () => {} },
+      pdfServerInternalToken: 't'.repeat(32),
+      pdfGenerationTimeout: 30000,
+      rateLimitMax: 10,
+      maxActiveJobs: 2,
+      maxHtmlSize: 1024 * 1024,
+      maxStylesheetSize: 50_000,
+      maxFragmentSize: 50_000
+    });
+    const req = {
+      body: {
+        htmlContent: '<img srcset="https://evil.test/a.png 1x" src="data:image/png;base64,AAAA">',
+        filename: 'test.pdf'
+      }
+    };
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn()
+    };
+    const next = vi.fn();
+
+    coordinator.middlewares.validatePdfRequest(req, res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(400);
   });
 });

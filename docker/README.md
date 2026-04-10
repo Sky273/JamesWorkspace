@@ -51,6 +51,13 @@ NODE_ENV=production
 HTTPS_ENABLED=true
 HTTPS_PORT=3443
 
+# Batch export safeguards
+# Default: 300 operations maximum per export job
+# Hard cap: 300 even if a higher value is configured
+BATCH_EXPORT_MAX_OPERATIONS=300
+# Default batch slice when unset: 100 files
+BATCH_EXPORT_BATCH_SIZE=100
+
 # LLM APIs (optional)
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
@@ -253,6 +260,17 @@ export MINIMAX_API_KEY="sk-api-..."
 export OLLAMA_BASE_URL="http://192.168.1.20:11434"
 ./docker/docker-build.sh run
 ```
+
+### Batch export settings
+
+The file export worker supports two environment variables:
+
+| Variable | Purpose | Default behavior |
+|---------|---------|------------------|
+| `BATCH_EXPORT_MAX_OPERATIONS` | Maximum number of export operations allowed for one job | `300`, with a hard cap at `300` |
+| `BATCH_EXPORT_BATCH_SIZE` | Number of files processed per batch slice during generation | `100` when unset |
+
+These values apply both in Docker and non-Docker installs.
 
 ### Cache partagé Redis
 

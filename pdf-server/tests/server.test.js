@@ -285,6 +285,30 @@ describe('PDF Server', () => {
       expect(res.body.error).toContain('external resources');
     });
 
+    it('should reject external resources in htmlContent srcset attributes', async () => {
+      const res = await request(app)
+        .post('/generate-pdf')
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
+        .send({
+          htmlContent: '<img src="data:image/png;base64,AAAA" srcset="https://evil.test/a.png 1x">',
+          filename: 'test.pdf'
+        });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('external resources');
+    });
+
+    it('should reject external base href declarations in htmlContent', async () => {
+      const res = await request(app)
+        .post('/generate-pdf')
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
+        .send({
+          htmlContent: '<base href="https://evil.test/"><p>Hello</p>',
+          filename: 'test.pdf'
+        });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('external resources');
+    });
+
     it('should reject entity-encoded javascript payloads in htmlContent', async () => {
       const res = await request(app)
         .post('/generate-pdf')
