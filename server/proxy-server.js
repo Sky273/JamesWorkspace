@@ -2,6 +2,7 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import 'dotenv/config';
 
@@ -73,6 +74,20 @@ const app = express();
 const JSON_BODY_LIMIT_BYTES = Number.parseInt(process.env.JSON_BODY_LIMIT_BYTES || '', 10) || (10 * 1024 * 1024);
 const URLENCODED_BODY_LIMIT_BYTES = Number.parseInt(process.env.URLENCODED_BODY_LIMIT_BYTES || '', 10) || (1024 * 1024);
 const METHODS_WITH_BODIES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const REQUEST_ID_HEADER = 'x-request-id';
+
+function normalizeRequestId(rawValue) {
+    if (typeof rawValue !== 'string') {
+        return '';
+    }
+
+    const trimmed = rawValue.trim();
+    if (!trimmed) {
+        return '';
+    }
+
+    return trimmed.replace(/[^a-zA-Z0-9._:-]/g, '_').slice(0, 128);
+}
 
 function resolveTrustProxySetting() {
     const rawValue = (process.env.TRUST_PROXY || '').trim();
@@ -104,6 +119,19 @@ configureAxios();
 // ============================================
 // MIDDLEWARE SETUP
 // ============================================
+
+app.use((req, res, next) => {
+    const rawRequestId = Array.isArray(req.headers[REQUEST_ID_HEADER])
+        ? req.headers[REQUEST_ID_HEADER][0]
+        : req.headers[REQUEST_ID_HEADER];
+    const requestId = normalizeRequestId(rawRequestId) || crypto.randomUUID();
+
+    req.requestId = requestId;
+    res.locals.requestId = requestId;
+    res.setHeader(REQUEST_ID_HEADER, requestId);
+
+    next();
+});
 
 // Security: CSP via Helmet
 configureHelmet(app);
@@ -196,6 +224,7 @@ app.use((req, res, next) => {
     const bodyLimitBytes = getBodyLimitBytes(contentType);
     if (contentLength > bodyLimitBytes) {
         safeLog('warn', 'Request body rejected before parsing', {
+            requestId: req.requestId,
             path: req.path,
             method: req.method,
             contentLength,
@@ -230,7 +259,10 @@ app.use((req, res, next) => {
         }
 
         badRequestDiagnosticLogged = true;
-        safeLog('warn', '400 Bad Request diagnostic', buildBadRequestDiagnostic(req, body));
+        safeLog('warn', '400 Bad Request diagnostic', {
+            requestId: req.requestId,
+            ...buildBadRequestDiagnostic(req, body)
+        });
     };
     
     // Intercept JSON responses to log 400 errors with details
@@ -251,7 +283,13 @@ app.use((req, res, next) => {
     
     const finishHandler = () => {
         const duration = Date.now() - start;
-        safeLog('info', `${req.method} ${req.path} - ${res.statusCode} - ${duration}ms`);
+        safeLog('info', 'HTTP request completed', {
+            requestId: req.requestId,
+            method: req.method,
+            path: req.path,
+            statusCode: res.statusCode,
+            durationMs: duration
+        });
         // Remove listener to prevent memory leak
         res.removeListener('finish', finishHandler);
     };
@@ -302,19 +340,20 @@ configureStaticFiles(app, __dirname);
 
 // 404 handler for API routes
 app.use((req, res) => {
-    res.status(404).json({ error: 'Route not found' });
+    res.status(404).json({ error: 'Route not found', requestId: req.requestId });
 });
 
 // Global error handler
 app.use((err, req, res, _next) => {
     if (err?.type === 'entity.too.large') {
-        return res.status(413).json({ error: 'Request body too large' });
+        return res.status(413).json({ error: 'Request body too large', requestId: req.requestId });
     }
 
     const statusCode = err.statusCode || err.status || 500;
     const isProduction = process.env.NODE_ENV === 'production';
     
     safeLog('error', 'Global error handler', { 
+        requestId: req.requestId,
         error: err.message, 
         statusCode,
         path: req.path,
@@ -323,7 +362,7 @@ app.use((err, req, res, _next) => {
     });
     
     if (err.message === 'Not allowed by CORS') {
-        return res.status(403).json({ error: 'CORS policy violation' });
+        return res.status(403).json({ error: 'CORS policy violation', requestId: req.requestId });
     }
     
     // Track error in metrics
@@ -331,6 +370,7 @@ app.use((err, req, res, _next) => {
     
     res.status(statusCode).json({
         error: isProduction ? 'Internal server error' : err.message,
+        requestId: req.requestId,
         statusCode,
         ...(isProduction ? {} : { 
             path: req.path,

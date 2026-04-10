@@ -55,7 +55,7 @@ vi.mock('mammoth', () => ({
     extractRawText: vi.fn()
 }));
 
-import { extractTextFromBuffer, extractTextFromPDFBuffer } from '../../services/batchJobsWorker/textExtraction.js';
+import { extractTextFromBuffer, extractTextFromPDFBuffer, getLastBatchTextExtractionSummary } from '../../services/batchJobsWorker/textExtraction.js';
 
 describe('Batch Jobs Worker - Text Extraction', () => {
     beforeEach(() => {
@@ -102,6 +102,17 @@ describe('Batch Jobs Worker - Text Extraction', () => {
                 mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                 textLength: 'Hello DOCX'.length,
                 ocrUsed: false,
+                durationMs: expect.any(Number)
+            }));
+            expect(getLastBatchTextExtractionSummary()).toEqual(expect.objectContaining({
+                operation: 'extractTextFromBuffer',
+                kind: 'docx',
+                status: 'completed',
+                fileName: 'test.docx',
+                mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                textLength: 'Hello DOCX'.length,
+                ocrUsed: false,
+                timestamp: expect.any(String),
                 durationMs: expect.any(Number)
             }));
         });

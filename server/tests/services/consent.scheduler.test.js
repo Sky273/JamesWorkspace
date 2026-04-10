@@ -43,7 +43,8 @@ import {
     checkExpiredConsents,
     sendConsentReminders,
     purgeResume,
-    purgeExpiredResumes
+    purgeExpiredResumes,
+    getLastConsentSchedulerSummary
 } from '../../services/consent/scheduler.js';
 
 describe('Consent Scheduler Tasks', () => {
@@ -61,6 +62,14 @@ describe('Consent Scheduler Tasks', () => {
             expect(count).toBe(2);
             expect(query.mock.calls[0][0]).toContain("consent_status = 'expired'");
             expect(query.mock.calls[0][0]).toContain('pending_consent');
+            expect(getLastConsentSchedulerSummary()).toEqual(expect.objectContaining({
+                operation: 'checkExpiredConsents',
+                status: 'completed',
+                totalExpired: 2,
+                pendingExpired: 2,
+                retentionExpired: 0,
+                timestamp: expect.any(String)
+            }));
         });
 
         it('should mark expired retention consents', async () => {
@@ -100,6 +109,14 @@ describe('Consent Scheduler Tasks', () => {
             expect(count).toBe(1);
             expect(gdprMailService.sendEmail).toHaveBeenCalledTimes(1);
             expect(gdprMailService.sendEmail.mock.calls[0][0].to).toBe('j@t.com');
+            expect(getLastConsentSchedulerSummary()).toEqual(expect.objectContaining({
+                operation: 'sendConsentReminders',
+                status: 'completed',
+                candidateCount: 1,
+                sentCount: 1,
+                failedCount: 0,
+                timestamp: expect.any(String)
+            }));
         });
 
         it('should return 0 if no reminders needed', async () => {
@@ -187,6 +204,14 @@ describe('Consent Scheduler Tasks', () => {
                     skippedCount: 0
                 }),
                 isAutomated: true
+            }));
+            expect(getLastConsentSchedulerSummary()).toEqual(expect.objectContaining({
+                operation: 'purgeExpiredResumes',
+                status: 'completed',
+                attemptedCount: 2,
+                purgedCount: 2,
+                skippedCount: 0,
+                timestamp: expect.any(String)
             }));
         });
 

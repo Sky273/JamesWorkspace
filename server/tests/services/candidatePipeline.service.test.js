@@ -18,6 +18,7 @@ import {
     PIPELINE_STAGES,
     initCandidatePipelineTable,
     addToPipeline,
+    getLastPipelineActivitySummary,
     getClientFirmId,
     getInterviewAccessContext,
     getMissionContext,
@@ -45,7 +46,7 @@ import {
 
 describe('Candidate Pipeline Service', () => {
     beforeEach(() => {
-        vi.clearAllMocks();
+        vi.resetAllMocks();
     });
 
     // ============================================
@@ -134,6 +135,15 @@ describe('Candidate Pipeline Service', () => {
             });
 
             expect(result.id).toBe('p1');
+            expect(getLastPipelineActivitySummary()).toMatchObject({
+                operation: 'addToPipeline',
+                status: 'completed',
+                pipelineId: 'p1',
+                resumeId: 'r1',
+                adaptationId: 'a1',
+                missionId: 'm1',
+                stage: 'new'
+            });
             expect(query.mock.calls[0][0]).toContain('INSERT INTO candidate_pipeline');
             expect(query.mock.calls[0][0]).toContain('ON CONFLICT');
             // Second call is history insert
@@ -147,7 +157,22 @@ describe('Candidate Pipeline Service', () => {
 
             await addToPipeline({ resumeId: 'r1', createdBy: 'u1' });
 
-            expect(query.mock.calls[0][1][3]).toBe('new');
+            expect(query.mock.calls[0][1][4]).toBe('new');
+        });
+
+        it('should expose failed add operation summary', async () => {
+            query.mockRejectedValueOnce(new Error('insert failed'));
+
+            await expect(addToPipeline({ resumeId: 'r1', missionId: 'm1', createdBy: 'u1' })).rejects.toThrow('insert failed');
+
+            expect(getLastPipelineActivitySummary()).toMatchObject({
+                operation: 'addToPipeline',
+                status: 'failed',
+                resumeId: 'r1',
+                missionId: 'm1',
+                stage: 'new',
+                error: 'insert failed'
+            });
         });
     });
 
@@ -245,6 +270,13 @@ describe('Candidate Pipeline Service', () => {
             });
 
             expect(result.stage).toBe('screening');
+            expect(getLastPipelineActivitySummary()).toMatchObject({
+                operation: 'moveToStage',
+                status: 'completed',
+                pipelineId: 'p1',
+                stage: 'screening',
+                changedBy: 'u1'
+            });
             expect(query.mock.calls[2][0]).toContain('INSERT INTO pipeline_history');
             expect(query.mock.calls[2][1]).toContain('new'); // from_stage
             expect(query.mock.calls[2][1]).toContain('screening'); // to_stage
@@ -274,6 +306,11 @@ describe('Candidate Pipeline Service', () => {
             query.mockResolvedValueOnce({ rows: [] });
 
             expect(await removeFromPipeline('p1')).toBe(true);
+            expect(getLastPipelineActivitySummary()).toMatchObject({
+                operation: 'removeFromPipeline',
+                status: 'completed',
+                pipelineId: 'p1'
+            });
             expect(query.mock.calls[0][0]).toContain('DELETE FROM candidate_pipeline');
         });
     });
@@ -440,6 +477,13 @@ describe('Candidate Pipeline Service', () => {
             });
 
             expect(result.id).toBe('i1');
+            expect(getLastPipelineActivitySummary()).toMatchObject({
+                operation: 'scheduleInterview',
+                status: 'completed',
+                pipelineId: 'p1',
+                interviewId: 'i1',
+                interviewType: 'client'
+            });
         });
 
         it('should NOT auto-move for non-client interview type', async () => {
@@ -543,6 +587,13 @@ describe('Candidate Pipeline Service', () => {
             });
 
             expect(result.id).toBe('i1');
+            expect(getLastPipelineActivitySummary()).toMatchObject({
+                operation: 'completeInterview',
+                status: 'completed',
+                interviewId: 'i1',
+                outcome: 'positive',
+                changedBy: 'u1'
+            });
         });
     });
 
@@ -553,6 +604,11 @@ describe('Candidate Pipeline Service', () => {
             const result = await cancelInterview('i1');
 
             expect(result.status).toBe('cancelled');
+            expect(getLastPipelineActivitySummary()).toMatchObject({
+                operation: 'cancelInterview',
+                status: 'completed',
+                interviewId: 'i1'
+            });
         });
     });
 

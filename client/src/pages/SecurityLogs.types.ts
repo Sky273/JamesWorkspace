@@ -1,3 +1,5 @@
+import type { OperationsMetrics } from './MetricsPage.types';
+
 export interface SecurityLogEntry {
   timestamp: string;
   source?: string;
@@ -34,3 +36,41 @@ export interface SecurityLogFilterOptions {
   events: string[];
   sources: string[];
 }
+
+export type SecurityLogsTab = 'logs' | 'observability';
+
+export interface ObservabilityCheckSummary {
+  status?: string;
+  message?: string;
+  timestamp?: string;
+  operation?: string;
+  durationMs?: number;
+  [key: string]: unknown;
+}
+
+export interface ObservabilityHealthResponse {
+  status: string;
+  responseTime?: string;
+  timestamp?: string;
+  checks?: Record<string, unknown> & {
+    database?: ObservabilityCheckSummary;
+    cache?: ObservabilityCheckSummary;
+    ocr?: ObservabilityCheckSummary;
+    batchWorker?: ObservabilityCheckSummary;
+    recentBatchActivity?: {
+      status?: string;
+      export?: ObservabilityCheckSummary | null;
+      textExtraction?: ObservabilityCheckSummary | null;
+    };
+    recentConsentActivity?: {
+      status?: string;
+      scheduler?: ObservabilityCheckSummary | null;
+    };
+    recentPipelineActivity?: {
+      status?: string;
+      pipeline?: ObservabilityCheckSummary | null;
+    };
+  };
+}
+
+export type ObservabilityOperationsMetrics = OperationsMetrics;

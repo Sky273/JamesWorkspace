@@ -225,10 +225,12 @@ describe('Batch Export Routes', () => {
             const res = await request(app)
                 .post('/api/batch-export')
                 .set(AUTH)
+                .set('x-request-id', 'batch-req-1')
                 .send({ resumeIds: [RESUME_UUID], templateId: TEMPLATE_UUID });
 
             expect(res.status).toBe(503);
             expect(res.body.error).toContain('PDF server');
+            expect(res.body.requestId).toBe('batch-req-1');
         });
 
         it('should return 404 if template not found', async () => {
@@ -272,9 +274,11 @@ describe('Batch Export Routes', () => {
             const res = await request(app)
                 .post('/api/batch-export')
                 .set(AUTH)
+                .set('x-request-id', 'batch-req-zip')
                 .send({ resumeIds: [RESUME_UUID], templateId: TEMPLATE_UUID });
 
             expect(res.status).toBe(200);
+            expect(res.headers['x-request-id']).toBe('batch-req-zip');
             expect(res.headers['content-type']).toContain('application/zip');
             expect(res.headers['content-disposition']).toContain('attachment');
             expect(res.headers['x-content-type-options']).toBe('nosniff');
@@ -292,6 +296,7 @@ describe('Batch Export Routes', () => {
                 generatedFiles: 1
             }));
             expect(safeLog).toHaveBeenCalledWith('info', 'Batch export completed', expect.objectContaining({
+                requestId: 'batch-req-zip',
                 templateId: TEMPLATE_UUID,
                 format: 'pdf',
                 filesCount: 1
@@ -449,11 +454,13 @@ describe('Batch Export Routes', () => {
             const res = await request(app)
                 .post('/api/batch-export')
                 .set(AUTH)
+                .set('x-request-id', 'batch-req-safe')
                 .send({ resumeIds: [RESUME_UUID], templateId: TEMPLATE_UUID });
 
             expect(res.status).toBe(503);
             expect(JSON.stringify(res.body)).not.toContain('127.0.0.1:3002');
             expect(res.body.details).toBeUndefined();
+            expect(res.body.requestId).toBe('batch-req-safe');
         });
 
         it('should pass firm access context to grouped resume export lookups', async () => {

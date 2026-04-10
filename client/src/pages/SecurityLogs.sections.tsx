@@ -4,10 +4,14 @@ import type { ChangeEvent } from 'react';
 import type { TFunction } from 'i18next';
 import Pagination from '../components/Pagination';
 import type {
+  ObservabilityCheckSummary,
+  ObservabilityHealthResponse,
+  ObservabilityOperationsMetrics,
   SecurityLogEntry,
   SecurityLogFilters,
   SecurityLogFilterOptions,
   SecurityLogStats,
+  SecurityLogsTab,
 } from './SecurityLogs.types';
 import {
   formatSecurityTimestamp,
@@ -16,6 +20,74 @@ import {
   getSecuritySourceBadgeClass,
   getSecurityStatusCodeClass,
 } from './SecurityLogs.utils';
+
+function formatObservabilityTimestamp(timestamp?: string): string {
+  if (!timestamp) {
+    return '-';
+  }
+
+  try {
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }).format(new Date(timestamp));
+  } catch {
+    return timestamp;
+  }
+}
+
+function formatMetricValue(value?: number): string {
+  return new Intl.NumberFormat('fr-FR').format(value ?? 0);
+}
+
+function getObservabilityStatusClass(status?: string): string {
+  switch ((status || '').toLowerCase()) {
+    case 'ok':
+    case 'healthy':
+    case 'completed':
+      return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
+    case 'degraded':
+    case 'slow':
+    case 'rejected':
+      return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
+    case 'error':
+    case 'failed':
+    case 'unhealthy':
+      return 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300';
+    default:
+      return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+  }
+}
+
+function getMainFlowStatus(successes?: number, failures?: number): string {
+  if ((failures ?? 0) > 0) {
+    return 'degraded';
+  }
+
+  if ((successes ?? 0) > 0) {
+    return 'completed';
+  }
+
+  return 'idle';
+}
+
+function getRecentObservabilityItems(health: ObservabilityHealthResponse | null): Array<{
+  id: string;
+  label: string;
+  summary: ObservabilityCheckSummary;
+}> {
+  const items = [
+    { id: 'export', label: 'Export batch', summary: health?.checks?.recentBatchActivity?.export },
+    { id: 'textExtraction', label: 'Extraction/OCR', summary: health?.checks?.recentBatchActivity?.textExtraction },
+    { id: 'consent', label: 'Consentement/Purge', summary: health?.checks?.recentConsentActivity?.scheduler },
+    { id: 'pipeline', label: 'Pipeline', summary: health?.checks?.recentPipelineActivity?.pipeline },
+  ];
+
+  return items.filter((item): item is { id: string; label: string; summary: ObservabilityCheckSummary } => Boolean(item.summary));
+}
 
 export function SecurityStatsGrid({
   stats,
@@ -49,6 +121,38 @@ export function SecurityStatsGrid({
         <div className="text-sm text-gray-600 dark:text-gray-400">{t('security.errors')}</div>
         <div className="text-2xl font-bold text-red-600">{stats.byLevel.ERROR || 0}</div>
       </motion.div>
+    </div>
+  );
+}
+
+export function SecurityTabs({
+  activeTab,
+  onTabChange,
+  t,
+}: {
+  activeTab: SecurityLogsTab;
+  onTabChange: (tab: SecurityLogsTab) => void;
+  t: TFunction;
+}): JSX.Element {
+  const tabs: Array<{ id: SecurityLogsTab; label: string }> = [
+    { id: 'logs', label: t('security.tabs.logs', { defaultValue: 'Logs' }) },
+    { id: 'observability', label: t('security.tabs.observability', { defaultValue: 'Observabilité' }) },
+  ];
+
+  return (
+    <div className="mb-6 flex flex-wrap gap-3">
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          onClick={() => onTabChange(tab.id)}
+          className={activeTab === tab.id
+            ? 'cv-gradient-button inline-flex min-h-11 items-center px-5 py-2 text-sm font-semibold'
+            : 'cv-ghost-button inline-flex min-h-11 items-center px-5 py-2 text-sm font-medium'}
+        >
+          {tab.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -209,5 +313,240 @@ export function SecurityLogsPagination({
       loading={loading}
       itemName={t('security.logs')}
     />
+  );
+}
+
+export function ObservabilityOverview({
+  health,
+  loading,
+  operationsMetrics,
+  onRefresh,
+  onCopy,
+  t,
+}: {
+  health: ObservabilityHealthResponse | null;
+  loading: boolean;
+  operationsMetrics: ObservabilityOperationsMetrics | null;
+  onRefresh: () => void;
+  onCopy: () => void;
+  t: TFunction;
+}): JSX.Element {
+  const mainFlowCards = [
+    {
+      id: 'import',
+      step: '01',
+      title: t('security.observability.mainFlow.import', { defaultValue: 'Import CV' }),
+      status: getMainFlowStatus(
+        operationsMetrics?.operations?.uploads?.successful,
+        operationsMetrics?.operations?.uploads?.failed,
+      ),
+      metrics: [
+        { label: t('security.observability.mainFlow.totalFiles', { defaultValue: 'Fichiers reçus' }), value: formatMetricValue(operationsMetrics?.operations?.uploads?.total) },
+        { label: t('security.observability.mainFlow.successful', { defaultValue: 'Imports réussis' }), value: formatMetricValue(operationsMetrics?.operations?.uploads?.successful) },
+        { label: t('security.observability.mainFlow.failed', { defaultValue: 'Imports en échec' }), value: formatMetricValue(operationsMetrics?.operations?.uploads?.failed) },
+      ],
+    },
+    {
+      id: 'analysis',
+      step: '02',
+      title: t('security.observability.mainFlow.analysis', { defaultValue: 'Analyse' }),
+      status: getMainFlowStatus(
+        operationsMetrics?.operations?.batchImports?.analysisRuns,
+        operationsMetrics?.operations?.batchImports?.textExtractionFailures,
+      ),
+      metrics: [
+        { label: t('security.observability.mainFlow.analysisRuns', { defaultValue: 'Analyses lancées' }), value: formatMetricValue(operationsMetrics?.operations?.batchImports?.analysisRuns) },
+        { label: t('security.observability.mainFlow.textExtractionRuns', { defaultValue: 'Extractions de texte' }), value: formatMetricValue(operationsMetrics?.operations?.batchImports?.textExtractionRuns) },
+        { label: t('security.observability.mainFlow.textExtractionFailures', { defaultValue: "Échecs d'extraction" }), value: formatMetricValue(operationsMetrics?.operations?.batchImports?.textExtractionFailures) },
+      ],
+    },
+    {
+      id: 'improvement',
+      step: '03',
+      title: t('security.observability.mainFlow.improvement', { defaultValue: 'Amélioration' }),
+      status: getMainFlowStatus(
+        operationsMetrics?.operations?.improvement?.successfulRuns,
+        operationsMetrics?.operations?.improvement?.failedRuns,
+      ),
+      metrics: [
+        { label: t('security.observability.mainFlow.improvementRuns', { defaultValue: 'Améliorations lancées' }), value: formatMetricValue(operationsMetrics?.operations?.improvement?.runs) },
+        { label: t('security.observability.mainFlow.successful', { defaultValue: 'Imports réussis' }), value: formatMetricValue(operationsMetrics?.operations?.improvement?.successfulRuns) },
+        { label: t('security.observability.mainFlow.failed', { defaultValue: 'Imports en échec' }), value: formatMetricValue(operationsMetrics?.operations?.improvement?.failedRuns) },
+      ],
+    },
+    {
+      id: 'export',
+      step: '04',
+      title: t('security.observability.mainFlow.export', { defaultValue: 'Export' }),
+      status: getMainFlowStatus(
+        operationsMetrics?.operations?.batchExports?.successfulRuns,
+        operationsMetrics?.operations?.batchExports?.failedRuns,
+      ),
+      metrics: [
+        { label: t('security.observability.mainFlow.exportRuns', { defaultValue: 'Exports lancés' }), value: formatMetricValue(operationsMetrics?.operations?.batchExports?.runs) },
+        { label: t('security.observability.mainFlow.generatedFiles', { defaultValue: 'Fichiers générés' }), value: formatMetricValue(operationsMetrics?.operations?.batchExports?.generatedFiles) },
+        { label: t('security.observability.mainFlow.failedFiles', { defaultValue: 'Fichiers en échec' }), value: formatMetricValue(operationsMetrics?.operations?.batchExports?.failedFiles) },
+      ],
+    },
+  ];
+
+  const statusCards = [
+    {
+      label: t('security.observability.overall', { defaultValue: 'Statut global' }),
+      value: health?.status || '-',
+      extra: health?.responseTime || '-',
+      status: health?.status,
+    },
+    {
+      label: t('security.observability.database', { defaultValue: 'Base de données' }),
+      value: String(health?.checks?.database?.status || '-'),
+      extra: String(health?.checks?.database?.message || '-'),
+      status: health?.checks?.database?.status,
+    },
+    {
+      label: t('security.observability.batchWorker', { defaultValue: 'Worker batch' }),
+      value: String(health?.checks?.batchWorker?.status || '-'),
+      extra: `active=${String(health?.checks?.batchWorker?.activeProcessingCount ?? 0)}`,
+      status: health?.checks?.batchWorker?.status,
+    },
+    {
+      label: t('security.observability.ocr', { defaultValue: 'OCR / Extraction' }),
+      value: String(health?.checks?.ocr?.status || '-'),
+      extra: String(health?.checks?.ocr?.preferredEngine || health?.checks?.ocr?.message || '-'),
+      status: health?.checks?.ocr?.status,
+    },
+  ];
+
+  const detailCards = [
+    { id: 'export', title: 'Export batch', summary: health?.checks?.recentBatchActivity?.export },
+    { id: 'textExtraction', title: 'Extraction / OCR', summary: health?.checks?.recentBatchActivity?.textExtraction },
+    { id: 'consent', title: 'Consentement / Purge', summary: health?.checks?.recentConsentActivity?.scheduler },
+    { id: 'pipeline', title: 'Pipeline', summary: health?.checks?.recentPipelineActivity?.pipeline },
+  ];
+
+  const recentItems = getRecentObservabilityItems(health);
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-[1.75rem] border border-gray-200/80 bg-white/80 p-5 shadow-sm dark:border-gray-700/80 dark:bg-gray-900/30">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              {t('security.observability.title', { defaultValue: 'Observabilité' })}
+            </h2>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              {t('security.observability.subtitle', { defaultValue: "Santé runtime, activité récente et diagnostics d'exploitation." })}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button type="button" onClick={onCopy} className="cv-ghost-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-medium">
+              {t('security.observability.copy', { defaultValue: 'Copier le diagnostic' })}
+            </button>
+            <button type="button" onClick={onRefresh} className="cv-gradient-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-semibold">
+              {loading ? t('security.refreshing', { defaultValue: 'Actualisation...' }) : t('security.refresh', { defaultValue: 'Rafraîchir' })}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-[1.75rem] border border-gray-200/80 bg-white/80 p-5 shadow-sm dark:border-gray-700/80 dark:bg-gray-900/30">
+        <div>
+          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+            {t('security.observability.mainFlow.title', { defaultValue: 'Flux principal' })}
+          </h3>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            {t('security.observability.mainFlow.subtitle', { defaultValue: "Import de CV, analyse, amélioration et export." })}
+          </p>
+        </div>
+        <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-4">
+          {mainFlowCards.map((card) => (
+            <div key={card.id} className="rounded-[1.5rem] border border-slate-200/80 bg-slate-50/70 p-4 dark:border-slate-700/80 dark:bg-slate-900/40">
+              <div className="flex items-center justify-between gap-3">
+                <span className="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-semibold tracking-[0.18em] text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  {card.step}
+                </span>
+                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getObservabilityStatusClass(card.status)}`}>
+                  {card.status}
+                </span>
+              </div>
+              <div className="mt-3 text-base font-semibold text-gray-900 dark:text-gray-100">{card.title}</div>
+              <div className="mt-4 space-y-2">
+                {card.metrics.map((metric) => (
+                  <div key={metric.label} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-gray-500 dark:text-gray-400">{metric.label}</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{metric.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {statusCards.map((card) => (
+          <div key={card.label} className="rounded-[1.5rem] border border-gray-200/80 bg-white/80 p-4 shadow-sm dark:border-gray-700/80 dark:bg-gray-900/30">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm text-gray-600 dark:text-gray-400">{card.label}</div>
+              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getObservabilityStatusClass(card.status)}`}>{card.value}</span>
+            </div>
+            <div className="mt-3 text-sm font-medium text-gray-900 dark:text-gray-100">{card.extra}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr,1.8fr]">
+        <div className="rounded-[1.75rem] border border-gray-200/80 bg-white/80 p-5 shadow-sm dark:border-gray-700/80 dark:bg-gray-900/30">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+            {t('security.observability.activity', { defaultValue: 'Activité récente' })}
+          </h3>
+          <div className="mt-4 space-y-3">
+            {recentItems.length === 0 && (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {t('security.observability.noActivity', { defaultValue: 'Aucune activité récente disponible.' })}
+              </p>
+            )}
+            {recentItems.map((item) => (
+              <div key={item.id} className="rounded-2xl border border-slate-200/80 px-4 py-3 dark:border-slate-700/80">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="font-medium text-gray-900 dark:text-gray-100">{item.label}</div>
+                  <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getObservabilityStatusClass(item.summary.status)}`}>
+                    {String(item.summary.status || '-')}
+                  </span>
+                </div>
+                <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  {String(item.summary.operation || '-')} · {formatObservabilityTimestamp(item.summary.timestamp)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {detailCards.map((card) => (
+            <div key={card.id} className="rounded-[1.75rem] border border-gray-200/80 bg-white/80 p-5 shadow-sm dark:border-gray-700/80 dark:bg-gray-900/30">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{card.title}</h3>
+                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getObservabilityStatusClass(card.summary?.status)}`}>
+                  {String(card.summary?.status || '-')}
+                </span>
+              </div>
+              <div className="mt-4 space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                {card.summary ? Object.entries(card.summary).map(([key, value]) => (
+                  <div key={key} className="flex items-start justify-between gap-4 border-b border-slate-100 py-1 last:border-b-0 dark:border-slate-800">
+                    <span className="text-gray-500 dark:text-gray-400">{key}</span>
+                    <span className="max-w-[60%] break-words text-right">{typeof value === 'object' ? JSON.stringify(value) : String(value)}</span>
+                  </div>
+                )) : (
+                  <p className="text-gray-500 dark:text-gray-400">
+                    {t('security.observability.noData', { defaultValue: 'Aucune donnée disponible.' })}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }

@@ -3,10 +3,12 @@ import { createElement } from 'react';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import {
+  ObservabilityOverview,
   SecurityFiltersBar,
   SecurityLogsPagination,
   SecurityLogsTable,
   SecurityStatsGrid,
+  SecurityTabs,
 } from './SecurityLogs.sections';
 
 function createMotionElement(tag: string) {
@@ -61,7 +63,7 @@ describe('SecurityLogs sections', () => {
         }}
         onResetFilters={onResetFilters}
         t={t}
-      />
+      />,
     );
 
     expect(screen.getByText('12')).toBeInTheDocument();
@@ -93,7 +95,7 @@ describe('SecurityLogs sections', () => {
         onFilterChange={onFilterChange}
         setLoading={setLoading}
         t={t}
-      />
+      />,
     );
 
     fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'ERROR' } });
@@ -141,7 +143,7 @@ describe('SecurityLogs sections', () => {
           totalCount={40}
           totalPages={4}
         />
-      </>
+      </>,
     );
 
     expect(screen.getByText('auth_failed')).toBeInTheDocument();
@@ -151,5 +153,69 @@ describe('SecurityLogs sections', () => {
 
     fireEvent.click(screen.getByText('next-page'));
     expect(onPageChange).toHaveBeenCalledWith(3);
+  });
+
+  it('renders tabs and observability overview, including the main flow', () => {
+    const onTabChange = vi.fn();
+    const onRefresh = vi.fn();
+    const onCopy = vi.fn();
+
+    render(
+      <>
+        <SecurityTabs activeTab="observability" onTabChange={onTabChange} t={t} />
+        <ObservabilityOverview
+          health={{
+            status: 'healthy',
+            responseTime: '42ms',
+            checks: {
+              database: { status: 'ok', message: 'Connected' },
+              batchWorker: { status: 'ok', activeProcessingCount: 0 },
+              ocr: { status: 'ok', preferredEngine: 'tesseract-cli' },
+              recentBatchActivity: {
+                export: { timestamp: '2026-04-10T10:00:00.000Z', operation: 'generateJobExport', status: 'completed', jobId: 'job-1' },
+                textExtraction: { timestamp: '2026-04-10T10:05:00.000Z', operation: 'extractTextFromBuffer', status: 'completed', fileName: 'cv.docx' },
+              },
+              recentConsentActivity: {
+                scheduler: { timestamp: '2026-04-10T10:10:00.000Z', operation: 'purgeExpiredResumes', status: 'completed' },
+              },
+              recentPipelineActivity: {
+                pipeline: { timestamp: '2026-04-10T10:15:00.000Z', operation: 'addToPipeline', status: 'completed', pipelineId: 'pipe-1' },
+              },
+            },
+          }}
+          loading={false}
+          operationsMetrics={{
+            operations: {
+              uploads: { total: 14, successful: 12, failed: 2 },
+              batchImports: { analysisRuns: 11, textExtractionRuns: 13, textExtractionFailures: 1 },
+              improvement: { runs: 7, successfulRuns: 6, failedRuns: 1 },
+              batchExports: { runs: 4, successfulRuns: 3, failedRuns: 1, generatedFiles: 8, failedFiles: 1 },
+            },
+          }}
+          onRefresh={onRefresh}
+          onCopy={onCopy}
+          t={t}
+        />
+      </>,
+    );
+
+    fireEvent.click(screen.getByText('security.tabs.logs'));
+    expect(onTabChange).toHaveBeenCalledWith('logs');
+
+    expect(screen.getByText('security.observability.title')).toBeInTheDocument();
+    expect(screen.getByText('security.observability.mainFlow.title')).toBeInTheDocument();
+    expect(screen.getByText('security.observability.mainFlow.import')).toBeInTheDocument();
+    expect(screen.getByText('security.observability.mainFlow.analysis')).toBeInTheDocument();
+    expect(screen.getByText('security.observability.mainFlow.improvement')).toBeInTheDocument();
+    expect(screen.getByText('security.observability.mainFlow.export')).toBeInTheDocument();
+    expect(screen.getAllByText('Export batch').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Pipeline').length).toBeGreaterThan(0);
+    expect(screen.getByText('generateJobExport')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('security.observability.copy'));
+    expect(onCopy).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByText('security.refresh'));
+    expect(onRefresh).toHaveBeenCalledTimes(1);
   });
 });

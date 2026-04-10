@@ -15,16 +15,21 @@ import PageHeader from '../components/page/PageHeader';
 import { fetchWithAuth, createAuthOptions } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
 import {
+  ObservabilityOverview,
   SecurityFiltersBar,
   SecurityLogsPagination,
   SecurityLogsTable,
   SecurityStatsGrid,
+  SecurityTabs,
 } from './SecurityLogs.sections';
 import type {
+  ObservabilityHealthResponse,
+  ObservabilityOperationsMetrics,
   SecurityLogEntry,
   SecurityLogFilterOptions,
   SecurityLogFilters,
   SecurityLogStats,
+  SecurityLogsTab,
 } from './SecurityLogs.types';
 import { getSecurityLoadErrorMessage } from './SecurityLogs.utils';
 
@@ -44,6 +49,9 @@ const SecurityLogs = (): JSX.Element => {
     events: [],
     sources: [],
   });
+  const [activeTab, setActiveTab] = useState<SecurityLogsTab>('logs');
+  const [health, setHealth] = useState<ObservabilityHealthResponse | null>(null);
+  const [operationsMetrics, setOperationsMetrics] = useState<ObservabilityOperationsMetrics | null>(null);
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalCount, setTotalCount] = useState<number>(0);
@@ -155,12 +163,55 @@ const SecurityLogs = (): JSX.Element => {
     }
   }, []);
 
+  const fetchObservability = useCallback(async (): Promise<void> => {
+    try {
+      const response = await fetchWithAuth('/health', createAuthOptions());
+      if (!response.ok) {
+        stopAutoRefreshOnAuthError(response.status);
+        throw new Error(`HTTP_${response.status}`);
+      }
+      const data = await response.json();
+      setHealth(data);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (/^HTTP_(401|403)$/.test(errorMessage) || errorMessage.includes('Session expired')) {
+        reportLoadError(errorMessage, error);
+      } else if (!errorMessage.includes('Session expired')) {
+        logger.error('[SecurityLogs] Error fetching observability diagnostics:', error);
+      }
+    }
+  }, [reportLoadError, stopAutoRefreshOnAuthError]);
+
+  const fetchObservabilityMetrics = useCallback(async (): Promise<void> => {
+    try {
+      const response = await fetchWithAuth('/api/metrics/operations', createAuthOptions());
+      if (!response.ok) {
+        stopAutoRefreshOnAuthError(response.status);
+        throw new Error(`HTTP_${response.status}`);
+      }
+      const data = await response.json();
+      setOperationsMetrics(data);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (/^HTTP_(401|403)$/.test(errorMessage) || errorMessage.includes('Session expired')) {
+        reportLoadError(errorMessage, error);
+      } else if (!errorMessage.includes('Session expired')) {
+        logger.error('[SecurityLogs] Error fetching observability metrics:', error);
+      }
+    }
+  }, [reportLoadError, stopAutoRefreshOnAuthError]);
+
   const refreshPage = useCallback(async (): Promise<void> => {
     setLoading(true);
     await fetchLogs();
-    await Promise.all([fetchStats(), fetchFilterOptions()]);
+    await Promise.all([
+      fetchStats(),
+      fetchFilterOptions(),
+      fetchObservability(),
+      fetchObservabilityMetrics(),
+    ]);
     setLoading(false);
-  }, [fetchFilterOptions, fetchLogs, fetchStats]);
+  }, [fetchFilterOptions, fetchLogs, fetchObservability, fetchObservabilityMetrics, fetchStats]);
 
   useEffect(() => {
     void refreshPage();
@@ -171,7 +222,7 @@ const SecurityLogs = (): JSX.Element => {
     const interval = setInterval(async () => {
       try {
         await fetchLogs();
-        await fetchStats();
+        await Promise.all([fetchStats(), fetchObservability(), fetchObservabilityMetrics()]);
       } catch (error: unknown) {
         if (
           error instanceof Error &&
@@ -182,7 +233,30 @@ const SecurityLogs = (): JSX.Element => {
       }
     }, 60000);
     return () => clearInterval(interval);
-  }, [autoRefresh, fetchLogs, fetchStats]);
+  }, [autoRefresh, fetchLogs, fetchObservability, fetchObservabilityMetrics, fetchStats]);
+
+  const copyObservabilityDiagnostics = useCallback(() => {
+    if (!health) {
+      return;
+    }
+
+    const payload = JSON.stringify(health, null, 2);
+    const clipboard = globalThis.navigator?.clipboard;
+
+    if (!clipboard?.writeText) {
+      toast.error(t('security.observability.copyUnavailable', { defaultValue: 'Copie non disponible.' }));
+      return;
+    }
+
+    void clipboard.writeText(payload)
+      .then(() => {
+        toast.success(t('security.observability.copySuccess', { defaultValue: 'Diagnostic copié.' }));
+      })
+      .catch((error: unknown) => {
+        logger.error('[SecurityLogs] Error copying observability diagnostics:', error);
+        toast.error(t('security.observability.copyError', { defaultValue: 'Impossible de copier le diagnostic.' }));
+      });
+  }, [health, t]);
 
   const hasActiveFilters = Boolean(filters.level || filters.event || filters.source);
 
@@ -219,6 +293,8 @@ const SecurityLogs = (): JSX.Element => {
     >
       <PageHeader title={t('security.title')} subtitle={t('security.subtitle')} />
 
+      <SecurityTabs activeTab={activeTab} onTabChange={setActiveTab} t={t} />
+
       {stats && (
         <div className="section-shell mb-6 rounded-[2rem] p-6">
           <SecurityStatsGrid
@@ -249,39 +325,41 @@ const SecurityLogs = (): JSX.Element => {
         </div>
       )}
 
-      <div className="section-shell mb-6 rounded-[2rem] p-4">
-        <SecurityFiltersBar
-          autoRefresh={autoRefresh}
-          fetchLogs={fetchLogs}
-          fetchStats={fetchStats}
-          filters={filters}
-          filterOptions={filterOptions}
-          onAutoRefreshChange={(e: ChangeEvent<HTMLInputElement>) =>
-            setAutoRefresh(e.target.checked)
-          }
-          onClearFilters={() => {
-            setFilters({ level: '', event: '', source: '' });
-            setCurrentPage(1);
-          }}
-          onFilterChange={handleFilterChange}
-          setLoading={setLoading}
-          t={t}
-        />
-      </div>
+      {activeTab === 'logs' ? (
+        <>
+          <div className="section-shell mb-6 rounded-[2rem] p-4">
+            <SecurityFiltersBar
+              autoRefresh={autoRefresh}
+              fetchLogs={fetchLogs}
+              fetchStats={fetchStats}
+              filters={filters}
+              filterOptions={filterOptions}
+              onAutoRefreshChange={(e: ChangeEvent<HTMLInputElement>) =>
+                setAutoRefresh(e.target.checked)
+              }
+              onClearFilters={() => {
+                setFilters({ level: '', event: '', source: '' });
+                setCurrentPage(1);
+              }}
+              onFilterChange={handleFilterChange}
+              setLoading={setLoading}
+              t={t}
+            />
+          </div>
 
-      <div className="section-shell mb-6 rounded-[2rem] p-4">
-        <SecurityLogsPagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalCount={totalCount}
-          pageSize={pageSize}
-          onPageChange={goToPage}
-          loading={loading}
-          t={t}
-        />
-      </div>
+          <div className="section-shell mb-6 rounded-[2rem] p-4">
+            <SecurityLogsPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalCount={totalCount}
+              pageSize={pageSize}
+              onPageChange={goToPage}
+              loading={loading}
+              t={t}
+            />
+          </div>
 
-      {loadError && !logs.length ? (
+          {loadError && !logs.length ? (
         <div className="section-shell rounded-[2rem] border border-amber-200/70 bg-amber-50/80 p-8 dark:border-amber-800/70 dark:bg-amber-900/15">
           <div className="flex items-start gap-4">
             <ExclamationTriangleIcon className="mt-1 h-6 w-6 text-amber-500" />
@@ -316,54 +394,69 @@ const SecurityLogs = (): JSX.Element => {
             </div>
           </div>
         </div>
-      ) : (
-        <>
-          <div className="section-shell mb-6 overflow-hidden rounded-[2rem]">
-            <SecurityLogsTable logs={logs} t={t} />
-            {!logs.length && (
-              <div className="border-t border-slate-200/80 px-6 py-8 text-center dark:border-slate-700/80">
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  {t('security.noLogs')}
-                </p>
-                <div className="mt-4 flex flex-wrap justify-center gap-3">
-                  {hasActiveFilters && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFilters({ level: '', event: '', source: '' });
-                        setCurrentPage(1);
-                      }}
-                      className="cv-ghost-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-medium"
-                    >
-                      {t('common.resetFilters')}
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void refreshPage();
-                    }}
-                    className="cv-gradient-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-semibold"
-                  >
-                    {t('security.refresh')}
-                  </button>
-                </div>
+          ) : (
+            <>
+              <div className="section-shell mb-6 overflow-hidden rounded-[2rem]">
+                <SecurityLogsTable logs={logs} t={t} />
+                {!logs.length && (
+                  <div className="border-t border-slate-200/80 px-6 py-8 text-center dark:border-slate-700/80">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      {t('security.noLogs')}
+                    </p>
+                    <div className="mt-4 flex flex-wrap justify-center gap-3">
+                      {hasActiveFilters && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFilters({ level: '', event: '', source: '' });
+                            setCurrentPage(1);
+                          }}
+                          className="cv-ghost-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-medium"
+                        >
+                          {t('common.resetFilters')}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void refreshPage();
+                        }}
+                        className="cv-gradient-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-semibold"
+                      >
+                        {t('security.refresh')}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          <div className="section-shell rounded-[2rem] p-4">
-            <SecurityLogsPagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalCount={totalCount}
-              pageSize={pageSize}
-              onPageChange={goToPage}
-              loading={loading}
-              t={t}
-            />
-          </div>
+              <div className="section-shell rounded-[2rem] p-4">
+                <SecurityLogsPagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalCount={totalCount}
+                  pageSize={pageSize}
+                  onPageChange={goToPage}
+                  loading={loading}
+                  t={t}
+                />
+              </div>
+            </>
+          )}
         </>
+      ) : (
+        <div className="section-shell rounded-[2rem] p-6">
+          <ObservabilityOverview
+            health={health}
+            loading={loading}
+            operationsMetrics={operationsMetrics}
+            onRefresh={() => {
+              void refreshPage();
+            }}
+            onCopy={copyObservabilityDiagnostics}
+            t={t}
+          />
+        </div>
       )}
     </motion.div>
   );

@@ -12,6 +12,14 @@ import { getFrontendUrl, buildConsentReminderEmailHtml } from './emailTemplates.
 
 // Constants
 const REMINDER_AFTER_DAYS = 7; // Send reminder after 1 week
+let lastConsentSchedulerSummary = null;
+
+function updateLastConsentSchedulerSummary(summary) {
+    lastConsentSchedulerSummary = {
+        timestamp: new Date().toISOString(),
+        ...summary
+    };
+}
 
 /**
  * Check for expired consents and mark them
@@ -49,6 +57,14 @@ export async function checkExpiredConsents() {
             retentionExpired: expiredRetention.rows.length 
         });
     }
+
+    updateLastConsentSchedulerSummary({
+        operation: 'checkExpiredConsents',
+        status: 'completed',
+        totalExpired,
+        pendingExpired: expiredPending.rows.length,
+        retentionExpired: expiredRetention.rows.length
+    });
 
     return totalExpired;
 }
@@ -135,6 +151,14 @@ export async function sendConsentReminders() {
     if (sentCount > 0) {
         safeLog('info', 'Consent reminders sent', { count: sentCount });
     }
+
+    updateLastConsentSchedulerSummary({
+        operation: 'sendConsentReminders',
+        status: 'completed',
+        candidateCount: result.rows.length,
+        sentCount,
+        failedCount: Math.max(0, result.rows.length - sentCount)
+    });
 
     return sentCount;
 }
@@ -246,6 +270,14 @@ export async function purgeExpiredResumes() {
         });
     }
 
+    updateLastConsentSchedulerSummary({
+        operation: 'purgeExpiredResumes',
+        status: 'completed',
+        attemptedCount: result.rows.length,
+        purgedCount,
+        skippedCount
+    });
+
     if (purgedCount > 0) {
         // Log batch purge action
         await logGdprAction({
@@ -261,4 +293,8 @@ export async function purgeExpiredResumes() {
     }
 
     return purgedCount;
+}
+
+export function getLastConsentSchedulerSummary() {
+    return lastConsentSchedulerSummary;
 }

@@ -115,6 +115,7 @@ describe('Proxy Routes', () => {
         const res = await request(app)
             .post('/generate-pdf')
             .set('x-test-auth', 'ok')
+            .set('x-request-id', 'proxy-req-1')
             .send({
                 htmlContent: '<div onclick="alert(1)">Test<script>alert(1)</script><img src="data:image/png;base64,AAAA" onerror="alert(2)" /></div>',
                 filename: '../my evil file',
@@ -126,10 +127,11 @@ describe('Proxy Routes', () => {
             });
 
         expect(res.status).toBe(200);
+        expect(res.headers['x-request-id']).toBe('proxy-req-1');
         expect(mockUserRateLimit).toHaveBeenCalledWith(20, 15 * 60 * 1000);
         expect(mockFetch).toHaveBeenCalledTimes(1);
         expect(mockFetch.mock.calls[0][1].headers['x-internal-service-token']).toBeDefined();
-        expect(mockFetch.mock.calls[0][1].headers['x-request-id']).toBeTruthy();
+        expect(mockFetch.mock.calls[0][1].headers['x-request-id']).toBe('proxy-req-1');
 
         const forwardedBody = JSON.parse(mockFetch.mock.calls[0][1].body);
         expect(forwardedBody.filename).toBe('my_evil_file.pdf');
@@ -211,6 +213,7 @@ describe('Proxy Routes', () => {
         const res = await request(app)
             .post('/generate-pdf')
             .set('x-test-auth', 'ok')
+            .set('x-request-id', 'proxy-timeout-1')
             .send({
                 htmlContent: '<p>timeout</p>',
                 filename: 'resume.pdf'
@@ -218,6 +221,7 @@ describe('Proxy Routes', () => {
 
         expect(res.status).toBe(504);
         expect(res.body.error).toContain('timed out');
+        expect(res.body.requestId).toBe('proxy-timeout-1');
         expect(res.body.details).toBeUndefined();
     });
 
@@ -235,16 +239,18 @@ describe('Proxy Routes', () => {
         const res = await request(app)
             .post('/generate-pdf')
             .set('x-test-auth', 'ok')
+            .set('x-request-id', 'proxy-upstream-500')
             .send({
                 htmlContent: '<p>boom</p>',
                 filename: 'resume.pdf'
             });
 
         expect(res.status).toBe(500);
-        expect(res.body).toEqual({ error: 'Failed to generate PDF' });
+        expect(res.body).toEqual({ error: 'Failed to generate PDF', requestId: 'proxy-upstream-500' });
+        expect(res.headers['x-request-id']).toBe('proxy-upstream-500');
         expect(res.headers['x-pdf-debug-id']).toBe('pdf-debug-500');
         expect(safeLog).toHaveBeenCalledWith('error', 'PDF server error', expect.objectContaining({
-            requestId: expect.any(String),
+            requestId: 'proxy-upstream-500',
             upstreamDebugId: 'pdf-debug-500',
             filename: 'resume.pdf',
             htmlLength: '<p>boom</p>'.length
@@ -263,13 +269,14 @@ describe('Proxy Routes', () => {
         const res = await request(app)
             .post('/generate-docx')
             .set('x-test-auth', 'ok')
+            .set('x-request-id', 'proxy-docx-403')
             .send({
                 htmlContent: '<p>blocked</p>',
                 filename: 'resume.docx'
             });
 
         expect(res.status).toBe(403);
-        expect(res.body).toEqual({ error: 'DOCX generation is not authorized' });
+        expect(res.body).toEqual({ error: 'DOCX generation is not authorized', requestId: 'proxy-docx-403' });
     });
 
     it('fails closed when PDF_SERVER_URL is not an internal service', async () => {
@@ -279,13 +286,14 @@ describe('Proxy Routes', () => {
         const res = await request(app)
             .post('/generate-pdf')
             .set('x-test-auth', 'ok')
+            .set('x-request-id', 'proxy-internal-only')
             .send({
                 htmlContent: '<p>blocked</p>',
                 filename: 'resume.pdf'
             });
 
         expect(res.status).toBe(503);
-        expect(res.body).toEqual({ error: 'PDF generation service is unavailable' });
+        expect(res.body).toEqual({ error: 'PDF generation service is unavailable', requestId: 'proxy-internal-only' });
         expect(mockFetch).not.toHaveBeenCalled();
     });
 
@@ -303,7 +311,8 @@ describe('Proxy Routes', () => {
             });
 
         expect(res.status).toBe(503);
-        expect(res.body).toEqual({ error: 'PDF generation service is unavailable' });
+        expect(res.body).toEqual(expect.objectContaining({ error: 'PDF generation service is unavailable' }));
+        expect(typeof res.body.requestId).toBe('string');
         expect(mockFetch).not.toHaveBeenCalled();
     });
 });

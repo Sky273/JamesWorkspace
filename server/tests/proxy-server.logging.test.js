@@ -91,6 +91,7 @@ describe('proxy-server 400 diagnostics', () => {
         const response = await request(app)
             .post('/api/test-400')
             .set('Content-Type', 'application/json')
+            .set('x-request-id', 'req-123')
             .set('Origin', 'https://example.test')
             .set('Cookie', [
                 'accessToken=secret-token',
@@ -102,6 +103,7 @@ describe('proxy-server 400 diagnostics', () => {
             });
 
         expect(response.status).toBe(400);
+        expect(response.headers['x-request-id']).toBe('req-123');
 
         const diagnosticCall = mockSafeLog.mock.calls.find(([level, message]) => (
             level === 'warn' && message === '400 Bad Request diagnostic'
@@ -111,6 +113,7 @@ describe('proxy-server 400 diagnostics', () => {
         const [, , payload] = diagnosticCall;
 
         expect(payload).toMatchObject({
+            requestId: 'req-123',
             path: '/api/test-400',
             method: 'POST',
             origin: 'https://example.test',
@@ -124,6 +127,17 @@ describe('proxy-server 400 diagnostics', () => {
         expect(payload).not.toHaveProperty('hasAccessToken');
         expect(payload).not.toHaveProperty('hasCsrfCookie');
         expect(payload).not.toHaveProperty('userAgent');
+    });
+
+    it('adds a generated request id to unmatched API responses', async () => {
+        const response = await request(app)
+            .get('/api/does-not-exist');
+
+        expect(response.status).toBe(404);
+        expect(response.body.error).toBe('Route not found');
+        expect(typeof response.body.requestId).toBe('string');
+        expect(response.body.requestId.length).toBeGreaterThan(0);
+        expect(response.headers['x-request-id']).toBe(response.body.requestId);
     });
 
     it('logs JSON 400 diagnostics sent via res.send without duplicating the diagnostic', async () => {
@@ -147,5 +161,19 @@ describe('proxy-server 400 diagnostics', () => {
         expect(payload).not.toHaveProperty('hasAccessToken');
         expect(payload).not.toHaveProperty('hasCsrfCookie');
         expect(payload).not.toHaveProperty('userAgent');
+    });
+
+    it('logs request completion with correlation metadata', async () => {
+        await request(app)
+            .get('/api/test-400-send')
+            .set('x-request-id', 'req-finish-1');
+
+        expect(mockSafeLog).toHaveBeenCalledWith('info', 'HTTP request completed', expect.objectContaining({
+            requestId: 'req-finish-1',
+            method: 'GET',
+            path: '/api/test-400-send',
+            statusCode: 400,
+            durationMs: expect.any(Number)
+        }));
     });
 });

@@ -8,18 +8,18 @@ import { safeLog } from '../utils/logger.backend.js';
 import { assertSchemaRequirements } from './schemaVerification.service.js';
 import { getPipelineHistory } from './candidatePipeline/history.js';
 import {
-    addToPipeline,
+    addToPipeline as addToPipelineInternal,
     getPipelineById,
     getPipelineByMissionId,
     getPipelineByResumeId,
     getPipelineOverview,
-    moveToStage,
-    removeFromPipeline,
+    moveToStage as moveToStageInternal,
+    removeFromPipeline as removeFromPipelineInternal,
     updatePipelineNotes
 } from './candidatePipeline/pipeline.js';
 import {
-    cancelInterview,
-    completeInterview,
+    cancelInterview as cancelInterviewInternal,
+    completeInterview as completeInterviewInternal,
     deleteInterview,
     getInterviews,
     getPipelineStats,
@@ -39,6 +39,19 @@ export const PIPELINE_STAGES = [
     { id: 'rejected', label: 'Non retenu', labelEn: 'Not Selected', order: 7, color: '#EF4444' },
     { id: 'on_hold', label: 'En attente', labelEn: 'On Hold', order: 8, color: '#F97316' }
 ];
+
+let lastPipelineActivitySummary = null;
+
+function updateLastPipelineActivitySummary(summary) {
+    lastPipelineActivitySummary = {
+        timestamp: new Date().toISOString(),
+        ...summary
+    };
+}
+
+export function getLastPipelineActivitySummary() {
+    return lastPipelineActivitySummary;
+}
 
 export async function initCandidatePipelineTable() {
     try {
@@ -70,19 +83,14 @@ export async function initCandidatePipelineTable() {
 }
 
 export {
-    addToPipeline,
     getPipelineById,
     getPipelineByResumeId,
     getPipelineByMissionId,
-    moveToStage,
     updatePipelineNotes,
-    removeFromPipeline,
     getPipelineHistory,
     getInterviews,
     getUpcomingInterviews,
     updateInterview,
-    completeInterview,
-    cancelInterview,
     deleteInterview,
     getPipelineStats
 };
@@ -92,7 +100,141 @@ export async function getPipelineOverviewFacade(filters = {}) {
 }
 
 export async function scheduleInterview(args) {
-    return scheduleInterviewInternal({ ...args, pipelineStages: PIPELINE_STAGES });
+    try {
+        const interview = await scheduleInterviewInternal({ ...args, pipelineStages: PIPELINE_STAGES });
+        updateLastPipelineActivitySummary({
+            operation: 'scheduleInterview',
+            status: 'completed',
+            pipelineId: args.pipelineId,
+            interviewId: interview?.id || null,
+            interviewType: args.interviewType || 'client'
+        });
+        return interview;
+    } catch (error) {
+        updateLastPipelineActivitySummary({
+            operation: 'scheduleInterview',
+            status: 'failed',
+            pipelineId: args.pipelineId,
+            interviewType: args.interviewType || 'client',
+            error: error.message
+        });
+        throw error;
+    }
+}
+
+export async function addToPipeline(args) {
+    try {
+        const pipelineEntry = await addToPipelineInternal(args);
+        updateLastPipelineActivitySummary({
+            operation: 'addToPipeline',
+            status: 'completed',
+            pipelineId: pipelineEntry?.id || null,
+            resumeId: args.resumeId,
+            adaptationId: args.adaptationId || null,
+            missionId: args.missionId || null,
+            stage: pipelineEntry?.stage || args.stage || 'new'
+        });
+        return pipelineEntry;
+    } catch (error) {
+        updateLastPipelineActivitySummary({
+            operation: 'addToPipeline',
+            status: 'failed',
+            resumeId: args.resumeId,
+            adaptationId: args.adaptationId || null,
+            missionId: args.missionId || null,
+            stage: args.stage || 'new',
+            error: error.message
+        });
+        throw error;
+    }
+}
+
+export async function moveToStage(args) {
+    try {
+        const updatedEntry = await moveToStageInternal(args);
+        updateLastPipelineActivitySummary({
+            operation: 'moveToStage',
+            status: 'completed',
+            pipelineId: args.pipelineId,
+            stage: args.newStage,
+            changedBy: args.changedBy || null
+        });
+        return updatedEntry;
+    } catch (error) {
+        updateLastPipelineActivitySummary({
+            operation: 'moveToStage',
+            status: 'failed',
+            pipelineId: args.pipelineId,
+            stage: args.newStage,
+            changedBy: args.changedBy || null,
+            error: error.message
+        });
+        throw error;
+    }
+}
+
+export async function removeFromPipeline(pipelineId) {
+    try {
+        const removed = await removeFromPipelineInternal(pipelineId);
+        updateLastPipelineActivitySummary({
+            operation: 'removeFromPipeline',
+            status: 'completed',
+            pipelineId
+        });
+        return removed;
+    } catch (error) {
+        updateLastPipelineActivitySummary({
+            operation: 'removeFromPipeline',
+            status: 'failed',
+            pipelineId,
+            error: error.message
+        });
+        throw error;
+    }
+}
+
+export async function completeInterview(args) {
+    try {
+        const interview = await completeInterviewInternal(args);
+        updateLastPipelineActivitySummary({
+            operation: 'completeInterview',
+            status: 'completed',
+            interviewId: args.interviewId,
+            outcome: args.outcome || null,
+            changedBy: args.changedBy || null
+        });
+        return interview;
+    } catch (error) {
+        updateLastPipelineActivitySummary({
+            operation: 'completeInterview',
+            status: 'failed',
+            interviewId: args.interviewId,
+            outcome: args.outcome || null,
+            changedBy: args.changedBy || null,
+            error: error.message
+        });
+        throw error;
+    }
+}
+
+export async function cancelInterview(interviewId) {
+    try {
+        const interview = await cancelInterviewInternal(interviewId);
+        updateLastPipelineActivitySummary({
+            operation: 'cancelInterview',
+            status: 'completed',
+            interviewId
+        });
+        return interview;
+    } catch (error) {
+        updateLastPipelineActivitySummary({
+            operation: 'cancelInterview',
+            status: 'failed',
+            interviewId,
+            error: error.message
+        });
+        throw error;
+    }
 }
 
 export async function getResumeFirmId(resumeId) {

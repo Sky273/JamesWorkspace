@@ -103,6 +103,60 @@ vi.mock('../../services/wordTextExtraction.service.js', () => ({
     }))
 }));
 
+vi.mock('../../services/batchJobsWorker/workerLifecycle.js', () => ({
+    getBatchWorkerRuntimeDiagnostics: vi.fn(() => ({
+        initialized: true,
+        workerRunning: false,
+        shuttingDown: false,
+        activeProcessingCount: 0,
+        intervalActive: true
+    }))
+}));
+
+vi.mock('../../services/batchJobsWorker/exportGenerator.js', () => ({
+    getLastBatchExportSummary: vi.fn(() => ({
+        timestamp: '2026-04-10T06:00:00.000Z',
+        operation: 'generateJobExport',
+        jobId: 'job-1',
+        status: 'completed',
+        format: 'pdf',
+        generatedFiles: 3
+    }))
+}));
+
+vi.mock('../../services/batchJobsWorker/textExtraction.js', () => ({
+    getLastBatchTextExtractionSummary: vi.fn(() => ({
+        timestamp: '2026-04-10T06:05:00.000Z',
+        operation: 'extractTextFromBuffer',
+        kind: 'pdf',
+        status: 'completed',
+        textLength: 4200,
+        ocrUsed: true
+    }))
+}));
+
+vi.mock('../../services/consent/scheduler.js', () => ({
+    getLastConsentSchedulerSummary: vi.fn(() => ({
+        timestamp: '2026-04-10T06:10:00.000Z',
+        operation: 'purgeExpiredResumes',
+        status: 'completed',
+        attemptedCount: 4,
+        purgedCount: 3,
+        skippedCount: 1
+    }))
+}));
+
+vi.mock('../../services/candidatePipeline.service.js', () => ({
+    getLastPipelineActivitySummary: vi.fn(() => ({
+        timestamp: '2026-04-10T06:15:00.000Z',
+        operation: 'addToPipeline',
+        status: 'completed',
+        pipelineId: 'pipe-1',
+        missionId: 'mission-1',
+        stage: 'new'
+    }))
+}));
+
 import { query as dbQuery } from '../../config/database.js';
 import { findUserById } from '../../services/users.service.js';
 
@@ -160,6 +214,50 @@ describe('Health Routes', () => {
             expect(response.checks.ocr.advancedBackend).toBe('paddleocr');
             expect(response.checks.ocr.sofficeAvailable).toBe(true);
             expect(response.checks.ocr.wordOcrFallbackAvailable).toBe(true);
+            expect(response.checks.batchWorker).toMatchObject({
+                status: 'ok',
+                initialized: true,
+                workerRunning: false,
+                activeProcessingCount: 0,
+                intervalActive: true
+            });
+            expect(response.checks.recentBatchActivity).toMatchObject({
+                status: 'ok',
+                export: expect.objectContaining({
+                    operation: 'generateJobExport',
+                    jobId: 'job-1',
+                    status: 'completed',
+                    format: 'pdf',
+                    generatedFiles: 3
+                }),
+                textExtraction: expect.objectContaining({
+                    operation: 'extractTextFromBuffer',
+                    kind: 'pdf',
+                    status: 'completed',
+                    textLength: 4200,
+                    ocrUsed: true
+                })
+            });
+            expect(response.checks.recentConsentActivity).toMatchObject({
+                status: 'ok',
+                scheduler: expect.objectContaining({
+                    operation: 'purgeExpiredResumes',
+                    status: 'completed',
+                    attemptedCount: 4,
+                    purgedCount: 3,
+                    skippedCount: 1
+                })
+            });
+            expect(response.checks.recentPipelineActivity).toMatchObject({
+                status: 'ok',
+                pipeline: expect.objectContaining({
+                    operation: 'addToPipeline',
+                    status: 'completed',
+                    pipelineId: 'pipe-1',
+                    missionId: 'mission-1',
+                    stage: 'new'
+                })
+            });
         });
 
         it('should return unhealthy status when database fails', async () => {

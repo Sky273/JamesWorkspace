@@ -113,7 +113,7 @@ vi.mock('stream/promises', () => ({
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-import { generateJobExport } from '../../services/batchJobsWorker/exportGenerator.js';
+import { generateJobExport, getLastBatchExportSummary } from '../../services/batchJobsWorker/exportGenerator.js';
 
 describe('Batch Jobs Worker - Export Generator', () => {
     const originalPdfToken = process.env.PDF_SERVER_INTERNAL_TOKEN;
@@ -237,6 +237,35 @@ describe('Batch Jobs Worker - Export Generator', () => {
         expect(fsModule.default.promises.writeFile).toHaveBeenCalled();
         expect(fsModule.default.createReadStream).toHaveBeenCalled();
         expect(mockUpdateJobExportFile).toHaveBeenCalledWith('j1', expect.any(String), expect.stringContaining('export_j1'));
+    });
+
+    it('should expose the last successful export summary for diagnostics', async () => {
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce([
+            { id: 'i1', status: 'success', resume_id: 'r1', file_name: 'cv.pdf' }
+        ]);
+        mockQuery
+            .mockResolvedValueOnce({ rows: [template] })
+            .mockResolvedValueOnce({ rows: [{ id: 'r1', improved_text: '<p>CV</p>', name: 'Alice', title: 'Dev', trigram: 'ALI' }] });
+
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(32))
+        });
+
+        await generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] });
+
+        expect(getLastBatchExportSummary()).toEqual(expect.objectContaining({
+            operation: 'generateJobExport',
+            jobId: 'j1',
+            status: 'completed',
+            format: 'pdf',
+            exportableItems: 1,
+            generatedFiles: 1,
+            failedFiles: 0,
+            timestamp: expect.any(String),
+            durationMs: expect.any(Number)
+        }));
     });
 
     it('should stream the final zip to disk without sync writes', async () => {

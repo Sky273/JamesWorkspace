@@ -122,6 +122,35 @@ export interface OperationsMetrics {
         error?: string;
       }>;
     };
+    batchExports?: {
+      runs?: number;
+      successfulRuns?: number;
+      failedRuns?: number;
+      requestedResumes?: number;
+      resolvedResumes?: number;
+      inaccessibleResumes?: number;
+      generatedFiles?: number;
+      failedFiles?: number;
+      totalDurationMs?: number;
+      totalArchiveBytes?: number;
+      truncatedErrors?: number;
+      byFormat?: Record<string, number>;
+      bySource?: Record<string, number>;
+      recent?: Array<{
+        timestamp?: string;
+        event?: string;
+        format?: string;
+        requestedResumes?: number;
+        resolvedResumes?: number;
+        inaccessibleResumes?: number;
+        generatedFiles?: number;
+        failedFiles?: number;
+        durationMs?: number;
+        archiveBytes?: number;
+        source?: string;
+        error?: string;
+      }>;
+    };
     aiModify?: {
       runs?: number;
       successfulRuns?: number;

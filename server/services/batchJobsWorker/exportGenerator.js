@@ -24,6 +24,14 @@ import { assertTrustedInternalServiceUrl } from '../../utils/networkHostSecurity
 import { getBatchExportPdfTimeoutMs } from '../../utils/pdfServiceTimeouts.js';
 
 const MAX_LOGGED_EXPORT_ERRORS = 10;
+let lastBatchExportSummary = null;
+
+function updateLastBatchExportSummary(summary) {
+    lastBatchExportSummary = {
+        timestamp: new Date().toISOString(),
+        ...summary
+    };
+}
 
 function getBatchExportMaxOperations() {
     const configuredValue = Number.parseInt(process.env.BATCH_EXPORT_MAX_OPERATIONS || '', 10);
@@ -185,6 +193,16 @@ export async function generateJobExport(jobId, options) {
     
     if (successfulItems.length === 0) {
         safeLog('warn', 'No successful items to export', { jobId, statusCounts });
+        updateLastBatchExportSummary({
+            operation: 'generateJobExport',
+            jobId,
+            status: 'no_exportable_items',
+            format: exportFormats.length === 1 ? exportFormats[0] : 'multi',
+            totalItems: items.length,
+            exportableItems: 0,
+            skippedItems,
+            durationMs: Date.now() - startedAt
+        });
         trackBatchExport({
             format: exportFormats.length === 1 ? exportFormats[0] : 'multi',
             requestedResumes: items.length,
@@ -394,6 +412,19 @@ export async function generateJobExport(jobId, options) {
     if (totalOperations > maxOperations) {
         const errorMessage = `Batch export exceeds configured workload limit (${totalOperations}/${maxOperations} operations)`;
         await markExportItemsAsError(successfulItems, errorMessage);
+        updateLastBatchExportSummary({
+            operation: 'generateJobExport',
+            jobId,
+            status: 'rejected',
+            format: exportFormats.length === 1 ? exportFormats[0] : 'multi',
+            totalItems: items.length,
+            exportableItems: successfulItems.length,
+            skippedItems,
+            totalOperations,
+            maxOperations,
+            reason: 'max_operations_exceeded',
+            durationMs: Date.now() - startedAt
+        });
         trackBatchExport({
             format: exportFormats.length === 1 ? exportFormats[0] : 'multi',
             requestedResumes: successfulItems.length,
@@ -549,6 +580,19 @@ export async function generateJobExport(jobId, options) {
     if (actualFilesInZip === 0) {
         await persistItemResults('Export archive generation failed');
         safeLog('warn', 'No files generated for export', { jobId, exportErrors });
+        updateLastBatchExportSummary({
+            operation: 'generateJobExport',
+            jobId,
+            status: 'failed',
+            format: exportFormats.length === 1 ? exportFormats[0] : 'multi',
+            totalItems: items.length,
+            exportableItems: successfulItems.length,
+            skippedItems,
+            generatedFiles: 0,
+            failedFiles: exportErrorCount,
+            reason: 'no_generated_files',
+            durationMs: Date.now() - startedAt
+        });
         trackBatchExport({
             format: exportFormats.length === 1 ? exportFormats[0] : 'multi',
             requestedResumes: successfulItems.length,
@@ -607,9 +651,34 @@ export async function generateJobExport(jobId, options) {
             size: exportedSize,
             durationMs: Date.now() - startedAt
         });
+        updateLastBatchExportSummary({
+            operation: 'generateJobExport',
+            jobId,
+            status: 'completed',
+            format: exportFormats.length === 1 ? exportFormats[0] : 'multi',
+            totalItems: items.length,
+            exportableItems: successfulItems.length,
+            skippedItems,
+            generatedFiles: actualFilesInZip,
+            failedFiles: exportErrorCount,
+            archiveBytes: exportedSize,
+            durationMs: Date.now() - startedAt
+        });
     } catch (error) {
         await cleanupPartialExportArchive(finalArchivePath, jobId);
         await persistItemResults('Export archive generation failed');
+        updateLastBatchExportSummary({
+            operation: 'generateJobExport',
+            jobId,
+            status: 'failed',
+            format: exportFormats.length === 1 ? exportFormats[0] : 'multi',
+            totalItems: items.length,
+            exportableItems: successfulItems.length,
+            skippedItems,
+            failedFiles: exportErrorCount,
+            error: error.message,
+            durationMs: Date.now() - startedAt
+        });
         throw error;
     } finally {
         await fs.promises.rm(tempExportDir, { recursive: true, force: true }).catch((cleanupError) => {
@@ -620,4 +689,8 @@ export async function generateJobExport(jobId, options) {
             });
         });
     }
+}
+
+export function getLastBatchExportSummary() {
+    return lastBatchExportSummary;
 }

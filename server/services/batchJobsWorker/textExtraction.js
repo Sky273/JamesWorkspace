@@ -7,6 +7,15 @@ import { safeLog } from '../../utils/logger.backend.js';
 import { extractPdfTextWithOcr } from '../pdfTextExtraction.service.js';
 import { extractTextFromWordBuffer } from '../wordTextExtraction.service.js';
 
+let lastBatchTextExtractionSummary = null;
+
+function updateLastBatchTextExtractionSummary(summary) {
+    lastBatchTextExtractionSummary = {
+        timestamp: new Date().toISOString(),
+        ...summary
+    };
+}
+
 /**
  * Extract text from PDF using pdfjs-dist (more reliable than pdf-parse)
  * Improved to better preserve structure, trigrams, and candidate names
@@ -63,6 +72,17 @@ export async function extractTextFromPDFBuffer(buffer) {
         avgOcrConfidence: result.avgOcrConfidence,
         durationMs: Date.now() - startedAt
     });
+    updateLastBatchTextExtractionSummary({
+        operation: 'extractTextFromPDFBuffer',
+        kind: 'pdf',
+        status: 'completed',
+        textLength: result.text?.length || 0,
+        ocrUsed: Boolean(result.ocrUsed),
+        pages: result.pages,
+        ocrPageCount: result.ocrPageCount,
+        failedOcrPages: result.failedOcrPages,
+        durationMs: Date.now() - startedAt
+    });
     return result;
 }
 
@@ -85,6 +105,15 @@ export async function extractTextFromBuffer(buffer, mimeType, fileName) {
             return result;
         } catch (pdfError) {
             safeLog('error', 'PDF extraction with pdfjs-dist failed', { error: pdfError.message, fileName });
+            updateLastBatchTextExtractionSummary({
+                operation: 'extractTextFromBuffer',
+                kind: 'pdf',
+                status: 'failed',
+                fileName,
+                mimeType,
+                error: pdfError.message,
+                durationMs: Date.now() - startedAt
+            });
             throw new Error(`Failed to extract text from PDF: ${pdfError.message}`);
         }
     } else if (
@@ -102,7 +131,21 @@ export async function extractTextFromBuffer(buffer, mimeType, fileName) {
             ocrUsed: Boolean(result.ocrUsed),
             durationMs: Date.now() - startedAt
         });
+        updateLastBatchTextExtractionSummary({
+            operation: 'extractTextFromBuffer',
+            kind: mimeType === 'application/msword' ? 'doc' : 'docx',
+            status: 'completed',
+            fileName,
+            mimeType,
+            textLength: result.text?.length || 0,
+            ocrUsed: Boolean(result.ocrUsed),
+            durationMs: Date.now() - startedAt
+        });
         return result;
     }
     throw new Error(`Unsupported file type: ${mimeType}`);
+}
+
+export function getLastBatchTextExtractionSummary() {
+    return lastBatchTextExtractionSummary;
 }

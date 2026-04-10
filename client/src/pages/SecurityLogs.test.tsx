@@ -6,6 +6,7 @@ import SecurityLogs from './SecurityLogs';
 
 const fetchWithAuthMock = vi.fn();
 const toastErrorMock = vi.fn();
+const toastSuccessMock = vi.fn();
 const tMock = (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key;
 
 function createMotionElement(tag: string) {
@@ -25,6 +26,7 @@ vi.mock('framer-motion', () => ({
 vi.mock('react-hot-toast', () => ({
   default: {
     error: (...args: unknown[]) => toastErrorMock(...args),
+    success: (...args: unknown[]) => toastSuccessMock(...args),
   },
 }));
 
@@ -52,7 +54,14 @@ describe('SecurityLogs', () => {
   beforeEach(() => {
     fetchWithAuthMock.mockReset();
     toastErrorMock.mockReset();
+    toastSuccessMock.mockReset();
     vi.useRealTimers();
+    Object.defineProperty(globalThis.navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
   });
 
   afterEach(() => {
@@ -87,6 +96,13 @@ describe('SecurityLogs', () => {
             events: [],
             sources: [],
           }),
+        });
+      }
+
+      if (url === '/health' || url === '/api/metrics/operations') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({}),
         });
       }
 
@@ -134,6 +150,13 @@ describe('SecurityLogs', () => {
             events: ['auth_failed'],
             sources: ['security'],
           }),
+        });
+      }
+
+      if (url === '/health' || url === '/api/metrics/operations') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({}),
         });
       }
 
@@ -235,6 +258,13 @@ describe('SecurityLogs', () => {
         });
       }
 
+      if (url === '/health' || url === '/api/metrics/operations') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({}),
+        });
+      }
+
       return Promise.reject(new Error(`Unexpected URL: ${url}`));
     });
 
@@ -300,6 +330,13 @@ describe('SecurityLogs', () => {
         });
       }
 
+      if (url === '/health' || url === '/api/metrics/operations') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({}),
+        });
+      }
+
       return Promise.reject(new Error(`Unexpected URL: ${url}`));
     });
 
@@ -310,5 +347,99 @@ describe('SecurityLogs', () => {
     });
 
     expect(toastErrorMock).toHaveBeenCalledWith('security.accessDenied');
+  });
+
+  it('renders the observability tab, including the main flow, and copies diagnostics', async () => {
+    fetchWithAuthMock.mockImplementation((url: string) => {
+      if (url.startsWith('/api/admin/security-logs')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ logs: [], total: 0 }),
+        });
+      }
+
+      if (url === '/api/admin/security-stats') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            total: 3,
+            recent: { lastHour: 1, last24h: 2 },
+            byLevel: { ERROR: 1 },
+          }),
+        });
+      }
+
+      if (url === '/api/admin/security-filters') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ levels: [], events: [], sources: [] }),
+        });
+      }
+
+      if (url === '/health') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            status: 'healthy',
+            responseTime: '10ms',
+            checks: {
+              database: { status: 'ok', message: 'Connected' },
+              batchWorker: { status: 'ok', activeProcessingCount: 0 },
+              ocr: { status: 'ok', preferredEngine: 'tesseract-cli' },
+              recentBatchActivity: {
+                export: { timestamp: '2026-04-10T10:00:00.000Z', operation: 'generateJobExport', status: 'completed', jobId: 'job-1' },
+              },
+              recentConsentActivity: {
+                scheduler: { timestamp: '2026-04-10T10:02:00.000Z', operation: 'purgeExpiredResumes', status: 'completed' },
+              },
+              recentPipelineActivity: {
+                pipeline: { timestamp: '2026-04-10T10:03:00.000Z', operation: 'addToPipeline', status: 'completed' },
+              },
+            },
+          }),
+        });
+      }
+
+      if (url === '/api/metrics/operations') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            operations: {
+              uploads: { total: 12, successful: 10, failed: 2 },
+              batchImports: { analysisRuns: 9, textExtractionRuns: 11, textExtractionFailures: 1 },
+              improvement: { runs: 6, successfulRuns: 5, failedRuns: 1 },
+              batchExports: { runs: 4, successfulRuns: 4, failedRuns: 0, generatedFiles: 7, failedFiles: 0 },
+            },
+          }),
+        });
+      }
+
+      return Promise.reject(new Error(`Unexpected URL: ${url}`));
+    });
+
+    render(<SecurityLogs />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Observabilité')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getAllByText('Observabilité')[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText('Copier le diagnostic')).toBeInTheDocument();
+      expect(screen.getByText('Flux principal')).toBeInTheDocument();
+      expect(screen.getByText('Import CV')).toBeInTheDocument();
+      expect(screen.getByText('Analyse')).toBeInTheDocument();
+      expect(screen.getByText('Amélioration')).toBeInTheDocument();
+      expect(screen.getByText('Export')).toBeInTheDocument();
+      expect(screen.getAllByText('Export batch').length).toBeGreaterThan(0);
+    });
+
+    fireEvent.click(screen.getByText('Copier le diagnostic'));
+
+    await waitFor(() => {
+      expect(globalThis.navigator.clipboard.writeText).toHaveBeenCalled();
+      expect(toastSuccessMock).toHaveBeenCalledWith('Diagnostic copié.');
+    });
   });
 });

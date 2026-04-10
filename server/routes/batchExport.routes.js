@@ -27,6 +27,19 @@ const MAX_BATCH_EXPORT_CONCURRENCY = 8;
 const DEFAULT_BATCH_EXPORT_BATCH_DELAY_MS = 0;
 const MAX_BATCH_EXPORT_ERROR_DETAILS = 20;
 
+function normalizeRequestId(rawValue) {
+    if (typeof rawValue !== 'string') {
+        return '';
+    }
+
+    const trimmed = rawValue.trim();
+    if (!trimmed) {
+        return '';
+    }
+
+    return trimmed.replace(/[^a-zA-Z0-9._:-]/g, '_').slice(0, 128);
+}
+
 async function createTempBatchExportWorkspace() {
     return fs.promises.mkdtemp(path.join(os.tmpdir(), 'batch-export-http-'));
 }
@@ -127,6 +140,11 @@ function summarizeBatchExportErrors(errors) {
 router.post('/', authenticateToken, validateBody(batchExportSchema), async (req, res) => {
     const startedAt = Date.now();
     let tempExportDir = null;
+    const requestId = req.requestId
+        || res.locals?.requestId
+        || normalizeRequestId(Array.isArray(req.headers['x-request-id']) ? req.headers['x-request-id'][0] : req.headers['x-request-id'])
+        || 'batch-export';
+    res.setHeader('x-request-id', requestId);
     const exportTimeoutMs = getBatchExportPdfTimeoutMs();
     const trackBatchExport = (payload = {}) => {
         metrics.trackBatchExportActivity({
@@ -142,17 +160,18 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
         const userFirmId = await getUserFirmId(req);
         
         if (!resumeIds || !Array.isArray(resumeIds) || resumeIds.length === 0) {
-            return res.status(400).json({ error: 'Resume IDs are required' });
+            return res.status(400).json({ error: 'Resume IDs are required', requestId });
         }
 
         if (resumeIds.length > MAX_BATCH_EXPORT_RESUMES) {
             return res.status(400).json({
-                error: `Batch export is limited to ${MAX_BATCH_EXPORT_RESUMES} resumes per request`
+                error: `Batch export is limited to ${MAX_BATCH_EXPORT_RESUMES} resumes per request`,
+                requestId
             });
         }
         
         if (!templateId) {
-            return res.status(400).json({ error: 'Template ID is required' });
+            return res.status(400).json({ error: 'Template ID is required', requestId });
         }
         
         const exportFormat = format || 'pdf';
@@ -160,6 +179,7 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
         const batchExportBatchDelayMs = getBatchExportBatchDelayMs();
         const totalBatches = Math.ceil(resumeIds.length / batchExportConcurrency);
         safeLog('info', 'Starting batch export', { 
+            requestId,
             resumeCount: resumeIds.length, 
             templateId, 
             format: exportFormat,
@@ -172,6 +192,7 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
             await assertTrustedInternalServiceUrl(PDF_SERVER_URL);
         } catch (guardError) {
             safeLog('warn', 'PDF server URL rejected by network guard', {
+                requestId,
                 error: guardError.message,
                 pdfServerUrl: PDF_SERVER_URL
             });
@@ -181,7 +202,8 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
                 failedRuns: 1
             });
             return res.status(503).json({
-                error: 'PDF server endpoint is not configured for internal access.'
+                error: 'PDF server endpoint is not configured for internal access.',
+                requestId
             });
         }
         
@@ -193,7 +215,7 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
                 requestedResumes: resumeIds.length,
                 failedRuns: 1
             });
-            return res.status(404).json({ error: 'Template not found' });
+            return res.status(404).json({ error: 'Template not found', requestId });
         }
 
         // Test PDF server connectivity after validating local prerequisites
@@ -203,10 +225,11 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
                 signal: AbortSignal.timeout(5000)
             });
             if (!testResponse.ok) {
-                safeLog('warn', 'PDF server health check failed', { status: testResponse.status });
+                safeLog('warn', 'PDF server health check failed', { requestId, status: testResponse.status });
             }
         } catch (healthErr) {
             safeLog('error', 'PDF server not reachable', { 
+                requestId,
                 url: PDF_SERVER_URL, 
                 error: healthErr.message 
             });
@@ -216,7 +239,8 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
                 failedRuns: 1
             });
             return res.status(503).json({
-                error: 'PDF server is not available. Please ensure the PDF server is running.'
+                error: 'PDF server is not available. Please ensure the PDF server is running.',
+                requestId
             });
         }
 
@@ -271,7 +295,7 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
 
                 if (!pdfResponse.ok) {
                     const errorText = await pdfResponse.text().catch(() => 'Unknown error');
-                    safeLog('error', 'PDF generation failed', { resumeId, status: pdfResponse.status, error: errorText });
+                    safeLog('error', 'PDF generation failed', { requestId, resumeId, status: pdfResponse.status, error: errorText });
                     return { ok: false, resumeId, error: `Failed to generate ${exportFormat.toUpperCase()}: ${errorText}` };
                 }
 
@@ -279,7 +303,7 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
                 const buffer = await pdfResponse.arrayBuffer();
                 return { ok: true, resumeId, fileName, data: buffer };
             } catch (err) {
-                safeLog('error', 'Error processing resume for batch export', { resumeId, error: err.message });
+                safeLog('error', 'Error processing resume for batch export', { requestId, resumeId, error: err.message });
                 return {
                     ok: false,
                     resumeId,
@@ -294,6 +318,7 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
         const resumeBatches = chunkArray(resumeIds, batchExportConcurrency);
         for (const [batchIndex, batch] of resumeBatches.entries()) {
             safeLog('debug', 'Batch export HTTP progress', {
+                requestId,
                 requestedResumeCount: resumeIds.length,
                 resolvedResumeCount: resumesById.size,
                 batchNumber: batchIndex + 1,
@@ -306,7 +331,8 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
             for (const result of batchResults) {
                 if (result.authConfigurationError) {
                     return res.status(503).json({
-                        error: 'PDF server authentication is not configured on the backend.'
+                        error: 'PDF server authentication is not configured on the backend.',
+                        requestId
                     });
                 }
 
@@ -328,6 +354,7 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
         if (Object.keys(zip.files).length === 0) {
             const errorSummary = summarizeBatchExportErrors(errors);
             safeLog('warn', 'Batch export generated no files', {
+                requestId,
                 requestedResumeCount: resumeIds.length,
                 resolvedResumeCount: resumesById.size,
                 inaccessibleResumeCount,
@@ -346,6 +373,7 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
             });
             return res.status(500).json({ 
                 error: 'No files could be generated', 
+                requestId,
                 details: errorSummary.details,
                 totalErrors: errorSummary.totalErrors,
                 truncated: errorSummary.truncated
@@ -373,6 +401,7 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
                 successfulRuns: 1
             });
             safeLog('info', 'Batch export completed', { 
+                requestId,
                 templateId,
                 format: exportFormat,
                 requestedResumeCount: resumeIds.length,
@@ -400,6 +429,7 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
             successfulRuns: 1
         });
         safeLog('info', 'Batch export completed', { 
+            requestId,
             templateId,
             format: exportFormat,
             requestedResumeCount: resumeIds.length,
@@ -418,14 +448,15 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
             requestedResumes: Array.isArray(normalizedPayload.resumeIds) ? normalizedPayload.resumeIds.length : 0,
             failedRuns: 1
         });
-        safeLog('error', 'Batch export error', { error: error.message, durationMs: Date.now() - startedAt });
+        safeLog('error', 'Batch export error', { requestId, error: error.message, durationMs: Date.now() - startedAt });
         if (error?.code === 'PDF_SERVER_AUTH_NOT_CONFIGURED') {
             return res.status(503).json({
-                error: 'PDF server authentication is not configured on the backend.'
+                error: 'PDF server authentication is not configured on the backend.',
+                requestId
             });
         }
         if (!res.headersSent) {
-            res.status(500).json({ error: 'Failed to generate batch export' });
+            res.status(500).json({ error: 'Failed to generate batch export', requestId });
             return;
         }
         res.destroy(error);

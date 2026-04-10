@@ -10,6 +10,19 @@ import { applySafeBinaryHeaders } from '../../utils/fileResponseSecurity.js';
 import { assertTrustedInternalServiceUrl } from '../../utils/networkHostSecurity.js';
 import { getPdfProxyTimeoutMs } from '../../utils/pdfServiceTimeouts.js';
 
+function normalizeRequestId(rawValue) {
+    if (typeof rawValue !== 'string') {
+        return '';
+    }
+
+    const trimmed = rawValue.trim();
+    if (!trimmed) {
+        return '';
+    }
+
+    return trimmed.replace(/[^a-zA-Z0-9._:-]/g, '_').slice(0, 128);
+}
+
 function buildProxyFailureBody(kind, statusCode) {
     const label = kind === 'DOCX' ? 'DOCX' : 'PDF';
 
@@ -103,12 +116,16 @@ export function registerProxyRoutes(app) {
     }
 
     app.post('/generate-pdf', ...proxyGuards, validateBody(generatePdfProxySchema), async (req, res) => {
-        const requestId = randomUUID();
+        const requestId = req.requestId
+            || res.locals?.requestId
+            || normalizeRequestId(Array.isArray(req.headers['x-request-id']) ? req.headers['x-request-id'][0] : req.headers['x-request-id'])
+            || randomUUID();
+        res.setHeader('x-request-id', requestId);
         const debugContext = createProxyDebugContext(req.body);
         try {
             const pdfServerUrl = await validatePdfServerTarget(requestId, debugContext, 'PDF');
             if (!pdfServerUrl) {
-                return res.status(503).json({ error: 'PDF generation service is unavailable' });
+                return res.status(503).json({ error: 'PDF generation service is unavailable', requestId });
             }
 
             safeLog('info', 'Proxying PDF generation request to PDF server', {
@@ -139,7 +156,10 @@ export function registerProxyRoutes(app) {
                 if (upstreamDebugId) {
                     res.setHeader('x-pdf-debug-id', upstreamDebugId);
                 }
-                return res.status(response.status).json(buildProxyFailureBody('PDF', response.status));
+                return res.status(response.status).json({
+                    ...buildProxyFailureBody('PDF', response.status),
+                    requestId
+                });
             }
             await relayBinaryResponse(response, res, 'application/pdf');
         } catch (error) {
@@ -153,18 +173,25 @@ export function registerProxyRoutes(app) {
                 ...debugContext
             });
             if (!res.headersSent) {
-                res.status(statusCode).json(buildProxyFailureBody('PDF', statusCode));
+                res.status(statusCode).json({
+                    ...buildProxyFailureBody('PDF', statusCode),
+                    requestId
+                });
             }
         }
     });
 
     app.post('/generate-docx', ...proxyGuards, validateBody(generateDocxProxySchema), async (req, res) => {
-        const requestId = randomUUID();
+        const requestId = req.requestId
+            || res.locals?.requestId
+            || normalizeRequestId(Array.isArray(req.headers['x-request-id']) ? req.headers['x-request-id'][0] : req.headers['x-request-id'])
+            || randomUUID();
+        res.setHeader('x-request-id', requestId);
         const debugContext = createProxyDebugContext(req.body);
         try {
             const pdfServerUrl = await validatePdfServerTarget(requestId, debugContext, 'DOCX');
             if (!pdfServerUrl) {
-                return res.status(503).json({ error: 'DOCX generation service is unavailable' });
+                return res.status(503).json({ error: 'DOCX generation service is unavailable', requestId });
             }
 
             safeLog('info', 'Proxying DOCX generation request to PDF server', {
@@ -195,7 +222,10 @@ export function registerProxyRoutes(app) {
                 if (upstreamDebugId) {
                     res.setHeader('x-pdf-debug-id', upstreamDebugId);
                 }
-                return res.status(response.status).json(buildProxyFailureBody('DOCX', response.status));
+                return res.status(response.status).json({
+                    ...buildProxyFailureBody('DOCX', response.status),
+                    requestId
+                });
             }
             await relayBinaryResponse(
                 response,
@@ -213,7 +243,10 @@ export function registerProxyRoutes(app) {
                 ...debugContext
             });
             if (!res.headersSent) {
-                res.status(statusCode).json(buildProxyFailureBody('DOCX', statusCode));
+                res.status(statusCode).json({
+                    ...buildProxyFailureBody('DOCX', statusCode),
+                    requestId
+                });
             }
         }
     });

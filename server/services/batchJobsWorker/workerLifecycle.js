@@ -377,6 +377,15 @@ export const _internal = {
     finalizeCompletedJob,
     processNextBatch,
     processItem,
+    getDiagnostics() {
+        return {
+            initialized: isInitialized,
+            workerRunning: isWorkerRunning,
+            shuttingDown: isShuttingDown,
+            activeProcessingCount,
+            intervalActive: Boolean(workerInterval)
+        };
+    },
     resetState() {
         if (workerInterval) {
             clearInterval(workerInterval);
@@ -387,3 +396,7 @@ export const _internal = {
         activeProcessingCount = 0;
     }
 };
+
+export function getBatchWorkerRuntimeDiagnostics() {
+    return _internal.getDiagnostics();
+}

@@ -13,6 +13,11 @@ import { getStorageStats, getFileCleanupStats } from '../utils/fileCleanup.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { getOcrRuntimeDiagnostics } from '../services/pdfTextExtraction.service.js';
 import { getWordExtractionRuntimeDiagnostics } from '../services/wordTextExtraction.service.js';
+import { getBatchWorkerRuntimeDiagnostics } from '../services/batchJobsWorker/workerLifecycle.js';
+import { getLastBatchExportSummary } from '../services/batchJobsWorker/exportGenerator.js';
+import { getLastBatchTextExtractionSummary } from '../services/batchJobsWorker/textExtraction.js';
+import { getLastConsentSchedulerSummary } from '../services/consent/scheduler.js';
+import { getLastPipelineActivitySummary } from '../services/candidatePipeline.service.js';
 import { findUserById } from '../services/users.service.js';
 import {
     buildCacheCheck,
@@ -340,6 +345,35 @@ router.get('/', async (req, res) => {
             message: error.message || 'OCR diagnostics unavailable'
         };
     }
+
+    try {
+        const batchWorkerDiagnostics = getBatchWorkerRuntimeDiagnostics();
+        checks.batchWorker = {
+            status: batchWorkerDiagnostics.workerRunning || batchWorkerDiagnostics.intervalActive ? 'ok' : 'degraded',
+            ...batchWorkerDiagnostics
+        };
+    } catch (error) {
+        checks.batchWorker = {
+            status: 'error',
+            message: error.message || 'Batch worker diagnostics unavailable'
+        };
+    }
+
+    checks.recentBatchActivity = {
+        status: 'ok',
+        export: getLastBatchExportSummary(),
+        textExtraction: getLastBatchTextExtractionSummary()
+    };
+
+    checks.recentConsentActivity = {
+        status: 'ok',
+        scheduler: getLastConsentSchedulerSummary()
+    };
+
+    checks.recentPipelineActivity = {
+        status: 'ok',
+        pipeline: getLastPipelineActivitySummary()
+    };
 
     const responsePayload = buildHealthResponsePayload({
         overallStatus,
