@@ -55,6 +55,23 @@ const MAX_REQUEST_BODY_BYTES = Number.isInteger(parsedMaxRequestBodyBytes) && pa
   : 10485760;
 const METHODS_WITH_BODIES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
+function normalizeOrigin(origin) {
+  if (typeof origin !== 'string') {
+    return '';
+  }
+
+  const trimmed = origin.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  try {
+    return new URL(trimmed).origin.toLowerCase();
+  } catch {
+    return trimmed.replace(/\/+$/, '').toLowerCase();
+  }
+}
+
 app.use((req, res, next) => {
   if (!METHODS_WITH_BODIES.has(req.method)) {
     return next();
@@ -86,11 +103,25 @@ app.use((req, res, next) => {
 
 app.use(bodyParser.json({ limit: `${MAX_REQUEST_BODY_BYTES}b` }));
 
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3001')
-  .split(',')
-  .map(s => s.trim());
+const ALLOWED_ORIGINS = [...new Set(
+  (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3001')
+    .split(',')
+    .map(normalizeOrigin)
+    .filter(Boolean)
+)];
 app.use(cors({
-  origin: ALLOWED_ORIGINS,
+  origin(origin, callback) {
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    const normalizedOrigin = normalizeOrigin(origin);
+    if (ALLOWED_ORIGINS.includes(normalizedOrigin)) {
+      return callback(null, true);
+    }
+
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],

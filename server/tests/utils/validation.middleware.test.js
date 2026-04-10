@@ -3,6 +3,12 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+
+const mockSafeLog = vi.fn();
+vi.mock('../../utils/logger.backend.js', () => ({
+    safeLog: (...args) => mockSafeLog(...args)
+}));
+
 import {
     validateBody,
     validateParams,
@@ -125,6 +131,17 @@ describe('Validation Middleware', () => {
 
             expect(res.status).toHaveBeenCalledWith(400);
             expect(res.json).toHaveBeenCalled();
+            expect(mockSafeLog).toHaveBeenCalledWith(
+                'error',
+                'Request validation failed',
+                expect.objectContaining({
+                    requestBodySummary: expect.objectContaining({
+                        type: 'object'
+                    })
+                })
+            );
+            const logPayload = mockSafeLog.mock.calls.at(-1)?.[2];
+            expect(logPayload.bodyPreview).toBeUndefined();
         });
     });
 

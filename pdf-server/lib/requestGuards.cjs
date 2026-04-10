@@ -30,6 +30,38 @@ const DANGEROUS_CSS_PATTERNS = [
   /url\s*\(\s*['"]?\s*(?!data:)/i
 ];
 
+function decodeHtmlEntities(value) {
+  if (typeof value !== 'string' || value.length === 0 || !value.includes('&')) {
+    return value;
+  }
+
+  return value
+    .replace(/&#(\d+);?/gi, (_, code) => {
+      const parsed = Number.parseInt(code, 10);
+      return Number.isFinite(parsed) ? String.fromCodePoint(parsed) : _;
+    })
+    .replace(/&#x([0-9a-f]+);?/gi, (_, code) => {
+      const parsed = Number.parseInt(code, 16);
+      return Number.isFinite(parsed) ? String.fromCodePoint(parsed) : _;
+    })
+    .replace(/&(quot|apos|amp|lt|gt);/gi, (match, entity) => {
+      switch (entity.toLowerCase()) {
+        case 'quot':
+          return '"';
+        case 'apos':
+          return '\'';
+        case 'amp':
+          return '&';
+        case 'lt':
+          return '<';
+        case 'gt':
+          return '>';
+        default:
+          return match;
+      }
+    });
+}
+
 function createAbortError(message) {
   const error = new Error(message);
   error.name = 'AbortError';
@@ -42,7 +74,8 @@ function containsDangerousResourceReference(content) {
     return false;
   }
 
-  return DANGEROUS_RESOURCE_PATTERNS.some((pattern) => pattern.test(content));
+  const decodedContent = decodeHtmlEntities(content);
+  return DANGEROUS_RESOURCE_PATTERNS.some((pattern) => pattern.test(content) || pattern.test(decodedContent));
 }
 
 function resolvePdfServerInternalToken({
@@ -111,7 +144,8 @@ function createRequestCoordinator({
 
   function containsDangerousPattern(content, patterns) {
     if (!content) return false;
-    return patterns.some((pattern) => pattern.test(content));
+    const decodedContent = decodeHtmlEntities(content);
+    return patterns.some((pattern) => pattern.test(content) || pattern.test(decodedContent));
   }
 
   function validateOptionalStringField(value, fieldName, maxSize, patterns, res) {
@@ -412,6 +446,7 @@ module.exports = {
   PDF_SERVER_AUTH_HEADER,
   buildGenerationFailureBody,
   createRequestCoordinator,
+  decodeHtmlEntities,
   resolvePdfServerInternalToken,
   sanitizeFilename,
   tokensMatch

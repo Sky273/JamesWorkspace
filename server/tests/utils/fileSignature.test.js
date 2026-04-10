@@ -12,6 +12,17 @@ async function buildDocxBuffer() {
     return Buffer.from(await zip.generateAsync({ type: 'nodebuffer' }));
 }
 
+async function buildDocxBufferWithCustomMainDocument() {
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8"?>
+    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+      <Override PartName="/word/custom/document2.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml" />
+    </Types>`);
+    zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>');
+    zip.file('word/custom/document2.xml', '<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Resume</w:t></w:r></w:p></w:body></w:document>');
+    return Buffer.from(await zip.generateAsync({ type: 'nodebuffer' }));
+}
+
 describe('fileSignature', () => {
     it('validates basic PDF and DOC signatures', () => {
         expect(isValidFileSignature(Buffer.from('%PDF-1.7 example'), 'application/pdf')).toBe(true);
@@ -30,5 +41,11 @@ describe('fileSignature', () => {
         const buffer = Buffer.from(await zip.generateAsync({ type: 'nodebuffer' }));
 
         await expect(isValidDocxArchive(buffer)).resolves.toBe(false);
+    });
+
+    it('accepts OOXML word packages when the main document part uses a non-default path', async () => {
+        const buffer = await buildDocxBufferWithCustomMainDocument();
+
+        await expect(isValidDocxArchive(buffer)).resolves.toBe(true);
     });
 });

@@ -8,6 +8,7 @@ import cors from 'cors';
 import { doubleCsrf } from 'csrf-csrf';
 import { ALLOWED_ORIGINS } from './constants.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { normalizeOrigin } from '../utils/originUtils.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -147,17 +148,26 @@ export function configureCors(app) {
             }
             
             // Check if origin is in allowed list
-            if (ALLOWED_ORIGINS.includes(origin)) {
-                safeLog('debug', 'CORS: Allowing request from allowed origin', { origin });
+            const normalizedOrigin = normalizeOrigin(origin);
+
+            if (ALLOWED_ORIGINS.includes(normalizedOrigin)) {
+                safeLog('debug', 'CORS: Allowing request from allowed origin', {
+                    origin,
+                    normalizedOrigin
+                });
                 return callback(null, true);
             }
             
             // Log all origins for debugging
             safeLog('warn', 'CORS: Rejected request from unauthorized origin', { 
                 origin, 
+                normalizedOrigin,
                 allowedOrigins: ALLOWED_ORIGINS 
             });
-            callback(new Error('Not allowed by CORS'));
+            const corsError = new Error('Not allowed by CORS');
+            corsError.statusCode = 403;
+            corsError.code = 'CORS_ORIGIN_DENIED';
+            callback(corsError);
         },
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

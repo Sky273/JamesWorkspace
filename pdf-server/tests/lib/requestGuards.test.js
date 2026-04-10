@@ -4,6 +4,7 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const {
   buildGenerationFailureBody,
+  decodeHtmlEntities,
   resolvePdfServerInternalToken,
   sanitizeFilename,
   tokensMatch
@@ -62,5 +63,10 @@ describe('requestGuards', () => {
     expect(tokensMatch('x'.repeat(32), 'y'.repeat(32))).toBe(false);
     expect(tokensMatch('x'.repeat(32), 'short')).toBe(false);
     expect(tokensMatch('', '')).toBe(false);
+  });
+
+  it('decodes common HTML entities before inspection', () => {
+    expect(decodeHtmlEntities('java&#x73;cript:alert(1)')).toBe('javascript:alert(1)');
+    expect(decodeHtmlEntities('Tom &amp; Jerry')).toBe('Tom & Jerry');
   });
 });

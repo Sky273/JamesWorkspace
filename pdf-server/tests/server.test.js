@@ -230,6 +230,86 @@ describe('PDF Server', () => {
       expect(res.body.error).toContain('stylesheet');
     });
 
+    it('should allow inline style attributes in htmlContent', async () => {
+      pdfGen.generatePdf.mockResolvedValue(Buffer.from('fake'));
+
+      const res = await request(app)
+        .post('/generate-pdf')
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
+        .send({
+          htmlContent: '<p style="color:#123456;font-weight:600">Hello</p>',
+          filename: 'test.pdf'
+        });
+
+      expect(res.status).toBe(200);
+    });
+
+    it('should allow embedded style tags in htmlContent', async () => {
+      pdfGen.generatePdf.mockResolvedValue(Buffer.from('fake'));
+
+      const res = await request(app)
+        .post('/generate-pdf')
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
+        .send({
+          htmlContent: '<style>.title { color: #123456; }</style><p class="title">Hello</p>',
+          filename: 'test.pdf'
+        });
+
+      expect(res.status).toBe(200);
+    });
+
+    it('should allow inline styles in headerContent', async () => {
+      pdfGen.generatePdf.mockResolvedValue(Buffer.from('fake'));
+
+      const res = await request(app)
+        .post('/generate-pdf')
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
+        .send({
+          htmlContent: '<p>Hello</p>',
+          filename: 'test.pdf',
+          headerContent: '<div style="font-size:12px;color:#666">Header</div>'
+        });
+
+      expect(res.status).toBe(200);
+    });
+
+    it('should reject external resources embedded in htmlContent tags', async () => {
+      const res = await request(app)
+        .post('/generate-pdf')
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
+        .send({
+          htmlContent: '<img src="https://evil.test/bg.png"><p>Hello</p>',
+          filename: 'test.pdf'
+        });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('external resources');
+    });
+
+    it('should reject entity-encoded javascript payloads in htmlContent', async () => {
+      const res = await request(app)
+        .post('/generate-pdf')
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
+        .send({
+          htmlContent: '<a href="java&#x73;cript:alert(1)">Hello</a>',
+          filename: 'test.pdf'
+        });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('unsupported');
+    });
+
+    it('should reject external resources embedded in headerContent tags', async () => {
+      const res = await request(app)
+        .post('/generate-pdf')
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
+        .send({
+          htmlContent: '<p>Hello</p>',
+          filename: 'test.pdf',
+          headerContent: '<img src="https://evil.test/header.png" alt="header">'
+        });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('external resources');
+    });
+
     it('should reject invalid footerHeight', async () => {
       const res = await request(app)
         .post('/generate-pdf')

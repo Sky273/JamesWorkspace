@@ -333,41 +333,44 @@ export function validateBody(schema) {
           code: err.code
         }));
 
-        const redactSensitiveValues = (value, seen = new WeakSet()) => {
-          if (value === null || value === undefined) {
-            return value;
+        const summarizeRequestBody = (value, seen = new WeakSet()) => {
+          if (value === null) {
+            return { type: 'null' };
+          }
+
+          if (value === undefined) {
+            return { type: 'undefined' };
           }
 
           if (typeof value !== 'object') {
-            return value;
+            return { type: typeof value };
           }
 
           if (seen.has(value)) {
-            return '[Circular]';
+            return { type: 'circular' };
           }
           seen.add(value);
 
           if (Array.isArray(value)) {
-            return value.map((entry) => redactSensitiveValues(entry, seen));
+            return {
+              type: 'array',
+              length: value.length
+            };
           }
 
-          const redacted = {};
-          const sensitiveKeyPattern = /(pass(word)?|token|secret|auth|cookie|session|code|key)$/i;
-
-          for (const [key, nestedValue] of Object.entries(value)) {
-            redacted[key] = sensitiveKeyPattern.test(key)
-              ? '[REDACTED]'
-              : redactSensitiveValues(nestedValue, seen);
-          }
-
-          return redacted;
+          const keys = Object.keys(value);
+          return {
+            type: 'object',
+            keyCount: keys.length,
+            keys: keys.slice(0, 20)
+          };
         };
         
         safeLog('error', 'Request validation failed', {
           path: req.path,
           errors: JSON.stringify(errors),
           receivedFields: Object.keys(req.body || {}),
-          bodyPreview: JSON.stringify(redactSensitiveValues(req.body)).substring(0, 500)
+          requestBodySummary: summarizeRequestBody(req.body)
         });
         
         res.status(400).json({

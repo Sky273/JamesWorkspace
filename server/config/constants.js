@@ -1,4 +1,5 @@
 import path from 'path';
+import { buildAllowedOrigins } from '../utils/originUtils.js';
 
 // Environment variables and constants
 export const PORT = process.env.PROXY_PORT || 3001;
@@ -101,17 +102,8 @@ if (UPLOAD_DIR === path.parse(UPLOAD_DIR).root) {
 // Security configuration
 export const MAX_LOGS = 1000;
 
-// CORS - Use environment variables only
-export const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim()).filter(Boolean)
-    : [
-        'http://localhost:5173',
-        'http://localhost:4173',
-        'http://localhost:3000',
-        'http://localhost:3001',
-        'https://localhost:3443',
-        'http://localhost:3002'
-    ];
+// CORS - Normalize explicit origins from environment and merge with local defaults
+export const ALLOWED_ORIGINS = buildAllowedOrigins(process.env);
 
 // Cache TTL in milliseconds
 export const CACHE_TTL = {

@@ -9,6 +9,7 @@ import { Readable } from 'stream';
 process.env.PDF_SERVER_INTERNAL_TOKEN = 'test-pdf-server-internal-token-minimum-32-chars';
 
 vi.mock('../../utils/logger.backend.js', () => ({ safeLog: vi.fn() }));
+import { safeLog } from '../../utils/logger.backend.js';
 
 const mockQuery = vi.fn();
 vi.mock('../../config/database.js', () => ({
@@ -78,6 +79,7 @@ vi.mock('fs', async () => {
                 mkdtemp: vi.fn(() => Promise.resolve('/tmp/batch-export-j1-123')),
                 mkdir: vi.fn(() => Promise.resolve()),
                 rm: vi.fn(() => Promise.resolve()),
+                unlink: vi.fn(() => Promise.resolve()),
                 writeFile: vi.fn(() => Promise.resolve()),
                 stat: vi.fn(() => Promise.resolve({ size: 7 }))
             },
@@ -91,6 +93,7 @@ vi.mock('fs', async () => {
             mkdtemp: vi.fn(() => Promise.resolve('/tmp/batch-export-j1-123')),
             mkdir: vi.fn(() => Promise.resolve()),
             rm: vi.fn(() => Promise.resolve()),
+            unlink: vi.fn(() => Promise.resolve()),
             writeFile: vi.fn(() => Promise.resolve()),
             stat: vi.fn(() => Promise.resolve({ size: 7 }))
         },
@@ -125,6 +128,8 @@ describe('Batch Jobs Worker - Export Generator', () => {
     afterEach(() => {
         process.env.PDF_SERVER_INTERNAL_TOKEN = originalPdfToken;
         delete process.env.PDF_SERVER_URL;
+        delete process.env.BATCH_EXPORT_MAX_OPERATIONS;
+        delete process.env.BATCH_EXPORT_BATCH_SIZE;
     });
 
     const template = {
@@ -290,6 +295,7 @@ describe('Batch Jobs Worker - Export Generator', () => {
             recursive: true,
             force: true
         }));
+        expect(fsModule.default.promises.unlink).toHaveBeenCalledWith(expect.stringContaining('export_j1_'));
     });
 
     it('should handle single exportFormat string', async () => {
@@ -423,6 +429,95 @@ describe('Batch Jobs Worker - Export Generator', () => {
         expect(mockFetch).not.toHaveBeenCalled();
         expect(mockUpdateJobItemStatus).toHaveBeenCalledWith('i1', 'error', expect.objectContaining({
             error_message: expect.stringContaining('private or loopback address')
+        }));
+    });
+
+    it('should reject batch exports above the configured workload limit', async () => {
+        process.env.BATCH_EXPORT_MAX_OPERATIONS = '1';
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce([
+            { id: 'i1', status: 'success', resume_id: 'r1', file_name: 'cv.pdf' },
+            { id: 'i2', status: 'success', resume_id: 'r2', file_name: 'cv-2.pdf' }
+        ]);
+        mockQuery.mockResolvedValueOnce({ rows: [template] });
+
+        await expect(
+            generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] })
+        ).rejects.toThrow('Batch export exceeds configured workload limit');
+
+        expect(mockFetch).not.toHaveBeenCalled();
+        expect(mockUpdateJobItemStatus).toHaveBeenCalledWith('i1', 'error', expect.objectContaining({
+            error_message: expect.stringContaining('workload limit')
+        }));
+        expect(mockUpdateJobItemStatus).toHaveBeenCalledWith('i2', 'error', expect.objectContaining({
+            error_message: expect.stringContaining('workload limit')
+        }));
+    });
+
+    it('should cap configured max operations to 300', async () => {
+        process.env.BATCH_EXPORT_MAX_OPERATIONS = '999';
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce(Array.from({ length: 301 }, (_, index) => ({
+            id: `i${index + 1}`,
+            status: 'success',
+            resume_id: `r${index + 1}`,
+            file_name: `cv-${index + 1}.pdf`
+        })));
+        mockQuery.mockResolvedValueOnce({ rows: [template] });
+
+        await expect(
+            generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] })
+        ).rejects.toThrow('Batch export exceeds configured workload limit (301/300 operations)');
+
+        expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('should process exports in batches of 100 by default', async () => {
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce(Array.from({ length: 205 }, (_, index) => ({
+            id: `i${index + 1}`,
+            status: 'success',
+            resume_id: `r${index + 1}`,
+            file_name: `cv-${index + 1}.pdf`
+        })));
+        mockQuery
+            .mockResolvedValueOnce({ rows: [template] })
+            .mockImplementation((sql, params) => Promise.resolve({
+                rows: [{
+                    id: params[0],
+                    improved_text: '<p>CV</p>',
+                    name: `Candidate ${params[0]}`,
+                    title: 'Dev',
+                    trigram: `T${String(params[0]).replace(/\D/g, '').padStart(3, '0')}`
+                }]
+            }));
+
+        mockFetch.mockResolvedValue({
+            ok: true,
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(32))
+        });
+
+        await generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] });
+
+        expect(mockFetch).toHaveBeenCalledTimes(205);
+        expect(safeLog).toHaveBeenCalledWith('debug', 'Processing PDF batch', expect.objectContaining({
+            jobId: 'j1',
+            batchStart: 0,
+            batchSize: 100
+        }));
+        expect(safeLog).toHaveBeenCalledWith('debug', 'Processing PDF batch', expect.objectContaining({
+            jobId: 'j1',
+            batchStart: 100,
+            batchSize: 100
+        }));
+        expect(safeLog).toHaveBeenCalledWith('debug', 'Processing PDF batch', expect.objectContaining({
+            jobId: 'j1',
+            batchStart: 200,
+            batchSize: 5
+        }));
+        expect(mockTrackBatchExportActivity).toHaveBeenCalledWith(expect.objectContaining({
+            successfulRuns: 1,
+            generatedFiles: 205
         }));
     });
 });

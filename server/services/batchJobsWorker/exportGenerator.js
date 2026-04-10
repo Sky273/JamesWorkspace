@@ -25,6 +25,24 @@ import { getBatchExportPdfTimeoutMs } from '../../utils/pdfServiceTimeouts.js';
 
 const MAX_LOGGED_EXPORT_ERRORS = 10;
 
+function getBatchExportMaxOperations() {
+    const configuredValue = Number.parseInt(process.env.BATCH_EXPORT_MAX_OPERATIONS || '', 10);
+    if (!Number.isFinite(configuredValue) || configuredValue < 1) {
+        return 300;
+    }
+
+    return Math.min(configuredValue, 300);
+}
+
+function getBatchExportBatchSize() {
+    const configuredValue = Number.parseInt(process.env.BATCH_EXPORT_BATCH_SIZE || '', 10);
+    if (!Number.isFinite(configuredValue) || configuredValue < 1) {
+        return 100;
+    }
+
+    return configuredValue;
+}
+
 function buildSafeArchiveFilePath(relativePath, generatedFileName) {
     const normalizedRelativePath = normalizeArchiveRelativePath(relativePath);
     if (!normalizedRelativePath) {
@@ -47,6 +65,24 @@ async function persistGeneratedArtifact(tempDir, itemId, format, content) {
     const artifactPath = path.join(tempDir, `${itemId}-${format}-${Date.now()}`);
     await fs.promises.writeFile(artifactPath, Buffer.from(content));
     return artifactPath;
+}
+
+async function cleanupPartialExportArchive(filePath, jobId) {
+    if (!filePath) {
+        return;
+    }
+
+    try {
+        await fs.promises.unlink(filePath);
+    } catch (error) {
+        if (error?.code !== 'ENOENT') {
+            safeLog('warn', 'Failed to remove partial export archive', {
+                jobId,
+                filePath,
+                error: error.message
+            });
+        }
+    }
 }
 
 /**
@@ -339,17 +375,35 @@ export async function generateJobExport(jobId, options) {
         }
     };
     
-    // Process items in small, bounded batches to keep upstream load controlled.
-    const PDF_BATCH_SIZE = 4;
+    // Process items in bounded batches to keep upstream load controlled.
+    const exportBatchSize = getBatchExportBatchSize();
     
     // Calculate total operations: items × formats
     const totalOperations = successfulItems.length * exportFormats.length;
+    const maxOperations = getBatchExportMaxOperations();
+    if (totalOperations > maxOperations) {
+        const errorMessage = `Batch export exceeds configured workload limit (${totalOperations}/${maxOperations} operations)`;
+        await markExportItemsAsError(successfulItems, errorMessage);
+        trackBatchExport({
+            format: exportFormats.length === 1 ? exportFormats[0] : 'multi',
+            requestedResumes: successfulItems.length,
+            failedRuns: 1,
+            metadata: {
+                jobId,
+                reason: 'max_operations_exceeded',
+                totalOperations,
+                maxOperations
+            }
+        });
+        throw new Error(errorMessage);
+    }
     safeLog('info', 'Starting batched export processing', { 
         jobId, 
         itemCount: successfulItems.length,
         formats: exportFormats,
         totalOperations,
-        batchSize: PDF_BATCH_SIZE 
+        batchSize: exportBatchSize,
+        maxOperations
     });
     
     // Process each format separately to organize files in folders
@@ -359,8 +413,8 @@ export async function generateJobExport(jobId, options) {
         // Track file name duplicates per format folder
         const fileNameCounts = new Map();
         
-        for (let i = 0; i < successfulItems.length; i += PDF_BATCH_SIZE) {
-            const batch = successfulItems.slice(i, i + PDF_BATCH_SIZE);
+        for (let i = 0; i < successfulItems.length; i += exportBatchSize) {
+            const batch = successfulItems.slice(i, i + exportBatchSize);
             safeLog('debug', `Processing ${format.toUpperCase()} batch`, { jobId, batchStart: i, batchSize: batch.length });
             
             const batchResults = await Promise.all(batch.map(item => processExportItemForFormat(item, format)));
@@ -457,6 +511,8 @@ export async function generateJobExport(jobId, options) {
         throw new Error('No files generated for export');
     }
     
+    let finalArchivePath = null;
+
     try {
         // Generate ZIP directly to disk to avoid buffering the full archive in memory
         const exportsDir = path.join(os.tmpdir(), 'batch-exports');
@@ -465,6 +521,7 @@ export async function generateJobExport(jobId, options) {
         // Save ZIP file
         const fileName = `export_${jobId}_${Date.now()}.zip`;
         const filePath = path.join(exportsDir, fileName);
+        finalArchivePath = filePath;
         const zipStream = typeof zip.generateNodeStream === 'function'
             ? zip.generateNodeStream({ streamFiles: true, compression: 'DEFLATE' })
             : null;
@@ -501,6 +558,7 @@ export async function generateJobExport(jobId, options) {
             durationMs: Date.now() - startedAt
         });
     } catch (error) {
+        await cleanupPartialExportArchive(finalArchivePath, jobId);
         await persistItemResults('Export archive generation failed');
         throw error;
     } finally {

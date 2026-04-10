@@ -48,6 +48,27 @@ function normalizeZipEntryName(entryName) {
     return String(entryName || '').replace(/\\/g, '/').replace(/^\/+/, '');
 }
 
+function extractMainWordDocumentPart(contentTypesXml) {
+    if (typeof contentTypesXml !== 'string' || contentTypesXml.trim().length === 0) {
+        return '';
+    }
+
+    const overrideTags = contentTypesXml.match(/<Override\b[^>]*\/?>/gi) || [];
+
+    for (const overrideTag of overrideTags) {
+        if (!/ContentType\s*=\s*["']application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document\.main\+xml["']/i.test(overrideTag)) {
+            continue;
+        }
+
+        const partMatch = overrideTag.match(/PartName\s*=\s*["']([^"']+)["']/i);
+        if (partMatch?.[1]) {
+            return normalizeZipEntryName(partMatch[1]);
+        }
+    }
+
+    return '';
+}
+
 export async function isValidDocxArchive(buffer) {
     if (!isDocx(buffer)) {
         return false;
@@ -57,7 +78,7 @@ export async function isValidDocxArchive(buffer) {
         const zip = await JSZip.loadAsync(toBuffer(buffer));
         const entryNames = Object.keys(zip.files).map(normalizeZipEntryName);
 
-        if (!entryNames.includes('[Content_Types].xml') || !entryNames.includes('word/document.xml')) {
+        if (!entryNames.includes('[Content_Types].xml')) {
             return false;
         }
 
@@ -67,8 +88,17 @@ export async function isValidDocxArchive(buffer) {
         }
 
         const contentTypesXml = await contentTypesEntry.async('string');
-        return /PartName\s*=\s*["']\/word\/document\.xml["']/i.test(contentTypesXml)
-            && /ContentType\s*=\s*["']application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document\.main\+xml["']/i.test(contentTypesXml);
+        const declaredMainDocument = extractMainWordDocumentPart(contentTypesXml);
+        if (declaredMainDocument && entryNames.includes(declaredMainDocument)) {
+            return true;
+        }
+
+        const hasWordXmlEntry = entryNames.some((entryName) => /^word\/.+\.xml$/i.test(entryName));
+        const hasOfficePackageMarker = entryNames.includes('_rels/.rels')
+            || entryNames.includes('docProps/core.xml')
+            || entryNames.includes('docProps/app.xml');
+
+        return hasWordXmlEntry && hasOfficePackageMarker;
     } catch {
         return false;
     }
