@@ -186,8 +186,8 @@ describe('SecurityLogs sections', () => {
           loading={false}
           operationsMetrics={{
             operations: {
-              uploads: { total: 14, successful: 12, failed: 2 },
-              batchImports: { analysisRuns: 11, textExtractionRuns: 13, textExtractionFailures: 1 },
+              uploads: { total: 0, successful: 0, failed: 0 },
+              batchImports: { runs: 14, resumeRecordsCreated: 12, failedRuns: 2, analysisRuns: 11, textExtractionRuns: 13, textExtractionFailures: 1 },
               improvement: { runs: 7, successfulRuns: 6, failedRuns: 1 },
               batchExports: { runs: 4, successfulRuns: 3, failedRuns: 1, generatedFiles: 8, failedFiles: 1 },
             },

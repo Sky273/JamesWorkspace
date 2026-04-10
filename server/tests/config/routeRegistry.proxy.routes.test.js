@@ -67,7 +67,14 @@ vi.mock('../../routes/deals.routes.js', () => ({ default: mockRouter }));
 vi.mock('../../config/swagger.js', () => ({ swaggerDocument: {} }));
 
 const mockFetch = vi.fn();
+const mockTrackBatchExportActivity = vi.fn();
 global.fetch = mockFetch;
+
+vi.mock('../../services/metrics.service.js', () => ({
+    metrics: {
+        trackBatchExportActivity: (...args) => mockTrackBatchExportActivity(...args)
+    }
+}));
 
 const { registerProxyRoutes } = await import('../../config/routeRegistry.js');
 
@@ -130,6 +137,12 @@ describe('Proxy Routes', () => {
         expect(res.headers['x-request-id']).toBe('proxy-req-1');
         expect(mockUserRateLimit).toHaveBeenCalledWith(20, 15 * 60 * 1000);
         expect(mockFetch).toHaveBeenCalledTimes(1);
+        expect(mockTrackBatchExportActivity).toHaveBeenCalledWith(expect.objectContaining({
+            format: 'pdf',
+            source: 'direct',
+            successfulRuns: 1,
+            generatedFiles: 1
+        }));
         expect(mockFetch.mock.calls[0][1].headers['x-internal-service-token']).toBeDefined();
         expect(mockFetch.mock.calls[0][1].headers['x-request-id']).toBe('proxy-req-1');
 
@@ -199,6 +212,12 @@ describe('Proxy Routes', () => {
             });
 
         expect(res.status).toBe(200);
+        expect(mockTrackBatchExportActivity).toHaveBeenCalledWith(expect.objectContaining({
+            format: 'doc',
+            source: 'direct',
+            successfulRuns: 1,
+            generatedFiles: 1
+        }));
         const forwardedBody = JSON.parse(mockFetch.mock.calls[0][1].body);
         expect(forwardedBody.format).toBe('doc');
         expect(forwardedBody.filename).toBe('resume.doc');
@@ -220,6 +239,12 @@ describe('Proxy Routes', () => {
             });
 
         expect(res.status).toBe(504);
+        expect(mockTrackBatchExportActivity).toHaveBeenCalledWith(expect.objectContaining({
+            format: 'pdf',
+            source: 'direct',
+            failedRuns: 1,
+            failedFiles: 1
+        }));
         expect(res.body.error).toContain('timed out');
         expect(res.body.requestId).toBe('proxy-timeout-1');
         expect(res.body.details).toBeUndefined();
@@ -246,6 +271,12 @@ describe('Proxy Routes', () => {
             });
 
         expect(res.status).toBe(500);
+        expect(mockTrackBatchExportActivity).toHaveBeenCalledWith(expect.objectContaining({
+            format: 'pdf',
+            source: 'direct',
+            failedRuns: 1,
+            failedFiles: 1
+        }));
         expect(res.body).toEqual({ error: 'Failed to generate PDF', requestId: 'proxy-upstream-500' });
         expect(res.headers['x-request-id']).toBe('proxy-upstream-500');
         expect(res.headers['x-pdf-debug-id']).toBe('pdf-debug-500');
@@ -276,6 +307,12 @@ describe('Proxy Routes', () => {
             });
 
         expect(res.status).toBe(403);
+        expect(mockTrackBatchExportActivity).toHaveBeenCalledWith(expect.objectContaining({
+            format: 'docx',
+            source: 'direct',
+            failedRuns: 1,
+            failedFiles: 1
+        }));
         expect(res.body).toEqual({ error: 'DOCX generation is not authorized', requestId: 'proxy-docx-403' });
     });
 

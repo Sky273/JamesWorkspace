@@ -337,13 +337,13 @@ export function ObservabilityOverview({
       step: '01',
       title: t('security.observability.mainFlow.import', { defaultValue: 'Import CV' }),
       status: getMainFlowStatus(
-        operationsMetrics?.operations?.uploads?.successful,
-        operationsMetrics?.operations?.uploads?.failed,
+        operationsMetrics?.operations?.batchImports?.resumeRecordsCreated,
+        operationsMetrics?.operations?.batchImports?.failedRuns,
       ),
       metrics: [
-        { label: t('security.observability.mainFlow.totalFiles', { defaultValue: 'Fichiers reçus' }), value: formatMetricValue(operationsMetrics?.operations?.uploads?.total) },
-        { label: t('security.observability.mainFlow.successful', { defaultValue: 'Imports réussis' }), value: formatMetricValue(operationsMetrics?.operations?.uploads?.successful) },
-        { label: t('security.observability.mainFlow.failed', { defaultValue: 'Imports en échec' }), value: formatMetricValue(operationsMetrics?.operations?.uploads?.failed) },
+        { label: t('security.observability.mainFlow.totalFiles', { defaultValue: 'Fichiers reçus' }), value: formatMetricValue(operationsMetrics?.operations?.batchImports?.runs) },
+        { label: t('security.observability.mainFlow.successful', { defaultValue: 'Imports réussis' }), value: formatMetricValue(operationsMetrics?.operations?.batchImports?.resumeRecordsCreated) },
+        { label: t('security.observability.mainFlow.failed', { defaultValue: 'Imports en échec' }), value: formatMetricValue(operationsMetrics?.operations?.batchImports?.failedRuns) },
       ],
     },
     {

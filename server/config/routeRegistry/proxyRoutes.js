@@ -2,6 +2,7 @@ import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 import { randomUUID } from 'crypto';
 import { safeLog } from '../../utils/logger.backend.js';
+import { metrics } from '../../services/metrics.service.js';
 import { authenticateToken } from '../../middleware/auth.middleware.js';
 import { userRateLimit } from '../../middleware/rateLimit.middleware.js';
 import { validateBody, generatePdfProxySchema, generateDocxProxySchema } from '../../utils/validation.js';
@@ -145,6 +146,18 @@ export function registerProxyRoutes(app) {
             if (!response.ok) {
                 const errorText = await response.text();
                 const upstreamDebugId = response.headers.get('x-pdf-debug-id');
+                metrics.trackBatchExportActivity({
+                    event: 'run',
+                    format: 'pdf',
+                    source: 'direct',
+                    failedRuns: 1,
+                    failedFiles: 1,
+                    metadata: {
+                        requestId,
+                        filename: req.body?.filename || null,
+                        error: errorText
+                    }
+                });
                 safeLog(response.status === 403 ? 'warn' : 'error', 'PDF server error', {
                     requestId,
                     status: response.status,
@@ -161,11 +174,34 @@ export function registerProxyRoutes(app) {
                     requestId
                 });
             }
+            metrics.trackBatchExportActivity({
+                event: 'run',
+                format: 'pdf',
+                source: 'direct',
+                successfulRuns: 1,
+                generatedFiles: 1,
+                metadata: {
+                    requestId,
+                    filename: req.body?.filename || null
+                }
+            });
             await relayBinaryResponse(response, res, 'application/pdf');
         } catch (error) {
             const statusCode = error?.code === 'PDF_SERVER_AUTH_NOT_CONFIGURED'
                 ? 503
                 : (isAbortError(error) ? 504 : 500);
+            metrics.trackBatchExportActivity({
+                event: 'run',
+                format: 'pdf',
+                source: 'direct',
+                failedRuns: 1,
+                failedFiles: 1,
+                metadata: {
+                    requestId,
+                    filename: req.body?.filename || null,
+                    error: error.message
+                }
+            });
             safeLog(statusCode === 504 ? 'warn' : 'error', 'PDF proxy error', {
                 requestId,
                 error: error.message,
@@ -211,6 +247,18 @@ export function registerProxyRoutes(app) {
             if (!response.ok) {
                 const errorText = await response.text();
                 const upstreamDebugId = response.headers.get('x-pdf-debug-id');
+                metrics.trackBatchExportActivity({
+                    event: 'run',
+                    format: typeof req.body?.format === 'string' ? req.body.format : 'docx',
+                    source: 'direct',
+                    failedRuns: 1,
+                    failedFiles: 1,
+                    metadata: {
+                        requestId,
+                        filename: req.body?.filename || null,
+                        error: errorText
+                    }
+                });
                 safeLog(response.status === 403 ? 'warn' : 'error', 'DOCX server error', {
                     requestId,
                     status: response.status,
@@ -227,6 +275,17 @@ export function registerProxyRoutes(app) {
                     requestId
                 });
             }
+            metrics.trackBatchExportActivity({
+                event: 'run',
+                format: typeof req.body?.format === 'string' ? req.body.format : 'docx',
+                source: 'direct',
+                successfulRuns: 1,
+                generatedFiles: 1,
+                metadata: {
+                    requestId,
+                    filename: req.body?.filename || null
+                }
+            });
             await relayBinaryResponse(
                 response,
                 res,
@@ -236,6 +295,18 @@ export function registerProxyRoutes(app) {
             const statusCode = error?.code === 'PDF_SERVER_AUTH_NOT_CONFIGURED'
                 ? 503
                 : (isAbortError(error) ? 504 : 500);
+            metrics.trackBatchExportActivity({
+                event: 'run',
+                format: typeof req.body?.format === 'string' ? req.body.format : 'docx',
+                source: 'direct',
+                failedRuns: 1,
+                failedFiles: 1,
+                metadata: {
+                    requestId,
+                    filename: req.body?.filename || null,
+                    error: error.message
+                }
+            });
             safeLog(statusCode === 504 ? 'warn' : 'error', 'DOCX proxy error', {
                 requestId,
                 error: error.message,

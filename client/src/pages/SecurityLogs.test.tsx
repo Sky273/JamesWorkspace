@@ -405,8 +405,8 @@ describe('SecurityLogs', () => {
           ok: true,
           json: async () => ({
             operations: {
-              uploads: { total: 12, successful: 10, failed: 2 },
-              batchImports: { analysisRuns: 9, textExtractionRuns: 11, textExtractionFailures: 1 },
+              uploads: { total: 0, successful: 0, failed: 0 },
+              batchImports: { runs: 12, resumeRecordsCreated: 10, failedRuns: 2, analysisRuns: 9, textExtractionRuns: 11, textExtractionFailures: 1 },
               improvement: { runs: 6, successfulRuns: 5, failedRuns: 1 },
               batchExports: { runs: 4, successfulRuns: 4, failedRuns: 0, generatedFiles: 7, failedFiles: 0 },
             },
@@ -432,6 +432,8 @@ describe('SecurityLogs', () => {
       expect(screen.getByText('Analyse')).toBeInTheDocument();
       expect(screen.getByText('Amélioration')).toBeInTheDocument();
       expect(screen.getByText('Export')).toBeInTheDocument();
+      expect(screen.getByText('12')).toBeInTheDocument();
+      expect(screen.getByText('10')).toBeInTheDocument();
       expect(screen.getAllByText('Export batch').length).toBeGreaterThan(0);
     });
 
