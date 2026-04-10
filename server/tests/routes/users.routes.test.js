@@ -64,7 +64,23 @@ vi.mock('../../utils/validation.js', () => ({
     validateBody: () => (req, res, next) => next(),
     validateParams: () => (req, res, next) => next(),
     createUserSchema: {},
-    updateAdminUserSchema: {}
+    updateAdminUserSchema: {},
+    normalizeRequestBodyAliases: (payload = {}) => {
+        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+            return payload;
+        }
+
+        const normalized = { ...payload };
+
+        if (normalized.firm_id !== undefined && normalized.firmId === undefined) {
+            normalized.firmId = normalized.firm_id;
+        }
+        if (normalized.job_title !== undefined && normalized.jobTitle === undefined) {
+            normalized.jobTitle = normalized.job_title;
+        }
+
+        return normalized;
+    }
 }));
 
 // Mock auth middleware
@@ -175,6 +191,39 @@ describe('Users Routes', () => {
             expect(res.status).toBe(201);
         });
 
+        it('should normalize email, role, status and legacy firm_id on create', async () => {
+            mockFindUserByEmail.mockResolvedValueOnce(null);
+            mockFindFirmById.mockResolvedValueOnce({ id: 'f-1', name: 'Acme Corp' });
+            mockCreateAdminUser.mockResolvedValue({
+                id: 'u-new',
+                email: 'new@example.com',
+                name: 'New User',
+                role: 'admin',
+                status: 'active'
+            });
+
+            const res = await request(app)
+                .post('/api/auth/users')
+                .set(authHeader)
+                .send({
+                    email: 'NEW@Example.com',
+                    password: 'Pass12345!',
+                    name: 'New User',
+                    firm_id: 'f-1',
+                    role: 'Admin',
+                    status: 'Active'
+                });
+
+            expect(res.status).toBe(201);
+            expect(mockCreateAdminUser).toHaveBeenCalledWith(expect.objectContaining({
+                email: 'new@example.com',
+                role: 'admin',
+                status: 'active',
+                firm_id: 'f-1',
+                firm_name: 'Acme Corp'
+            }));
+        });
+
         it('should return 400 if firm not found', async () => {
             mockFindUserByEmail.mockResolvedValueOnce(null); // no existing user
             mockFindFirmById.mockResolvedValueOnce(null); // firm not found
@@ -228,6 +277,37 @@ describe('Users Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.name).toBe('New Name');
+        });
+
+        it('should normalize updated email, role, status and password hash on update', async () => {
+            mockFindUserById.mockResolvedValueOnce({
+                id: 'u-1', email: 'old@example.com', name: 'Old Name', role: 'user', status: 'active'
+            });
+            mockFindFirmById.mockResolvedValueOnce({ id: 'f-1', name: 'Acme Corp' });
+            mockUpdateAdminUser.mockResolvedValue({
+                id: 'u-1', email: 'next@example.com', name: 'Old Name', role: 'admin', status: 'inactive'
+            });
+
+            const res = await request(app)
+                .put('/api/auth/users/u-1')
+                .set(authHeader)
+                .send({
+                    email: 'NEXT@Example.com',
+                    role: 'Admin',
+                    status: 'Inactive',
+                    password: 'NewPass123!',
+                    firm_id: 'f-1'
+                });
+
+            expect(res.status).toBe(200);
+            expect(mockUpdateAdminUser).toHaveBeenCalledWith('u-1', expect.objectContaining({
+                email: 'next@example.com',
+                role: 'admin',
+                status: 'inactive',
+                password: 'hashed-password',
+                firm_id: 'f-1',
+                firm_name: 'Acme Corp'
+            }));
         });
 
         it('should return 404 if user not found', async () => {

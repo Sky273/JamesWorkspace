@@ -107,7 +107,20 @@ vi.mock('../components/ConsentBadge', () => ({
 }));
 
 vi.mock('../components/ResumeAnalysis/SendEmailModal', () => ({
-  default: () => <div data-testid="send-email-modal" />,
+  default: ({
+    attachmentFormat,
+    onGenerateAttachment,
+  }: {
+    attachmentFormat?: string;
+    onGenerateAttachment?: (format: 'pdf' | 'docx' | 'doc') => Promise<Blob>;
+  }) => (
+    <div data-testid="send-email-modal">
+      <div>attachment:{attachmentFormat}</div>
+      <button onClick={() => void onGenerateAttachment?.((attachmentFormat as 'pdf' | 'docx' | 'doc') || 'pdf')}>
+        modal-generate-attachment
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock('../components/ResumeAnalysis/ExportTab', () => ({
@@ -127,8 +140,8 @@ vi.mock('../components/ResumeAnalysis/ExportTab', () => ({
     onFormatChange: (value: 'pdf' | 'docx' | 'doc') => void;
   }) => (
     <div data-testid="export-tab">
-      <div>{selectedTemplate}</div>
-      <div>{selectedFormat}</div>
+      <div data-testid="selected-template">{selectedTemplate}</div>
+      <div data-testid="selected-format">{selectedFormat}</div>
       <button onClick={() => onTemplateChange('template-2')}>select-template-2</button>
       <button onClick={() => onFormatChange('docx')}>select-docx</button>
       <button onClick={onExport}>export-now</button>
@@ -284,5 +297,91 @@ describe('ResumeExportPage', () => {
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalledWith('resume.exportError');
     });
+  });
+
+  it('opens the send email modal with the selected attachment format', async () => {
+    resumeContextValue = {
+      ...resumeContextValue,
+      currentResume: {
+        id: 'resume-1',
+        Name: 'Jane Doe',
+        'Original Text': 'Original body',
+      },
+    };
+
+    render(
+      <MemoryRouter>
+        <ResumeExportPage />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'select-docx' }));
+    fireEvent.click(screen.getByRole('button', { name: 'send-email' }));
+
+    expect(await screen.findByTestId('send-email-modal')).toHaveTextContent('attachment:docx');
+  });
+
+  it('generates the email attachment with the selected template and format from the page flow', async () => {
+    const resume = {
+      id: 'resume-1',
+      Name: 'Jane Doe',
+      Title: 'Engineer',
+      'Improved Text': '[[suggestion]]Improved body',
+      'Original Text': 'Original body',
+    };
+
+    resumeContextValue = {
+      ...resumeContextValue,
+      currentResume: resume,
+    };
+
+    getTemplateByIdMock.mockResolvedValue({
+      id: 'template-1',
+      Name: 'Default',
+      TemplateContent: '<main>-name-|-title-|-content-</main>',
+      HeaderContent: '<header>-name-</header>',
+      FooterContent: '<footer>-title-</footer>',
+      FooterHeight: 40,
+      Stylesheet: 'body { color: red; }',
+    });
+    fetchWithCsrfRetryMock.mockResolvedValue({
+      ok: true,
+      blob: async () => new Blob(['attachment-content'], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }),
+    });
+
+    render(
+      <MemoryRouter>
+        <ResumeExportPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('selected-template')).toHaveTextContent('template-1');
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'select-docx' }));
+    fireEvent.click(screen.getByRole('button', { name: 'send-email' }));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'modal-generate-attachment' }));
+
+    await waitFor(() => {
+      expect(getTemplateByIdMock).toHaveBeenCalledWith('template-1');
+    });
+
+    expect(fetchWithCsrfRetryMock).toHaveBeenCalledWith(
+      '/generate-docx',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          htmlContent: '<main>Jane Doe|Engineer|Improved body</main>',
+          filename: 'Jane_Doe.docx',
+          stylesheet: 'body { color: red; }',
+          headerContent: '<header>Jane Doe</header>',
+          footerContent: '<footer>Engineer</footer>',
+          footerHeight: 40,
+          format: 'docx',
+        }),
+      }),
+      300000
+    );
   });
 });

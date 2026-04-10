@@ -97,6 +97,13 @@ describe('Batch Jobs Worker - Text Extraction', () => {
             expect(result.text).toBe('Hello DOCX');
             expect(result.ocrUsed).toBe(false);
             expect(mammoth.extractRawText).toHaveBeenCalledWith({ buffer: buf });
+            expect(safeLog).toHaveBeenCalledWith('info', 'Batch file extraction completed', expect.objectContaining({
+                fileName: 'test.docx',
+                mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                textLength: 'Hello DOCX'.length,
+                ocrUsed: false,
+                durationMs: expect.any(Number)
+            }));
         });
 
         it('should throw for unsupported mime type', async () => {

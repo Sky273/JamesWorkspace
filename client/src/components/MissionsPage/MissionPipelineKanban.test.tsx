@@ -131,6 +131,47 @@ describe('MissionPipelineKanban', () => {
     expect(screen.getAllByText('pipeline.adapted').length).toBeGreaterThan(0);
     expect(screen.getAllByText('pipeline.original').length).toBeGreaterThan(0);
   });
+
+  it('adds a mission adaptation to the pipeline with adaptationId preserved', async () => {
+    render(
+      <MemoryRouter>
+        <MissionPipelineKanban missionId="mission-1" missionTitle="Product Manager" />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('pipeline.title')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'pipeline.addCandidate' }));
+
+    const adaAdaptedCandidateButton = await waitFor(() => {
+      const button = screen.getAllByRole('button').find(
+        (candidateButton) =>
+          candidateButton.textContent?.includes('ADA') &&
+          candidateButton.textContent?.includes('pipeline.adapted')
+      );
+
+      expect(button).toBeTruthy();
+      return button!;
+    });
+
+    fireEvent.click(adaAdaptedCandidateButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'pipeline.add' })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'pipeline.add' }));
+
+    await waitFor(() => {
+      expect(addToPipelineMock).toHaveBeenCalledWith(expect.objectContaining({
+        resumeId: 'resume-1',
+        adaptationId: 'adapt-1',
+        missionId: 'mission-1'
+      }));
+    });
+  });
+
   it('shows the pipeline load error when the initial fetch fails', async () => {
     getStagesMock.mockRejectedValueOnce(new Error('load failed'));
 
@@ -143,6 +184,37 @@ describe('MissionPipelineKanban', () => {
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalledWith('pipeline.errors.loadFailed');
     });
+  });
+
+  it('renders adaptation links in the pipeline cards when an adapted CV is already in the pipeline', async () => {
+    getPipelineByMissionIdMock.mockResolvedValueOnce([
+      {
+        id: 'entry-2',
+        resume_id: 'resume-1',
+        adaptation_id: 'adapt-1',
+        mission_id: 'mission-1',
+        client_id: null,
+        stage: 'new',
+        notes: 'Adaptation sélectionnée',
+        created_by: 'user-1',
+        created_at: '2026-04-10T09:00:00Z',
+        updated_at: '2026-04-10T09:00:00Z',
+        moved_at: '2026-04-10T09:00:00Z',
+        resume_name: 'ADA',
+        global_score: 65,
+        tags: ['Product'],
+        interview_count: 0,
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <MissionPipelineKanban missionId="mission-1" missionTitle="Product Manager" />
+      </MemoryRouter>
+    );
+
+    const adaptedLink = await screen.findByRole('link', { name: 'ADA' });
+    expect(adaptedLink).toHaveAttribute('href', '/adaptations/adapt-1');
   });
 
 });

@@ -49,6 +49,65 @@ prepare_log_paths() {
 
 prepare_log_paths
 
+resolve_positive_int_with_cap() {
+    local raw_value="$1"
+    local default_value="$2"
+    local max_value="$3"
+
+    if ! [[ "$raw_value" =~ ^[0-9]+$ ]] || [ "$raw_value" -lt 1 ]; then
+        echo "$default_value"
+        return
+    fi
+
+    if [ "$raw_value" -gt "$max_value" ]; then
+        echo "$max_value"
+        return
+    fi
+
+    echo "$raw_value"
+}
+
+print_runtime_configuration_summary() {
+    local effective_batch_max effective_batch_size
+    effective_batch_max="$(resolve_positive_int_with_cap "${BATCH_EXPORT_MAX_OPERATIONS:-}" 300 300)"
+    effective_batch_size="$(resolve_positive_int_with_cap "${BATCH_EXPORT_BATCH_SIZE:-}" 100 100)"
+
+    echo "Runtime configuration summary:"
+    echo "  - PostgreSQL database: ${POSTGRES_DB:-resumeconverter}"
+    echo "  - PostgreSQL user:     ${POSTGRES_USER:-postgres}"
+    echo "  - Batch max ops:      ${effective_batch_max}"
+    echo "  - Batch batch size:   ${effective_batch_size}"
+
+    if [ -z "${JWT_SECRET:-}" ] || [ "${#JWT_SECRET}" -lt 32 ]; then
+        echo "WARN: JWT_SECRET is missing or shorter than 32 characters."
+    fi
+
+    if [ -z "${CSRF_SECRET:-}" ] || [ "${#CSRF_SECRET}" -lt 32 ]; then
+        echo "WARN: CSRF_SECRET is missing or shorter than 32 characters."
+    fi
+}
+
+verify_database_bootstrap_state() {
+    local default_admin_email escaped_admin_email schema_migrations_exists users_exists default_admin_exists
+    default_admin_email="${DEFAULT_ADMIN_EMAIL:-admin@resumeconverter.local}"
+    escaped_admin_email="${default_admin_email//\'/\'\'}"
+    schema_migrations_exists="$(PGPASSWORD="$POSTGRES_PASSWORD" psql -h 127.0.0.1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAqc \
+        "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'schema_migrations')::int;" | tr -d '[:space:]')"
+    users_exists="$(PGPASSWORD="$POSTGRES_PASSWORD" psql -h 127.0.0.1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAqc \
+        "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users')::int;" | tr -d '[:space:]')"
+    default_admin_exists="$(PGPASSWORD="$POSTGRES_PASSWORD" psql -h 127.0.0.1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAqc \
+        "SELECT EXISTS (SELECT 1 FROM users WHERE LOWER(email) = LOWER('${escaped_admin_email}'))::int;" | tr -d '[:space:]')"
+
+    if [ "$schema_migrations_exists" != "1" ] || [ "$users_exists" != "1" ] || [ "$default_admin_exists" != "1" ]; then
+        echo "ERROR: Database bootstrap verification failed (schema_migrations/users/default admin)."
+        exit 1
+    fi
+
+    echo "Database bootstrap verification passed."
+}
+
+print_runtime_configuration_summary
+
 # =============================================================================
 # Generate SSL Certificates (if not mounted)
 # =============================================================================
@@ -147,6 +206,7 @@ fi
 echo "[4/5] Running docker-migrate..."
 node server/scripts/docker-migrate.js
 node server/scripts/ensure-default-admin.js
+verify_database_bootstrap_state
 
 # =============================================================================
 # Start all services via Supervisor

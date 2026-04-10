@@ -373,4 +373,34 @@ describe('ResumeAnalysisPage', () => {
     expect(toastErrorMock).toHaveBeenCalledWith('errors.loadResume');
   });
 
+  it('returns to the deal detail view with scroll restoration context', async () => {
+    locationState = {
+      from: 'dealDetailView',
+      dealReturnContext: {
+        dealId: 'deal-1',
+        scrollY: 320,
+      },
+    };
+    resumeContextValue = {
+      ...resumeContextValue,
+      currentResume: {
+        id: 'resume-1',
+        Name: 'Jane Doe',
+        'Original Text': 'Original content',
+      },
+    };
+
+    render(
+      <MemoryRouter>
+        <ResumeAnalysisPage />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'common.back' }));
+
+    expect(navigateMock).toHaveBeenCalledWith('/deals/deal-1', {
+      state: { restoreScrollY: 320 },
+    });
+  });
+
 });

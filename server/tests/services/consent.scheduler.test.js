@@ -38,6 +38,7 @@ vi.mock('../../services/consent/emailTemplates.js', () => ({
 import { query } from '../../config/database.js';
 import { transaction } from '../../utils/postgresHelpers.js';
 import { gdprMailService } from '../../services/mail/gdprMailService.js';
+import { logGdprAction, GDPR_ACTIONS } from '../../services/gdprAudit.service.js';
 import {
     checkExpiredConsents,
     sendConsentReminders,
@@ -178,6 +179,15 @@ describe('Consent Scheduler Tasks', () => {
 
             expect(count).toBe(2);
             expect(transaction).toHaveBeenCalledTimes(2);
+            expect(logGdprAction).toHaveBeenCalledWith(expect.objectContaining({
+                action: GDPR_ACTIONS.AUTO_PURGE_EXECUTED,
+                details: expect.objectContaining({
+                    attemptedCount: 2,
+                    purgedCount: 2,
+                    skippedCount: 0
+                }),
+                isAutomated: true
+            }));
         });
 
         it('should not count resumes that were selected but not deleted', async () => {
@@ -208,6 +218,14 @@ describe('Consent Scheduler Tasks', () => {
 
             expect(count).toBe(1);
             expect(transaction).toHaveBeenCalledTimes(2);
+            expect(logGdprAction).toHaveBeenCalledWith(expect.objectContaining({
+                action: GDPR_ACTIONS.AUTO_PURGE_EXECUTED,
+                details: expect.objectContaining({
+                    attemptedCount: 2,
+                    purgedCount: 1,
+                    skippedCount: 1
+                })
+            }));
         });
 
         it('should return 0 if nothing to purge', async () => {
@@ -224,6 +242,9 @@ describe('Consent Scheduler Tasks', () => {
             const count = await purgeExpiredResumes();
 
             expect(count).toBe(0);
+            expect(logGdprAction).not.toHaveBeenCalledWith(expect.objectContaining({
+                action: GDPR_ACTIONS.AUTO_PURGE_EXECUTED
+            }));
         });
     });
 });

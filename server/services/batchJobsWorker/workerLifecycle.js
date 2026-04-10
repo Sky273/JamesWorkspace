@@ -263,9 +263,31 @@ async function processNextBatch() {
                 executionConcurrency: WORKER_EXECUTION_CONCURRENCY
             });
 
+            const totalChunks = Math.ceil(pendingItems.length / WORKER_EXECUTION_CONCURRENCY);
+
             for (let index = 0; index < pendingItems.length; index += WORKER_EXECUTION_CONCURRENCY) {
                 const itemChunk = pendingItems.slice(index, index + WORKER_EXECUTION_CONCURRENCY);
+                const chunkNumber = Math.floor(index / WORKER_EXECUTION_CONCURRENCY) + 1;
+                const chunkStartedAt = Date.now();
+
+                safeLog('debug', 'Processing batch chunk', {
+                    jobId: job.id,
+                    jobType: job.job_type,
+                    chunkNumber,
+                    totalChunks,
+                    chunkSize: itemChunk.length
+                });
+
                 await Promise.all(itemChunk.map(item => processItem(item, job, jobOptions)));
+
+                safeLog('debug', 'Batch chunk completed', {
+                    jobId: job.id,
+                    jobType: job.job_type,
+                    chunkNumber,
+                    totalChunks,
+                    chunkSize: itemChunk.length,
+                    durationMs: Date.now() - chunkStartedAt
+                });
             }
 
             // Update counters after batch

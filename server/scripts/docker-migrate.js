@@ -57,6 +57,8 @@ function loadEnvironment() {
 
 loadEnvironment();
 
+const DEFAULT_ADMIN_EMAIL = (process.env.DEFAULT_ADMIN_EMAIL || 'admin@resumeconverter.local').toLowerCase();
+
 const [
     { query, testConnection, closePool },
     { safeLog },
@@ -195,6 +197,21 @@ async function ensureSchemaMigrationsTable() {
             applied_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
         )
     `);
+}
+
+async function schemaMigrationsTableExists() {
+    const result = await query(
+        `
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_name = $1
+            ) AS exists
+        `,
+        [MIGRATION_TABLE]
+    );
+
+    return result.rows[0]?.exists === true;
 }
 
 async function tableExists(tableName) {
@@ -376,6 +393,46 @@ async function ensureAuxiliarySchema() {
     }
 }
 
+async function verifyBootstrapState() {
+    const [schemaMigrationsPresent, usersTablePresent] = await Promise.all([
+        schemaMigrationsTableExists(),
+        tableExists('users')
+    ]);
+
+    if (!schemaMigrationsPresent) {
+        throw new Error('schema_migrations table is missing after migration bootstrap');
+    }
+
+    if (!usersTablePresent) {
+        throw new Error('users table is missing after migration bootstrap');
+    }
+
+    const [migrationCountResult, adminResult] = await Promise.all([
+        query(`SELECT COUNT(*)::int AS cnt FROM ${MIGRATION_TABLE}`),
+        query(
+            `
+                SELECT id
+                FROM users
+                WHERE LOWER(email) = $1
+                LIMIT 1
+            `,
+            [DEFAULT_ADMIN_EMAIL]
+        )
+    ]);
+
+    if (!adminResult.rows[0]?.id) {
+        throw new Error(`Default administrator account is missing after migration bootstrap (${DEFAULT_ADMIN_EMAIL})`);
+    }
+
+    safeLog('info', 'docker-migrate bootstrap verified', {
+        schemaMigrationsTable: true,
+        migrationCount: migrationCountResult.rows[0]?.cnt || 0,
+        usersTable: true,
+        defaultAdminEmail: DEFAULT_ADMIN_EMAIL,
+        defaultAdminUserId: adminResult.rows[0].id
+    });
+}
+
 export async function runDockerMigrate() {
     safeLog('info', 'Starting docker-migrate');
 
@@ -395,6 +452,7 @@ export async function runDockerMigrate() {
     await seedIndustryAliases();
     await ensureAuxiliarySchema();
     await ensureDefaultAdminAccount();
+    await verifyBootstrapState();
 
     safeLog('info', 'docker-migrate completed successfully');
 }

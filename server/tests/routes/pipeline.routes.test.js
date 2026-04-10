@@ -106,7 +106,29 @@ vi.mock('../../utils/validation.js', () => ({
     createPipelineEntrySchema: {},
     scheduleInterviewSchema: {},
     completeInterviewSchema: {},
-    updateInterviewSchema: {}
+    updateInterviewSchema: {},
+    normalizeRequestBodyAliases: (payload = {}) => {
+        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+            return payload;
+        }
+
+        const normalized = { ...payload };
+
+        if (normalized.resume_id !== undefined && normalized.resumeId === undefined) {
+            normalized.resumeId = normalized.resume_id;
+        }
+        if (normalized.mission_id !== undefined && normalized.missionId === undefined) {
+            normalized.missionId = normalized.mission_id;
+        }
+        if (normalized.client_id !== undefined && normalized.clientId === undefined) {
+            normalized.clientId = normalized.client_id;
+        }
+        if (normalized.adaptation_id !== undefined && normalized.adaptationId === undefined) {
+            normalized.adaptationId = normalized.adaptation_id;
+        }
+
+        return normalized;
+    }
 }));
 
 // Mock auth middleware
@@ -255,6 +277,23 @@ describe('Pipeline Routes', () => {
                 .send({ resumeId: 'r-1' });
 
             expect(res.status).toBe(500);
+        });
+
+        it('should reject pipeline creation when adaptation associations are invalid', async () => {
+            mockValidatePipelineAssociations.mockResolvedValueOnce({
+                ok: false,
+                status: 400,
+                error: 'Adaptation does not belong to the mission'
+            });
+
+            const res = await request(app)
+                .post('/api/pipeline')
+                .set(authHeader)
+                .send({ resumeId: 'r-1', adaptationId: 'a-1', missionId: 'm-1' });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Adaptation does not belong to the mission');
+            expect(mockAddToPipeline).not.toHaveBeenCalled();
         });
 
         it('should reject creation without firm association for non-admin', async () => {

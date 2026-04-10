@@ -110,6 +110,19 @@ describe('DealDetailView', () => {
       },
     });
   });
+
+  it('navigates to the mission detail from the associated missions section', async () => {
+    render(<DealDetailView dealId="deal-1" onBack={vi.fn()} onEdit={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Product Manager')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'missions.view' }));
+
+    expect(navigateMock).toHaveBeenCalledWith('/missions/mission-1');
+  });
+
   it('shows the not found state when the deal request fails', async () => {
     authGetMock.mockReset();
     authGetMock.mockResolvedValueOnce({

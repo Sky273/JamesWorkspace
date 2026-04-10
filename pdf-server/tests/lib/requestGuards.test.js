@@ -128,4 +128,121 @@ describe('requestGuards', () => {
     expect(next).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(400);
   });
+
+  it('rejects entity-encoded external resource references during document validation', () => {
+    const coordinator = createRequestCoordinator({
+      logger: { log: () => {} },
+      pdfServerInternalToken: 't'.repeat(32),
+      pdfGenerationTimeout: 30000,
+      rateLimitMax: 10,
+      maxActiveJobs: 2,
+      maxHtmlSize: 1024 * 1024,
+      maxStylesheetSize: 50_000,
+      maxFragmentSize: 50_000
+    });
+    const req = {
+      body: {
+        htmlContent: '<img src="https&#x3a;//evil.test/a.png">',
+        filename: 'test.pdf'
+      }
+    };
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn()
+    };
+    const next = vi.fn();
+
+    coordinator.middlewares.validatePdfRequest(req, res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  it('rejects entity-encoded dangerous CSS in stylesheets', () => {
+    const coordinator = createRequestCoordinator({
+      logger: { log: () => {} },
+      pdfServerInternalToken: 't'.repeat(32),
+      pdfGenerationTimeout: 30000,
+      rateLimitMax: 10,
+      maxActiveJobs: 2,
+      maxHtmlSize: 1024 * 1024,
+      maxStylesheetSize: 50_000,
+      maxFragmentSize: 50_000
+    });
+    const req = {
+      body: {
+        htmlContent: '<p>Hello</p>',
+        filename: 'test.pdf',
+        stylesheet: 'body { background-image: url(https&#x3a;//evil.test/a.png); }'
+      }
+    };
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn()
+    };
+    const next = vi.fn();
+
+    coordinator.middlewares.validatePdfRequest(req, res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  it('rejects entity-encoded external base href declarations', () => {
+    const coordinator = createRequestCoordinator({
+      logger: { log: () => {} },
+      pdfServerInternalToken: 't'.repeat(32),
+      pdfGenerationTimeout: 30000,
+      rateLimitMax: 10,
+      maxActiveJobs: 2,
+      maxHtmlSize: 1024 * 1024,
+      maxStylesheetSize: 50_000,
+      maxFragmentSize: 50_000
+    });
+    const req = {
+      body: {
+        htmlContent: '<base href="https&#x3a;//evil.test/"><p>Hello</p>',
+        filename: 'test.pdf'
+      }
+    };
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn()
+    };
+    const next = vi.fn();
+
+    coordinator.middlewares.validatePdfRequest(req, res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  it('rejects entity-encoded external resources inside embedded css fragments', () => {
+    const coordinator = createRequestCoordinator({
+      logger: { log: () => {} },
+      pdfServerInternalToken: 't'.repeat(32),
+      pdfGenerationTimeout: 30000,
+      rateLimitMax: 10,
+      maxActiveJobs: 2,
+      maxHtmlSize: 1024 * 1024,
+      maxStylesheetSize: 50_000,
+      maxFragmentSize: 50_000
+    });
+    const req = {
+      body: {
+        htmlContent: '<style>body { background-image: url(https&#x3a;//evil.test/a.png); }</style><p>Hello</p>',
+        filename: 'test.pdf'
+      }
+    };
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn()
+    };
+    const next = vi.fn();
+
+    coordinator.middlewares.validatePdfRequest(req, res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
 });

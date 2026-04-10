@@ -156,7 +156,8 @@ export async function generateJobExport(jobId, options) {
     // Get successful items with resume_id or adaptation_id
     const successfulItems = items.filter(item => item.status === 'success' && (item.resume_id || item.adaptation_id));
     const successWithoutResumeId = items.filter(item => item.status === 'success' && !item.resume_id && !item.adaptation_id);
-    
+    const skippedItems = items.length - successfulItems.length;
+
     // Log relative paths for debugging
     const itemsWithRelativePath = successfulItems.filter(item => item.relative_path);
     safeLog('info', 'Relative paths in successful items', { 
@@ -164,6 +165,14 @@ export async function generateJobExport(jobId, options) {
         totalSuccessful: successfulItems.length,
         withRelativePath: itemsWithRelativePath.length,
         samplePaths: itemsWithRelativePath.slice(0, 5).map(i => ({ fileName: i.file_name, relativePath: i.relative_path }))
+    });
+    safeLog('info', 'Batch export item selection', {
+        jobId,
+        totalItems: items.length,
+        exportableItems: successfulItems.length,
+        skippedItems,
+        successfulItemsWithoutSource: successWithoutResumeId.length,
+        statusCounts
     });
     
     if (successWithoutResumeId.length > 0) {
@@ -411,6 +420,8 @@ export async function generateJobExport(jobId, options) {
     // Process each format separately to organize files in folders
     for (const format of exportFormats) {
         safeLog('info', `Processing format: ${format.toUpperCase()}`, { jobId, itemCount: successfulItems.length });
+        let formatSuccessCount = 0;
+        let formatErrorCount = 0;
         
         // Track file name duplicates per format folder
         const fileNameCounts = new Map();
@@ -418,13 +429,17 @@ export async function generateJobExport(jobId, options) {
         for (let i = 0; i < successfulItems.length; i += exportBatchSize) {
             const batch = successfulItems.slice(i, i + exportBatchSize);
             const batchNumber = Math.floor(i / exportBatchSize) + 1;
-            safeLog('debug', `Processing ${format.toUpperCase()} batch`, { jobId, batchStart: i, batchSize: batch.length });
-            safeLog('debug', 'Batch export progress', {
+            const batchStartedAt = Date.now();
+            let batchSuccessCount = 0;
+            let batchErrorCount = 0;
+            safeLog('info', `Processing ${format.toUpperCase()} batch`, { jobId, batchStart: i, batchSize: batch.length });
+            safeLog('info', 'Batch export batch started', {
                 jobId,
                 format,
                 batchNumber,
                 totalBatches,
-                processedItems: i,
+                batchSize: batch.length,
+                processedItemsBeforeBatch: i,
                 totalItems: successfulItems.length
             });
             
@@ -472,8 +487,12 @@ export async function generateJobExport(jobId, options) {
                     safeLog('debug', 'Adding file to ZIP', { format, filePath, sourceType: result.sourceType });
                     formatFolders[format].root.file(filePath, fs.createReadStream(artifactPath));
                     exportSuccessCount++;
+                    formatSuccessCount++;
+                    batchSuccessCount++;
                 } else {
                     exportErrorCount++;
+                    formatErrorCount++;
+                    batchErrorCount++;
                     exportErrors.push({ itemId: result.itemId, resumeId: result.resumeId, format: result.format, error: result.error });
                     const itemResult = itemResults.get(result.itemId);
                     if (itemResult) {
@@ -481,6 +500,17 @@ export async function generateJobExport(jobId, options) {
                     }
                 }
             }
+
+            safeLog('info', 'Batch export batch completed', {
+                jobId,
+                format,
+                batchNumber,
+                totalBatches,
+                batchSize: batch.length,
+                generatedFiles: batchSuccessCount,
+                failedFiles: batchErrorCount,
+                durationMs: Date.now() - batchStartedAt
+            });
         }
         
         // Log duplicates for this format
@@ -490,6 +520,14 @@ export async function generateJobExport(jobId, options) {
                 duplicates: duplicatesDetected.map(([name, count]) => `${name} (x${count})`) 
             });
         }
+        safeLog('info', 'Batch export format completed', {
+            jobId,
+            format,
+            exportableItems: successfulItems.length,
+            generatedFiles: formatSuccessCount,
+            failedFiles: formatErrorCount,
+            skippedItems
+        });
     }
     
     // Log export statistics - count only actual files, not directories
@@ -500,6 +538,7 @@ export async function generateJobExport(jobId, options) {
         formats: exportFormats,
         exportSuccessCount, 
         exportErrorCount,
+        skippedItems,
         filesInZip: actualFilesInZip,
         totalZipEntries: Object.keys(zip.files).length,
         errors: exportErrors.length > 0 ? exportErrors.slice(0, MAX_LOGGED_EXPORT_ERRORS) : undefined,

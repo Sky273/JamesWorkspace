@@ -500,20 +500,27 @@ describe('Batch Jobs Worker - Export Generator', () => {
         await generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] });
 
         expect(mockFetch).toHaveBeenCalledTimes(205);
-        expect(safeLog).toHaveBeenCalledWith('debug', 'Processing PDF batch', expect.objectContaining({
+        expect(safeLog).toHaveBeenCalledWith('info', 'Processing PDF batch', expect.objectContaining({
             jobId: 'j1',
             batchStart: 0,
             batchSize: 100
         }));
-        expect(safeLog).toHaveBeenCalledWith('debug', 'Processing PDF batch', expect.objectContaining({
+        expect(safeLog).toHaveBeenCalledWith('info', 'Processing PDF batch', expect.objectContaining({
             jobId: 'j1',
             batchStart: 100,
             batchSize: 100
         }));
-        expect(safeLog).toHaveBeenCalledWith('debug', 'Processing PDF batch', expect.objectContaining({
+        expect(safeLog).toHaveBeenCalledWith('info', 'Processing PDF batch', expect.objectContaining({
             jobId: 'j1',
             batchStart: 200,
             batchSize: 5
+        }));
+        expect(safeLog).toHaveBeenCalledWith('info', 'Batch export batch completed', expect.objectContaining({
+            jobId: 'j1',
+            format: 'pdf',
+            batchNumber: 3,
+            totalBatches: 3,
+            generatedFiles: 5
         }));
         expect(mockTrackBatchExportActivity).toHaveBeenCalledWith(expect.objectContaining({
             successfulRuns: 1,
@@ -554,16 +561,99 @@ describe('Batch Jobs Worker - Export Generator', () => {
             batchSize: 100,
             totalBatches: 2
         }));
-        expect(safeLog).toHaveBeenCalledWith('debug', 'Batch export progress', expect.objectContaining({
+        expect(safeLog).toHaveBeenCalledWith('info', 'Batch export batch started', expect.objectContaining({
             jobId: 'j1',
             format: 'pdf',
             batchNumber: 1,
-            totalBatches: 2
+            totalBatches: 2,
+            batchSize: 100
         }));
-        expect(safeLog).toHaveBeenCalledWith('debug', 'Processing PDF batch', expect.objectContaining({
+        expect(safeLog).toHaveBeenCalledWith('info', 'Processing PDF batch', expect.objectContaining({
             jobId: 'j1',
             batchStart: 100,
             batchSize: 5
+        }));
+    });
+
+    it('should default invalid configured batch size to 100', async () => {
+        process.env.BATCH_EXPORT_BATCH_SIZE = 'invalid';
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce(Array.from({ length: 101 }, (_, index) => ({
+            id: `i${index + 1}`,
+            status: 'success',
+            resume_id: `r${index + 1}`,
+            file_name: `cv-${index + 1}.pdf`
+        })));
+        mockQuery
+            .mockResolvedValueOnce({ rows: [template] })
+            .mockImplementation((sql, params) => Promise.resolve({
+                rows: [{
+                    id: params[0],
+                    improved_text: '<p>CV</p>',
+                    name: `Candidate ${params[0]}`,
+                    title: 'Dev',
+                    trigram: `T${String(params[0]).replace(/\D/g, '').padStart(3, '0')}`
+                }]
+            }));
+
+        mockFetch.mockResolvedValue({
+            ok: true,
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(32))
+        });
+
+        await generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] });
+
+        expect(safeLog).toHaveBeenCalledWith('info', 'Starting batched export processing', expect.objectContaining({
+            jobId: 'j1',
+            batchSize: 100,
+            totalBatches: 2
+        }));
+        expect(safeLog).toHaveBeenCalledWith('info', 'Processing PDF batch', expect.objectContaining({
+            jobId: 'j1',
+            batchStart: 100,
+            batchSize: 1
+        }));
+    });
+
+    it('should log skipped items and successful items without source in selection summary', async () => {
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce([
+            { id: 'i1', status: 'success', resume_id: 'r1', file_name: 'cv.pdf' },
+            { id: 'i2', status: 'success', file_name: 'missing-source.pdf' },
+            { id: 'i3', status: 'error', resume_id: 'r3', file_name: 'cv-error.pdf' }
+        ]);
+        mockQuery
+            .mockResolvedValueOnce({ rows: [template] })
+            .mockResolvedValueOnce({ rows: [{ id: 'r1', improved_text: '<p>CV</p>', name: 'Alice', title: 'Dev', trigram: 'ALI' }] });
+
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(32))
+        });
+
+        await generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] });
+
+        expect(safeLog).toHaveBeenCalledWith('info', 'Batch export item selection', expect.objectContaining({
+            jobId: 'j1',
+            totalItems: 3,
+            exportableItems: 1,
+            skippedItems: 2,
+            successfulItemsWithoutSource: 1,
+            statusCounts: expect.objectContaining({
+                success: 2,
+                error: 1
+            })
+        }));
+        expect(safeLog).toHaveBeenCalledWith('warn', 'Some successful items have no resume_id', expect.objectContaining({
+            jobId: 'j1',
+            count: 1,
+            itemIds: ['i2']
+        }));
+        expect(safeLog).toHaveBeenCalledWith('info', 'Batch export format completed', expect.objectContaining({
+            jobId: 'j1',
+            format: 'pdf',
+            exportableItems: 1,
+            skippedItems: 2
         }));
     });
 });

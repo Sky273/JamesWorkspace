@@ -70,10 +70,19 @@ export async function extractTextFromPDFBuffer(buffer) {
  * Extract text from file buffer
  */
 export async function extractTextFromBuffer(buffer, mimeType, fileName) {
+    const startedAt = Date.now();
     // Use pdfjs-dist for PDF, mammoth for DOCX, word-extractor for DOC
     if (mimeType === 'application/pdf') {
         try {
-            return await extractTextFromPDFBuffer(buffer);
+            const result = await extractTextFromPDFBuffer(buffer);
+            safeLog('info', 'Batch file extraction completed', {
+                fileName,
+                mimeType,
+                textLength: result.text?.length || 0,
+                ocrUsed: Boolean(result.ocrUsed),
+                durationMs: Date.now() - startedAt
+            });
+            return result;
         } catch (pdfError) {
             safeLog('error', 'PDF extraction with pdfjs-dist failed', { error: pdfError.message, fileName });
             throw new Error(`Failed to extract text from PDF: ${pdfError.message}`);
@@ -82,10 +91,18 @@ export async function extractTextFromBuffer(buffer, mimeType, fileName) {
         mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         || mimeType === 'application/msword'
     ) {
-        return extractTextFromWordBuffer(buffer, {
+        const result = await extractTextFromWordBuffer(buffer, {
             mimeType,
             fileName
         });
+        safeLog('info', 'Batch file extraction completed', {
+            fileName,
+            mimeType,
+            textLength: result.text?.length || 0,
+            ocrUsed: Boolean(result.ocrUsed),
+            durationMs: Date.now() - startedAt
+        });
+        return result;
     }
     throw new Error(`Unsupported file type: ${mimeType}`);
 }

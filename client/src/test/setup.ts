@@ -1,6 +1,29 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
+const GLIB_GIO_WARNING_PATTERN = /GLib-GIO-WARNING|Failed to open application manifest .*Microsoft\.Limitless/i;
+const stderrPatchFlag = Symbol.for('resumeconverter.vitest.stderrPatched');
+
+if (!(process as typeof process & { [key: symbol]: boolean })[stderrPatchFlag]) {
+  const originalWrite = process.stderr.write.bind(process.stderr);
+  const patchedProcess = process as typeof process & { [key: symbol]: boolean };
+
+  process.stderr.write = ((chunk: unknown, encoding?: BufferEncoding | ((error?: Error | null) => void), callback?: (error?: Error | null) => void) => {
+    const text = typeof chunk === 'string' ? chunk : Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk ?? '');
+    if (GLIB_GIO_WARNING_PATTERN.test(text)) {
+      if (typeof encoding === 'function') {
+        encoding();
+      } else if (typeof callback === 'function') {
+        callback();
+      }
+      return true;
+    }
+    return originalWrite(chunk as never, encoding as never, callback as never);
+  }) as typeof process.stderr.write;
+
+  patchedProcess[stderrPatchFlag] = true;
+}
+
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

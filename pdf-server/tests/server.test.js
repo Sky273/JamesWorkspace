@@ -348,6 +348,42 @@ describe('PDF Server', () => {
       expect(res.body.error).toContain('unsupported');
     });
 
+    it('should reject entity-encoded external resources in htmlContent', async () => {
+      const res = await request(app)
+        .post('/generate-pdf')
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
+        .send({
+          htmlContent: '<img src="https&#x3a;//evil.test/a.png">',
+          filename: 'test.pdf'
+        });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('external resources');
+    });
+
+    it('should reject entity-encoded external base href declarations in htmlContent', async () => {
+      const res = await request(app)
+        .post('/generate-pdf')
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
+        .send({
+          htmlContent: '<base href="https&#x3a;//evil.test/"><p>Hello</p>',
+          filename: 'test.pdf'
+        });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('external resources');
+    });
+
+    it('should reject entity-encoded dangerous CSS inside embedded style tags', async () => {
+      const res = await request(app)
+        .post('/generate-pdf')
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
+        .send({
+          htmlContent: '<style>body{background-image:url(https&#x3a;//evil.test/a.png)}</style><p>Hello</p>',
+          filename: 'test.pdf'
+        });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('unsupported CSS');
+    });
+
     it('should reject external resources embedded in headerContent tags', async () => {
       const res = await request(app)
         .post('/generate-pdf')

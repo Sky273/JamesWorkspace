@@ -154,6 +154,21 @@ describe('Batch Jobs Worker - Worker Lifecycle', () => {
             expect(updateJobStatus).toHaveBeenCalledWith('j1', 'processing');
             expect(processImportItem).toHaveBeenCalledWith(item, job, {});
             expect(updateJobItemStatus).toHaveBeenCalledWith('i1', 'success', { progress: 100 });
+            expect(safeLog).toHaveBeenCalledWith('debug', 'Processing batch chunk', expect.objectContaining({
+                jobId: 'j1',
+                jobType: 'import',
+                chunkNumber: 1,
+                totalChunks: 1,
+                chunkSize: 1
+            }));
+            expect(safeLog).toHaveBeenCalledWith('debug', 'Batch chunk completed', expect.objectContaining({
+                jobId: 'j1',
+                jobType: 'import',
+                chunkNumber: 1,
+                totalChunks: 1,
+                chunkSize: 1,
+                durationMs: expect.any(Number)
+            }));
         }, 10000);
 
         it('should process adapt items', async () => {
