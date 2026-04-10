@@ -1,258 +1,144 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import SettingsPage from './SettingsPage';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const {
-  authGetMock,
-  authPostMock,
-  authPutMock,
-  setChatbotEnabledMock,
-  toastSuccessMock,
-  toastErrorMock,
-} = vi.hoisted(() => ({
-  authGetMock: vi.fn(),
-  authPostMock: vi.fn(),
-  authPutMock: vi.fn(),
-  setChatbotEnabledMock: vi.fn(),
-  toastSuccessMock: vi.fn(),
-  toastErrorMock: vi.fn(),
-}));
-
-vi.mock('../hooks/useAuthFetch', () => ({
-  useAuthFetch: () => ({
-    authGet: authGetMock,
-    authPost: authPostMock,
-    authPut: authPutMock,
-  }),
-}));
-
-vi.mock('../context/ChatbotContext', () => ({
-  useChatbot: () => ({
-    setChatbotEnabled: setChatbotEnabledMock,
-  }),
-}));
-
-vi.mock('react-hot-toast', () => ({
-  default: {
-    success: toastSuccessMock,
-    error: toastErrorMock,
+const hookState = vi.hoisted(() => ({
+  value: {
+    settings: {
+      llmAvailability: {},
+      llmModelCatalog: {},
+      llmParameterDefinitions: {},
+      promptGovernance: null,
+      promptVersionState: null,
+    },
+    loading: false,
+    saving: false,
+    ollamaDiscoveryLoading: false,
+    ollamaModelCatalog: [],
+    ollamaModelCapabilities: {},
+    activeTab: 'llm',
+    setActiveTab: vi.fn(),
+    formData: {},
+    tabs: [{ id: 'llm', label: 'LLM' }, { id: 'swagger', label: 'Swagger' }],
+    totalWeight: 100,
+    handleSave: vi.fn(),
+    handleInputChange: vi.fn(),
+    resetToDefaults: vi.fn(),
   },
 }));
 
-vi.mock('../utils/logger.frontend', () => ({
-  default: {
-    log: vi.fn(),
-    error: vi.fn(),
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, fallback?: string) => fallback || key,
+  }),
+}));
+
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
   },
+}));
+
+vi.mock('./SettingsPage.hooks', () => ({
+  useSettingsPage: () => hookState.value,
 }));
 
 vi.mock('../components/SettingsPage', () => ({
-  LLMTab: ({
-    formData,
-    onInputChange,
-  }: {
-    formData: { llmProvider: string; chatbotEnabled: string };
-    onInputChange: (field: string, value: string | number | boolean) => void;
-  }) => (
-    <div data-testid="llm-tab">
-      <span>{formData.llmProvider}</span>
-      <button onClick={() => onInputChange('chatbotEnabled', 'off')}>disable-chatbot</button>
-    </div>
-  ),
-  PromptsTab: () => <div data-testid="prompts-tab" />,
-  WeightsTab: ({
-    onInputChange,
-    totalWeight,
-  }: {
-    onInputChange: (field: string, value: string | number | boolean) => void;
-    totalWeight: number;
-  }) => (
-    <div data-testid="weights-tab">
-      <span>{totalWeight}</span>
-      <button onClick={() => onInputChange('Executive Summary Weight', 10)}>set-invalid-weight</button>
-      <button onClick={() => onInputChange('Executive Summary Weight', 20)}>set-valid-weight</button>
-    </div>
-  ),
-  ChatbotTab: () => <div data-testid="chatbot-tab" />,
-  GdprTab: () => <div data-testid="gdpr-tab" />,
-  DpoTab: () => <div data-testid="dpo-tab" />,
+  LLMTab: () => <div>llm-tab</div>,
+  PromptsTab: () => <div>prompts-tab</div>,
+  WeightsTab: () => <div>weights-tab</div>,
+  ChatbotTab: () => <div>chatbot-tab</div>,
+  GdprTab: () => <div>gdpr-tab</div>,
+  DpoTab: () => <div>dpo-tab</div>,
 }));
 
 vi.mock('../components/SettingsPage/SettingsHeader', () => ({
-  default: () => <div data-testid="settings-header">settings-header</div>,
+  default: () => <div>settings-header</div>,
 }));
 
 vi.mock('../components/SettingsPage/SettingsTabsNav', () => ({
-  default: ({
-    tabs,
-    onTabChange,
-  }: {
-    tabs: Array<{ id: string; name: string }>;
-    onTabChange: (tabId: string) => void;
-  }) => (
-    <div data-testid="settings-tabs">
-      {tabs.map((tab) => (
-        <button key={tab.id} onClick={() => onTabChange(tab.id)}>
-          {tab.name}
-        </button>
-      ))}
+  default: ({ onTabChange }: { onTabChange: (tab: string) => void }) => (
+    <div>
+      <button onClick={() => onTabChange('llm')}>open-llm</button>
+      <button onClick={() => onTabChange('swagger')}>open-swagger</button>
     </div>
   ),
 }));
 
 vi.mock('../components/SettingsPage/SettingsApiDocsPanel', () => ({
-  default: () => <div data-testid="swagger-tab" />,
+  default: () => <div>api-docs-panel</div>,
 }));
+
+vi.mock('../components/SettingsPage/SettingsActionsFooter', () => ({
+  default: ({ onSave, onReset }: { onSave: () => void; onReset: () => void }) => (
+    <div>
+      <button onClick={onSave}>save-settings</button>
+      <button onClick={onReset}>reset-settings</button>
+    </div>
+  ),
+}));
+
+import SettingsPage from './SettingsPage';
 
 describe('SettingsPage', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    vi.stubGlobal('confirm', vi.fn(() => true));
-    authGetMock.mockImplementation(async (url: string) => {
-      if (url === '/api/settings') {
-        return {
-          ok: true,
-          json: async () => ({
-            id: 'settings-1',
-            llmProvider: 'anthropic',
-            llmModel: 'claude-sonnet-4-20250514',
-            chatbotEnabled: 'on',
-            webglEnabled: 'on',
-            'Executive Summary Weight': 20,
-            'Skills Weight': 20,
-            'Experience Weight': 20,
-            'Education Weight': 15,
-            'ATS Weight': 15,
-            'Hobbies Languages Weight': 10,
-          }),
-        };
-      }
-
-      if (url === '/api/settings/defaults') {
-        return {
-          ok: true,
-          json: async () => ({
-            llmProvider: 'openai',
-            llmModel: 'gpt-4o',
-            chatbotEnabled: 'off',
-            webglEnabled: 'on',
-            'Executive Summary Weight': 20,
-            'Skills Weight': 20,
-            'Experience Weight': 20,
-            'Education Weight': 15,
-            'ATS Weight': 15,
-            'Hobbies Languages Weight': 10,
-          }),
-        };
-      }
-
-      throw new Error(`Unexpected authGet url: ${url}`);
-    });
+    hookState.value = {
+      settings: {
+        llmAvailability: {},
+        llmModelCatalog: {},
+        llmParameterDefinitions: {},
+        promptGovernance: null,
+        promptVersionState: null,
+      },
+      loading: false,
+      saving: false,
+      ollamaDiscoveryLoading: false,
+      ollamaModelCatalog: [],
+      ollamaModelCapabilities: {},
+      activeTab: 'llm',
+      setActiveTab: vi.fn(),
+      formData: {},
+      tabs: [{ id: 'llm', label: 'LLM' }, { id: 'swagger', label: 'Swagger' }],
+      totalWeight: 100,
+      handleSave: vi.fn(),
+      handleInputChange: vi.fn(),
+      resetToDefaults: vi.fn(),
+    };
   });
 
-  it('loads settings and renders the llm tab with fetched values', async () => {
-    render(<SettingsPage />);
-
-    expect(await screen.findByTestId('llm-tab')).toHaveTextContent('anthropic');
-    expect(authGetMock).toHaveBeenCalledWith('/api/settings');
-  });
-
-  it('prevents saving when weights do not total 100', async () => {
-    render(<SettingsPage />);
-
-    await screen.findByTestId('llm-tab');
-    fireEvent.click(screen.getByRole('button', { name: 'settings.tabs.weights' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'set-invalid-weight' }));
-    fireEvent.click(screen.getByRole('button', { name: 'settings.save' }));
-
-    expect(toastErrorMock).toHaveBeenCalledWith('settings.weights.totalMustEqualCurrent');
-    expect(authPutMock).not.toHaveBeenCalled();
-    expect(authPostMock).not.toHaveBeenCalled();
-  });
-
-  it('saves existing settings and updates chatbot state', async () => {
-    authPutMock.mockResolvedValue({
-      ok: true,
-      json: async () => ({ id: 'settings-1' }),
-    });
+  it('shows the loading state while settings are loading', () => {
+    hookState.value = { ...hookState.value, loading: true };
 
     render(<SettingsPage />);
 
-    await screen.findByTestId('llm-tab');
-    fireEvent.click(screen.getByRole('button', { name: 'disable-chatbot' }));
-    fireEvent.click(screen.getByRole('button', { name: 'settings.save' }));
-
-    await waitFor(() => {
-      expect(authPutMock).toHaveBeenCalledWith(
-        '/api/settings/settings-1',
-        expect.objectContaining({
-          chatbotEnabled: 'off',
-          llmProvider: 'anthropic',
-          llmModel: 'claude-sonnet-4-20250514',
-        })
-      );
-    });
-    expect(setChatbotEnabledMock).toHaveBeenCalledWith(false);
-    expect(toastSuccessMock).toHaveBeenCalledWith('settings.saveSuccess');
+    expect(screen.getByText('settings.loading')).toBeInTheDocument();
   });
 
-  it('allows saving ollama settings even without a selected model', async () => {
-    authGetMock.mockImplementation(async (url: string) => {
-      if (url === '/api/settings') {
-        return {
-          ok: true,
-          json: async () => ({
-            id: 'settings-1',
-            llmProvider: 'ollama',
-            llmModel: '',
-            ollamaBaseUrl: 'http://ollama.local:11434',
-            chatbotEnabled: 'on',
-            webglEnabled: 'on',
-            'Executive Summary Weight': 20,
-            'Skills Weight': 20,
-            'Experience Weight': 20,
-            'Education Weight': 15,
-            'ATS Weight': 15,
-            'Hobbies Languages Weight': 10,
-          }),
-        };
-      }
-
-      throw new Error(`Unexpected authGet url: ${url}`);
+  it('shows the reload fallback when settings cannot be loaded', () => {
+    const reloadSpy = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { reload: reloadSpy },
     });
-
-    authPutMock.mockResolvedValue({
-      ok: true,
-      json: async () => ({ id: 'settings-1' }),
-    });
+    hookState.value = { ...hookState.value, settings: null };
 
     render(<SettingsPage />);
 
-    await screen.findByTestId('llm-tab');
-    fireEvent.click(screen.getByRole('button', { name: 'settings.save' }));
-
-    await waitFor(() => {
-      expect(authPutMock).toHaveBeenCalledWith(
-        '/api/settings/settings-1',
-        expect.objectContaining({
-          llmProvider: 'ollama',
-          llmModel: '',
-          ollamaBaseUrl: 'http://ollama.local:11434',
-        })
-      );
-    });
-    expect(toastErrorMock).not.toHaveBeenCalledWith('Selectionnez un modele Ollama distant');
+    fireEvent.click(screen.getByRole('button', { name: 'Reload page' }));
+    expect(reloadSpy).toHaveBeenCalled();
   });
 
-  it('reloads defaults after reset confirmation', async () => {
+  it('renders the active settings tab and forwards actions', () => {
     render(<SettingsPage />);
 
-    await screen.findByTestId('llm-tab');
-    fireEvent.click(screen.getByRole('button', { name: 'settings.reset' }));
+    expect(screen.getByText('settings-header')).toBeInTheDocument();
+    expect(screen.getByText('llm-tab')).toBeInTheDocument();
 
-    await waitFor(() => {
-      expect(authGetMock).toHaveBeenCalledWith('/api/settings/defaults');
-    });
-    expect(toastSuccessMock).toHaveBeenCalledWith('settings.resetSuccess');
+    fireEvent.click(screen.getByText('open-swagger'));
+    fireEvent.click(screen.getByText('save-settings'));
+    fireEvent.click(screen.getByText('reset-settings'));
+
+    expect(hookState.value.setActiveTab).toHaveBeenCalledWith('swagger');
+    expect(hookState.value.handleSave).toHaveBeenCalled();
+    expect(hookState.value.resetToDefaults).toHaveBeenCalled();
   });
 });

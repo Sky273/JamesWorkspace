@@ -16,6 +16,16 @@ import {
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import type { PipelineEntry, PipelineStage } from '../../services/pipelineService';
+import {
+  getPipelineEntryAnalysisPath,
+  getPipelineEntryBadge,
+  getPipelineEntryDateLabel,
+  getPipelineEntryDisplayName,
+  getPipelineEntryInterviewCta,
+  getPipelineEntryScore,
+  getPipelineEntryTags,
+  getStageEntrySummary,
+} from './MissionPipelineKanban.view-model';
 
 interface LoadingStateProps {
   loading: boolean;
@@ -62,18 +72,17 @@ interface KanbanBoardProps {
 }
 
 function renderScore(score?: number) {
-  if (!score) {
+  const scoreModel = getPipelineEntryScore(score);
+  if (!scoreModel) {
     return null;
   }
 
-  const stars = Math.round(score / 20);
-
   return (
     <div className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-500/20">
-      <span className="text-xs font-semibold">{score}%</span>
+      <span className="text-xs font-semibold">{scoreModel.value}%</span>
       <div className="flex items-center gap-0.5">
         {[1, 2, 3, 4, 5].map((index) =>
-          index <= stars ? (
+          index <= scoreModel.stars ? (
             <StarIconSolid key={index} className="h-3.5 w-3.5 text-amber-400" />
           ) : (
             <StarIcon key={index} className="h-3.5 w-3.5 text-amber-200 dark:text-amber-900/60" />
@@ -82,12 +91,6 @@ function renderScore(score?: number) {
       </div>
     </div>
   );
-}
-
-function getEntryAnalysisPath(entry: PipelineEntry) {
-  return entry.adaptation_id
-    ? `/adaptations/${entry.adaptation_id}`
-    : `/resumes/${entry.resume_id}/analysis`;
 }
 
 function CandidateCard({
@@ -109,7 +112,12 @@ function CandidateCard({
   onRemove: (entry: PipelineEntry) => void;
   texts: KanbanBoardTexts;
 }) {
-  const hasInterviews = Boolean(entry.interview_count && entry.interview_count > 0);
+  const badge = getPipelineEntryBadge(entry);
+  const displayName = getPipelineEntryDisplayName(entry, texts.unknownCandidate);
+  const { visibleTags, hiddenCount } = getPipelineEntryTags(entry);
+  const interviewCta = getPipelineEntryInterviewCta(entry, formatDate, texts);
+  const analysisPath = getPipelineEntryAnalysisPath(entry);
+  const dateLabel = getPipelineEntryDateLabel(entry, formatDate);
 
   return (
     <article
@@ -127,27 +135,21 @@ function CandidateCard({
             <ArrowsRightLeftIcon className="h-3.5 w-3.5" />
             {texts.dragAndDrop}
           </div>
-          {entry.adaptation_id ? (
+          {badge ? (
             <div className="mb-2">
-              <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20">
-                Adapté
-              </span>
-            </div>
-          ) : entry.has_mission_adaptation ? (
-            <div className="mb-2">
-              <span className="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-500/20">
-                Original
+              <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${badge.className}`}>
+                {badge.label}
               </span>
             </div>
           ) : null}
           <Link
-            to={getEntryAnalysisPath(entry)}
+            to={analysisPath}
             className="flex w-full min-w-0 flex-1 items-start gap-2 text-left text-sm font-semibold text-slate-900 transition-colors hover:text-[var(--cv-primary)] dark:text-[var(--cv-text)] dark:hover:text-white"
           >
             <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20">
               <UserIcon className="h-4 w-4" />
             </span>
-            <span className="block min-w-0 flex-1 text-base leading-tight">{entry.resume_name || texts.unknownCandidate}</span>
+            <span className="block min-w-0 flex-1 text-base leading-tight">{displayName}</span>
           </Link>
         </div>
         <div className="mt-3 flex items-start justify-between gap-2">
@@ -163,9 +165,9 @@ function CandidateCard({
         </div>
       </div>
 
-      {entry.tags && entry.tags.length > 0 ? (
+      {visibleTags.length > 0 ? (
         <div className="mb-3 flex flex-wrap gap-1.5">
-          {entry.tags.slice(0, 4).map((tag, index) => (
+          {visibleTags.map((tag, index) => (
             <span
               key={`${entry.id}-${tag}-${index}`}
               className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-blue-700 ring-1 ring-blue-100 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20"
@@ -173,9 +175,9 @@ function CandidateCard({
               {tag}
             </span>
           ))}
-          {entry.tags.length > 4 ? (
+          {hiddenCount > 0 ? (
             <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-500 dark:bg-white/5 dark:text-[var(--cv-muted)]">
-              +{entry.tags.length - 4}
+              +{hiddenCount}
             </span>
           ) : null}
         </div>
@@ -192,7 +194,7 @@ function CandidateCard({
       <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-200/80 pt-3 text-xs text-slate-500 dark:border-white/10 dark:text-[var(--cv-muted)]">
         <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 dark:bg-white/5">
           <CalendarDaysIcon className="h-3.5 w-3.5" />
-          {formatDate(entry.moved_at || entry.created_at)}
+          {dateLabel}
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -210,7 +212,7 @@ function CandidateCard({
             <ChatBubbleLeftRightIcon className="h-4 w-4" />
           </button>
           <Link
-            to={getEntryAnalysisPath(entry)}
+            to={analysisPath}
             className="inline-flex h-9 w-9 items-center justify-center rounded-2xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-[var(--cv-muted)] dark:hover:bg-white/10 dark:hover:text-white"
             title={texts.viewResume}
           >
@@ -225,10 +227,10 @@ function CandidateCard({
       >
         <span className="inline-flex items-center gap-2">
           <VideoCameraIcon className="h-4 w-4" />
-          {hasInterviews ? `${entry.interview_count} ${texts.interviews}` : texts.scheduleInterview}
+          {interviewCta.label}
         </span>
         <span className="text-xs text-purple-500 dark:text-purple-200/80">
-          {hasInterviews && entry.next_interview ? formatDate(entry.next_interview) : '→'}
+          {interviewCta.meta}
         </span>
       </button>
     </article>
@@ -301,7 +303,7 @@ function StageColumn({
           </span>
         </div>
         <div className="rounded-[1.15rem] bg-slate-50/80 px-3 py-2 text-xs text-slate-500 ring-1 ring-slate-200/70 dark:bg-white/[0.03] dark:text-[var(--cv-muted)] dark:ring-white/10">
-          {isDropTarget ? 'Déposez le candidat ici' : `${stageEntries.length} profil${stageEntries.length > 1 ? 's' : ''} dans cette étape`}
+          {getStageEntrySummary(stageEntries.length, isDropTarget)}
         </div>
       </header>
 

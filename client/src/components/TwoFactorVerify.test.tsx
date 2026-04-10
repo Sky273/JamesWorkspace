@@ -55,9 +55,9 @@ describe('TwoFactorVerify', () => {
   it('keeps verify disabled for short codes', () => {
     renderTwoFactorVerify();
 
-    fireEvent.change(screen.getByPlaceholderText('000000'), { target: { value: '123' } });
+    fireEvent.change(screen.getByPlaceholderText('twoFactor.codePlaceholder'), { target: { value: '123' } });
 
-    expect(screen.getByRole('button', { name: 'Verifier' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'twoFactor.verifyButton' })).toBeDisabled();
   });
 
   it('verifies the code and calls onSuccess on success', async () => {
@@ -65,8 +65,8 @@ describe('TwoFactorVerify', () => {
     const onSuccess = vi.fn();
     renderTwoFactorVerify({ onSuccess });
 
-    fireEvent.change(screen.getByPlaceholderText('000000'), { target: { value: '123456' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Verifier' }));
+    fireEvent.change(screen.getByPlaceholderText('twoFactor.codePlaceholder'), { target: { value: '123456' } });
+    fireEvent.click(screen.getByRole('button', { name: 'twoFactor.verifyButton' }));
 
     await waitFor(() => {
       expect(mockSignIn).toHaveBeenCalledWith('john@example.com', 'secret', '123456');
@@ -81,8 +81,8 @@ describe('TwoFactorVerify', () => {
     mockSignIn.mockRejectedValue(new Error('Code invalide'));
     renderTwoFactorVerify();
 
-    fireEvent.change(screen.getByPlaceholderText('000000'), { target: { value: '123456' } });
-    fireEvent.keyDown(screen.getByPlaceholderText('000000'), { key: 'Enter' });
+    fireEvent.change(screen.getByPlaceholderText('twoFactor.codePlaceholder'), { target: { value: '123456' } });
+    fireEvent.keyDown(screen.getByPlaceholderText('twoFactor.codePlaceholder'), { key: 'Enter' });
 
     expect(await screen.findByText('Code invalide')).toBeInTheDocument();
     expect(mockToastError).toHaveBeenCalledWith('Code invalide', { id: '2fa-verify' });
@@ -92,7 +92,7 @@ describe('TwoFactorVerify', () => {
     const onCancel = vi.fn();
     renderTwoFactorVerify({ onCancel });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Annuler' }));
+    fireEvent.click(screen.getByRole('button', { name: 'twoFactor.cancelButton' }));
     expect(onCancel).toHaveBeenCalled();
   });
 });

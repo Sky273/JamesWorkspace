@@ -5,78 +5,30 @@ import { useTranslation } from 'react-i18next';
 
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import logger from '../utils/logger.frontend';
-
-export interface Mission {
-  id: string;
-  Title?: string;
-  Content?: string;
-  Firm?: string;
-  'Firm ID'?: string;
-  'Created At'?: string;
-  Status?: 'Active' | 'Closed' | 'Draft';
-  'Client ID'?: string;
-  'Client Name'?: string;
-  'Client Type'?: string;
-  'Contact ID'?: string;
-  'Contact Name'?: string;
-  'Contact Email'?: string;
-  'Contact Role'?: string;
-  'Deal ID'?: string;
-  'Deal Title'?: string;
-  'Deal Status'?: string;
-  [key: string]: unknown;
-}
-
-export interface Client {
-  id: string;
-  name: string;
-  type: string;
-}
-
-export interface Contact {
-  id: string;
-  name: string;
-  email?: string;
-  role?: string;
-}
-
-export interface Deal {
-  id: string;
-  title: string;
-  status: string;
-  client_name?: string;
-}
-
-export interface MissionFormData {
-  Title: string;
-  Content: string;
-  Status: 'Active' | 'Closed' | 'Draft';
-  'Client ID': string;
-  'Contact ID': string;
-  'Firm ID': string;
-  'Deal ID': string;
-}
-
-export interface MissionStats {
-  total: number;
-  firms: number;
-  linkedDeals: number;
-  active: number;
-  draft: number;
-  closed: number;
-}
-
-export type MissionViewMode = 'list' | 'byDeal';
+import {
+  buildMissionFormData,
+  buildMissionsSearchParams,
+  buildMissionSubmitPayload,
+  computeMissionStats,
+  EMPTY_MISSION_FORM,
+  getInitialMissionViewMode,
+  type Client,
+  type Contact,
+  type Deal,
+  type Mission,
+  type MissionFormData,
+  type MissionStats,
+  type MissionViewMode,
+} from './MissionsPage.data';
 export const MISSIONS_PAGE_SIZE = 12;
-
-const EMPTY_FORM: MissionFormData = {
-  Title: '',
-  Content: '',
-  Status: 'Active',
-  'Client ID': '',
-  'Contact ID': '',
-  'Firm ID': '',
-  'Deal ID': '',
+export type {
+  Client,
+  Contact,
+  Deal,
+  Mission,
+  MissionFormData,
+  MissionStats,
+  MissionViewMode,
 };
 
 export function useMissionsDashboard() {
@@ -96,7 +48,7 @@ export function useMissionsDashboard() {
   const [editingMission, setEditingMission] = useState<Mission | null>(null);
   const [missionPendingDelete, setMissionPendingDelete] = useState<Mission | null>(null);
   const [isDeletingMission, setIsDeletingMission] = useState(false);
-  const [formData, setFormData] = useState<MissionFormData>(EMPTY_FORM);
+  const [formData, setFormData] = useState<MissionFormData>(EMPTY_MISSION_FORM);
   const [clients, setClients] = useState<Client[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -104,7 +56,7 @@ export function useMissionsDashboard() {
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [loadingDeals, setLoadingDeals] = useState(false);
   const [viewMode, setViewMode] = useState<MissionViewMode>(
-    (location.state as { viewMode?: string } | null)?.viewMode === 'list' ? 'list' : 'byDeal'
+    getInitialMissionViewMode((location.state as { viewMode?: string } | null)?.viewMode)
   );
   const editorReadyRef = useRef(false);
 
@@ -194,12 +146,7 @@ export function useMissionsDashboard() {
   const fetchMissions = useCallback(async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      params.append('page', String(currentPage));
-      params.append('limit', String(MISSIONS_PAGE_SIZE));
-      if (debouncedSearch) {
-        params.append('search', debouncedSearch);
-      }
+      const params = buildMissionsSearchParams(currentPage, MISSIONS_PAGE_SIZE, debouncedSearch);
 
       const response = await authGet(`/api/missions?${params.toString()}`);
       if (!response.ok) {
@@ -233,7 +180,7 @@ export function useMissionsDashboard() {
 
   const resetForm = useCallback(() => {
     setEditingMission(null);
-    setFormData(EMPTY_FORM);
+    setFormData(EMPTY_MISSION_FORM);
     setContacts([]);
     editorReadyRef.current = false;
   }, []);
@@ -250,15 +197,7 @@ export function useMissionsDashboard() {
 
   const handleEdit = useCallback((mission: Mission) => {
     setEditingMission(mission);
-    setFormData({
-      Title: mission.Title || '',
-      Content: mission.Content || '',
-      Status: mission.Status || 'Active',
-      'Client ID': mission['Client ID'] || '',
-      'Contact ID': mission['Contact ID'] || '',
-      'Firm ID': mission['Firm ID'] || '',
-      'Deal ID': mission['Deal ID'] || '',
-    });
+    setFormData(buildMissionFormData(mission));
     setShowModal(true);
   }, []);
 
@@ -289,18 +228,7 @@ export function useMissionsDashboard() {
     event.preventDefault();
 
     try {
-      const dataToSend: Record<string, unknown> = {
-        Title: formData.Title,
-        Content: formData.Content,
-        Status: formData.Status,
-        'Client ID': formData['Client ID'] || null,
-        'Contact ID': formData['Contact ID'] || null,
-        'Deal ID': formData['Deal ID'] || null,
-      };
-
-      if (formData['Firm ID']) {
-        dataToSend.firm_id = formData['Firm ID'];
-      }
+      const dataToSend = buildMissionSubmitPayload(formData);
 
       const response = editingMission
         ? await authPut(`/api/missions/${editingMission.id}`, dataToSend)
@@ -373,14 +301,7 @@ export function useMissionsDashboard() {
     return t('missions.messages.deleteConfirmNamed', { defaultValue: 'Supprimer définitivement la mission « {{title}} » ?', title: missionTitle });
   }, [missionPendingDelete, t]);
 
-  const stats: MissionStats = {
-    total: totalCount,
-    firms: [...new Set(missions.map((mission) => mission.Firm).filter(Boolean))].length,
-    linkedDeals: missions.filter((mission) => Boolean(mission['Deal ID'])).length,
-    active: missions.filter((mission) => mission.Status === 'Active').length,
-    draft: missions.filter((mission) => mission.Status === 'Draft').length,
-    closed: missions.filter((mission) => mission.Status === 'Closed').length,
-  };
+  const stats = useMemo(() => computeMissionStats(missions, totalCount), [missions, totalCount]);
 
   return {
     clients,

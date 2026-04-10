@@ -7,61 +7,22 @@ import { useAuthFetch } from '../hooks/useAuthFetch';
 import type { Resume } from '../types/entities';
 import { formatDate } from '../utils/dateFormatter';
 import logger from '../utils/logger.frontend';
-
-export interface TagsByCategory {
-  Skills: string[];
-  Industries: string[];
-  Tools: string[];
-  'Soft Skills': string[];
-  [key: string]: string[];
-}
-
-export interface ResumeStats {
-  total: number;
-  improved: number;
-  processing: number;
-  avgScore: number;
-}
+import {
+  buildResumesSearchParams,
+  computeResumeStats,
+  EMPTY_TAGS,
+  filterResumesByTags,
+  getResumePreviewTags,
+  normalizeResumeStatsResponse,
+  type ResumeStats,
+  type TagsByCategory,
+} from './ResumesPage.data';
 
 export type ResumeViewMode = 'list' | 'byDeal';
 
 export const RESUMES_PAGE_SIZE = 20;
-
-const EMPTY_TAGS: TagsByCategory = {
-  Skills: [],
-  Industries: [],
-  Tools: [],
-  'Soft Skills': [],
-};
-
-function parseResumeTags(value: unknown): string[] {
-  if (!value) return [];
-
-  try {
-    if (typeof value === 'string') {
-      const parsed = JSON.parse(value);
-      return Array.isArray(parsed) ? parsed.map((tag) => String(tag)) : [];
-    }
-
-    if (Array.isArray(value)) {
-      return value.map((tag) => String(tag));
-    }
-  } catch {
-    return [];
-  }
-
-  return [];
-}
-
-export function getResumePreviewTags(resume: Resume, category: 'Skills' | 'Industries' | 'Tools' | 'Soft Skills'): string[] {
-  const cleanedField = `${category} Cleaned` as keyof Resume;
-  const cleanedTags = parseResumeTags(resume[cleanedField]);
-  if (cleanedTags.length > 0) {
-    return cleanedTags;
-  }
-
-  return parseResumeTags(resume[category]);
-}
+export { getResumePreviewTags };
+export type { ResumeStats, TagsByCategory };
 
 export function useResumesDashboard() {
   const { user: authUser } = useAuth();
@@ -99,12 +60,7 @@ export function useResumesDashboard() {
   const fetchResumes = useCallback(async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      params.append('page', String(currentPage));
-      params.append('limit', String(RESUMES_PAGE_SIZE));
-      if (debouncedSearch) {
-        params.append('search', debouncedSearch);
-      }
+      const params = buildResumesSearchParams(currentPage, RESUMES_PAGE_SIZE, debouncedSearch);
 
       const response = await authGet(`/api/resumes?${params.toString()}`);
       if (!response.ok) {
@@ -143,12 +99,7 @@ export function useResumesDashboard() {
       }
 
       const data = await response.json();
-      setGlobalStats({
-        total: data.resumes?.total || 0,
-        improved: data.resumes?.improved || 0,
-        processing: 0,
-        avgScore: data.scores?.averageImproved || data.scores?.averageOriginal || 0,
-      });
+      setGlobalStats(normalizeResumeStatsResponse(data as Record<string, unknown>));
     } catch (error) {
       logger.error('Error fetching global stats:', error);
     }
@@ -178,32 +129,13 @@ export function useResumesDashboard() {
   }, [authGet, viewMode]);
 
   const filteredResumes = useMemo(() => {
-    if (selectedTags.length === 0) {
-      return resumes;
-    }
-
-    return resumes.filter((resume) => {
-      const skills = parseResumeTags(resume['Skills_cleaned' as keyof Resume]) || parseResumeTags(resume['Skills' as keyof Resume]);
-      const industries = parseResumeTags(resume['Industries_cleaned' as keyof Resume]) || parseResumeTags(resume['Industries' as keyof Resume]);
-      const tools = parseResumeTags(resume['Tools_cleaned' as keyof Resume]) || parseResumeTags(resume['Tools' as keyof Resume]);
-      const softSkills = parseResumeTags(resume['Soft Skills_cleaned' as keyof Resume]) || parseResumeTags(resume['Soft Skills' as keyof Resume]);
-      const resumeTags = [...skills, ...industries, ...tools, ...softSkills].map((tag) => tag.toLowerCase().trim());
-
-      return selectedTags.every((selectedTag) =>
-        resumeTags.some((resumeTag) => resumeTag === selectedTag.toLowerCase().trim())
-      );
-    });
+    return filterResumesByTags(resumes, selectedTags);
   }, [resumes, selectedTags]);
 
-  const stats = useMemo<ResumeStats>(() => ({
-    total: globalStats.total || totalCount,
-    improved: globalStats.improved,
-    processing: resumes.filter((resume) => {
-      const status = resume.Status?.toLowerCase();
-      return status === 'processing' || status === 'analyzing';
-    }).length,
-    avgScore: globalStats.avgScore,
-  }), [globalStats, resumes, totalCount]);
+  const stats = useMemo<ResumeStats>(
+    () => computeResumeStats(resumes, globalStats, totalCount),
+    [globalStats, resumes, totalCount]
+  );
 
   const totalPages = Math.ceil(totalCount / RESUMES_PAGE_SIZE);
 

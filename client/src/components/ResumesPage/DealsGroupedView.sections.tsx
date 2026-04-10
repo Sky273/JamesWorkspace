@@ -24,6 +24,11 @@ import {
   INITIAL_RESUMES_LIMIT,
   TAG_FILTER_COLORS,
 } from './dealsGrouped.types';
+import {
+  CATEGORY_PREVIEW_LIMIT,
+  getActiveFilterCategory,
+  getVisibleFilterCategories,
+} from './DealsGroupedView.filters';
 import DealSection from './DealSection';
 
 const categoryIcons = {
@@ -32,25 +37,6 @@ const categoryIcons = {
   Tools: WrenchScrewdriverIcon,
   'Soft Skills': UserGroupIcon,
 } as const;
-
-const CATEGORY_ORDER = ['Skills', 'Industries', 'Tools', 'Soft Skills'] as const;
-const CATEGORY_PREVIEW_LIMIT = 8;
-
-function normalizeTagValue(value: string) {
-  return value.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').trim();
-}
-
-function sortTags(tags: string[], selectedTags: string[]) {
-  const selected = new Set(selectedTags);
-  return [...tags].sort((left, right) => {
-    const leftSelected = selected.has(left);
-    const rightSelected = selected.has(right);
-    if (leftSelected !== rightSelected) {
-      return leftSelected ? -1 : 1;
-    }
-    return left.localeCompare(right, undefined, { sensitivity: 'base' });
-  });
-}
 
 interface FilterPanelProps {
   allTags: TagsByCategory;
@@ -81,47 +67,11 @@ export function FilterPanel({
   );
 
   const visibleCategories = useMemo(() => {
-    const normalizedGlobalQuery = normalizeTagValue(globalTagQuery);
-
-    return CATEGORY_ORDER.map((category) => {
-      const categoryTags = allTags[category] || [];
-      const localQuery = categoryQueries[category] || '';
-      const normalizedLocalQuery = normalizeTagValue(localQuery);
-      const filteredTags = sortTags(
-        categoryTags.filter((tag) => {
-          const normalizedTag = normalizeTagValue(tag);
-          if (normalizedGlobalQuery && !normalizedTag.includes(normalizedGlobalQuery)) {
-            return false;
-          }
-          if (normalizedLocalQuery && !normalizedTag.includes(normalizedLocalQuery)) {
-            return false;
-          }
-          return true;
-        }),
-        selectedTags
-      );
-
-      return {
-        category,
-        allTags: categoryTags,
-        filteredTags,
-        previewTags: filteredTags.slice(0, CATEGORY_PREVIEW_LIMIT),
-      };
-    }).filter(({ allTags: categoryTags, filteredTags }) => categoryTags.length > 0 && (normalizedGlobalQuery ? filteredTags.length > 0 : true));
+    return getVisibleFilterCategories(allTags, selectedTags, globalTagQuery, categoryQueries);
   }, [allTags, categoryQueries, globalTagQuery, selectedTags]);
 
   const activeCategoryData = useMemo(() => {
-    if (!activeCategory) {
-      return null;
-    }
-
-    return visibleCategories.find(({ category }) => category === activeCategory)
-      || {
-        category: activeCategory,
-        allTags: allTags[activeCategory] || [],
-        filteredTags: sortTags(allTags[activeCategory] || [], selectedTags),
-        previewTags: [],
-      };
+    return getActiveFilterCategory(activeCategory, visibleCategories, allTags, selectedTags);
   }, [activeCategory, allTags, selectedTags, visibleCategories]);
 
   if (!isFilterExpanded || (visibleData.totalAssigned <= 0 && visibleData.totalUnassigned <= 0 && !Object.values(allTags).some((tags) => tags.length > 0))) {

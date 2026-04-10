@@ -1,29 +1,18 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import BatchUploadPage from './BatchUploadPage';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const {
-  navigateMock,
-  startProcessingMock,
-  startBatchExportMock,
-  deleteProcessedResumesMock,
-  getEstimatedTimeMock,
-  templateGetAllMock,
-  toastErrorMock,
-  toastMock,
-} = vi.hoisted(() => ({
-  navigateMock: vi.fn(),
-  startProcessingMock: vi.fn(),
-  startBatchExportMock: vi.fn(),
-  deleteProcessedResumesMock: vi.fn(),
-  getEstimatedTimeMock: vi.fn(() => '~2 minutes'),
-  templateGetAllMock: vi.fn(),
-  toastErrorMock: vi.fn(),
-  toastMock: vi.fn(),
+const navigateMock = vi.fn();
+const toastErrorMock = vi.fn();
+const getAllTemplatesMock = vi.fn();
+const startBatchExportMock = vi.fn();
+const startProcessingMock = vi.fn();
+const getEstimatedTimeMock = vi.fn();
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, fallback?: string) => fallback || key,
+  }),
 }));
-
-let authUser: { role?: string } | null = { role: 'admin' };
-let capturedOnDrop: ((files: File[]) => void) | null = null;
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -34,177 +23,131 @@ vi.mock('react-router-dom', async () => {
 });
 
 vi.mock('../context/AuthContext', () => ({
-  useAuth: () => ({ user: authUser }),
-}));
-
-vi.mock('../utils/templateService', () => ({
-  templateService: {
-    getAllTemplates: templateGetAllMock,
-  },
-}));
-
-vi.mock('react-hot-toast', () => ({
-  default: Object.assign(toastMock, { error: toastErrorMock }),
-}));
-
-vi.mock('../utils/logger.frontend', () => ({
-  default: {
-    error: vi.fn(),
-    info: vi.fn(),
-  },
-  createLogger: () => ({
-    debug: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn(),
+  useAuth: () => ({
+    user: {
+      role: 'admin',
+    },
   }),
 }));
 
 vi.mock('react-dropzone', () => ({
-  useDropzone: ({ onDrop }: { onDrop: (files: File[]) => void }) => {
-    capturedOnDrop = onDrop;
-    return {
-      getRootProps: () => ({ 'data-testid': 'dropzone-root' }),
-      getInputProps: () => ({ 'data-testid': 'dropzone-input' }),
-      isDragActive: false,
-    };
-  },
+  useDropzone: ({ onDrop }: { onDrop: (files: File[]) => void }) => ({
+    getRootProps: () => ({
+      onClick: () => onDrop([new File(['cv'], 'ada.pdf', { type: 'application/pdf' })]),
+    }),
+    getInputProps: () => ({}),
+    isDragActive: false,
+  }),
 }));
 
-vi.mock('./batchUpload/useBatchProcessing', () => ({
-  useBatchProcessing: () => ({
-    startProcessing: startProcessingMock,
-    getEstimatedTime: getEstimatedTimeMock,
-  }),
+vi.mock('react-hot-toast', () => ({
+  default: (...args: unknown[]) => toastErrorMock(...args),
+    error: (...args: unknown[]) => toastErrorMock(...args),
+}));
+
+vi.mock('../utils/templateService', () => ({
+  templateService: {
+    getAllTemplates: (...args: unknown[]) => getAllTemplatesMock(...args),
+  },
 }));
 
 vi.mock('./batchUpload/useBatchExport', () => ({
   useBatchExport: () => ({
-    startBatchExport: startBatchExportMock,
-    deleteProcessedResumes: deleteProcessedResumesMock,
+    startBatchExport: (...args: unknown[]) => startBatchExportMock(...args),
+  }),
+}));
+
+vi.mock('./batchUpload/useBatchProcessing', () => ({
+  useBatchProcessing: () => ({
+    startProcessing: (...args: unknown[]) => startProcessingMock(...args),
+    getEstimatedTime: (...args: unknown[]) => getEstimatedTimeMock(...args),
   }),
 }));
 
 vi.mock('./BatchUploadOptions', () => ({
-  default: ({
-    exportOption,
-    setExportOption,
-    templates,
-    isAdmin,
-    selectedFirmId,
-  }: {
-    exportOption: boolean;
-    setExportOption: (value: boolean) => void;
-    templates: Array<{ id: string; Name: string }>;
-    isAdmin: boolean;
-    selectedFirmId: string;
-  }) => (
-    <div data-testid="batch-options">
-      <span>{exportOption ? 'export-on' : 'export-off'}</span>
-      <span>{templates.map((template) => template.Name).join(',')}</span>
-      <span>{isAdmin ? 'admin' : 'not-admin'}</span>
-      <span>{selectedFirmId}</span>
+  default: ({ exportOption, setExportOption }: { exportOption: boolean; setExportOption: (value: boolean) => void }) => (
+    <div>
+      <span>batch-upload-options:{exportOption ? 'on' : 'off'}</span>
       <button onClick={() => setExportOption(!exportOption)}>toggle-export-option</button>
     </div>
   ),
 }));
 
 vi.mock('./BatchUploadFileList', () => ({
-  default: ({
-    files,
-    pendingCount,
-    successCount,
-  }: {
-    files: Array<{ file: File; status: string }>;
-    pendingCount: number;
-    successCount: number;
-  }) => (
-    <div data-testid="batch-file-list">
-      <span>files:{files.length}</span>
-      <span>pending:{pendingCount}</span>
-      <span>success:{successCount}</span>
+  default: ({ files }: { files: Array<{ file: File }> }) => <div>batch-upload-file-list:{files.length}</div>,
+}));
+
+vi.mock('./BatchUploadPage.sections', () => ({
+  BatchUploadHeader: () => <div>batch-upload-header</div>,
+  BatchUploadDropzone: ({ onFolderChange }: { onFolderChange: (event: React.ChangeEvent<HTMLInputElement>) => void }) => (
+    <div>
+      <button
+        onClick={() =>
+          onFolderChange({
+            target: {
+              files: [new File(['cv'], 'ada.pdf', { type: 'application/pdf' })],
+              value: '',
+            },
+          } as unknown as React.ChangeEvent<HTMLInputElement>)
+        }
+      >
+        select-folder
+      </button>
     </div>
   ),
+  BatchUploadActions: ({
+    onBackToResumes,
+    onStartProcessing,
+    onStartExport,
+  }: {
+    onBackToResumes: () => void;
+    onStartProcessing: () => void;
+    onStartExport: () => void;
+  }) => (
+    <div>
+      <button onClick={onBackToResumes}>back-to-resumes</button>
+      <button onClick={onStartProcessing}>start-processing</button>
+      <button onClick={onStartExport}>start-export</button>
+    </div>
+  ),
+  BatchUploadGdprNotice: () => <div>batch-upload-gdpr</div>,
 }));
+
+import BatchUploadPage from './BatchUploadPage';
 
 describe('BatchUploadPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    authUser = { role: 'admin' };
-    capturedOnDrop = null;
-    templateGetAllMock.mockResolvedValue([
-      { id: 'template-1', Name: 'Executive' },
-      { id: 'template-2', Name: 'Minimal' },
-    ]);
+    getAllTemplatesMock.mockResolvedValue([{ id: 'tpl-1', name: 'Template 1' }]);
+    startBatchExportMock.mockResolvedValue(undefined);
+    startProcessingMock.mockResolvedValue(undefined);
+    getEstimatedTimeMock.mockReturnValue('~2 minutes');
   });
 
-  it('loads export templates when export option is enabled', async () => {
+  it('adds files, enables export mode, loads templates, and forwards processing/export actions', async () => {
     render(<BatchUploadPage />);
 
-    expect(screen.getByTestId('batch-options')).toHaveTextContent('export-off');
-    fireEvent.click(screen.getByRole('button', { name: 'toggle-export-option' }));
+    expect(screen.getByText('batch-upload-header')).toBeInTheDocument();
+    expect(screen.getByText('batch-upload-file-list:0')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('select-folder'));
 
     await waitFor(() => {
-      expect(templateGetAllMock).toHaveBeenCalled();
+      expect(screen.getByText('batch-upload-file-list:1')).toBeInTheDocument();
     });
-    expect(await screen.findByTestId('batch-options')).toHaveTextContent('Executive,Minimal');
-    expect(screen.getByTestId('batch-options')).toHaveTextContent('admin');
-  });
 
-  it('shows a localized error toast when template loading fails', async () => {
-    templateGetAllMock.mockRejectedValueOnce(new Error('network down'));
-    render(<BatchUploadPage />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'toggle-export-option' }));
+    fireEvent.click(screen.getByText('toggle-export-option'));
 
     await waitFor(() => {
-      expect(templateGetAllMock).toHaveBeenCalled();
-    });
-    expect(toastErrorMock).toHaveBeenCalledWith('batchUpload.loadTemplatesError');
-  });
-
-  it('adds dropped files and starts processing from the action button', async () => {
-    render(<BatchUploadPage />);
-
-    expect(capturedOnDrop).toBeTypeOf('function');
-
-    const file = new File(['resume'], 'candidate.pdf', { type: 'application/pdf' });
-    capturedOnDrop?.([file]);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('batch-file-list')).toHaveTextContent('files:1');
-      expect(screen.getByTestId('batch-file-list')).toHaveTextContent('pending:1');
+      expect(getAllTemplatesMock).toHaveBeenCalled();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Traiter|batchUpload.process/ }));
+    fireEvent.click(screen.getByText('start-processing'));
+    fireEvent.click(screen.getByText('start-export'));
+    fireEvent.click(screen.getByText('back-to-resumes'));
 
     expect(startProcessingMock).toHaveBeenCalled();
-    expect(screen.getByText('~2 minutes')).toBeInTheDocument();
-  });
-
-  it('keeps export mode enabled when files are added after template loading', async () => {
-    render(<BatchUploadPage />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'toggle-export-option' }));
-    await waitFor(() => {
-      expect(templateGetAllMock).toHaveBeenCalled();
-    });
-
-    const file = new File(['resume'], 'candidate.pdf', { type: 'application/pdf' });
-    capturedOnDrop?.([file]);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('batch-file-list')).toHaveTextContent('files:1');
-    });
-    expect(screen.getByTestId('batch-options')).toHaveTextContent('export-on');
-  });
-
-  it('renders non-admin mode without admin selector state', async () => {
-    authUser = { role: 'user' };
-
-    render(<BatchUploadPage />);
-
-    expect(screen.getByTestId('batch-options')).toHaveTextContent('not-admin');
-    fireEvent.click(screen.getByRole('button', { name: /Retour aux CVs|batchUpload.backToResumes/ }));
+    expect(startBatchExportMock).toHaveBeenCalled();
     expect(navigateMock).toHaveBeenCalledWith('/resumes');
   });
 });

@@ -25,7 +25,7 @@ import ConsentBadge from '../components/ConsentBadge';
 import { ManageResumeDealsModal } from '../components/ResumesPage';
 import { SkeletonResumeList } from '../components/ui/Skeleton';
 import type { Resume } from '../types/entities';
-import { getResumePreviewTags, type TagsByCategory } from './ResumesPage.hooks';
+import { getResumePreviewTags, type TagsByCategory } from './ResumesPage.data';
 
 export const filterContentVariants: Variants = {
   expanded: {

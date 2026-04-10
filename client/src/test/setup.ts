@@ -39,6 +39,13 @@ Object.defineProperty(window, 'open', {
   value: vi.fn(() => null),
 });
 
+// Prevent happy-dom from delegating anchor navigation to the host OS on Windows
+Object.defineProperty(HTMLAnchorElement.prototype, 'click', {
+  configurable: true,
+  writable: true,
+  value: vi.fn(),
+});
+
 // Mock localStorage
 const localStorageMock = {
   getItem: vi.fn(),

@@ -6,13 +6,15 @@ import toast from 'react-hot-toast';
 import clientService from '../utils/clientService';
 import logger from '../utils/logger.frontend';
 import type { Client, ClientContact } from '../types/entities';
-
-export interface ClientsStats {
-  totalClients: number;
-  totalProspects: number;
-  totalContacts: number;
-  totalSubmissions: number;
-}
+import {
+  buildCrmTabSearchParams,
+  computeClientsStats,
+  getClientTypeFilter,
+  getInitialCrmTab,
+  type ClientFilter,
+  type ClientsStats,
+  type CRMTab,
+} from './ClientsPage.data';
 
 export interface DeleteTarget {
   id: string;
@@ -20,15 +22,13 @@ export interface DeleteTarget {
   type: 'client' | 'contact';
   clientId?: string;
 }
-
-export type CRMTab = 'clients' | 'deals' | 'interviews';
-export type ClientFilter = 'all' | 'client' | 'prospect';
 export const CLIENTS_PAGE_SIZE = 12;
+export type { ClientFilter, ClientsStats, CRMTab };
 
 export function useClientsDashboard() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [crmTab, setCrmTab] = useState<CRMTab>((searchParams.get('tab') as CRMTab) || 'clients');
+  const [crmTab, setCrmTab] = useState<CRMTab>(getInitialCrmTab(searchParams.get('tab')));
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ClientFilter>('all');
@@ -56,7 +56,7 @@ export function useClientsDashboard() {
   const fetchData = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
-      const typeFilter = activeTab === 'all' ? '' : activeTab;
+      const typeFilter = getClientTypeFilter(activeTab);
       const result = await clientService.getClients({
         page,
         pageSize: CLIENTS_PAGE_SIZE,
@@ -79,15 +79,7 @@ export function useClientsDashboard() {
     void fetchData();
   }, [fetchData]);
 
-  const stats = useMemo<ClientsStats>(
-    () => ({
-      totalClients: clients.filter((client) => client.type === 'client').length,
-      totalProspects: clients.filter((client) => client.type === 'prospect').length,
-      totalContacts: clients.reduce((sum, client) => sum + Number(client.contacts_count || 0), 0),
-      totalSubmissions: clients.reduce((sum, client) => sum + Number(client.submissions_count || 0), 0),
-    }),
-    [clients]
-  );
+  const stats = useMemo<ClientsStats>(() => computeClientsStats(clients), [clients]);
 
   const totalPages = Math.ceil(totalCount / CLIENTS_PAGE_SIZE);
 
@@ -183,25 +175,17 @@ export function useClientsDashboard() {
 
   const goToClientsTab = useCallback(() => {
     setCrmTab('clients');
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set('tab', 'clients');
-    nextParams.delete('clientId');
-    setSearchParams(nextParams);
+    setSearchParams(buildCrmTabSearchParams(searchParams, 'clients', { removeClientId: true }));
   }, [searchParams, setSearchParams]);
 
   const goToDealsTab = useCallback(() => {
     setCrmTab('deals');
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set('tab', 'deals');
-    setSearchParams(nextParams);
+    setSearchParams(buildCrmTabSearchParams(searchParams, 'deals'));
   }, [searchParams, setSearchParams]);
 
   const goToInterviewsTab = useCallback(() => {
     setCrmTab('interviews');
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set('tab', 'interviews');
-    nextParams.delete('clientId');
-    setSearchParams(nextParams);
+    setSearchParams(buildCrmTabSearchParams(searchParams, 'interviews', { removeClientId: true }));
   }, [searchParams, setSearchParams]);
 
   return {

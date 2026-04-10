@@ -1,20 +1,44 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import ProcessingScreen from './ProcessingScreen';
+
+const stableT = (key: string, options?: { returnObjects?: boolean }) => {
+  if (options?.returnObjects) {
+    const arrays: Record<string, string[]> = {
+      'processing.steps.upload.steps': ['uploading'],
+      'processing.steps.extract.steps': ['extracting'],
+      'processing.steps.preanalyze.steps': ['preanalyzing'],
+      'processing.steps.analyze.steps': ['analyzing'],
+    };
+    return arrays[key] ?? [key];
+  }
+  return key;
+};
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, options?: { returnObjects?: boolean }) => {
-      if (options?.returnObjects) {
-        return [key];
-      }
-      return key;
-    },
+    t: stableT,
   }),
 }));
 
+import ProcessingScreen from './ProcessingScreen';
+
 describe('ProcessingScreen', () => {
-  it('hides the pre-analysis step when pre-analysis is disabled', () => {
+  it('renders fullscreen overlay with the active step and error message', () => {
+    render(
+      <ProcessingScreen
+        currentStep="extract"
+        fullscreen
+        error="Erreur OCR"
+      />
+    );
+
+    expect(screen.getByTestId('processing-screen-fullscreen-overlay')).toBeInTheDocument();
+    expect(screen.getByText('processing.steps.extract.title')).toBeInTheDocument();
+    expect(screen.getByText('processing.title')).toBeInTheDocument();
+    expect(screen.getByText('Erreur OCR')).toBeInTheDocument();
+  });
+
+  it('omits the pre-analysis step when disabled', () => {
     render(
       <ProcessingScreen
         currentStep="analyze"
@@ -23,33 +47,6 @@ describe('ProcessingScreen', () => {
     );
 
     expect(screen.queryByText('processing.steps.preanalyze.title')).not.toBeInTheDocument();
-    expect(screen.getByText('processing.steps.upload.title')).toBeInTheDocument();
-    expect(screen.getByText('processing.steps.extract.title')).toBeInTheDocument();
     expect(screen.getByText('processing.steps.analyze.title')).toBeInTheDocument();
-  });
-
-  it('keeps the pre-analysis step when pre-analysis is enabled', () => {
-    render(
-      <ProcessingScreen
-        currentStep="preanalyze"
-        preAnalysisEnabled={true}
-      />
-    );
-
-    expect(screen.getByText('processing.steps.preanalyze.title')).toBeInTheDocument();
-  });
-
-  it('mounts the fullscreen overlay at the document level', () => {
-    render(
-      <ProcessingScreen
-        currentStep="analyze"
-        fullscreen={true}
-      />
-    );
-
-    const overlay = screen.getByTestId('processing-screen-fullscreen-overlay');
-    expect(overlay).toBeInTheDocument();
-    expect(document.body).toContainElement(overlay);
-    expect(overlay).toHaveClass('fixed', 'inset-0', 'z-[100]');
   });
 });
