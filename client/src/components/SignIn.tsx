@@ -83,7 +83,12 @@ const SignIn = (): JSX.Element => {
       navigate('/');
     } catch (authError) {
       logger.error('Sign in failed:', authError);
-      setError(t('errors.unauthorized'));
+      const rawMessage = authError instanceof Error ? authError.message : '';
+      setError(
+        rawMessage.includes('Password replacement required')
+          ? rawMessage
+          : t('errors.unauthorized')
+      );
     } finally {
       setLoading(false);
     }

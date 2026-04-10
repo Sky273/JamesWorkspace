@@ -22,7 +22,11 @@
     "phonePlaceholder": "Ex: +33 6 12 34 56 78",
     "firm": "Cabinet",
     "passwordTitle": "Mot de passe",
-    "passwordHelp": "Pour changer votre mot de passe, contactez votre administrateur.",
+    "passwordHelp": "Vous pouvez demander un lien sécurisé pour définir un nouveau mot de passe.",
+    "passwordEmailNotice": "Le lien de changement de mot de passe sera envoyé à votre adresse email via le compte Gmail configuré dans la configuration RGPD.",
+    "requestPasswordReset": "Recevoir un lien de changement de mot de passe",
+    "passwordRequestSuccess": "Un email contenant un lien de changement de mot de passe a été envoyé.",
+    "passwordRequestError": "Erreur lors de l'envoi du lien de changement de mot de passe",
     "updateSuccess": "Profil mis à jour",
     "updateError": "Erreur lors de la mise à jour"
   }

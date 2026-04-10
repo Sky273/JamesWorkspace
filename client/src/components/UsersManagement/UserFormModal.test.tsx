@@ -22,7 +22,7 @@ describe('UserFormModal', () => {
     { id: 'firm-2', name: 'Globex' },
   ];
 
-  it('submits a new admin user with the selected firm', () => {
+  it('submits a new admin user with the selected firm and no password field', () => {
     const onSubmit = vi.fn();
     const { container } = render(
       <UserFormModal
@@ -40,7 +40,6 @@ describe('UserFormModal', () => {
 
     fireEvent.change(textInputs[0], { target: { value: 'Lookman' } });
     fireEvent.change(textInputs[1], { target: { value: 'lookman@yopmail.com' } });
-    fireEvent.change(textInputs[4], { target: { value: 'Password123!' } });
     fireEvent.change(selects[0], { target: { value: 'firm-1' } });
     fireEvent.change(selects[1], { target: { value: 'admin' } });
     fireEvent.change(selects[2], { target: { value: 'Active' } });
@@ -50,11 +49,11 @@ describe('UserFormModal', () => {
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Lookman',
       email: 'lookman@yopmail.com',
-      password: 'Password123!',
       firmId: 'firm-1',
       role: 'admin',
       status: 'Active',
     }));
+    expect(container.querySelector('input[type="password"]')).not.toBeInTheDocument();
   });
 
   it('pre-fills an existing user and does not render the password field in edit mode', () => {

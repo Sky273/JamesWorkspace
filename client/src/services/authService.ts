@@ -61,7 +61,6 @@ export interface SignInResponse {
 
 export interface CreateUserData {
   email: string;
-  password: string;
   name: string;
   jobTitle?: string;
   phone?: string;
@@ -73,7 +72,6 @@ export interface CreateUserData {
 export interface UpdateUserData {
   name?: string;
   email?: string;
-  password?: string;
   jobTitle?: string;
   phone?: string;
   role?: string;

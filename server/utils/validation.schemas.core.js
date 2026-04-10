@@ -33,7 +33,6 @@ export const resetPasswordSchema = z.object({
 
 export const createUserSchema = z.object({
   email: emailSchema,
-  password: passwordSchema,
   name: nameSchema,
   jobTitle: z.string().max(255).optional(),
   phone: z.string().max(50).optional(),
@@ -154,7 +153,6 @@ export const lowercaseEnum = (values) => z.preprocess(
 export const updateAdminUserSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   email: z.string().email().optional(),
-  password: z.string().min(6).max(100).optional(),
   status: lowercaseEnum(['active', 'inactive', 'pending']).optional(),
   role: lowercaseEnum(['user', 'admin']).optional(),
   jobTitle: z.string().max(255).optional().nullable(),

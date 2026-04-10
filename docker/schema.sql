@@ -1365,6 +1365,7 @@ CREATE TABLE public.users (
     totp_pending_secret text,
     totp_pending_backup_codes text,
     totp_enabled_at timestamp with time zone,
+    must_change_password boolean DEFAULT false NOT NULL,
     CONSTRAINT users_role_check CHECK (((role)::text = ANY (ARRAY[('admin'::character varying)::text, ('user'::character varying)::text]))),
     CONSTRAINT users_status_check CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('inactive'::character varying)::text, ('pending'::character varying)::text])))
 );

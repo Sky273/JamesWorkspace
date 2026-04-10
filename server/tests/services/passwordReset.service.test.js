@@ -1,6 +1,5 @@
 /**
  * Tests for Password Reset Service
- * Tests token generation, rate limiting, reset flow, and cleanup
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -29,6 +28,7 @@ import { query } from '../../config/database.js';
 import { sendEmail } from '../../services/mail/gdprMailService.js';
 import {
     PASSWORD_RESET_EMAIL_DELIVERY_FAILED_CODE,
+    PASSWORD_RESET_EMAIL_TYPES,
     requestPasswordReset,
     resetPassword,
     cleanupExpiredTokens
@@ -40,8 +40,8 @@ describe('Password Reset Service', () => {
     });
 
     describe('requestPasswordReset', () => {
-        it('should return success even if user not found (prevent enumeration)', async () => {
-            query.mockResolvedValueOnce({ rows: [] }); // user not found
+        it('should return success even if user not found', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
 
             const result = await requestPasswordReset('unknown@test.com');
 
@@ -58,10 +58,10 @@ describe('Password Reset Service', () => {
             expect(sendEmail).not.toHaveBeenCalled();
         });
 
-        it('should return success if rate limited (without revealing it)', async () => {
+        it('should return success if rate limited', async () => {
             query
-                .mockResolvedValueOnce({ rows: [{ id: 'u1', name: 'User', email: 'u@t.com', status: 'active' }] }) // find user
-                .mockResolvedValueOnce({ rows: [{ count: '3' }] }); // rate limit exceeded
+                .mockResolvedValueOnce({ rows: [{ id: 'u1', name: 'User', email: 'u@t.com', status: 'active' }] })
+                .mockResolvedValueOnce({ rows: [{ count: '3' }] });
 
             const result = await requestPasswordReset('u@t.com');
 
@@ -71,10 +71,10 @@ describe('Password Reset Service', () => {
 
         it('should send reset email on valid request', async () => {
             query
-                .mockResolvedValueOnce({ rows: [{ id: 'u1', name: 'User', email: 'u@t.com', status: 'active' }] }) // find user
-                .mockResolvedValueOnce({ rows: [{ count: '0' }] }) // rate limit OK
-                .mockResolvedValueOnce({ rows: [] }) // invalidate existing tokens
-                .mockResolvedValueOnce({ rows: [] }); // insert new token
+                .mockResolvedValueOnce({ rows: [{ id: 'u1', name: 'User', email: 'u@t.com', status: 'active' }] })
+                .mockResolvedValueOnce({ rows: [{ count: '0' }] })
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [] });
             sendEmail.mockResolvedValueOnce();
 
             const result = await requestPasswordReset('u@t.com');
@@ -85,7 +85,26 @@ describe('Password Reset Service', () => {
             expect(sendEmail.mock.calls[0][0].subject).toContain('Réinitialisation');
         });
 
-        it('should still return success if email sending fails', async () => {
+        it('should mark user and send invite email when requested', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [{ id: 'u1', name: 'User', email: 'u@t.com', status: 'active' }] })
+                .mockResolvedValueOnce({ rows: [{ count: '0' }] })
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [] });
+            sendEmail.mockResolvedValueOnce();
+
+            const result = await requestPasswordReset('u@t.com', {
+                emailType: PASSWORD_RESET_EMAIL_TYPES.INVITE,
+                markUserAsMustChangePassword: true
+            });
+
+            expect(result.success).toBe(true);
+            expect(query.mock.calls[4][0]).toContain('must_change_password = true');
+            expect(sendEmail.mock.calls[0][0].subject).toContain('Invitation ResumeConverter');
+        });
+
+        it('should reject with delivery error metadata when email sending fails', async () => {
             query
                 .mockResolvedValueOnce({ rows: [{ id: 'u1', name: 'User', email: 'u@t.com', status: 'active' }] })
                 .mockResolvedValueOnce({ rows: [{ count: '0' }] })
@@ -111,8 +130,12 @@ describe('Password Reset Service', () => {
 
         it('should return token_used if already used', async () => {
             query.mockResolvedValueOnce({ rows: [{
-                id: 't1', user_id: 'u1', expires_at: new Date(Date.now() + 3600000),
-                used_at: new Date(), email: 'u@t.com', status: 'active'
+                id: 't1',
+                user_id: 'u1',
+                expires_at: new Date(Date.now() + 3600000),
+                used_at: new Date(),
+                email: 'u@t.com',
+                status: 'active'
             }] });
 
             const result = await resetPassword('sometoken', 'newpass');
@@ -122,8 +145,12 @@ describe('Password Reset Service', () => {
 
         it('should return token_expired if expired', async () => {
             query.mockResolvedValueOnce({ rows: [{
-                id: 't1', user_id: 'u1', expires_at: new Date(Date.now() - 1000),
-                used_at: null, email: 'u@t.com', status: 'active'
+                id: 't1',
+                user_id: 'u1',
+                expires_at: new Date(Date.now() - 1000),
+                used_at: null,
+                email: 'u@t.com',
+                status: 'active'
             }] });
 
             const result = await resetPassword('sometoken', 'newpass');
@@ -133,8 +160,12 @@ describe('Password Reset Service', () => {
 
         it('should return account_inactive for inactive users', async () => {
             query.mockResolvedValueOnce({ rows: [{
-                id: 't1', user_id: 'u1', expires_at: new Date(Date.now() + 3600000),
-                used_at: null, email: 'u@t.com', status: 'inactive'
+                id: 't1',
+                user_id: 'u1',
+                expires_at: new Date(Date.now() + 3600000),
+                used_at: null,
+                email: 'u@t.com',
+                status: 'inactive'
             }] });
 
             const result = await resetPassword('sometoken', 'newpass');
@@ -142,19 +173,23 @@ describe('Password Reset Service', () => {
             expect(result).toEqual({ success: false, error: 'account_inactive' });
         });
 
-        it('should reset password successfully', async () => {
+        it('should reset password successfully and clear must_change_password', async () => {
             query
                 .mockResolvedValueOnce({ rows: [{
-                    id: 't1', user_id: 'u1', expires_at: new Date(Date.now() + 3600000),
-                    used_at: null, email: 'u@t.com', status: 'active'
-                }] }) // find token
-                .mockResolvedValueOnce({ rows: [] }) // update password
-                .mockResolvedValueOnce({ rows: [] }); // mark token used
+                    id: 't1',
+                    user_id: 'u1',
+                    expires_at: new Date(Date.now() + 3600000),
+                    used_at: null,
+                    email: 'u@t.com',
+                    status: 'active'
+                }] })
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [] });
 
             const result = await resetPassword('validtoken', 'newSecurePass');
 
             expect(result).toEqual({ success: true });
-            expect(query.mock.calls[1][0]).toContain('UPDATE users SET password');
+            expect(query.mock.calls[1][0]).toContain('must_change_password = false');
             expect(query.mock.calls[2][0]).toContain('UPDATE password_reset_tokens SET used_at');
         });
     });

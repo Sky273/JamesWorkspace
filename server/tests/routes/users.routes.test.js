@@ -36,6 +36,7 @@ const mockCreateAdminUser = vi.fn();
 const mockFindUserById = vi.fn();
 const mockUpdateAdminUser = vi.fn();
 const mockDeleteUser = vi.fn();
+const mockRequestPasswordReset = vi.fn();
 vi.mock('../../services/users.service.js', () => ({
     findUserByEmail: (...args) => mockFindUserByEmail(...args),
     findFirmById: (...args) => mockFindFirmById(...args),
@@ -43,6 +44,13 @@ vi.mock('../../services/users.service.js', () => ({
     findUserById: (...args) => mockFindUserById(...args),
     updateAdminUser: (...args) => mockUpdateAdminUser(...args),
     deleteUser: (...args) => mockDeleteUser(...args)
+}));
+vi.mock('../../services/passwordReset.service.js', () => ({
+    PASSWORD_RESET_EMAIL_TYPES: {
+        INVITE: 'invite',
+        FORCE_CHANGE: 'force_change'
+    },
+    requestPasswordReset: (...args) => mockRequestPasswordReset(...args)
 }));
 
 // Mock security service
@@ -142,10 +150,14 @@ describe('Users Routes', () => {
             const res = await request(app)
                 .post('/api/auth/users')
                 .set(authHeader)
-                .send({ email: 'new@example.com', password: 'Password123!', name: 'New User', firmId: 'f-1' });
+                .send({ email: 'new@example.com', name: 'New User', firmId: 'f-1' });
 
             expect(res.status).toBe(201);
             expect(res.body.email).toBe('new@example.com');
+            expect(mockRequestPasswordReset).toHaveBeenCalledWith('new@example.com', expect.objectContaining({
+                emailType: 'invite',
+                markUserAsMustChangePassword: true
+            }));
         });
 
         it('should return 409 if user already exists', async () => {
@@ -154,7 +166,7 @@ describe('Users Routes', () => {
             const res = await request(app)
                 .post('/api/auth/users')
                 .set(authHeader)
-                .send({ email: 'existing@example.com', password: 'Password123!', name: 'Existing', firmId: 'f-1' });
+                .send({ email: 'existing@example.com', name: 'Existing', firmId: 'f-1' });
 
             expect(res.status).toBe(409);
             expect(res.body.error).toContain('already exists');
@@ -166,7 +178,7 @@ describe('Users Routes', () => {
             const res = await request(app)
                 .post('/api/auth/users')
                 .set(authHeader)
-                .send({ email: 'new@example.com', password: 'Password123!', name: 'New User' });
+                .send({ email: 'new@example.com', name: 'New User' });
 
             expect(res.status).toBe(400);
             expect(res.body.error).toContain('Firm ID selection is required');
@@ -186,7 +198,7 @@ describe('Users Routes', () => {
             const res = await request(app)
                 .post('/api/auth/users')
                 .set(authHeader)
-                .send({ email: 'new@example.com', password: 'Pass123!', name: 'New User', firmId: 'f-1' });
+                .send({ email: 'new@example.com', name: 'New User', firmId: 'f-1' });
 
             expect(res.status).toBe(201);
         });
@@ -207,7 +219,6 @@ describe('Users Routes', () => {
                 .set(authHeader)
                 .send({
                     email: 'NEW@Example.com',
-                    password: 'Pass12345!',
                     name: 'New User',
                     firm_id: 'f-1',
                     role: 'Admin',
@@ -219,6 +230,7 @@ describe('Users Routes', () => {
                 email: 'new@example.com',
                 role: 'admin',
                 status: 'active',
+                must_change_password: true,
                 firm_id: 'f-1',
                 firm_name: 'Acme Corp'
             }));
@@ -231,7 +243,7 @@ describe('Users Routes', () => {
             const res = await request(app)
                 .post('/api/auth/users')
                 .set(authHeader)
-                .send({ email: 'new@example.com', password: 'Pass123!', name: 'New User', firmId: 'firm-missing' });
+                .send({ email: 'new@example.com', name: 'New User', firmId: 'firm-missing' });
 
             expect(res.status).toBe(400);
             expect(res.body.error).toContain('not found');
@@ -241,7 +253,7 @@ describe('Users Routes', () => {
             const res = await request(app)
                 .post('/api/auth/users')
                 .set({ ...authHeader, 'x-test-role': 'user' })
-                .send({ email: 'new@example.com', password: 'Pass123!', name: 'New User' });
+                .send({ email: 'new@example.com', name: 'New User' });
 
             expect(res.status).toBe(403);
         });
@@ -254,9 +266,41 @@ describe('Users Routes', () => {
             const res = await request(app)
                 .post('/api/auth/users')
                 .set(authHeader)
-                .send({ email: 'new@example.com', password: 'Pass123!', name: 'New User', firmId: 'f-1' });
+                .send({ email: 'new@example.com', name: 'New User', firmId: 'f-1' });
 
             expect(res.status).toBe(500);
+        });
+    });
+
+    describe('POST /api/auth/users/:id/force-password-reset', () => {
+        it('should force password replacement and send email', async () => {
+            mockFindUserById.mockResolvedValueOnce({
+                id: 'u-1',
+                email: 'user@example.com',
+                name: 'User'
+            });
+
+            const res = await request(app)
+                .post('/api/auth/users/u-1/force-password-reset')
+                .set(authHeader)
+                .send({});
+
+            expect(res.status).toBe(200);
+            expect(mockRequestPasswordReset).toHaveBeenCalledWith('user@example.com', expect.objectContaining({
+                emailType: 'force_change',
+                markUserAsMustChangePassword: true
+            }));
+        });
+
+        it('should return 404 when forcing password replacement on unknown user', async () => {
+            mockFindUserById.mockResolvedValueOnce(null);
+
+            const res = await request(app)
+                .post('/api/auth/users/missing/force-password-reset')
+                .set(authHeader)
+                .send({});
+
+            expect(res.status).toBe(404);
         });
     });
 
@@ -279,7 +323,7 @@ describe('Users Routes', () => {
             expect(res.body.name).toBe('New Name');
         });
 
-        it('should normalize updated email, role, status and password hash on update', async () => {
+        it('should normalize updated email, role and status on update', async () => {
             mockFindUserById.mockResolvedValueOnce({
                 id: 'u-1', email: 'old@example.com', name: 'Old Name', role: 'user', status: 'active'
             });
@@ -295,7 +339,6 @@ describe('Users Routes', () => {
                     email: 'NEXT@Example.com',
                     role: 'Admin',
                     status: 'Inactive',
-                    password: 'NewPass123!',
                     firm_id: 'f-1'
                 });
 
@@ -304,7 +347,6 @@ describe('Users Routes', () => {
                 email: 'next@example.com',
                 role: 'admin',
                 status: 'inactive',
-                password: 'hashed-password',
                 firm_id: 'f-1',
                 firm_name: 'Acme Corp'
             }));

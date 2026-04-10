@@ -147,6 +147,24 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
             return blockUnassignedUser(res);
         }
 
+        if (user.must_change_password) {
+            securityLog(LOG_LEVELS.WARNING, SECURITY_EVENTS.AUTH_BLOCKED, {
+                ...metadata,
+                email: normalizedEmail,
+                userId: user.id,
+                firm: user.firm_name,
+                role: user.role,
+                statusCode: 403,
+                action: 'LOGIN_ATTEMPT',
+                message: 'Login blocked until password is replaced',
+                metadata: { reason: 'password_change_required' }
+            });
+            return res.status(403).json({
+                error: 'Password replacement required. Check your email to define a new password.',
+                code: 'password_change_required'
+            });
+        }
+
         // Check if 2FA is enabled
         const has2FA = await is2FAEnabled(user.id);
         const { totpCode } = req.body;

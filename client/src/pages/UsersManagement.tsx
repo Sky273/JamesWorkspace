@@ -38,7 +38,7 @@ const UsersManagement = (): JSX.Element => {
     handleDeleteFirm,
     handleDeleteUser,
     handleFirmSubmit,
-    handlePasswordChange,
+    handleForcePasswordReset,
     handleUserSubmit,
     loading,
     openCreateFirm,
@@ -132,7 +132,7 @@ const UsersManagement = (): JSX.Element => {
       <PasswordModal
         isOpen={passwordModalOpen}
         onClose={closePasswordModal}
-        onSubmit={handlePasswordChange}
+        onSubmit={handleForcePasswordReset}
         userName={selectedUser?.name || ''}
         t={t}
       />

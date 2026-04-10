@@ -36,7 +36,6 @@ export interface DeleteTarget {
 export interface UserFormData {
   name: string;
   email: string;
-  password: string;
   jobTitle: string;
   phone: string;
   firmId: string;
@@ -162,14 +161,13 @@ export function useUsersManagementDashboard() {
         await userService.createUser({
           name: formData.name,
           email: formData.email,
-          password: formData.password,
           jobTitle: formData.jobTitle || '',
           phone: formData.phone || '',
           firmId: formData.firmId,
           role: capitalizedRole,
           status: formData.status,
         });
-        toast.success(t('users.management.messages.userCreated'));
+        toast.success(t('users.management.messages.userCreatedInvitationSent'));
       }
 
       setUserModalOpen(false);
@@ -198,19 +196,19 @@ export function useUsersManagementDashboard() {
     }
   }, [deleteTarget, fetchData, t]);
 
-  const handlePasswordChange = useCallback(async (newPassword: string) => {
+  const handleForcePasswordReset = useCallback(async () => {
     if (!selectedUser) {
       return;
     }
 
     try {
-      await userService.changeUserPassword(selectedUser.id, newPassword);
-      toast.success(t('users.management.messages.passwordChanged'));
+      await userService.forcePasswordReset(selectedUser.id);
+      toast.success(t('users.management.messages.passwordResetForced'));
       setPasswordModalOpen(false);
       setSelectedUser(null);
     } catch (error) {
-      logger.error('Error changing password:', error);
-      toast.error(t('users.management.messages.errorChangingPassword'));
+      logger.error('Error forcing password reset:', error);
+      toast.error(t('users.management.messages.errorForcingPasswordReset'));
     }
   }, [selectedUser, t]);
 
@@ -303,7 +301,7 @@ export function useUsersManagementDashboard() {
     handleDeleteFirm,
     handleDeleteUser,
     handleFirmSubmit,
-    handlePasswordChange,
+    handleForcePasswordReset,
     handleUserSubmit,
     loading,
     openCreateFirm: () => {

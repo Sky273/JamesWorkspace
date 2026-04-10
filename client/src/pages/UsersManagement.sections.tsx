@@ -108,7 +108,7 @@ export function UsersResultsGrid({
               <CardActionButton
                 icon={KeyIcon}
                 onClick={() => onPassword(user)}
-                title={t('users.management.actions.resetPassword')}
+                title={t('users.management.actions.forcePasswordReset')}
                 tone="info"
               />
               <CardActionButton

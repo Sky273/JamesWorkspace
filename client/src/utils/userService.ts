@@ -62,7 +62,6 @@ interface FirmFormData {
 interface UserFormData {
   name?: string;
   email?: string;
-  password?: string;
   jobTitle?: string;
   phone?: string;
   firmId?: string;
@@ -338,16 +337,16 @@ const userService = {
     }
   },
 
-  async changeUserPassword(userId: string, newPassword: string): Promise<{ message: string }> {
+  async forcePasswordReset(userId: string): Promise<{ message: string; success?: boolean }> {
     try {
-      const response = await authPut(`/api/auth/users/${userId}/password`, { password: newPassword });
+      const response = await authPost(`/api/auth/users/${userId}/force-password-reset`, {});
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to change password');
+        throw new Error(errorData.error || 'Failed to force password reset');
       }
       return await response.json();
     } catch (error) {
-      logger.error('Error changing password:', error);
+      logger.error('Error forcing password reset:', error);
       throw error;
     }
   },

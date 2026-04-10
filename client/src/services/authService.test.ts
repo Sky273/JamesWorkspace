@@ -255,7 +255,6 @@ describe('authService', () => {
 
             const result = await authService.createUser({
                 email: 'created@test.com',
-                password: 'pass123',
                 name: 'Created',
             });
 
@@ -269,7 +268,7 @@ describe('authService', () => {
             );
 
             await expect(
-                authService.createUser({ email: 'x@x.com', password: 'p', name: 'X' })
+                authService.createUser({ email: 'x@x.com', name: 'X' })
             ).rejects.toThrow('Forbidden');
         });
     });

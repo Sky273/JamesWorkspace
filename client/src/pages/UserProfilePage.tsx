@@ -19,6 +19,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import logger from '../utils/logger.frontend';
+import authService from '../services/authService';
 import TwoFactorSettings from '../components/TwoFactorSettings';
 import InputWithLeadingIcon from '../components/form/InputWithLeadingIcon';
 import PageHeader from '../components/page/PageHeader';
@@ -40,6 +41,7 @@ const UserProfilePage = (): JSX.Element => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sendingPasswordReset, setSendingPasswordReset] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     jobTitle: '',
@@ -88,6 +90,24 @@ const UserProfilePage = (): JSX.Element => {
       toast.error(t('userProfile.updateError'));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePasswordResetRequest = async () => {
+    if (!profile?.email) {
+      toast.error(t('userProfile.passwordRequestError'));
+      return;
+    }
+
+    setSendingPasswordReset(true);
+    try {
+      const result = await authService.forgotPassword(profile.email);
+      toast.success(result.message || t('userProfile.passwordRequestSuccess'));
+    } catch (error) {
+      logger.error('[UserProfile] Failed to request password reset:', error);
+      toast.error(t('userProfile.passwordRequestError'));
+    } finally {
+      setSendingPasswordReset(false);
     }
   };
 
@@ -231,6 +251,11 @@ const UserProfilePage = (): JSX.Element => {
             </div>
           </div>
 
+        </div>
+      )}
+
+      {activeTab === 'security' && (
+        <div className="space-y-6">
           <div className="section-shell rounded-[2rem] p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
               <KeyIcon className="h-6 w-6 text-blue-600" />
@@ -240,14 +265,19 @@ const UserProfilePage = (): JSX.Element => {
               {t('userProfile.passwordHelp')}
             </p>
             <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-200">
-              {t('userProfile.passwordExternalProviderNotice')}
+              {t('userProfile.passwordEmailNotice')}
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={handlePasswordResetRequest}
+                disabled={sendingPasswordReset}
+                className="btn btn-primary px-4 py-2 disabled:opacity-50"
+              >
+                {sendingPasswordReset ? t('common.loading') : t('userProfile.requestPasswordReset')}
+              </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {activeTab === 'security' && (
-        <div className="space-y-6">
           <TwoFactorSettings />
         </div>
       )}

@@ -22,7 +22,11 @@
     "phonePlaceholder": "E.g. +33 6 12 34 56 78",
     "firm": "Firm",
     "passwordTitle": "Password",
-    "passwordHelp": "To change your password, contact your administrator.",
+    "passwordHelp": "You can request a secure link to define a new password.",
+    "passwordEmailNotice": "The password change link will be sent to your email address using the Gmail account configured in GDPR settings.",
+    "requestPasswordReset": "Receive a password change link",
+    "passwordRequestSuccess": "An email with a password change link has been sent.",
+    "passwordRequestError": "Error sending the password change link",
     "updateSuccess": "Profile updated",
     "updateError": "Error updating profile"
   }

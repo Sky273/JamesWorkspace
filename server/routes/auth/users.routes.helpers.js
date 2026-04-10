@@ -6,7 +6,6 @@ export function normalizeAdminUserPayload(payload = {}) {
     return {
         ...normalized,
         email: normalized.email,
-        password: normalized.password,
         name: normalized.name,
         jobTitle: normalized.jobTitle,
         phone: normalized.phone,
@@ -28,7 +27,7 @@ export function normalizeRole(role) {
     return ['admin', 'user'].includes(normalizedRole) ? normalizedRole : 'user';
 }
 
-export function buildAdminUserUpdateData(normalizedPayload, currentUser, hashedPassword) {
+export function buildAdminUserUpdateData(normalizedPayload, currentUser) {
     const updateData = {};
     const name = normalizedPayload.name;
     const email = normalizedPayload.email;
@@ -45,9 +44,5 @@ export function buildAdminUserUpdateData(normalizedPayload, currentUser, hashedP
     if (role) updateData.role = role.toLowerCase();
     if (jobTitle !== undefined) updateData.job_title = jobTitle || null;
     if (phone !== undefined) updateData.phone = phone || null;
-    if (hashedPassword) {
-        updateData.password = hashedPassword;
-    }
-
     return updateData;
 }

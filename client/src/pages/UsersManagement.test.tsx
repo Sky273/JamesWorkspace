@@ -6,6 +6,7 @@ import UsersManagement from './UsersManagement';
 const getCustomersPaginatedMock = vi.fn();
 const getUsersPaginatedMock = vi.fn();
 const createUserMock = vi.fn();
+const forcePasswordResetMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
 
@@ -44,7 +45,7 @@ vi.mock('../utils/userService', () => ({
     createUser: (...args: unknown[]) => createUserMock(...args),
     updateUser: vi.fn(),
     deleteUser: vi.fn(),
-    changeUserPassword: vi.fn(),
+    forcePasswordReset: (...args: unknown[]) => forcePasswordResetMock(...args),
     updateCustomer: vi.fn(),
     createCustomer: vi.fn(),
     uploadFirmLogo: vi.fn(),
@@ -64,7 +65,6 @@ vi.mock('../components/UsersManagement', () => ({
     onSubmit: (data: {
       name: string;
       email: string;
-      password: string;
       jobTitle: string;
       phone: string;
       firmId: string;
@@ -77,7 +77,6 @@ vi.mock('../components/UsersManagement', () => ({
         onClick={() => onSubmit({
           name: 'Lookman',
           email: 'lookman@yopmail.com',
-          password: 'Password123!',
           jobTitle: '',
           phone: '',
           firmId: 'firm-1',
@@ -140,7 +139,6 @@ describe('UsersManagement', () => {
       expect(createUserMock).toHaveBeenCalledWith({
         name: 'Lookman',
         email: 'lookman@yopmail.com',
-        password: 'Password123!',
         jobTitle: '',
         phone: '',
         firmId: 'firm-1',
@@ -149,7 +147,7 @@ describe('UsersManagement', () => {
       });
     });
 
-    expect(toastSuccessMock).toHaveBeenCalledWith('users.management.messages.userCreated');
+    expect(toastSuccessMock).toHaveBeenCalledWith('users.management.messages.userCreatedInvitationSent');
     expect(getUsersPaginatedMock.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(getCustomersPaginatedMock.mock.calls.length).toBeGreaterThanOrEqual(2);
   });

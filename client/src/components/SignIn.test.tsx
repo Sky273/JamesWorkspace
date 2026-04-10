@@ -123,6 +123,17 @@ describe('SignIn', () => {
     expect(await screen.findByText('errors.unauthorized')).toBeInTheDocument();
   });
 
+  it('shows password replacement message when sign in is blocked for password renewal', async () => {
+    mockSignIn.mockRejectedValue(new Error('Password replacement required. Check your email to define a new password.'));
+    renderSignIn();
+
+    fireEvent.change(screen.getByPlaceholderText('auth.signIn.emailPlaceholder'), { target: { value: 'john@example.com' } });
+    fireEvent.change(screen.getByPlaceholderText('auth.signIn.passwordPlaceholder'), { target: { value: 'secret' } });
+    fireEvent.submit(screen.getByRole('button', { name: 'auth.signIn.signInButton' }).closest('form') as HTMLFormElement);
+
+    expect(await screen.findByText('Password replacement required. Check your email to define a new password.')).toBeInTheDocument();
+  });
+
   it('switches to 2FA verification when required', async () => {
     mockSignIn.mockResolvedValue({ requires2FA: true, userId: 'user-42' });
     renderSignIn();

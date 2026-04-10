@@ -4,12 +4,14 @@
 
 import express from 'express';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { SALT_ROUNDS } from '../../config/constants.js';
 import { authenticateToken, requireAdmin } from '../../middleware/auth.middleware.js';
 import { validateBody, validateParams, createUserSchema, updateAdminUserSchema } from '../../utils/validation.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../services/security.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import * as usersService from '../../services/users.service.js';
+import { PASSWORD_RESET_EMAIL_TYPES, requestPasswordReset } from '../../services/passwordReset.service.js';
 import {
     buildAdminUserUpdateData,
     normalizeAdminUserPayload,
@@ -23,7 +25,7 @@ const router = express.Router();
 router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSchema), async (req, res) => {
     try {
         const normalizedPayload = normalizeAdminUserPayload(req.body);
-        const { email, password, name, jobTitle, phone, status, role } = normalizedPayload;
+        const { email, name, jobTitle, phone, status, role } = normalizedPayload;
         const normalizedEmail = email.toLowerCase();
         const metadata = getRequestMetadata(req);
         const requestedFirmId = resolveRequiredFirmId(normalizedPayload);
@@ -34,7 +36,7 @@ router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSc
             return res.status(409).json({ error: 'User with this email already exists' });
         }
 
-        const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+        const hashedPassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), SALT_ROUNDS);
 
         const userData = {
             email: normalizedEmail,
@@ -43,7 +45,8 @@ router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSc
             job_title: jobTitle || null,
             phone: phone || null,
             role: normalizeRole(role),
-            status: (status || 'active').toLowerCase()
+            status: (status || 'active').toLowerCase(),
+            must_change_password: true
         };
 
         if (!requestedFirmId) {
@@ -63,6 +66,11 @@ router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSc
         }
 
         const newUser = await usersService.createAdminUser(userData);
+        await requestPasswordReset(normalizedEmail, {
+            emailType: PASSWORD_RESET_EMAIL_TYPES.INVITE,
+            markUserAsMustChangePassword: true,
+            skipRateLimit: true
+        });
 
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.USER_CREATED, {
             ...metadata,
@@ -80,11 +88,49 @@ router.post('/users', authenticateToken, requireAdmin, validateBody(createUserSc
             email: newUser.email,
             name: newUser.name,
             role: newUser.role,
-            status: newUser.status
+            status: newUser.status,
+            invitationSent: true
         });
     } catch (error) {
         safeLog('error', 'Create user error', { error: error.message });
         res.status(500).json({ error: 'Failed to create user' });
+    }
+});
+
+router.post('/users/:id/force-password-reset', authenticateToken, requireAdmin, validateParams('id'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const user = await usersService.findUserById(id);
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        await requestPasswordReset(user.email, {
+            emailType: PASSWORD_RESET_EMAIL_TYPES.FORCE_CHANGE,
+            markUserAsMustChangePassword: true,
+            skipRateLimit: true
+        });
+
+        securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.USER_UPDATED, {
+            ...getRequestMetadata(req),
+            userId: id,
+            updatedBy: req.user.id,
+            statusCode: 200,
+            action: 'USER_FORCE_PASSWORD_RESET',
+            message: 'Admin forced password replacement'
+        });
+
+        res.json({
+            success: true,
+            message: 'Password replacement email sent'
+        });
+    } catch (error) {
+        if (error.statusCode === 404) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        safeLog('error', 'Force password reset error', { error: error.message });
+        res.status(500).json({ error: 'Failed to force password reset' });
     }
 });
 
@@ -106,8 +152,7 @@ router.put('/users/:id', authenticateToken, requireAdmin, validateParams('id'), 
             updateData,
             buildAdminUserUpdateData(
                 normalizedPayload,
-                currentUser,
-                req.body.password ? await bcrypt.hash(req.body.password, SALT_ROUNDS) : null
+                currentUser
             )
         );
         

@@ -2,7 +2,7 @@
   "users": {
     "management": {
       "title": "User Management",
-      "subtitle": "Manage application users and companies",
+      "subtitle": "Manage application users and firms",
       "addUser": "Add User",
       "addFirm": "Add Firm",
       "noUsers": "No users found",
@@ -26,7 +26,8 @@
         "firms": "Firms"
       },
       "actions": {
-        "edit": "Edit"
+        "edit": "Edit",
+        "forcePasswordReset": "Force password replacement"
       },
       "modal": {
         "addUser": "Add User",
@@ -34,6 +35,7 @@
         "addFirm": "Add Firm",
         "editFirm": "Edit Firm",
         "changePassword": "Change Password",
+        "forcePasswordReset": "Force password replacement",
         "name": "Name",
         "email": "Email",
         "password": "Password",
@@ -59,12 +61,14 @@
       "messages": {
         "confirmDeleteUser": "Are you sure you want to delete this user? This action cannot be undone.",
         "userCreated": "User created successfully",
+        "userCreatedInvitationSent": "User created successfully. An invitation email has been sent.",
         "userUpdated": "User updated successfully",
         "userDeleted": "User deleted successfully",
         "firmCreated": "Firm created successfully",
         "firmUpdated": "Firm updated successfully",
         "firmDeleted": "Firm deleted successfully",
         "passwordChanged": "Password changed successfully",
+        "passwordResetForced": "Password replacement email sent successfully",
         "logoUploaded": "Logo uploaded successfully",
         "logoDeleted": "Logo deleted successfully",
         "logoUploadFailed": "Error uploading logo",
@@ -78,9 +82,13 @@
         "errorUpdatingFirm": "Error updating firm",
         "errorDeletingFirm": "Error deleting firm",
         "errorChangingPassword": "Error changing password",
+        "errorForcingPasswordReset": "Error sending password replacement email",
         "cannotDeleteFirmWithUsers": "Cannot delete this firm because users are associated with it",
         "passwordMinLength": "Password must be at least 8 characters",
-        "passwordMismatch": "Passwords do not match"
+        "passwordMismatch": "Passwords do not match",
+        "userInvitationNotice": "An invitation email will be sent to the user so they can define their password on first access.",
+        "forcePasswordResetDescription": "User {{name}} will be required to replace their password. A secure email link will be sent.",
+        "forcePasswordResetEmailNotice": "This email is sent with the Gmail account configured in GDPR settings."
       },
       "stats": {
         "totalUsers": "Total Users",

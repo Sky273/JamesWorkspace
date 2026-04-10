@@ -218,6 +218,27 @@ describe('Auth Routes - POST /api/auth/signin', () => {
             expect(res.body.error).toContain('inactive');
         });
 
+        it('should return 403 when password replacement is required', async () => {
+            mockFindUserWithFirmByEmail.mockResolvedValueOnce({
+                id: 'user-123',
+                email: 'test@example.com',
+                password: '$2a$10$hashedpassword',
+                status: 'active',
+                role: 'user',
+                firm_id: 'firm-123',
+                firm_name: 'Test Firm',
+                must_change_password: true
+            });
+            mockBcryptCompare.mockResolvedValueOnce(true);
+
+            const res = await request(app)
+                .post('/api/auth/signin')
+                .send({ email: 'test@example.com', password: 'password123' });
+
+            expect(res.status).toBe(403);
+            expect(res.body.code).toBe('password_change_required');
+        });
+
         it('should return 403 for active user without firm assignment', async () => {
             mockFindUserWithFirmByEmail.mockResolvedValueOnce({
                 id: 'user-123',
