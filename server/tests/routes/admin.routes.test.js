@@ -28,6 +28,37 @@ vi.mock('../../utils/logger.backend.js', () => ({
 }));
 
 // Mock cache stats
+vi.mock('../../services/cache.service.js', () => ({
+    getCacheRegistryStats: () => ({
+        settings: {
+            backend: 'memory',
+            disabledReason: null,
+            hits: 4,
+            misses: 1,
+            sets: 3,
+            invalidations: 1,
+            size: 2
+        },
+        templates: {
+            backend: 'memory',
+            disabledReason: null,
+            hits: 2,
+            misses: 3,
+            sets: 5,
+            invalidations: 0,
+            size: 4
+        },
+        firms: {
+            backend: 'memory',
+            disabledReason: null,
+            hits: 1,
+            misses: 0,
+            sets: 2,
+            invalidations: 1,
+            size: 1
+        }
+    })
+}));
 vi.mock('../../services/tokenBlacklist.service.js', () => ({
     getBlacklistStats: () => ({ size: 5 })
 }));
@@ -35,9 +66,7 @@ vi.mock('../../services/settings.service.js', () => ({
     getSettingsCacheStats: () => ({
         entries: 2,
         cache: {
-            backend: 'redis',
-            effectiveBackend: 'redis',
-            connected: true,
+            backend: 'memory',
             disabledReason: null
         }
     })
@@ -263,9 +292,19 @@ describe('Admin Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.cacheBackend).toEqual({
-                backend: 'redis',
-                connected: true,
+                configuredBackend: 'memory',
+                backend: 'memory',
+                connected: null,
                 fallbackReason: null
+            });
+            expect(res.body.cacheSummary).toEqual({
+                hits: 7,
+                misses: 4,
+                sets: 10,
+                invalidations: 2,
+                size: 7,
+                totalLookups: 11,
+                hitRate: 7 / 11
             });
             expect(res.body.caches.settings.entries).toBe(2);
         });
@@ -282,18 +321,19 @@ describe('Admin Routes', () => {
             expect(res.body.memory).toBeDefined();
             expect(res.body.memory.heapUsed).toBeGreaterThan(0);
             expect(res.body.cacheBackend).toEqual({
-                backend: 'redis',
-                connected: true,
+                configuredBackend: 'memory',
+                backend: 'memory',
+                connected: null,
                 fallbackReason: null
             });
+            expect(res.body.cacheSummary.hits).toBe(7);
+            expect(res.body.cacheSummary.misses).toBe(4);
             expect(res.body.caches).toBeDefined();
             expect(res.body.caches.tokenBlacklist).toEqual({ size: 5 });
             expect(res.body.caches.settings).toEqual({
                 entries: 2,
                 cache: {
-                    backend: 'redis',
-                    effectiveBackend: 'redis',
-                    connected: true,
+                    backend: 'memory',
                     disabledReason: null
                 }
             });

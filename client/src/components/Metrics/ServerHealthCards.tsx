@@ -7,6 +7,16 @@ interface ServerHealthCardsProps {
     memory?: { heapUsed?: number; heapTotal?: number; rss?: number; external?: number };
     cache?: { hitRate?: number; hits?: number; misses?: number };
   } | null;
+  cacheSummary?: {
+    hitRate?: number;
+    hits?: number;
+    misses?: number;
+    sets?: number;
+    invalidations?: number;
+    size?: number;
+    totalLookups?: number;
+  } | null;
+  configuredCacheBackend: string;
   cacheBackend: string;
   cacheConnected: boolean | null | undefined;
   cacheFallbackReason: string | null | undefined;
@@ -18,6 +28,8 @@ interface ServerHealthCardsProps {
 
 export default function ServerHealthCards({
   metrics,
+  cacheSummary,
+  configuredCacheBackend,
   cacheBackend,
   cacheConnected,
   cacheFallbackReason,
@@ -26,6 +38,11 @@ export default function ServerHealthCards({
   formatBytes,
   formatNumber
 }: ServerHealthCardsProps): JSX.Element {
+  const actualCacheHitRate = safeNumber(cacheSummary?.hitRate, safeNumber(metrics?.cache?.hitRate));
+  const actualCacheHits = safeNumber(cacheSummary?.hits, safeNumber(metrics?.cache?.hits));
+  const actualCacheMisses = safeNumber(cacheSummary?.misses, safeNumber(metrics?.cache?.misses));
+  const actualCacheSize = safeNumber(cacheSummary?.size);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-gray-800 dark:text-indigo-400 dark:border-indigo-700 p-6">
@@ -50,18 +67,22 @@ export default function ServerHealthCards({
         <div className="flex items-center justify-between mb-4">
           <div>
             <p className="text-sm font-medium opacity-80">{t('metrics.cachePerformance')}</p>
-            <p className="text-2xl font-bold mt-1">{(safeNumber(metrics?.cache?.hitRate) * 100).toFixed(1)}%</p>
+            <p className="text-2xl font-bold mt-1">{(actualCacheHitRate * 100).toFixed(1)}%</p>
             <p className="text-xs mt-1 opacity-60">{t('metrics.cacheHitRate')}</p>
           </div>
           <CircleStackIcon className="w-10 h-10 opacity-50" />
         </div>
         <div className="grid grid-cols-2 gap-4 text-sm">
-          <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3"><p className="opacity-70">{t('metrics.cacheHits')}</p><p className="font-semibold">{formatNumber(safeNumber(metrics?.cache?.hits))}</p></div>
-          <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3"><p className="opacity-70">{t('metrics.cacheMisses')}</p><p className="font-semibold">{formatNumber(safeNumber(metrics?.cache?.misses))}</p></div>
+          <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3"><p className="opacity-70">{t('metrics.cacheHits')}</p><p className="font-semibold">{formatNumber(actualCacheHits)}</p></div>
+          <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3"><p className="opacity-70">{t('metrics.cacheMisses')}</p><p className="font-semibold">{formatNumber(actualCacheMisses)}</p></div>
         </div>
-        <div className="grid grid-cols-3 gap-4 text-sm mt-4">
+        <div className="grid grid-cols-2 gap-4 text-sm mt-4 xl:grid-cols-4">
           <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
-            <p className="opacity-70">{t('metrics.cacheBackend')}</p>
+            <p className="opacity-70">{t('metrics.configuredCacheBackend')}</p>
+            <p className="font-semibold uppercase">{configuredCacheBackend}</p>
+          </div>
+          <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
+            <p className="opacity-70">{t('metrics.effectiveCacheBackend')}</p>
             <p className="font-semibold uppercase">{cacheBackend}</p>
           </div>
           <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
@@ -77,6 +98,20 @@ export default function ServerHealthCards({
           <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
             <p className="opacity-70">{t('metrics.cacheFallbackReason')}</p>
             <p className="font-semibold break-words">{cacheFallbackReason || t('metrics.none')}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4 text-sm mt-4">
+          <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
+            <p className="opacity-70">{t('metrics.cacheEntries')}</p>
+            <p className="font-semibold">{formatNumber(actualCacheSize)}</p>
+          </div>
+          <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
+            <p className="opacity-70">{t('metrics.cacheSets')}</p>
+            <p className="font-semibold">{formatNumber(safeNumber(cacheSummary?.sets))}</p>
+          </div>
+          <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
+            <p className="opacity-70">{t('metrics.cacheInvalidations')}</p>
+            <p className="font-semibold">{formatNumber(safeNumber(cacheSummary?.invalidations))}</p>
           </div>
         </div>
       </motion.div>

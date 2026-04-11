@@ -321,6 +321,7 @@ const MetricsPage = (): JSX.Element => {
   const aiModifyMetrics = operationsMetrics?.operations?.aiModify;
   const improvementMetrics = operationsMetrics?.operations?.improvement;
   const adaptationMetrics = operationsMetrics?.operations?.adaptation;
+  const configuredCacheBackend = cacheAdminMetrics?.cacheBackend?.configuredBackend || 'unknown';
   const cacheBackend = cacheAdminMetrics?.cacheBackend?.backend || 'unknown';
   const cacheConnected = cacheAdminMetrics?.cacheBackend?.connected;
   const cacheFallbackReason = cacheAdminMetrics?.cacheBackend?.fallbackReason;
@@ -384,6 +385,8 @@ const MetricsPage = (): JSX.Element => {
               <Suspense fallback={null}>
                 <ServerHealthCards
                   metrics={metrics}
+                  cacheSummary={cacheAdminMetrics?.cacheSummary}
+                  configuredCacheBackend={configuredCacheBackend}
                   cacheBackend={cacheBackend}
                   cacheConnected={cacheConnected}
                   cacheFallbackReason={cacheFallbackReason}

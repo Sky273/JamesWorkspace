@@ -244,14 +244,23 @@ L'application inclut un monitoring mémoire accessible via :
 - variables associées :
   - `CACHE_REDIS_URL`
   - `CACHE_KEY_PREFIX`
+- comportement runtime :
+  - `CACHE_BACKEND` correspond au backend demandé dans la configuration
+  - si Redis est demandé mais indisponible, l'application bascule automatiquement sur `memory-fallback`
+  - les métriques distinguent donc le backend configuré et le backend effectivement utilisé
 - caches applicatifs déjà branchés sur cette abstraction :
   - `settings`
   - `templates`
   - `firms`
   - disponibilité runtime LLM via `settings`
 - diagnostics visibles :
-  - `/health` expose `checks.cache.backend`, `checks.cache.connected`, `checks.cache.fallbackReason`
-  - la page métriques admin affiche aussi le backend effectif et la raison éventuelle du fallback
+  - `/health` expose le backend effectif via `checks.cache.backend`, plus `checks.cache.connected` et `checks.cache.fallbackReason`
+  - `/api/admin/cache-stats` expose :
+    - `cacheBackend.configuredBackend`
+    - `cacheBackend.backend` (backend effectif)
+    - `cacheBackend.connected`
+    - `cacheBackend.fallbackReason`
+  - la page métriques admin affiche donc le backend configuré et le backend effectif
 - en Docker :
   - `docker-run.bat` démarre la pile standard `app + redis`
   - `docker-run-compose.bat` reste un alias de compatibilité vers `docker-run.bat`

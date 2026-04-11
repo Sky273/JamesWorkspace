@@ -11,6 +11,7 @@ import {
     buildServerCheck,
     getCacheBackendSummary,
     getCacheDiagnosticSummary,
+    getCacheUsageSummary,
     getConfiguredCheck,
     getFailedConnectivityCheck,
     getHealthStatusCode,
@@ -31,6 +32,29 @@ describe('healthRouteHelpers', () => {
             backend: 'redis',
             connected: true,
             fallbackReason: null
+        });
+    });
+
+    it('summarizes real cache usage for memory backends', () => {
+        const registry = {
+            settings: { backend: 'memory', hits: 4, misses: 1, sets: 3, invalidations: 1, size: 2 },
+            templates: { backend: 'memory', hits: 2, misses: 3, sets: 5, invalidations: 0, size: 4 },
+            firms: { backend: 'memory', hits: 1, misses: 0, sets: 2, invalidations: 1, size: 1 }
+        };
+
+        expect(getCacheDiagnosticSummary(registry)).toEqual({
+            backend: 'memory',
+            connected: null,
+            fallbackReason: null
+        });
+        expect(getCacheUsageSummary(registry)).toEqual({
+            hits: 7,
+            misses: 4,
+            sets: 10,
+            invalidations: 2,
+            size: 7,
+            totalLookups: 11,
+            hitRate: 7 / 11
         });
     });
 

@@ -191,6 +191,17 @@ BATCH_EXPORT_MAX_OPERATIONS=300
 # Valeur par défaut si non configuré : 100
 BATCH_EXPORT_BATCH_SIZE=100
 
+# Cache backend
+# - memory: in-process cache (default)
+# - redis: shared cache across instances
+# Runtime note:
+# - CACHE_BACKEND is the requested backend
+# - if Redis is unavailable, the app falls back automatically to memory
+# - admin diagnostics expose both the configured backend and the effective backend
+CACHE_BACKEND=memory
+CACHE_REDIS_URL=redis://127.0.0.1:6379
+CACHE_KEY_PREFIX=resumeconverter
+
 # ==============================================================================
 # CORS - ORIGINES AUTORISÉES [OPTIONNEL]
 # ==============================================================================
@@ -608,6 +619,18 @@ La configuration complète du fichier `.env` est détaillée dans la section [In
 | `GEMINI_API_KEY` | Clé API Gemini / Gemma Cloud | https://aistudio.google.com/app/apikey |
 | `MINIMAX_API_KEY` | Clé API MiniMax | https://platform.minimax.io/ |
 | `OLLAMA_BASE_URL` | URL de l'instance Ollama distante | Votre instance Ollama auto-hébergée |
+
+#### Backend de cache
+
+| Variable | Description | Valeur par défaut |
+|----------|-------------|-------------------|
+| `CACHE_BACKEND` | Backend demandé (`memory` ou `redis`) | `memory` |
+| `CACHE_REDIS_URL` | URL de connexion Redis | `redis://127.0.0.1:6379` |
+| `CACHE_KEY_PREFIX` | Préfixe des clés Redis | `resumeconverter` |
+
+Notes :
+- si `CACHE_BACKEND=redis` mais que Redis est indisponible, ResumeConverter bascule automatiquement sur un backend effectif `memory-fallback`
+- les métriques admin exposent à la fois le backend configuré et le backend effectivement utilisé
 
 #### Variables optionnelles par fonctionnalité
 

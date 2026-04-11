@@ -37,9 +37,19 @@ export interface DatabaseMetrics {
 
 export interface CacheAdminMetrics {
   cacheBackend?: {
+    configuredBackend?: string;
     backend?: string;
     connected?: boolean | null;
     fallbackReason?: string | null;
+  };
+  cacheSummary?: {
+    hits?: number;
+    misses?: number;
+    sets?: number;
+    invalidations?: number;
+    size?: number;
+    totalLookups?: number;
+    hitRate?: number;
   };
   caches?: {
     settings?: {

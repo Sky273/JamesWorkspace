@@ -32,6 +32,32 @@ export function getCacheDiagnosticSummary(cacheRegistry = {}) {
     };
 }
 
+export function getCacheUsageSummary(cacheRegistry = {}) {
+    const registryEntries = Object.values(cacheRegistry);
+    const summary = registryEntries.reduce((accumulator, stats) => {
+        accumulator.hits += Number(stats?.hits || 0);
+        accumulator.misses += Number(stats?.misses || 0);
+        accumulator.sets += Number(stats?.sets || 0);
+        accumulator.invalidations += Number(stats?.invalidations || 0);
+        accumulator.size += Number(stats?.size || 0);
+        return accumulator;
+    }, {
+        hits: 0,
+        misses: 0,
+        sets: 0,
+        invalidations: 0,
+        size: 0
+    });
+
+    const totalLookups = summary.hits + summary.misses;
+
+    return {
+        ...summary,
+        totalLookups,
+        hitRate: totalLookups > 0 ? summary.hits / totalLookups : 0
+    };
+}
+
 export function getInitialHealthChecks() {
     return {
         server: { status: 'ok' },

@@ -1,9 +1,11 @@
 import express from 'express';
+import { CACHE_BACKEND } from '../config/constants.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { validateQuery, validators } from '../utils/validation.js';
 import { getSecurityLogs, getSecurityLogsCount } from '../services/security.service.js';
 import { getProxyLogs, getProxyLogsCount, getProxyLogsStats, safeLog } from '../utils/logger.backend.js';
 import { listUsers } from '../services/users.service.js';
+import { getCacheDiagnosticSummary, getCacheUsageSummary } from './healthRouteHelpers.js';
 
 // Import cache stats functions
 import { getBlacklistStats } from '../services/tokenBlacklist.service.js';
@@ -14,6 +16,7 @@ import { getMetiersCacheStats } from '../services/rome.service.js';
 import { getTagsCacheStats } from '../services/tagsCache.service.js';
 import { getEscoCacheStats } from '../services/escoService.js';
 import { getStatsCacheStats } from './resumes/stats.routes.js';
+import { getCacheRegistryStats } from '../services/cache.service.js';
 
 const router = express.Router();
 const MAX_SECURITY_LOGS_LIMIT = 1000;
@@ -207,18 +210,12 @@ router.get('/security-stats', authenticateToken, requireAdmin, (req, res) => {
 router.get('/cache-stats', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const memUsage = process.memoryUsage();
-        const settingsCacheStats = await getSettingsCacheStats();
-        const cacheBackendDiagnostics = settingsCacheStats?.cache
-            ? {
-                backend: settingsCacheStats.cache.effectiveBackend || settingsCacheStats.cache.backend || 'unknown',
-                connected: typeof settingsCacheStats.cache.connected === 'boolean' ? settingsCacheStats.cache.connected : null,
-                fallbackReason: settingsCacheStats.cache.disabledReason || null
-            }
-            : {
-                backend: 'unknown',
-                connected: null,
-                fallbackReason: null
-            };
+        const [settingsCacheStats, cacheRegistryStats] = await Promise.all([
+            getSettingsCacheStats(),
+            getCacheRegistryStats()
+        ]);
+        const effectiveCacheDiagnostics = getCacheDiagnosticSummary(cacheRegistryStats);
+        const cacheUsageSummary = getCacheUsageSummary(cacheRegistryStats);
         const stats = {
             timestamp: new Date().toISOString(),
             memory: {
@@ -227,7 +224,13 @@ router.get('/cache-stats', authenticateToken, requireAdmin, async (req, res) => 
                 heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
                 external: Math.round(memUsage.external / 1024 / 1024)
             },
-            cacheBackend: cacheBackendDiagnostics,
+            cacheBackend: {
+                configuredBackend: CACHE_BACKEND,
+                backend: effectiveCacheDiagnostics.backend,
+                connected: effectiveCacheDiagnostics.connected,
+                fallbackReason: effectiveCacheDiagnostics.fallbackReason
+            },
+            cacheSummary: cacheUsageSummary,
             caches: {
                 tokenBlacklist: getBlacklistStats(),
                 settings: settingsCacheStats,
