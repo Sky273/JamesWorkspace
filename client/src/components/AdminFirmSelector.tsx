@@ -106,6 +106,10 @@ const AdminFirmSelector = ({
   const displayValue = isSuperAdmin
     ? (!selectedFirmId || selectedFirmId === userFirmId ? MY_FIRM_VALUE : selectedFirmId)
     : (selectedFirmId || userFirmId);
+  const currentUserFirmName = user?.firmName
+    || user?.firm
+    || firms.find((firm) => firm.id === userFirmId)?.name
+    || t('common.myFirm', 'Mon cabinet (par defaut)');
 
   return (
     <div className={className}>
@@ -130,7 +134,7 @@ const AdminFirmSelector = ({
           <option value={MY_FIRM_VALUE}>
             {loading
               ? t('common.loading', 'Chargement...')
-              : t('common.myFirm', 'Mon cabinet (par defaut)')}
+              : currentUserFirmName}
           </option>
         ) : null}
         {(isSuperAdmin ? firms.filter((firm) => firm.id !== userFirmId) : firms).map((firm) => (
