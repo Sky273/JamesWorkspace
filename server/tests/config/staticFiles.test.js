@@ -20,6 +20,8 @@ function createFixtureDir() {
     fs.writeFileSync(path.join(distDir, 'app.js.br'), zlib.brotliCompressSync(Buffer.from('console.log("app");')));
     fs.writeFileSync(path.join(assetsDir, 'index-12345678.js'), 'console.log("hashed");');
     fs.writeFileSync(path.join(assetsDir, 'index-12345678.js.br'), zlib.brotliCompressSync(Buffer.from('console.log("hashed");')));
+    fs.writeFileSync(path.join(distDir, 'vendor-i18n-AbC_1234.js'), 'console.log("vite-like hash");');
+    fs.writeFileSync(path.join(distDir, 'vendor-i18n-AbC_1234.js.br'), zlib.brotliCompressSync(Buffer.from('console.log("vite-like hash");')));
     fs.mkdirSync(path.join(distDir, 'nested'), { recursive: true });
     fs.writeFileSync(path.join(distDir, 'nested', 'feature.js.gz'), zlib.gzipSync(Buffer.from('console.log("feature");')));
     return { root, serverDir };
@@ -62,6 +64,26 @@ describe('configureStaticFiles', () => {
         const plainRes = await request(app).get('/assets/js/index-12345678.js');
         const compressedRes = await request(app)
             .get('/assets/js/index-12345678.js')
+            .set('Accept-Encoding', 'br, gzip');
+
+        expect(plainRes.status).toBe(200);
+        expect(plainRes.headers['cache-control']).toBe('public, max-age=31536000, immutable');
+
+        expect(compressedRes.status).toBe(200);
+        expect(compressedRes.headers['content-encoding']).toBe('br');
+        expect(compressedRes.headers['cache-control']).toBe('public, max-age=31536000, immutable');
+    });
+
+    it('treats vite-style alphanumeric hashed chunks outside /assets as immutable', async () => {
+        const { root, serverDir } = createFixtureDir();
+        fixtures.push(root);
+
+        const app = express();
+        configureStaticFiles(app, serverDir);
+
+        const plainRes = await request(app).get('/vendor-i18n-AbC_1234.js');
+        const compressedRes = await request(app)
+            .get('/vendor-i18n-AbC_1234.js')
             .set('Accept-Encoding', 'br, gzip');
 
         expect(plainRes.status).toBe(200);

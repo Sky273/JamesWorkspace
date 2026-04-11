@@ -3,8 +3,7 @@
  */
 
 import { useEffect, useRef } from 'react';
-import maplibregl, { Marker, NavigationControl, Popup, type Map as MaplibreMap } from 'maplibre-gl';
-import maplibreCss from 'maplibre-gl/dist/maplibre-gl.css?inline';
+import type { Marker, NavigationControl, Popup, Map as MaplibreMap } from 'maplibre-gl';
 
 import {
   MAP_STYLES,
@@ -109,14 +108,29 @@ export default function FranceMapCanvas({
   }, [selectedRegion]);
 
   useEffect(() => {
-    if (typeof document === 'undefined' || document.getElementById(MAPLIBRE_STYLE_ID)) {
-      return;
-    }
+    let cancelled = false;
 
-    const styleElement = document.createElement('style');
-    styleElement.id = MAPLIBRE_STYLE_ID;
-    styleElement.textContent = maplibreCss;
-    document.head.appendChild(styleElement);
+    const ensureMaplibreCss = async () => {
+      if (typeof document === 'undefined' || document.getElementById(MAPLIBRE_STYLE_ID)) {
+        return;
+      }
+
+      const { default: maplibreCss } = await import('maplibre-gl/dist/maplibre-gl.css?inline');
+      if (cancelled || document.getElementById(MAPLIBRE_STYLE_ID)) {
+        return;
+      }
+
+      const styleElement = document.createElement('style');
+      styleElement.id = MAPLIBRE_STYLE_ID;
+      styleElement.textContent = maplibreCss;
+      document.head.appendChild(styleElement);
+    };
+
+    void ensureMaplibreCss();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -124,24 +138,48 @@ export default function FranceMapCanvas({
       return undefined;
     }
 
+    let cancelled = false;
+    let mountedMap: MaplibreMap | null = null;
     const regionButtons = regionButtonsRef.current;
-    const initialStyle = isDarkMode ? MAP_STYLES.dark : MAP_STYLES.light;
-    const map = new maplibregl.Map({
-      container: containerRef.current,
-      style: initialStyle,
-      center: [2.5, 46.5],
-      zoom: 5,
-      attributionControl: false,
-    });
+    const initializeMap = async () => {
+      const [{ default: maplibregl, NavigationControl }, { default: maplibreCss }] = await Promise.all([
+        import('maplibre-gl'),
+        import('maplibre-gl/dist/maplibre-gl.css?inline'),
+      ]);
 
-    const navigationControl = new NavigationControl({ showCompass: false });
-    navControlRef.current = navigationControl;
-    map.addControl(navigationControl, 'top-right');
-    map.on('load', onMapLoad);
-    appliedStyleRef.current = initialStyle;
-    mapRef.current = map;
+      if (cancelled || !containerRef.current || mapRef.current) {
+        return;
+      }
+
+      if (typeof document !== 'undefined' && !document.getElementById(MAPLIBRE_STYLE_ID)) {
+        const styleElement = document.createElement('style');
+        styleElement.id = MAPLIBRE_STYLE_ID;
+        styleElement.textContent = maplibreCss;
+        document.head.appendChild(styleElement);
+      }
+
+      const initialStyle = isDarkMode ? MAP_STYLES.dark : MAP_STYLES.light;
+      const map = new maplibregl.Map({
+        container: containerRef.current,
+        style: initialStyle,
+        center: [2.5, 46.5],
+        zoom: 5,
+        attributionControl: false,
+      });
+
+      const navigationControl = new NavigationControl({ showCompass: false });
+      navControlRef.current = navigationControl;
+      map.addControl(navigationControl, 'top-right');
+      map.on('load', onMapLoad);
+      appliedStyleRef.current = initialStyle;
+      mapRef.current = map;
+      mountedMap = map;
+    };
+
+    void initializeMap();
 
     return () => {
+      cancelled = true;
       popupRef.current?.remove();
       popupRef.current = null;
       markersRef.current.forEach((marker) => marker.remove());
@@ -149,8 +187,11 @@ export default function FranceMapCanvas({
       regionButtons.clear();
       navControlRef.current = null;
       appliedStyleRef.current = null;
-      mapRef.current = null;
-      map.remove();
+      mountedMap?.off('load', onMapLoad);
+      mountedMap?.remove();
+      if (mapRef.current === mountedMap) {
+        mapRef.current = null;
+      }
     };
   }, [isDarkMode, mapRef, onMapLoad]);
 

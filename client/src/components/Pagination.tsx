@@ -73,7 +73,7 @@ const Pagination = ({
               type="button"
               onClick={() => goToPage(1)}
               disabled={currentPage === 1}
-              className="app-button-secondary rounded-2xl px-3 py-2 text-xs font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
+              className="app-button-secondary rounded-2xl px-3 py-2 text-xs font-medium transition-[transform,background-color,border-color] duration-200 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
               title={t('common.first')}
             >
               {t('common.first')}
@@ -83,7 +83,7 @@ const Pagination = ({
               type="button"
               onClick={() => goToPage(currentPage - 1)}
               disabled={currentPage === 1}
-              className="app-button-secondary rounded-2xl p-2.5 transition-all disabled:cursor-not-allowed disabled:opacity-50"
+              className="app-button-secondary rounded-2xl p-2.5 transition-[transform,background-color,border-color] duration-200 disabled:cursor-not-allowed disabled:opacity-50"
               title={t('common.previous')}
             >
               <ChevronLeftIcon className="h-5 w-5" />
@@ -96,7 +96,7 @@ const Pagination = ({
                   type="button"
                   onClick={() => goToPage(pageNum)}
                   aria-current={currentPage === pageNum ? 'page' : undefined}
-                  className={`rounded-2xl px-3.5 py-2 text-sm font-medium transition-all ${
+                  className={`rounded-2xl px-3.5 py-2 text-sm font-medium transition-[transform,background-color,border-color] duration-200 ${
                     currentPage === pageNum
                       ? 'app-button-primary'
                       : 'app-button-secondary'
@@ -115,7 +115,7 @@ const Pagination = ({
               type="button"
               onClick={() => goToPage(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="app-button-secondary rounded-2xl p-2.5 transition-all disabled:cursor-not-allowed disabled:opacity-50"
+              className="app-button-secondary rounded-2xl p-2.5 transition-[transform,background-color,border-color] duration-200 disabled:cursor-not-allowed disabled:opacity-50"
               title={t('common.next')}
             >
               <ChevronRightIcon className="h-5 w-5" />
@@ -125,7 +125,7 @@ const Pagination = ({
               type="button"
               onClick={() => goToPage(totalPages)}
               disabled={currentPage === totalPages}
-              className="app-button-secondary rounded-2xl px-3 py-2 text-xs font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
+              className="app-button-secondary rounded-2xl px-3 py-2 text-xs font-medium transition-[transform,background-color,border-color] duration-200 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
               title={t('common.last')}
             >
               {t('common.last')}

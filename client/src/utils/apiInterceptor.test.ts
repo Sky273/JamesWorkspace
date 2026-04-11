@@ -98,6 +98,17 @@ describe('apiInterceptor', () => {
     });
   });
 
+  it('does not fetch csrf token for safe requests', async () => {
+    const options = await createAuthOptionsWithCsrf({ method: 'GET', headers: { A: '1' } }, true);
+
+    expect(mocks.getCsrfToken).not.toHaveBeenCalled();
+    expect(options).toEqual({
+      method: 'GET',
+      headers: { A: '1' },
+      credentials: 'include',
+    });
+  });
+
   it('attempts token refresh successfully', async () => {
     vi.mocked(fetch).mockResolvedValue(jsonResponse({}, { status: 200 }));
 

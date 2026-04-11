@@ -91,7 +91,7 @@ export function UsersResultsGrid({
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">{user.name}</h3>
+                  <h2 className="font-semibold text-gray-900 dark:text-gray-100">{user.name}</h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
                 </div>
               </div>
@@ -170,7 +170,7 @@ export function FirmsResultsGrid({
                     <BuildingOfficeIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">{firm.name}</h3>
+                    <h2 className="font-semibold text-gray-900 dark:text-gray-100">{firm.name}</h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       {associatedUsers.length} {t('users.management.tabs.users').toLowerCase()}
                     </p>

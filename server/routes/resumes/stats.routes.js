@@ -10,6 +10,14 @@ import { getUserFirmId } from '../../utils/firmHelpers.js';
 import * as resumeStatsService from '../../services/resumeStats.service.js';
 
 const router = express.Router();
+const applyResumeStatsReadHeaders = (_req, res, next) => {
+    res.set({
+        'Cache-Control': 'private, no-cache, max-age=0, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+    });
+    next();
+};
 
 // Re-export cache functions for external use
 export const invalidateStatsCache = resumeStatsService.invalidateStatsCache;
@@ -17,7 +25,7 @@ export const getStatsCacheStats = resumeStatsService.getStatsCacheStats;
 
 // GET /api/resumes/grouped-by-deal - Get resumes grouped by deal for the "Par affaire" view
 // OPTIMIZED: Uses batch queries instead of N+1 pattern (reduced from ~150 queries to 5)
-router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
+router.get('/grouped-by-deal', applyResumeStatsReadHeaders, authenticateToken, async (req, res) => {
     try {
         const isAdmin = req.user?.role === 'admin';
         const userFirmId = await getUserFirmId(req);
@@ -36,7 +44,7 @@ router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
 
 // GET /api/resumes/stats - Get statistics for dashboard KPIs
 // OPTIMIZED: Uses 30s cache per firm to reduce DB load
-router.get('/stats', authenticateToken, async (req, res) => {
+router.get('/stats', applyResumeStatsReadHeaders, authenticateToken, async (req, res) => {
     try {
         const isAdmin = req.user?.role === 'admin';
         const userFirmId = isAdmin ? null : await getUserFirmId(req);

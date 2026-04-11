@@ -1,4 +1,4 @@
-import { removeSuggestionMarkers } from '../components/TiptapEditor';
+import { removeSuggestionMarkers } from '../components/TiptapEditor/suggestionsHtml';
 import type { Resume } from '../types/entities';
 import type { ExportFormat } from '../components/ResumeAnalysis/ExportTab';
 import {

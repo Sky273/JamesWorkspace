@@ -1,13 +1,17 @@
+import { lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
 
 import {
-  ResumesByDealView,
   ResumesDeleteModal,
   ResumesHeader,
   ResumesListPanel,
   ResumesViewModeToggle,
 } from './ResumesPage.components';
 import { useResumesDashboard } from './ResumesPage.hooks';
+
+const ResumesByDealView = lazy(() =>
+  import('./ResumesPage.components').then((module) => ({ default: module.ResumesByDealView }))
+);
 
 const ResumesPage = (): JSX.Element => {
   const {
@@ -56,7 +60,9 @@ const ResumesPage = (): JSX.Element => {
       <ResumesViewModeToggle value={viewMode} onChange={setViewMode} />
 
       {viewMode === 'byDeal' ? (
-        <ResumesByDealView allTags={allTags} stats={stats} />
+        <Suspense fallback={<div className="cv-panel mt-6 rounded-[2rem] p-8 text-sm text-slate-500 dark:text-[#a3aac4]">Chargement de la vue par affaire...</div>}>
+          <ResumesByDealView allTags={allTags} stats={stats} />
+        </Suspense>
       ) : (
         <ResumesListPanel
           authUserRole={authUser?.role}

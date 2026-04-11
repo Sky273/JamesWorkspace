@@ -30,8 +30,10 @@ function normalizeForPathChecks(filePath) {
 
 function isHashedAsset(requestPath) {
     const normalizedPath = normalizeForPathChecks(requestPath);
+    const fileName = normalizedPath.split('/').pop() || '';
     return (
-        /\.[a-f0-9]{8,}\.(js|css|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|webp|ico)$/i.test(normalizedPath)
+        /\.[a-z0-9_-]{8,}\.(js|css|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|webp|ico)$/i.test(normalizedPath)
+        || /-[a-z0-9_-]{8,}\.(js|css|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|webp|ico)$/i.test(fileName)
         || normalizedPath.includes('/assets/')
     );
 }
@@ -158,7 +160,8 @@ export function configureStaticFiles(app, serverDir) {
         lastModified: true,
         redirect: false,
         setHeaders: (res, filePath) => {
-            applyStaticCacheHeaders(res, filePath);
+            const uncompressedFilePath = stripCompressionSuffix(filePath);
+            applyStaticCacheHeaders(res, uncompressedFilePath, uncompressedFilePath);
         }
     }));
 

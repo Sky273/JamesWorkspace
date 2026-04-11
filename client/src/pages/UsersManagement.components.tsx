@@ -20,8 +20,14 @@ import { FirmsResultsGrid, UsersResultsGrid } from './UsersManagement.sections';
 
 export function UsersManagementLoadingState() {
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-6" />
+    <div className="cv-surface app-page-shell min-h-[60vh]">
+      <div className="mb-10 h-32 rounded-[2rem] bg-gray-200/70 animate-pulse dark:bg-gray-700/60" />
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="h-28 rounded-[1.75rem] bg-gray-200/70 animate-pulse dark:bg-gray-700/60" />
+        <div className="h-28 rounded-[1.75rem] bg-gray-200/70 animate-pulse dark:bg-gray-700/60" />
+        <div className="h-28 rounded-[1.75rem] bg-gray-200/70 animate-pulse dark:bg-gray-700/60" />
+      </div>
+      <div className="mb-6 h-32 rounded-[2rem] bg-gray-200/70 animate-pulse dark:bg-gray-700/60" />
       <SkeletonUsersTable rows={8} />
     </div>
   );

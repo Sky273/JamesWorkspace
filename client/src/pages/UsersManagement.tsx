@@ -1,12 +1,7 @@
+import { lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 
-import {
-  ConfirmDeleteModal,
-  FirmFormModal,
-  PasswordModal,
-  UserFormModal,
-} from '../components/UsersManagement';
 import {
   FirmsResults,
   UsersManagementHeader,
@@ -16,6 +11,11 @@ import {
   UsersResults,
 } from './UsersManagement.components';
 import { useUsersManagementDashboard } from './UsersManagement.hooks';
+
+const ConfirmDeleteModal = lazy(() => import('../components/UsersManagement/ConfirmDeleteModal'));
+const FirmFormModal = lazy(() => import('../components/UsersManagement/FirmFormModal'));
+const PasswordModal = lazy(() => import('../components/UsersManagement/PasswordModal'));
+const UserFormModal = lazy(() => import('../components/UsersManagement/UserFormModal'));
 
 const UsersManagement = (): JSX.Element => {
   const { t } = useTranslation();
@@ -30,6 +30,7 @@ const UsersManagement = (): JSX.Element => {
     fetchData,
     firmModalOpen,
     firms,
+    firmsLoading,
     firmsPage,
     firmsTotalCount,
     firmsTotalPages,
@@ -107,7 +108,7 @@ const UsersManagement = (): JSX.Element => {
         <FirmsResults
           currentPage={firmsPage}
           firms={firms}
-          loading={loading}
+          loading={loading || firmsLoading}
           onDelete={openDeleteFirm}
           onEdit={openEditFirm}
           onPageChange={goToFirmsPage}
@@ -117,39 +118,47 @@ const UsersManagement = (): JSX.Element => {
         />
       )}
 
-      <UserFormModal
-        isOpen={userModalOpen}
-        onClose={closeUserModal}
-        onSubmit={handleUserSubmit}
-        user={selectedUser}
-        firms={firms}
-        canAssignSuperAdmin={canAssignSuperAdmin}
-        canChangeFirm={canManageFirms}
-        t={t}
-      />
-      {canManageFirms ? (
-        <FirmFormModal
-          isOpen={firmModalOpen}
-          onClose={closeFirmModal}
-          onSubmit={handleFirmSubmit}
-          firm={selectedFirm}
-          t={t}
-        />
-      ) : null}
-      <PasswordModal
-        isOpen={passwordModalOpen}
-        onClose={closePasswordModal}
-        onSubmit={handleForcePasswordReset}
-        userName={selectedUser?.name || ''}
-        t={t}
-      />
-      <ConfirmDeleteModal
-        isOpen={deleteModalOpen}
-        onClose={closeDeleteModal}
-        onConfirm={deleteTarget?.type === 'user' ? handleDeleteUser : handleDeleteFirm}
-        message={deleteTarget?.type === 'user' ? t('users.management.messages.confirmDeleteUser', { name: deleteTarget?.name }) : t('users.management.messages.confirmDeleteFirm', { name: deleteTarget?.name })}
-        t={t}
-      />
+      <Suspense fallback={null}>
+        {userModalOpen ? (
+          <UserFormModal
+            isOpen={userModalOpen}
+            onClose={closeUserModal}
+            onSubmit={handleUserSubmit}
+            user={selectedUser}
+            firms={firms}
+            canAssignSuperAdmin={canAssignSuperAdmin}
+            canChangeFirm={canManageFirms}
+            t={t}
+          />
+        ) : null}
+        {canManageFirms && firmModalOpen ? (
+          <FirmFormModal
+            isOpen={firmModalOpen}
+            onClose={closeFirmModal}
+            onSubmit={handleFirmSubmit}
+            firm={selectedFirm}
+            t={t}
+          />
+        ) : null}
+        {passwordModalOpen ? (
+          <PasswordModal
+            isOpen={passwordModalOpen}
+            onClose={closePasswordModal}
+            onSubmit={handleForcePasswordReset}
+            userName={selectedUser?.name || ''}
+            t={t}
+          />
+        ) : null}
+        {deleteModalOpen ? (
+          <ConfirmDeleteModal
+            isOpen={deleteModalOpen}
+            onClose={closeDeleteModal}
+            onConfirm={deleteTarget?.type === 'user' ? handleDeleteUser : handleDeleteFirm}
+            message={deleteTarget?.type === 'user' ? t('users.management.messages.confirmDeleteUser', { name: deleteTarget?.name }) : t('users.management.messages.confirmDeleteFirm', { name: deleteTarget?.name })}
+            t={t}
+          />
+        ) : null}
+      </Suspense>
     </motion.div>
   );
 };

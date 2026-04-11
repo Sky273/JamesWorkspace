@@ -477,6 +477,7 @@ describe('Auth Routes - POST /api/auth/refresh', () => {
             .set('Cookie', 'refreshToken=valid-refresh-token');
 
         expect(res.status).toBe(200);
+        expect(res.headers['cache-control']).toBe('private, no-cache, max-age=0, must-revalidate');
         expect(res.body.user).toBeDefined();
         expect(res.body.user.id).toBe('user-123');
         
@@ -576,6 +577,7 @@ describe('Auth Routes - GET /api/auth/me', () => {
             .set('Cookie', 'accessToken=valid-token');
 
         expect(res.status).toBe(200);
+        expect(res.headers['cache-control']).toBe('private, no-cache, max-age=0, must-revalidate');
         expect(res.body.user).toBeDefined();
         expect(res.body.user.email).toBe('test@example.com');
         expect(res.body.user.name).toBe('Test User');

@@ -46,7 +46,6 @@ function HomePage(): JSX.Element {
   const { t } = useTranslation();
   const { authGet } = useAuthFetch();
   const [activeSection, setActiveSection] = useState<string>('hero');
-  const [, setIsScrolled] = useState<boolean>(false);
   const [webglEnabled, setWebglEnabled] = useState<boolean>(false);
   const [dashboardRef, dashboardInView] = useInView({
     triggerOnce: true,
@@ -81,24 +80,48 @@ function HomePage(): JSX.Element {
     { id: 'features', label: t('home.nav.features') }
   ], [t]);
 
-  const handleScrollSpy = useCallback(() => {
-    const scrollPosition = window.scrollY + 150;
-    setIsScrolled(window.scrollY > 300);
+  useEffect(() => {
+    const sectionIds = navSections.map((section) => section.id);
+    const visibleSections = new Map<string, number>();
 
-    for (let i = navSections.length - 1; i >= 0; i -= 1) {
-      const section = document.getElementById(navSections[i].id);
-      if (section && section.offsetTop <= scrollPosition) {
-        setActiveSection(navSections[i].id);
-        break;
+    const updateActiveSection = () => {
+      const nextSection = [...visibleSections.entries()]
+        .sort((left, right) => Math.abs(left[1]) - Math.abs(right[1]))[0]?.[0] ?? 'hero';
+      setActiveSection((current) => (current === nextSection ? current : nextSection));
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            visibleSections.set(entry.target.id, entry.boundingClientRect.top);
+          } else {
+            visibleSections.delete(entry.target.id);
+          }
+        }
+        updateActiveSection();
+      },
+      {
+        root: null,
+        rootMargin: '-96px 0px -55% 0px',
+        threshold: [0, 0.1, 0.25, 0.5],
+      }
+    );
+
+    for (const sectionId of sectionIds) {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        observer.observe(element);
       }
     }
-  }, [navSections]);
 
-  useEffect(() => {
-    window.addEventListener('scroll', handleScrollSpy);
-    handleScrollSpy();
-    return () => window.removeEventListener('scroll', handleScrollSpy);
-  }, [handleScrollSpy]);
+    const heroElement = document.getElementById('hero');
+    if (!heroElement) {
+      setActiveSection('hero');
+    }
+
+    return () => observer.disconnect();
+  }, [navSections]);
 
   const scrollToSection = useCallback((sectionId: string) => {
     if (sectionId === 'hero') {

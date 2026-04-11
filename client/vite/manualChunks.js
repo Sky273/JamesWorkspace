@@ -36,10 +36,6 @@ const chunkRules = [
     matches: ['supercluster', 'kdbush', 'pbf', 'geojson-vt', 'vector-tile', 'vt-pbf'],
   },
   {
-    chunk: 'vendor-map-core',
-    matches: ['maplibre', 'mapbox'],
-  },
-  {
     chunk: 'vendor-pdf',
     matches: ['pdfjs-dist', 'html2pdf', 'jspdf'],
   },

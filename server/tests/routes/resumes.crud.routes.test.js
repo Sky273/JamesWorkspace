@@ -241,6 +241,7 @@ describe('Resume Routes - GET /api/resumes', () => {
         expect(res.body.resumes).toEqual(res.body.data);
         expect(res.body.pagination).toBeDefined();
         expect(res.body.pagination.totalCount).toBe(5);
+        expect(res.headers['cache-control']).toBe('private, no-cache, max-age=0, must-revalidate');
     });
 
     it('should return 403 for user without firm_id', async () => {
@@ -366,6 +367,7 @@ describe('Resume Routes - GET /api/resumes/:id', () => {
         expect(res.status).toBe(200);
         expect(res.body.id).toBe('123e4567-e89b-12d3-a456-426614174000');
         expect(res.body.name).toBe('Test Resume');
+        expect(res.headers['cache-control']).toBe('private, no-cache, max-age=0, must-revalidate');
     });
 
     it('should return 403 for resume from different firm', async () => {

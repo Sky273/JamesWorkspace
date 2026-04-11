@@ -14,7 +14,7 @@ import SendEmailModal from '../components/ResumeAnalysis/SendEmailModal';
 import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
 import i18n from '../i18n';
-import { removeSuggestionMarkers } from '../components/TiptapEditor';
+import { removeSuggestionMarkers } from '../components/TiptapEditor/suggestionsHtml';
 import { normalizeTemplateStylesheet, summarizeTemplatePayload } from '../utils/templateFragments';
 import AdaptationHeader from './AdaptationHeader';
 import AdaptationExportModal from './AdaptationExportModal';

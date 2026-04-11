@@ -58,11 +58,20 @@ vi.mock('../utils/userService', () => ({
   },
 }));
 
-vi.mock('../components/UsersManagement', () => ({
-  ConfirmDeleteModal: () => null,
-  FirmFormModal: () => null,
-  PasswordModal: () => null,
-  UserFormModal: ({
+vi.mock('../components/UsersManagement/ConfirmDeleteModal', () => ({
+  default: () => null,
+}));
+
+vi.mock('../components/UsersManagement/FirmFormModal', () => ({
+  default: () => null,
+}));
+
+vi.mock('../components/UsersManagement/PasswordModal', () => ({
+  default: () => null,
+}));
+
+vi.mock('../components/UsersManagement/UserFormModal', () => ({
+  default: ({
     isOpen,
     onSubmit,
   }: {

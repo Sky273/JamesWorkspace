@@ -22,6 +22,14 @@ import {
 } from '../services/tagsCache.service.js';
 
 const router = express.Router();
+const applyTagsReadHeaders = (_req, res, next) => {
+    res.set({
+        'Cache-Control': 'private, no-cache, max-age=0, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+    });
+    next();
+};
 
 /**
  * Parse JSON field from database
@@ -81,7 +89,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // GET /api/tags/cleaned - Get cleaned tags (aggregated from resumes - filtered by firm for non-admins)
-router.get('/cleaned', authenticateToken, async (req, res) => {
+router.get('/cleaned', applyTagsReadHeaders, authenticateToken, async (req, res) => {
     try {
         const scope = req.query.scope === 'grouped-by-deal' ? 'grouped-by-deal' : 'default';
         const access = await resolveTagsAccess(req, res, {

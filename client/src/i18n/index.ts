@@ -31,7 +31,7 @@ const getInitialLanguage = (): SupportedLanguage => {
     return normalizeLanguage(storedLanguage);
   }
 
-  return normalizeLanguage(window.navigator.language);
+  return FALLBACK_LANGUAGE;
 };
 
 const loadLanguageResources = async (language: SupportedLanguage): Promise<void> => {

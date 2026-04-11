@@ -23,7 +23,11 @@ export async function createAuthOptionsWithCsrf(
   options: FetchOptions = {},
   forceRefreshCsrf = false
 ): Promise<FetchOptions> {
-  const csrfToken = await deps.getCsrfToken(forceRefreshCsrf);
+  const method = String(options.method || 'GET').toUpperCase();
+  const requiresCsrf = !['GET', 'HEAD', 'OPTIONS', 'PROPFIND'].includes(method);
+  const csrfToken = requiresCsrf
+    ? await deps.getCsrfToken(forceRefreshCsrf)
+    : null;
 
   deps.logger.log('[CSRF] Building options with token:', csrfToken ? 'present' : 'missing');
 
@@ -31,7 +35,7 @@ export async function createAuthOptionsWithCsrf(
     ...options,
     headers: {
       ...options.headers,
-      'x-csrf-token': csrfToken || '',
+      ...(requiresCsrf ? { 'x-csrf-token': csrfToken || '' } : {}),
     },
     credentials: 'include',
   };

@@ -30,14 +30,29 @@ import batchExportRoutes from '../../routes/batchExport.routes.js';
 import batchJobsRoutes from '../../routes/batchJobs.routes.js';
 import dealsRoutes from '../../routes/deals.routes.js';
 
+function getApiCacheHeaders(method) {
+    const normalizedMethod = String(method || 'GET').toUpperCase();
+    const isSafeMethod = normalizedMethod === 'GET' || normalizedMethod === 'HEAD' || normalizedMethod === 'OPTIONS';
+
+    if (isSafeMethod) {
+        return {
+            'Cache-Control': 'private, no-cache, max-age=0, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        };
+    }
+
+    return {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Surrogate-Control': 'no-store'
+    };
+}
+
 export function registerCacheControl(app) {
     app.use('/api', (req, res, next) => {
-        res.set({
-            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0',
-            'Surrogate-Control': 'no-store'
-        });
+        res.set(getApiCacheHeaders(req.method));
         next();
     });
 }
@@ -75,3 +90,5 @@ export function registerApiRoutes(app) {
     app.use('/api/batch-export', batchExportRoutes);
     app.use('/api/batch-jobs', batchJobsRoutes);
 }
+
+export { getApiCacheHeaders };

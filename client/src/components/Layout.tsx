@@ -43,13 +43,13 @@ const getInitials = (name: string | undefined): string => {
 };
 
 const headerIconButtonClassName =
-  'group flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/90 bg-white shadow-sm shadow-slate-200/50 transition-all hover:-translate-y-px hover:border-slate-300 dark:border-white/8 dark:bg-white/[0.045] dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08]';
+  'group flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/90 bg-white shadow-sm shadow-slate-200/50 transition-[transform,background-color,border-color] duration-200 hover:-translate-y-px hover:border-slate-300 dark:border-white/8 dark:bg-white/[0.045] dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08]';
 
 const headerIconClassName =
-  'h-[18px] w-[18px] flex-shrink-0 stroke-2 text-slate-400 transition-colors duration-200 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300';
+  'h-[18px] w-[18px] flex-shrink-0 stroke-2 text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300';
 
 const headerSolidIconClassName =
-  'h-5 w-5 flex-shrink-0 fill-current text-slate-400 transition-colors duration-200 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300';
+  'h-5 w-5 flex-shrink-0 fill-current text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300';
 
 const Layout = (): JSX.Element => {
   const { user, signOut } = useAuth();
@@ -186,7 +186,7 @@ const Layout = (): JSX.Element => {
                   <div className="hidden h-7 w-px bg-slate-200/80 lg:block dark:bg-white/8" />
                   <Link
                     to="/profile"
-                    className="flex min-w-0 items-center gap-2 rounded-full border border-slate-200/90 bg-white px-1.5 py-1.5 shadow-sm shadow-slate-200/50 transition-all hover:-translate-y-px hover:border-slate-300 dark:border-white/8 dark:bg-white/[0.045] dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08] sm:gap-3 sm:px-2.5"
+                    className="flex min-w-0 items-center gap-2 rounded-full border border-slate-200/90 bg-white px-1.5 py-1.5 shadow-sm shadow-slate-200/50 transition-[transform,background-color,border-color] duration-200 hover:-translate-y-px hover:border-slate-300 dark:border-white/8 dark:bg-white/[0.045] dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08] sm:gap-3 sm:px-2.5"
                     title={t('userProfile.viewProfile') || 'Mon compte'}
                   >
                     <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 via-violet-500 to-sky-500 text-[11px] font-semibold text-white shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">

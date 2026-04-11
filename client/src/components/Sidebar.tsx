@@ -105,7 +105,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
         key={item.name}
         to={item.href}
         className={classNames(
-          'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-200',
+          'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-[transform,background-color,border-color] duration-200',
           isActive
             ? 'bg-slate-900 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] dark:bg-white/12 dark:text-white'
             : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-100'
@@ -116,7 +116,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
         )}
         <IconComponent
           className={classNames(
-            'h-[18px] w-[18px] flex-shrink-0 transition-colors duration-200',
+            'h-[18px] w-[18px] flex-shrink-0',
             isActive
               ? 'text-sky-300 dark:text-sky-300'
               : 'text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300'

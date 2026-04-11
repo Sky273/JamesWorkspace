@@ -15,6 +15,11 @@ import * as authService from '../../services/auth.service.js';
 import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, CLEAR_ACCESS_TOKEN, CLEAR_REFRESH_TOKEN } from './config.js';
 
 const router = express.Router();
+const AUTH_REVALIDATE_CACHE_HEADERS = {
+    'Cache-Control': 'private, no-cache, max-age=0, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+};
 
 // ============================================
 // SHARED HELPERS
@@ -292,6 +297,9 @@ router.post('/register', authLimiter, validateBody(registerSchema), async (req, 
 // POST /api/auth/refresh - Refresh access token (with token rotation)
 router.post('/refresh', authLimiter, async (req, res) => {
     try {
+        // Keep refresh responses out of shared caches without using `no-store`,
+        // which blocks BFCache for authenticated page restores.
+        res.set(AUTH_REVALIDATE_CACHE_HEADERS);
         const refreshToken = req.cookies.refreshToken;
 
         if (!refreshToken) {
@@ -380,6 +388,7 @@ router.post('/logout', logoutHandler);
 // GET /api/auth/me - Get current user
 router.get('/me', authenticateToken, async (req, res) => {
     try {
+        res.set(AUTH_REVALIDATE_CACHE_HEADERS);
         const user = await fetchUserWithFirm(req.user.id);
         
         if (!user) {

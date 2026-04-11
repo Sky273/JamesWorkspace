@@ -26,7 +26,7 @@ describe('Breadcrumbs', () => {
     renderBreadcrumbs('/');
 
     expect(screen.getByLabelText('Breadcrumb')).toBeInTheDocument();
-    expect(screen.getAllByRole('link')[0]).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'navigation.home' })).toHaveAttribute('href', '/');
     expect(screen.getByText('navigation.home')).toBeInTheDocument();
   });
 

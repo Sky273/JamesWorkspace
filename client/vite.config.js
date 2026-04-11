@@ -160,7 +160,7 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       minify: true,
-      sourcemap: mode !== 'production',
+      sourcemap: true,
       chunkSizeWarningLimit: 1100,
       target: 'es2020',
       modulePreload: {

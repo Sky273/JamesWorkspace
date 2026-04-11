@@ -107,6 +107,7 @@ describe('Resume Stats Routes', () => {
             expect(res.body.deals).toHaveLength(1);
             expect(res.body.totalDeals).toBe(1);
             expect(res.body.unassigned).toBeDefined();
+            expect(res.headers['cache-control']).toBe('private, no-cache, max-age=0, must-revalidate');
         });
 
         it('should return empty deals and unassigned', async () => {
@@ -172,6 +173,7 @@ describe('Resume Stats Routes', () => {
             expect(res.body.scores.averageImproved).toBe(82);
             expect(res.body.scores.improvement).toBe(20);
             expect(mockSetCachedStats).toHaveBeenCalled();
+            expect(res.headers['cache-control']).toBe('private, no-cache, max-age=0, must-revalidate');
         });
 
         it('should return cached stats on cache hit', async () => {

@@ -63,6 +63,14 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
             res.status(401).json({ error: 'Unauthorized' });
         }
     },
+    requireUserManager: (req, res, next) => {
+        if (req.user?.role === 'admin' || req.user?.role === 'localAdmin') {
+            next();
+        } else {
+            res.status(403).json({ error: 'Manager access required' });
+        }
+    },
+    isUserAdmin: (req) => req.user?.role === 'admin',
     requireAdmin: (req, res, next) => {
         if (req.user?.role === 'admin') {
             next();
@@ -158,6 +166,7 @@ describe('Tags Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body).toHaveProperty('Skills');
+            expect(res.headers['cache-control']).toBe('private, no-cache, max-age=0, must-revalidate');
         });
 
         it('should return 500 on DB error', async () => {

@@ -19,6 +19,7 @@ import {
 } from './ResumesPage.data';
 
 export type ResumeViewMode = 'list' | 'byDeal';
+const RESUMES_VIEW_MODE_STORAGE_KEY = 'resumesViewMode';
 
 export const RESUMES_PAGE_SIZE = 20;
 export { getResumePreviewTags };
@@ -44,9 +45,21 @@ export function useResumesDashboard() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [resumeToDelete, setResumeToDelete] = useState<Resume | null>(null);
   const [allTags, setAllTags] = useState<TagsByCategory>(EMPTY_TAGS);
-  const [viewMode, setViewMode] = useState<ResumeViewMode>(
-    (location.state as { viewMode?: string } | null)?.viewMode === 'list' ? 'list' : 'byDeal'
-  );
+  const [viewMode, setViewMode] = useState<ResumeViewMode>(() => {
+    const routeViewMode = (location.state as { viewMode?: string } | null)?.viewMode;
+    if (routeViewMode === 'list' || routeViewMode === 'byDeal') {
+      return routeViewMode;
+    }
+
+    if (typeof window !== 'undefined') {
+      const storedViewMode = window.sessionStorage.getItem(RESUMES_VIEW_MODE_STORAGE_KEY);
+      if (storedViewMode === 'list' || storedViewMode === 'byDeal') {
+        return storedViewMode;
+      }
+    }
+
+    return 'list';
+  });
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -91,6 +104,12 @@ export function useResumesDashboard() {
     void fetchResumes();
   }, [fetchResumes]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem(RESUMES_VIEW_MODE_STORAGE_KEY, viewMode);
+    }
+  }, [viewMode]);
+
   const fetchGlobalStats = useCallback(async () => {
     try {
       const response = await authGet('/api/resumes/stats');
@@ -106,10 +125,18 @@ export function useResumesDashboard() {
   }, [authGet]);
 
   useEffect(() => {
-    void fetchGlobalStats();
+    const timer = window.setTimeout(() => {
+      void fetchGlobalStats();
+    }, 400);
+
+    return () => window.clearTimeout(timer);
   }, [fetchGlobalStats]);
 
   useEffect(() => {
+    if (viewMode !== 'byDeal' && !isFilterExpanded) {
+      return;
+    }
+
     const fetchAllTags = async () => {
       try {
         const scope = viewMode === 'byDeal' ? 'grouped-by-deal' : 'default';
@@ -126,7 +153,7 @@ export function useResumesDashboard() {
     };
 
     void fetchAllTags();
-  }, [authGet, viewMode]);
+  }, [authGet, isFilterExpanded, viewMode]);
 
   const filteredResumes = useMemo(() => {
     return filterResumesByTags(resumes, selectedTags);

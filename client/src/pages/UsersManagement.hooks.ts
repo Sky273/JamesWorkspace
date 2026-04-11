@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -65,9 +65,10 @@ export function useUsersManagementDashboard() {
   const [firms, setFirms] = useState<Firm[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [firmsLoading, setFirmsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<UsersManagementTab>('users');
   const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [usersPage, setUsersPage] = useState(1);
   const [usersTotalCount, setUsersTotalCount] = useState(0);
   const [, setUsersHasMore] = useState(false);
@@ -83,6 +84,7 @@ export function useUsersManagementDashboard() {
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const canManageFirms = user?.role === 'admin';
   const canAssignSuperAdmin = user?.role === 'admin';
+  const deferredSearchTerm = useDeferredValue(searchTerm);
   const currentUserFirmId = user?.firmId || user?.firm_id || '';
   const currentUserFirm = useMemo(
     () => (currentUserFirmId
@@ -96,36 +98,20 @@ export function useUsersManagementDashboard() {
   }, [t]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setDebouncedSearch(searchTerm);
+    startTransition(() => {
       setUsersPage(1);
       setFirmsPage(1);
-    }, 300);
-
-    return () => window.clearTimeout(timer);
+    });
   }, [searchTerm]);
 
-  const fetchData = useCallback(async () => {
+  const fetchUsers = useCallback(async () => {
     try {
-      setLoading(true);
-      const userDataPromise = userService.getUsersPaginated({ page: usersPage, pageSize: USERS_PAGE_SIZE, search: debouncedSearch });
-      const customerDataPromise = canManageFirms
-        ? userService.getCustomersPaginated({ page: firmsPage, pageSize: USERS_PAGE_SIZE, search: debouncedSearch })
-        : Promise.resolve(null);
-
-      const [customerData, userData] = await Promise.all([customerDataPromise, userDataPromise]);
-
-      if (customerData?.customers) {
-        setFirms(customerData.customers);
-        setFirmsTotalCount(customerData.pagination?.totalCount || customerData.customers.length);
-        setFirmsHasMore(customerData.pagination?.hasMore || false);
-      } else {
-        const scopedFirms = currentUserFirm ? [currentUserFirm] : [];
-        setFirms(scopedFirms);
-        setFirmsTotalCount(scopedFirms.length);
-        setFirmsHasMore(false);
-      }
-
+      setUsersLoading(true);
+      const userData = await userService.getUsersPaginated({
+        page: usersPage,
+        pageSize: USERS_PAGE_SIZE,
+        search: deferredSearchTerm,
+      });
       if (userData.users) {
         setUsers(userData.users);
         setUsersTotalCount(userData.pagination?.totalCount || userData.users.length);
@@ -135,16 +121,69 @@ export function useUsersManagementDashboard() {
         setUsersTotalCount(Array.isArray(userData) ? userData.length : 0);
       }
     } catch (error) {
-      logger.error('Error loading data:', error);
+      logger.error('Error loading users:', error);
       toast.error(tRef.current('common.error'));
     } finally {
-      setLoading(false);
+      setUsersLoading(false);
     }
-  }, [canManageFirms, currentUserFirm, debouncedSearch, firmsPage, usersPage]);
+  }, [deferredSearchTerm, usersPage]);
+
+  const fetchFirms = useCallback(async () => {
+    if (!canManageFirms) {
+      const scopedFirms = currentUserFirm ? [currentUserFirm] : [];
+      setFirms(scopedFirms);
+      setFirmsTotalCount(scopedFirms.length);
+      setFirmsHasMore(false);
+      return;
+    }
+
+    try {
+      setFirmsLoading(true);
+      const customerData = await userService.getCustomersPaginated({
+        page: firmsPage,
+        pageSize: USERS_PAGE_SIZE,
+        search: deferredSearchTerm,
+      });
+
+      if (customerData?.customers) {
+        setFirms(customerData.customers);
+        setFirmsTotalCount(customerData.pagination?.totalCount || customerData.customers.length);
+        setFirmsHasMore(customerData.pagination?.hasMore || false);
+      }
+    } catch (error) {
+      logger.error('Error loading firms:', error);
+      toast.error(tRef.current('common.error'));
+    } finally {
+      setFirmsLoading(false);
+    }
+  }, [canManageFirms, currentUserFirm, deferredSearchTerm, firmsPage]);
 
   useEffect(() => {
-    void fetchData();
-  }, [fetchData]);
+    void fetchUsers();
+  }, [fetchUsers]);
+
+  useEffect(() => {
+    if (!canManageFirms) {
+      void fetchFirms();
+      return;
+    }
+
+    const shouldPrioritizeFirms = activeTab === 'firms' || userModalOpen || firmModalOpen;
+    if (shouldPrioritizeFirms) {
+      void fetchFirms();
+      return;
+    }
+
+    const deferredFetch = window.setTimeout(() => {
+      void fetchFirms();
+    }, 250);
+
+    return () => window.clearTimeout(deferredFetch);
+  }, [activeTab, canManageFirms, fetchFirms, firmModalOpen, userModalOpen]);
+
+  useEffect(() => {
+    setLoading(usersLoading);
+  }, [usersLoading]);
 
   useEffect(() => {
     if (!canManageFirms && activeTab !== 'users') {
@@ -195,12 +234,15 @@ export function useUsersManagementDashboard() {
 
       setUserModalOpen(false);
       setSelectedUser(null);
-      await fetchData();
+      await fetchUsers();
+      if (canManageFirms) {
+        void fetchFirms();
+      }
     } catch (error) {
       logger.error('Error saving user:', error);
       toast.error(selectedUser ? t('users.management.messages.errorUpdatingUser') : t('users.management.messages.errorCreatingUser'));
     }
-  }, [fetchData, selectedUser, t]);
+  }, [canManageFirms, fetchFirms, fetchUsers, selectedUser, t]);
 
   const handleDeleteUser = useCallback(async () => {
     if (!deleteTarget) {
@@ -212,12 +254,15 @@ export function useUsersManagementDashboard() {
       toast.success(t('users.management.messages.userDeleted'));
       setDeleteModalOpen(false);
       setDeleteTarget(null);
-      await fetchData();
+      await fetchUsers();
+      if (canManageFirms) {
+        void fetchFirms();
+      }
     } catch (error) {
       logger.error('Error deleting user:', error);
       toast.error(t('users.management.messages.errorDeletingUser'));
     }
-  }, [deleteTarget, fetchData, t]);
+  }, [canManageFirms, deleteTarget, fetchFirms, fetchUsers, t]);
 
   const handleForcePasswordReset = useCallback(async () => {
     if (!selectedUser) {
@@ -260,12 +305,13 @@ export function useUsersManagementDashboard() {
 
       setFirmModalOpen(false);
       setSelectedFirm(null);
-      await fetchData();
+      await fetchUsers();
+      void fetchFirms();
     } catch (error) {
       logger.error('Error saving customer:', error);
       toast.error(selectedFirm ? t('users.management.messages.errorUpdatingFirm') : t('users.management.messages.errorCreatingFirm'));
     }
-  }, [fetchData, selectedFirm, t]);
+  }, [fetchFirms, fetchUsers, selectedFirm, t]);
 
   const handleDeleteFirm = useCallback(async () => {
     if (!deleteTarget) {
@@ -277,7 +323,8 @@ export function useUsersManagementDashboard() {
       toast.success(t('users.management.messages.firmDeleted'));
       setDeleteModalOpen(false);
       setDeleteTarget(null);
-      await fetchData();
+      await fetchUsers();
+      void fetchFirms();
     } catch (error: unknown) {
       logger.error('Error deleting customer:', error);
       if (error instanceof Error && error.message.includes('associated users')) {
@@ -286,12 +333,20 @@ export function useUsersManagementDashboard() {
         toast.error(t('users.management.messages.errorDeletingFirm'));
       }
     }
-  }, [deleteTarget, fetchData, t]);
+  }, [deleteTarget, fetchFirms, fetchUsers, t]);
 
   const stats = useMemo<UsersManagementStats>(
     () => buildUsersManagementStats(users, usersTotalCount, firmsTotalCount),
     [firmsTotalCount, users, usersTotalCount],
   );
+
+  const refreshData = useCallback(async () => {
+    await fetchUsers();
+
+    if (canManageFirms && (activeTab === 'firms' || firms.length > 0)) {
+      await fetchFirms();
+    }
+  }, [activeTab, canManageFirms, fetchFirms, fetchUsers, firms.length]);
 
   return {
     activeTab,
@@ -313,7 +368,8 @@ export function useUsersManagementDashboard() {
     },
     deleteModalOpen,
     deleteTarget,
-    fetchData,
+    fetchData: refreshData,
+    firmsLoading,
     firmModalOpen,
     firms,
     firmsPage,

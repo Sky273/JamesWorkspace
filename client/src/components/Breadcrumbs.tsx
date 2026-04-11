@@ -201,8 +201,13 @@ const Breadcrumbs = ({ items, className = '', tone = 'default' }: BreadcrumbsPro
           <li key={index} className="flex min-w-0 items-center">
             {index > 0 && <ChevronRightIcon className={`mx-0.5 h-3.5 w-3.5 flex-shrink-0 ${palette.icon}`} />}
             {index === 0 ? (
-              <Link to={item.href || '/'} className={palette.home}>
-                <HomeIcon className="h-3.5 w-3.5" />
+              <Link
+                to={item.href || '/'}
+                className={palette.home}
+                aria-label={item.label}
+                title={item.label}
+              >
+                <HomeIcon className="h-3.5 w-3.5" aria-hidden="true" />
               </Link>
             ) : item.current || !item.href ? (
               <span className={`max-w-[220px] truncate sm:max-w-[320px] ${palette.current}`}>{item.label}</span>

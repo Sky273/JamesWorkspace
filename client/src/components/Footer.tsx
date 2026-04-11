@@ -18,21 +18,21 @@ const Footer = (): JSX.Element => {
             href="https://www.aptea.net/"
             target="_blank"
             rel="noopener noreferrer"
-            className="opacity-80 transition-opacity hover:opacity-100"
+            className="opacity-80 hover:opacity-100"
           >
             <ApteaLogo className="h-12 w-[5.6875rem] text-slate-900 dark:text-white" />
           </a>
           <div className="flex flex-wrap items-center justify-center gap-3 text-sm sm:gap-4">
             <Link
               to="/privacy"
-              className="text-slate-600 transition-colors hover:text-slate-900 dark:text-[var(--cv-muted)] dark:hover:text-[var(--cv-text)]"
+              className="text-slate-600 hover:text-slate-900 dark:text-[var(--cv-muted)] dark:hover:text-[var(--cv-text)]"
             >
               {t('footer.privacy')}
             </Link>
             <span className="text-slate-300 dark:text-white/12">|</span>
             <Link
               to="/terms"
-              className="text-slate-600 transition-colors hover:text-slate-900 dark:text-[var(--cv-muted)] dark:hover:text-[var(--cv-text)]"
+              className="text-slate-600 hover:text-slate-900 dark:text-[var(--cv-muted)] dark:hover:text-[var(--cv-text)]"
             >
               {t('footer.terms')}
             </Link>

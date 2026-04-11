@@ -3,15 +3,8 @@
  * TypeScript version
  */
 
-// IMPORTANT: i18n must be imported FIRST before any React components
-import i18n, { i18nReady } from './i18n';
-import { I18nextProvider } from 'react-i18next';
-
-import { StrictMode } from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
 import './styles/main.css';
-import { AuthProvider } from './context/AuthContext';
 import { installGlobalErrorHandling } from './bootstrap/globalErrorHandling';
 
 installGlobalErrorHandling();
@@ -19,21 +12,25 @@ installGlobalErrorHandling();
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Root element not found');
 
-const renderApp = () => {
-  ReactDOM.createRoot(rootElement).render(
-    <StrictMode>
-      <I18nextProvider i18n={i18n}>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </I18nextProvider>
-    </StrictMode>
-  );
+const root = ReactDOM.createRoot(rootElement);
+
+root.render(
+  <div className="min-h-screen flex items-center justify-center bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="flex flex-col items-center gap-4">
+      <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-slate-200 border-t-primary-600 dark:border-slate-800" />
+      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Chargement...</p>
+    </div>
+  </div>
+);
+
+const loadApplication = async () => {
+  const { mountApplication } = await import('./bootstrap/mountApplication');
+  await mountApplication(root);
 };
 
-void i18nReady
-  .then(renderApp)
-  .catch((error) => {
-    console.error('[i18n] Failed to initialize translations', error);
+window.setTimeout(() => {
+  void loadApplication().catch((error) => {
+    console.error('[bootstrap] Failed to mount application', error);
     throw error;
   });
+}, 0);

@@ -11,6 +11,25 @@ import { safeLog } from '../utils/logger.backend.js';
 import { normalizeOrigin } from '../utils/originUtils.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
+const cspScriptSources = [
+    "'self'",
+    "blob:",            // Required: PDF.js worker scripts
+    "https://unpkg.com",                      // Swagger UI scripts
+    "https://basemaps.cartocdn.com",          // MapLibre GL scripts from style
+    "https://*.basemaps.cartocdn.com",        // MapLibre GL scripts from tiles
+    // Cloudflare injects inline scripts (Rocket Loader, Email Obfuscation, etc.)
+    // These hashes allow the specific Cloudflare-injected scripts without 'unsafe-inline'.
+    // Warning: Cloudflare can change these at any time. If new CSP violations appear for
+    // inline scripts, add the hash from the browser error or disable Rocket Loader
+    // and Email Obfuscation in the Cloudflare dashboard for a permanent fix.
+    "'sha256-A1+e72bQn7hPqkdKAAlQSbFpetfFWJBOj5vG34ZrAxU='",  // Cloudflare injected script
+    "'sha256-P5AT03Ewswrka26JysiPTKxr4GXeRKQKbPiV4tBCy2k='",  // Cloudflare injected script (variant)
+    "'sha256-yZlHOZ5xtWE8Evaf3HFDtJxWosKnkweYfd1MWFsufuI='",  // Cloudflare injected script (variant 2)
+    "'sha256-OJ/4e+qcd2xOGOLtsh+uuewAvle/9b2F/3/WwzgLXoE='",  // Cloudflare injected script (variant 3)
+    "'sha256-oR7U6/Q03fkV/ymCI4KGJsn1/qEg14weQX35BoNd6/8='",  // Cloudflare injected script (variant 4)
+    "'sha256-FID3c60H9c7lktAfbhJ+B/txDAbRaj0JQWM8iPEiRXk='",  // Cloudflare injected script (variant 5)
+    "'sha256-nileZXtiIiKtSt6FJjdZt1szHltIjlRss/RxLHOpD0U='"   // Cloudflare injected script (variant 6)
+];
 
 // ============================================
 // CONTENT SECURITY POLICY
@@ -50,22 +69,8 @@ export function configureHelmet(app) {
             directives: {
                 // STRICT CSP: default-src 'none' requires explicit directives for all resource types
                 defaultSrc: ["'none'"],
-                scriptSrc: [
-                    "'self'",
-                    "blob:",            // Required: PDF.js worker scripts
-                    "https://unpkg.com",                      // Swagger UI scripts
-                    "https://basemaps.cartocdn.com",          // MapLibre GL scripts from style
-                    "https://*.basemaps.cartocdn.com",        // MapLibre GL scripts from tiles
-                    // Cloudflare injects inline scripts (Rocket Loader, Email Obfuscation, etc.)
-                    // These hashes allow the specific Cloudflare-injected scripts without 'unsafe-inline'.
-                    // Warning: Cloudflare can change these at any time. If new CSP violations appear for
-                    // inline scripts, add the hash from the browser error or disable Rocket Loader
-                    // and Email Obfuscation in the Cloudflare dashboard for a permanent fix.
-                    "'sha256-A1+e72bQn7hPqkdKAAlQSbFpetfFWJBOj5vG34ZrAxU='",  // Cloudflare injected script
-                    "'sha256-P5AT03Ewswrka26JysiPTKxr4GXeRKQKbPiV4tBCy2k='",  // Cloudflare injected script (variant)
-                    "'sha256-yZlHOZ5xtWE8Evaf3HFDtJxWosKnkweYfd1MWFsufuI='",  // Cloudflare injected script (variant 2)
-                    "'sha256-OJ/4e+qcd2xOGOLtsh+uuewAvle/9b2F/3/WwzgLXoE='"  // Cloudflare injected script (variant 3)
-                ],
+                scriptSrc: cspScriptSources,
+                scriptSrcElem: cspScriptSources,
                 scriptSrcAttr: ["'none'"], // No inline event handlers allowed
                 styleSrc: [
                     "'self'",

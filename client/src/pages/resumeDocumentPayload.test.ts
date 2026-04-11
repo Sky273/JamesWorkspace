@@ -5,8 +5,8 @@ import {
   buildExportPayload,
 } from './resumeDocumentPayload';
 
-vi.mock('../components/TiptapEditor', async () => {
-  const actual = await vi.importActual<typeof import('../components/TiptapEditor')>('../components/TiptapEditor');
+vi.mock('../components/TiptapEditor/suggestionsHtml', async () => {
+  const actual = await vi.importActual<typeof import('../components/TiptapEditor/suggestionsHtml')>('../components/TiptapEditor/suggestionsHtml');
   return {
     ...actual,
     removeSuggestionMarkers: vi.fn((value: string) => value.replace(/\[\[suggestion\]\]/g, '')),
