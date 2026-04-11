@@ -16,6 +16,11 @@ interface LanguageSelectorProps {
   variant?: 'default' | 'header';
 }
 
+interface MenuPosition {
+  top: number;
+  left: number;
+}
+
 const FlagFR = () => (
   <svg className="h-4 w-5 rounded-sm" viewBox="0 0 640 480" xmlns="http://www.w3.org/2000/svg">
     <rect width="213.3" height="480" fill="#002654" />
@@ -66,11 +71,36 @@ const HeaderLanguageIcon = (): JSX.Element => (
 const LanguageSelector = ({ variant = 'default' }: LanguageSelectorProps): JSX.Element => {
   const { i18n, t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<MenuPosition>({ top: 0, left: 0 });
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const normalizedLanguage = i18n.resolvedLanguage?.toLowerCase().startsWith('en') ? 'en' : 'fr';
   const currentLanguage = languages.find((lang) => lang.code === normalizedLanguage) || languages[0];
   const isHeader = variant === 'header';
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const updateMenuPosition = () => {
+      const button = buttonRef.current;
+      if (!button) return;
+
+      const { bottom, right } = button.getBoundingClientRect();
+      setMenuPosition({
+        top: bottom + 10,
+        left: right - 160,
+      });
+    };
+
+    const rafId = window.requestAnimationFrame(updateMenuPosition);
+    window.addEventListener('resize', updateMenuPosition);
+    window.addEventListener('scroll', updateMenuPosition, true);
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', updateMenuPosition);
+      window.removeEventListener('scroll', updateMenuPosition, true);
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -108,10 +138,7 @@ const LanguageSelector = ({ variant = 'default' }: LanguageSelectorProps): JSX.E
         <div
           ref={menuRef}
           className="fixed z-[70] w-40 origin-top-right rounded-xl border border-slate-200 bg-white p-1 shadow-lg focus:outline-none dark:border-slate-700 dark:bg-slate-800"
-          style={{
-            top: buttonRef.current.getBoundingClientRect().bottom + 10,
-            left: buttonRef.current.getBoundingClientRect().right - 160,
-          }}
+          style={menuPosition}
         >
           {languages.map((language) => {
             const isActive = currentLanguage.code === language.code;

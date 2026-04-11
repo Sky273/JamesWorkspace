@@ -8,6 +8,7 @@ import { BrowserRouter as Router } from 'react-router-dom';
 import { ResumeProvider } from './context/ResumeContext';
 import { ChatbotProvider } from './context/ChatbotContext';
 import ErrorBoundary from './components/ErrorBoundary';
+import DeferredRender from './components/DeferredRender';
 import { AppRoutes } from './app/appRoutes';
 import { AppToaster } from './app/lazyPages';
 
@@ -26,9 +27,11 @@ const App = (): JSX.Element => {
             <Suspense fallback={<PageLoader />}>
               <AppRoutes />
             </Suspense>
-            <Suspense fallback={null}>
-              <AppToaster />
-            </Suspense>
+            <DeferredRender delayMs={6000}>
+              <Suspense fallback={null}>
+                <AppToaster />
+              </Suspense>
+            </DeferredRender>
           </Router>
         </ChatbotProvider>
       </ResumeProvider>

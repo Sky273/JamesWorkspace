@@ -24,6 +24,37 @@ const mimeTypes = {
     '.eot': 'application/vnd.ms-fontobject'
 };
 
+function normalizeForPathChecks(filePath) {
+    return String(filePath || '').replace(/\\/g, '/');
+}
+
+function isHashedAsset(requestPath) {
+    const normalizedPath = normalizeForPathChecks(requestPath);
+    return (
+        /\.[a-f0-9]{8,}\.(js|css|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|webp|ico)$/i.test(normalizedPath)
+        || normalizedPath.includes('/assets/')
+    );
+}
+
+function applyStaticCacheHeaders(res, filePath, requestPath = filePath) {
+    const normalizedFilePath = normalizeForPathChecks(filePath);
+    const normalizedRequestPath = normalizeForPathChecks(requestPath);
+
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+
+    if (isHashedAsset(normalizedRequestPath)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        return;
+    }
+
+    if (normalizedFilePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache, max-age=0, must-revalidate');
+        return;
+    }
+
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+}
+
 function normalizeStaticRequestPath(filePath) {
     return `/${String(filePath || '').replace(/\\/g, '/')}`;
 }
@@ -90,9 +121,10 @@ export function configureStaticFiles(app, serverDir) {
             const ext = path.extname(req.path).toLowerCase();
             const mimeType = mimeTypes[ext];
             const cachedVariants = precompressedAssetIndex.get(req.path);
+            const originalRequestPath = req.path;
             
             if (cachedVariants?.br && acceptEncoding.includes('br')) {
-                res.set('X-Content-Type-Options', 'nosniff');
+                applyStaticCacheHeaders(res, originalRequestPath, originalRequestPath);
                 res.set('Content-Encoding', 'br');
                 res.set('Vary', 'Accept-Encoding');
                 if (mimeType) res.set('Content-Type', mimeType);
@@ -100,7 +132,7 @@ export function configureStaticFiles(app, serverDir) {
             }
             // Gzip remains the fallback when Brotli is unavailable.
             else if (cachedVariants?.gzip && acceptEncoding.includes('gzip')) {
-                res.set('X-Content-Type-Options', 'nosniff');
+                applyStaticCacheHeaders(res, originalRequestPath, originalRequestPath);
                 res.set('Content-Encoding', 'gzip');
                 res.set('Vary', 'Accept-Encoding');
                 if (mimeType) res.set('Content-Type', mimeType);
@@ -116,8 +148,7 @@ export function configureStaticFiles(app, serverDir) {
         etag: true,
         lastModified: true,
         setHeaders: (res) => {
-            res.setHeader('X-Content-Type-Options', 'nosniff');
-            res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+            applyStaticCacheHeaders(res, '/logos');
         }
     }));
 
@@ -127,23 +158,7 @@ export function configureStaticFiles(app, serverDir) {
         lastModified: true,
         redirect: false,
         setHeaders: (res, filePath) => {
-            res.setHeader('X-Content-Type-Options', 'nosniff');
-            // Hashed assets (contain hash in filename) - cache for 1 year
-            if (filePath.match(/\.[a-f0-9]{8,}\.(js|css|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|webp|ico)$/i)) {
-                res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-            }
-            // Assets directory (Vite build output) - cache for 1 year
-            else if (filePath.includes('/assets/')) {
-                res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-            }
-            // HTML files - no cache (always fetch fresh for SPA)
-            else if (filePath.endsWith('.html')) {
-                res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-            }
-            // Other static files - cache for 1 day
-            else {
-                res.setHeader('Cache-Control', 'public, max-age=86400');
-            }
+            applyStaticCacheHeaders(res, filePath);
         }
     }));
 
@@ -160,7 +175,7 @@ export function configureStaticFiles(app, serverDir) {
         }
         // Serve index.html for all other routes (SPA client-side routing)
         res.setHeader('X-Content-Type-Options', 'nosniff');
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Cache-Control', 'no-cache, max-age=0, must-revalidate');
         res.sendFile(path.join(distPath, 'index.html'), (err) => {
             if (err) {
                 safeLog('error', 'Error serving index.html', { error: err.message, path: req.path });

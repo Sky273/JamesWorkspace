@@ -329,6 +329,7 @@ describe('Batch Jobs Routes - GET /api/batch-jobs', () => {
         expect(res.status).toBe(200);
         expect(Array.isArray(res.body)).toBe(true);
         expect(res.body.length).toBe(2);
+        expect(res.headers['cache-control']).toBe('private, no-cache, max-age=0, must-revalidate');
     });
 
     it('should filter by status', async () => {
@@ -525,6 +526,7 @@ describe('Batch Jobs Routes - GET /api/batch-jobs/:id', () => {
         expect(res.body.id).toBe('job-123');
         expect(res.body.items).toBeDefined();
         expect(res.body).not.toHaveProperty('export_file_path');
+        expect(res.headers['cache-control']).toBe('private, no-cache, max-age=0, must-revalidate');
     });
 
     it('should return 403 for job from different firm', async () => {

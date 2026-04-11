@@ -11,11 +11,16 @@ const Footer = (): JSX.Element => {
   const { t } = useTranslation();
 
   return (
-    <footer className="border-t border-slate-200/80 bg-white/92 shadow-[0_-1px_0_rgba(15,23,42,0.04)] backdrop-blur-xl dark:border-white/6 dark:bg-[#0c1222]/95 dark:shadow-[0_-1px_0_rgba(255,255,255,0.03)]">
-      <div className="px-4 py-6 sm:px-6 lg:px-8">
+    <footer className="pointer-events-none border-t border-slate-200/80 bg-white/92 shadow-[0_-1px_0_rgba(15,23,42,0.04)] backdrop-blur-xl dark:border-white/6 dark:bg-[#0c1222]/95 dark:shadow-[0_-1px_0_rgba(255,255,255,0.03)]">
+      <div className="pointer-events-auto min-h-[9.5rem] px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center justify-center space-y-4 text-center">
-          <a href="https://www.aptea.net/" target="_blank" rel="noopener noreferrer" className="opacity-80 transition-opacity hover:opacity-100">
-            <ApteaLogo className="h-12 text-slate-900 dark:text-white" />
+          <a
+            href="https://www.aptea.net/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="opacity-80 transition-opacity hover:opacity-100"
+          >
+            <ApteaLogo className="h-12 w-[5.6875rem] text-slate-900 dark:text-white" />
           </a>
           <div className="flex flex-wrap items-center justify-center gap-3 text-sm sm:gap-4">
             <Link

@@ -128,7 +128,7 @@
 }
 
 .editorial-migrated-shell .cv-display {
-  font-family: 'Manrope', var(--font-family-sans) !important;
+  font-family: var(--font-family-sans) !important;
 }
 
 .editorial-migrated-shell .rounded-full,

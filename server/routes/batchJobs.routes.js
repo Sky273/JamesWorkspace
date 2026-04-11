@@ -39,6 +39,15 @@ import { createUploadMiddleware } from './batchJobs/helpers.js';
 const router = express.Router();
 const upload = createUploadMiddleware();
 
+const applyBatchJobsReadHeaders = (_req, res, next) => {
+    res.set({
+        'Cache-Control': 'private, no-cache, max-age=0, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+    });
+    next();
+};
+
 router.post('/', authenticateToken, upload.array('files', 200), createImportJob);
 router.post('/improve', authenticateToken, validateBody(batchImproveSchema), createImproveJob);
 router.post('/adapt', authenticateToken, validateBody(batchAdaptSchema), createAdaptJob);
@@ -47,12 +56,12 @@ router.post('/profile-search', authenticateToken, validateBody(batchProfileSearc
 router.post('/profile-analysis', authenticateToken, validateBody(batchProfileAnalysisSchema), createProfileAnalysisJob);
 router.post('/deal-export', authenticateToken, validateBody(batchDealExportSchema), createDealExportJob);
 
-router.get('/', authenticateToken, listJobs);
-router.get('/:id', authenticateToken, validateParams('id'), getJobDetails);
+router.get('/', applyBatchJobsReadHeaders, authenticateToken, listJobs);
+router.get('/:id', applyBatchJobsReadHeaders, authenticateToken, validateParams('id'), getJobDetails);
 router.post('/:id/cancel', authenticateToken, validateParams('id'), cancelJobHandler);
 router.delete('/:id', authenticateToken, validateParams('id'), deleteJobHandler);
 router.get('/:id/download', authenticateToken, validateParams('id'), downloadJobExport);
-router.get('/:id/pending-names', authenticateToken, listPendingNames);
+router.get('/:id/pending-names', applyBatchJobsReadHeaders, authenticateToken, listPendingNames);
 router.post('/items/:itemId/provide-name', authenticateToken, validateParams('itemId'), validateBody(provideNameSchema), provideNameForItem);
 
 export default router;

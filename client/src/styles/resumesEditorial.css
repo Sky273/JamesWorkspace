@@ -31,7 +31,7 @@
 }
 
 .resumes-editorial-shell .cv-filter-section-text {
-  font-family: 'Manrope', var(--font-family-sans) !important;
+  font-family: var(--font-family-sans) !important;
   font-size: 1.15rem;
   font-weight: 700;
   letter-spacing: -0.035em;

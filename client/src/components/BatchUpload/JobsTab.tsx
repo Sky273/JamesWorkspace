@@ -76,7 +76,7 @@ const JobsTab = (): JSX.Element => {
       if (expandedJobId) {
         void fetchJobDetails(expandedJobId);
       }
-    }, 2000);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [autoRefreshEnabled, jobs, expandedJobId, fetchJobs, fetchJobDetails]);

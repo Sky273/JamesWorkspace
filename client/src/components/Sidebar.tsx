@@ -3,9 +3,10 @@
  * TypeScript version with organized sections
  */
 
-import { useState, useEffect, ForwardRefExoticComponent, RefAttributes, SVGProps } from 'react';
+import { ForwardRefExoticComponent, RefAttributes, SVGProps } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
+  BoltIcon,
   HomeIcon,
   DocumentTextIcon,
   DocumentDuplicateIcon,
@@ -29,8 +30,6 @@ import {
 import classNames from 'classnames';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
-import resumeConverterLogoDark from '../assets/resume-converter-logo.png';
-import resumeConverterLogoLight from '../assets/resume-converter-logo-clair.png';
 
 type HeroIcon = ForwardRefExoticComponent<Omit<SVGProps<SVGSVGElement>, 'ref'> & { title?: string; titleId?: string } & RefAttributes<SVGSVGElement>>;
 
@@ -57,24 +56,10 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
   const location = useLocation();
   const { t } = useTranslation();
   const { user } = useAuth();
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
 
   const isSuperAdmin = user?.role === 'admin';
   const isLocalAdmin = user?.role === 'localAdmin';
   const canAccessManagerScreens = isSuperAdmin || isLocalAdmin;
-
-  useEffect(() => {
-    const checkDarkMode = (): void => {
-      setIsDarkMode(document.documentElement.classList.contains('dark'));
-    };
-
-    checkDarkMode();
-
-    const observer = new MutationObserver(checkDarkMode);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-
-    return () => observer.disconnect();
-  }, []);
 
   const homeItem: NavItem = { name: t('navigation.home'), href: '/', icon: HomeIcon };
 
@@ -182,7 +167,21 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
     <div className="flex min-h-0 flex-1 flex-col border-r border-slate-200/80 bg-white/96 shadow-[1px_0_0_rgba(15,23,42,0.04)] dark:border-white/6 dark:bg-[#09111f] dark:shadow-[1px_0_0_rgba(255,255,255,0.03)]">
       <div className="flex flex-1 flex-col overflow-y-auto px-3 pb-4 pt-4 sidebar-scrollbar">
         <div className="flex flex-shrink-0 items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/90 px-3 py-3 dark:border-white/6 dark:bg-white/[0.03]">
-          <img src={isDarkMode ? resumeConverterLogoDark : resumeConverterLogoLight} alt="Resume Converter" className="h-auto max-w-[176px] object-contain" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 via-indigo-500 to-violet-500 text-white shadow-[0_12px_28px_rgba(79,70,229,0.28)]">
+                <BoltIcon className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold tracking-[0.02em] text-slate-900 dark:text-white">
+                  ResumeConverter
+                </div>
+                <div className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                  AI workspace
+                </div>
+              </div>
+            </div>
+          </div>
           <button
             onClick={onClose}
             className="rounded-xl p-1.5 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-white/8 dark:hover:text-slate-200 lg:hidden"

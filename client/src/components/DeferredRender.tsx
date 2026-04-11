@@ -3,9 +3,14 @@ import { useEffect, useState, type ReactNode } from 'react';
 interface DeferredRenderProps {
   children: ReactNode;
   delayMs?: number;
+  strategy?: 'timeout' | 'idle';
 }
 
-export default function DeferredRender({ children, delayMs = 150 }: DeferredRenderProps) {
+export default function DeferredRender({
+  children,
+  delayMs = 150,
+  strategy = 'timeout',
+}: DeferredRenderProps) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -19,7 +24,7 @@ export default function DeferredRender({ children, delayMs = 150 }: DeferredRend
       return undefined;
     }
 
-    if ('requestIdleCallback' in window) {
+    if (strategy === 'idle' && 'requestIdleCallback' in window) {
       idleId = window.requestIdleCallback(activate, { timeout: delayMs * 4 });
       return () => {
         if (idleId !== null) {

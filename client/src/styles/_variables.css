@@ -39,7 +39,7 @@
   --spacing-2xl: 3rem;     /* 48px */
 
   /* --- Typography --- */
-  --main-font: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --main-font: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   --font-family-sans: var(--main-font);
   --font-family-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   

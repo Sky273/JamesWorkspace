@@ -16,11 +16,12 @@ import {
 import { useTranslation } from 'react-i18next';
 import LanguageSelector from './LanguageSelector';
 import Footer from './Footer';
-import HealthIndicator from './HealthIndicator';
 import Breadcrumbs from './Breadcrumbs';
+import DeferredRender from './DeferredRender';
 
 const AboutModal = lazy(() => import('./AboutModal'));
 const ChatBot = lazy(() => import('./ChatBot'));
+const HealthIndicator = lazy(() => import('./HealthIndicator'));
 
 const getCookie = (name: string): string | null => {
   const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
@@ -92,7 +93,6 @@ const Layout = (): JSX.Element => {
     '/profile-matching',
     '/upload',
     '/batch-upload',
-    '/batch-jobs',
     '/clients',
     '/templates',
     '/dashboard/tags',
@@ -124,8 +124,8 @@ const Layout = (): JSX.Element => {
 
       <div className="min-h-screen lg:pl-64">
         <div className={`flex min-h-screen flex-1 flex-col${isEditorialMigratedRoute ? ` editorial-migrated-shell${editorialRouteClassName}` : ''}`}>
-        <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/92 shadow-[0_1px_0_rgba(15,23,42,0.04)] backdrop-blur-xl dark:border-white/6 dark:bg-[#0c1222]/95 dark:shadow-[0_1px_0_rgba(255,255,255,0.03)]">
-          <div className="relative flex min-h-16 items-center justify-between gap-3 px-4 py-2 sm:h-16 sm:gap-4 sm:py-0 sm:px-6 lg:px-8">
+        <header className="pointer-events-none sticky top-0 z-40 border-b border-slate-200/80 bg-white/92 shadow-[0_1px_0_rgba(15,23,42,0.04)] backdrop-blur-xl dark:border-white/6 dark:bg-[#0c1222]/95 dark:shadow-[0_1px_0_rgba(255,255,255,0.03)]">
+          <div className="pointer-events-auto relative flex min-h-16 items-center justify-between gap-3 px-4 py-2 sm:h-16 sm:gap-4 sm:py-0 sm:px-6 lg:px-8">
             <button
               className={`absolute left-4 top-1/2 z-10 -translate-y-1/2 shrink-0 lg:hidden ${headerIconButtonClassName}`}
               onClick={() => setIsMobileMenuOpen(true)}
@@ -174,7 +174,11 @@ const Layout = (): JSX.Element => {
               </div>
 
               <div className="hidden sm:block">
-                <HealthIndicator variant="header" />
+                <DeferredRender delayMs={7000}>
+                  <Suspense fallback={null}>
+                    <HealthIndicator variant="header" />
+                  </Suspense>
+                </DeferredRender>
               </div>
 
               {user && (
@@ -211,7 +215,7 @@ const Layout = (): JSX.Element => {
           </div>
         </header>
 
-        <main className="flex-1">
+        <main className="relative z-0 flex-1">
           <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
             <Outlet />
           </div>
@@ -221,10 +225,16 @@ const Layout = (): JSX.Element => {
         </div>
       </div>
 
-      <Suspense fallback={null}>
-        <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
-        <ChatBot />
-      </Suspense>
+      {isAboutOpen ? (
+        <Suspense fallback={null}>
+          <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
+        </Suspense>
+      ) : null}
+      <DeferredRender delayMs={10000}>
+        <Suspense fallback={null}>
+          <ChatBot />
+        </Suspense>
+      </DeferredRender>
     </div>
   );
 };

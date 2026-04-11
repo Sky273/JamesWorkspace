@@ -22,11 +22,31 @@ const OPTIMIZE_DEPENDENCY_INCLUDE = [
 const COMPRESSED_ASSET_FILTER = /\.(js|mjs|json|css|html|svg|txt|xml|wasm)$/i;
 const COMPRESSION_VERBOSE = process.platform !== 'win32';
 const NON_CRITICAL_MODULE_PRELOAD_PATTERNS = [
+  /assets\/js\/vendor-react-.*\.js$/,
+  /^vendor-react-.*\.js$/,
+  /assets\/js\/vendor-ui-.*\.js$/,
+  /^vendor-ui-.*\.js$/,
+  /assets\/js\/vendor-i18n-.*\.js$/,
+  /^vendor-i18n-.*\.js$/,
+  /assets\/js\/vendor-utils-.*\.js$/,
+  /^vendor-utils-.*\.js$/,
+  /assets\/js\/authService-.*\.js$/,
+  /^authService-.*\.js$/,
+  /assets\/js\/AuthContext-.*\.js$/,
+  /^AuthContext-.*\.js$/,
+  /assets\/js\/apiInterceptor-.*\.js$/,
+  /^apiInterceptor-.*\.js$/,
+  /assets\/js\/llmTimeouts-.*\.js$/,
+  /^llmTimeouts-.*\.js$/,
   /assets\/js\/vendor-map-core-.*\.js$/,
+  /^vendor-map-core-.*\.js$/,
   /assets\/css\/vendor-map-core-.*\.css$/,
   /assets\/js\/vendor-markdown-.*\.js$/,
+  /^vendor-markdown-.*\.js$/,
   /assets\/js\/vendor-charts-.*\.js$/,
+  /^vendor-charts-.*\.js$/,
   /assets\/js\/vendor-three-.*\.js$/,
+  /^vendor-three-.*\.js$/,
 ];
 
 export default defineConfig(({ mode }) => {

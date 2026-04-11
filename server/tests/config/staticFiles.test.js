@@ -11,11 +11,15 @@ function createFixtureDir() {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'resume-converter-static-'));
     const serverDir = path.join(root, 'server');
     const distDir = path.join(root, 'client', 'dist');
+    const assetsDir = path.join(distDir, 'assets', 'js');
     fs.mkdirSync(serverDir, { recursive: true });
     fs.mkdirSync(distDir, { recursive: true });
+    fs.mkdirSync(assetsDir, { recursive: true });
     fs.writeFileSync(path.join(distDir, 'index.html'), '<!doctype html><html><body>app</body></html>');
     fs.writeFileSync(path.join(distDir, 'app.js'), 'console.log("app");');
     fs.writeFileSync(path.join(distDir, 'app.js.br'), zlib.brotliCompressSync(Buffer.from('console.log("app");')));
+    fs.writeFileSync(path.join(assetsDir, 'index-12345678.js'), 'console.log("hashed");');
+    fs.writeFileSync(path.join(assetsDir, 'index-12345678.js.br'), zlib.brotliCompressSync(Buffer.from('console.log("hashed");')));
     fs.mkdirSync(path.join(distDir, 'nested'), { recursive: true });
     fs.writeFileSync(path.join(distDir, 'nested', 'feature.js.gz'), zlib.gzipSync(Buffer.from('console.log("feature");')));
     return { root, serverDir };
@@ -46,6 +50,26 @@ describe('configureStaticFiles', () => {
         expect(res.status).toBe(200);
         expect(res.headers['x-content-type-options']).toBe('nosniff');
         expect(res.headers['cache-control']).toBe('public, max-age=86400');
+    });
+
+    it('sets immutable caching headers for hashed assets, including precompressed variants', async () => {
+        const { root, serverDir } = createFixtureDir();
+        fixtures.push(root);
+
+        const app = express();
+        configureStaticFiles(app, serverDir);
+
+        const plainRes = await request(app).get('/assets/js/index-12345678.js');
+        const compressedRes = await request(app)
+            .get('/assets/js/index-12345678.js')
+            .set('Accept-Encoding', 'br, gzip');
+
+        expect(plainRes.status).toBe(200);
+        expect(plainRes.headers['cache-control']).toBe('public, max-age=31536000, immutable');
+
+        expect(compressedRes.status).toBe(200);
+        expect(compressedRes.headers['content-encoding']).toBe('br');
+        expect(compressedRes.headers['cache-control']).toBe('public, max-age=31536000, immutable');
     });
 
     it('serves precompressed assets from an initialized index without per-request filesystem checks', async () => {
@@ -83,7 +107,7 @@ describe('configureStaticFiles', () => {
         expect(existsSpy).not.toHaveBeenCalled();
     });
 
-    it('sets nosniff and no-store on spa fallback responses', async () => {
+    it('sets nosniff and revalidation headers on spa fallback responses', async () => {
         const { root, serverDir } = createFixtureDir();
         fixtures.push(root);
 
@@ -94,7 +118,7 @@ describe('configureStaticFiles', () => {
 
         expect(res.status).toBe(200);
         expect(res.headers['x-content-type-options']).toBe('nosniff');
-        expect(res.headers['cache-control']).toBe('no-cache, no-store, must-revalidate');
+        expect(res.headers['cache-control']).toBe('no-cache, max-age=0, must-revalidate');
         expect(res.text).toContain('<!doctype html>');
     });
 });

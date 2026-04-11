@@ -1,13 +1,18 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
+import frMessages from './locales/fr';
 
 type SupportedLanguage = 'en' | 'fr';
 
 const FALLBACK_LANGUAGE: SupportedLanguage = 'fr';
+const BUNDLED_RESOURCES = {
+  fr: frMessages,
+} satisfies Record<typeof FALLBACK_LANGUAGE, Record<string, unknown>>;
+
 const LANGUAGE_LOADERS: Record<SupportedLanguage, () => Promise<{ default: Record<string, unknown> }>> = {
   en: () => import('./locales/en'),
-  fr: () => import('./locales/fr'),
+  fr: () => Promise.resolve({ default: BUNDLED_RESOURCES.fr }),
 };
 const loadedLanguages = new Set<SupportedLanguage>();
 
@@ -45,7 +50,11 @@ const bootstrapI18n = async (): Promise<void> => {
   i18n.use(LanguageDetector).use(initReactI18next);
 
   await i18n.init({
-    resources: {},
+    resources: {
+      fr: {
+        translation: BUNDLED_RESOURCES.fr,
+      },
+    },
     lng: FALLBACK_LANGUAGE,
     fallbackLng: FALLBACK_LANGUAGE,
     supportedLngs: ['en', 'fr'],
@@ -62,9 +71,14 @@ const bootstrapI18n = async (): Promise<void> => {
     },
   });
 
-  await loadLanguageResources(FALLBACK_LANGUAGE);
+  loadedLanguages.add(FALLBACK_LANGUAGE);
+
   if (initialLanguage !== FALLBACK_LANGUAGE) {
-    await loadLanguageResources(initialLanguage);
+    void loadLanguageResources(initialLanguage).then(() => {
+      if (i18n.language !== initialLanguage) {
+        void i18n.changeLanguage(initialLanguage);
+      }
+    });
   }
 
   const originalChangeLanguage = i18n.changeLanguage.bind(i18n);
@@ -76,7 +90,7 @@ const bootstrapI18n = async (): Promise<void> => {
     return originalChangeLanguage(nextLanguage, callback);
   };
 
-  if (i18n.language !== initialLanguage) {
+  if (initialLanguage === FALLBACK_LANGUAGE && i18n.language !== initialLanguage) {
     await i18n.changeLanguage(initialLanguage);
   }
 };

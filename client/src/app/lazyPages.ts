@@ -1,42 +1,57 @@
-import { lazy } from 'react';
+import { lazy, type ComponentType } from 'react';
+
+const editorialCssLoaders = [() => import('../styles/editorialPages.css')];
+const resumesEditorialCssLoaders = [
+  () => import('../styles/editorialPages.css'),
+  () => import('../styles/resumesEditorial.css'),
+];
+
+const lazyWithCss = <T extends { default: ComponentType<any> }>(
+  importer: () => Promise<T>,
+  cssLoaders: Array<() => Promise<unknown>> = [],
+) =>
+  lazy(async () => {
+    const [module] = await Promise.all([importer(), ...cssLoaders.map((loadCss) => loadCss())]);
+    return module;
+  });
 
 export const HomePage = lazy(() => import('../pages/HomePage'));
 export const PublicHomePage = lazy(() => import('../pages/PublicHomePage'));
-export const ResumesPage = lazy(() => import('../pages/ResumesPage'));
-export const TemplatesPage = lazy(() => import('../pages/TemplatesPage'));
-export const UploadPage = lazy(() => import('../pages/UploadPage'));
-export const NewTemplatePage = lazy(() => import('../pages/NewTemplatePage'));
-export const TagsManagement = lazy(() => import('../pages/TagsManagement'));
-export const UsersManagement = lazy(() => import('../pages/UsersManagement'));
-export const SecurityLogs = lazy(() => import('../pages/SecurityLogs'));
-export const MetricsPage = lazy(() => import('../pages/MetricsPage'));
-export const SettingsPage = lazy(() => import('../pages/SettingsPage'));
-export const MissionsPage = lazy(() => import('../pages/MissionsPage'));
-export const AdaptationsPage = lazy(() => import('../pages/AdaptationsPage'));
-export const ProfileMatchingPage = lazy(() => import('../pages/ProfileMatchingPage'));
-export const ResumeAnalysisPage = lazy(() => import('../pages/ResumeAnalysisPage'));
-export const ResumeImprovePage = lazy(() => import('../pages/ResumeImprovePage'));
-export const ResumeExportPage = lazy(() => import('../pages/ResumeExportPage'));
-export const ResumeAdaptPage = lazy(() => import('../pages/ResumeAdaptPage'));
-export const MissionViewPage = lazy(() => import('../pages/MissionViewPage'));
-export const DealViewPage = lazy(() => import('../pages/DealViewPage'));
-export const AdaptationViewPage = lazy(() => import('../pages/AdaptationViewPage'));
-export const UserGuidePage = lazy(() => import('../pages/UserGuidePage'));
-export const FactsPage = lazy(() => import('../pages/FactsPage'));
-export const MetiersPage = lazy(() => import('../pages/MetiersPage'));
-export const ClientsPage = lazy(() => import('../pages/ClientsPage'));
-export const EmailTemplatesPage = lazy(() => import('../pages/admin/EmailTemplatesPage'));
+export const ResumesPage = lazyWithCss(() => import('../pages/ResumesPage'), resumesEditorialCssLoaders);
+export const TemplatesPage = lazyWithCss(() => import('../pages/TemplatesPage'), editorialCssLoaders);
+export const UploadPage = lazyWithCss(() => import('../pages/UploadPage'), editorialCssLoaders);
+export const NewTemplatePage = lazyWithCss(() => import('../pages/NewTemplatePage'), editorialCssLoaders);
+export const TagsManagement = lazyWithCss(() => import('../pages/TagsManagement'), editorialCssLoaders);
+export const UsersManagement = lazyWithCss(() => import('../pages/UsersManagement'), editorialCssLoaders);
+export const SecurityLogs = lazyWithCss(() => import('../pages/SecurityLogs'), editorialCssLoaders);
+export const MetricsPage = lazyWithCss(() => import('../pages/MetricsPage'), editorialCssLoaders);
+export const SettingsPage = lazyWithCss(() => import('../pages/SettingsPage'), editorialCssLoaders);
+export const MissionsPage = lazyWithCss(() => import('../pages/MissionsPage'), editorialCssLoaders);
+export const AdaptationsPage = lazyWithCss(() => import('../pages/AdaptationsPage'), editorialCssLoaders);
+export const ProfileMatchingPage = lazyWithCss(() => import('../pages/ProfileMatchingPage'), editorialCssLoaders);
+export const ResumeAnalysisPage = lazyWithCss(() => import('../pages/ResumeAnalysisPage'), editorialCssLoaders);
+export const ResumeImprovePage = lazyWithCss(() => import('../pages/ResumeImprovePage'), editorialCssLoaders);
+export const ResumeExportPage = lazyWithCss(() => import('../pages/ResumeExportPage'), editorialCssLoaders);
+export const ResumeAdaptPage = lazyWithCss(() => import('../pages/ResumeAdaptPage'), editorialCssLoaders);
+export const MissionViewPage = lazyWithCss(() => import('../pages/MissionViewPage'), editorialCssLoaders);
+export const DealViewPage = lazyWithCss(() => import('../pages/DealViewPage'), editorialCssLoaders);
+export const AdaptationViewPage = lazyWithCss(() => import('../pages/AdaptationViewPage'), editorialCssLoaders);
+export const UserGuidePage = lazyWithCss(() => import('../pages/UserGuidePage'), editorialCssLoaders);
+export const FactsPage = lazyWithCss(() => import('../pages/FactsPage'), editorialCssLoaders);
+export const MetiersPage = lazyWithCss(() => import('../pages/MetiersPage'), editorialCssLoaders);
+export const ClientsPage = lazyWithCss(() => import('../pages/ClientsPage'), editorialCssLoaders);
+export const EmailTemplatesPage = lazyWithCss(() => import('../pages/admin/EmailTemplatesPage'), editorialCssLoaders);
 export const SignIn = lazy(() => import('../components/SignIn'));
 export const Register = lazy(() => import('../components/Register'));
 export const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage'));
 export const ResetPasswordPage = lazy(() => import('../pages/ResetPasswordPage'));
 export const ConsentResponsePage = lazy(() => import('../pages/ConsentResponsePage'));
-export const UserProfilePage = lazy(() => import('../pages/UserProfilePage'));
+export const UserProfilePage = lazyWithCss(() => import('../pages/UserProfilePage'), editorialCssLoaders);
 export const PrivacyPolicyPage = lazy(() => import('../pages/PrivacyPolicyPage'));
 export const TermsOfServicePage = lazy(() => import('../pages/TermsOfServicePage'));
-export const GdprAuditPage = lazy(() => import('../pages/GdprAuditPage'));
+export const GdprAuditPage = lazyWithCss(() => import('../pages/GdprAuditPage'), editorialCssLoaders);
 export const SharedFilePage = lazy(() => import('../pages/SharedFilePage'));
-export const BackupPage = lazy(() => import('../pages/BackupPage'));
-export const BatchUploadPage = lazy(() => import('../pages/BatchUploadPage'));
+export const BackupPage = lazyWithCss(() => import('../pages/BackupPage'), editorialCssLoaders);
+export const BatchUploadPage = lazyWithCss(() => import('../pages/BatchUploadPage'), editorialCssLoaders);
 export const BatchJobsPage = lazy(() => import('../pages/BatchJobsPage'));
 export const AppToaster = lazy(() => import('../components/AppToaster'));
