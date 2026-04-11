@@ -3,21 +3,14 @@
  * TypeScript version
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { lazy, Suspense, useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { fetchWithAuth, createAuthOptions } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
-import BatchImportMetricsCard from '../components/Metrics/BatchImportMetricsCard';
-import AiModifyMetricsCard from '../components/Metrics/AiModifyMetricsCard';
-import ProfileMatchingMetricsCard from '../components/Metrics/ProfileMatchingMetricsCard';
-import OperationLLMCard from '../components/Metrics/OperationLLMCard';
-import ServerHealthCards from '../components/Metrics/ServerHealthCards';
-import DatabaseMetricsCards from '../components/Metrics/DatabaseMetricsCards';
-import OperationsInfraCards from '../components/Metrics/OperationsInfraCards';
-import HttpTrafficCards from '../components/Metrics/HttpTrafficCards';
+import DeferredRender from '../components/DeferredRender';
 import { ApmMetricsSection, ProgressBar } from './MetricsPage.parts';
 import {
   MetricsPageHeader,
@@ -26,6 +19,15 @@ import {
 } from './MetricsPage.sections';
 import type { APMMetrics, CacheAdminMetrics, DatabaseMetrics, Metrics, OperationsMetrics } from './MetricsPage.types';
 import { computeRatio, formatBytes, formatNumber, safeNumber } from './MetricsPage.utils';
+
+const BatchImportMetricsCard = lazy(() => import('../components/Metrics/BatchImportMetricsCard'));
+const AiModifyMetricsCard = lazy(() => import('../components/Metrics/AiModifyMetricsCard'));
+const ProfileMatchingMetricsCard = lazy(() => import('../components/Metrics/ProfileMatchingMetricsCard'));
+const OperationLLMCard = lazy(() => import('../components/Metrics/OperationLLMCard'));
+const ServerHealthCards = lazy(() => import('../components/Metrics/ServerHealthCards'));
+const DatabaseMetricsCards = lazy(() => import('../components/Metrics/DatabaseMetricsCards'));
+const OperationsInfraCards = lazy(() => import('../components/Metrics/OperationsInfraCards'));
+const HttpTrafficCards = lazy(() => import('../components/Metrics/HttpTrafficCards'));
 
 const MetricsPage = (): JSX.Element => {
   const { t } = useTranslation();
@@ -39,6 +41,7 @@ const MetricsPage = (): JSX.Element => {
   const [loading, setLoading] = useState<boolean>(true);
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [secondaryReady, setSecondaryReady] = useState<boolean>(false);
 
   const fetchMetrics = useCallback(async (): Promise<void> => {
     try {
@@ -126,9 +129,21 @@ const MetricsPage = (): JSX.Element => {
     }
   }, [t]);
 
+  const refreshSecondaryMetrics = useCallback(async (): Promise<void> => {
+    await Promise.all([fetchDbMetrics(), fetchApmMetrics(), fetchOperationsMetrics()]);
+  }, [fetchDbMetrics, fetchApmMetrics, fetchOperationsMetrics]);
+
   const refreshAllMetrics = useCallback(async (): Promise<void> => {
-    await Promise.all([fetchMetrics(), fetchDbMetrics(), fetchApmMetrics(), fetchOperationsMetrics()]);
-  }, [fetchMetrics, fetchDbMetrics, fetchApmMetrics, fetchOperationsMetrics]);
+    await Promise.all([
+      fetchMetrics(),
+      secondaryReady ? refreshSecondaryMetrics() : Promise.resolve()
+    ]);
+  }, [fetchMetrics, refreshSecondaryMetrics, secondaryReady]);
+
+  const handleRefresh = useCallback(async (): Promise<void> => {
+    setSecondaryReady(true);
+    await Promise.all([fetchMetrics(), refreshSecondaryMetrics()]);
+  }, [fetchMetrics, refreshSecondaryMetrics]);
 
   const exportMetrics = (format: 'json' | 'csv'): void => {
     if (!metrics) return;
@@ -199,20 +214,42 @@ const MetricsPage = (): JSX.Element => {
   useEffect(() => {
     const loadData = async (): Promise<void> => {
       setLoading(true);
-      await refreshAllMetrics();
+      await fetchMetrics();
       setLoading(false);
     };
-    // Load immediately without delay for faster initial render
     loadData();
-  }, [refreshAllMetrics]);
+  }, [fetchMetrics]);
+
+  useEffect(() => {
+    if (loading || secondaryReady) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setSecondaryReady(true);
+    }, 350);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loading, secondaryReady]);
+
+  useEffect(() => {
+    if (!secondaryReady) return;
+    void refreshSecondaryMetrics();
+  }, [secondaryReady, refreshSecondaryMetrics]);
 
   useEffect(() => {
     if (!autoRefresh) return;
     const interval = setInterval(async () => {
-      await refreshAllMetrics();
+      await fetchMetrics();
     }, 30000);
     return () => clearInterval(interval);
-  }, [autoRefresh, refreshAllMetrics]);
+  }, [autoRefresh, fetchMetrics]);
+
+  useEffect(() => {
+    if (!autoRefresh || !secondaryReady) return;
+    const interval = setInterval(async () => {
+      await refreshSecondaryMetrics();
+    }, 120000);
+    return () => clearInterval(interval);
+  }, [autoRefresh, refreshSecondaryMetrics, secondaryReady]);
 
   if (loading) {
     return (
@@ -267,7 +304,7 @@ const MetricsPage = (): JSX.Element => {
               </div>
               <button
                 type="button"
-                onClick={refreshAllMetrics}
+                onClick={handleRefresh}
                 className="cv-gradient-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-semibold"
               >
                 {t('metrics.retry')}
@@ -333,7 +370,7 @@ const MetricsPage = (): JSX.Element => {
         autoRefresh={autoRefresh}
         lastUpdated={lastUpdated}
         onAutoRefreshChange={setAutoRefresh}
-        onRefresh={refreshAllMetrics}
+        onRefresh={handleRefresh}
         onExport={exportMetrics}
         t={t}
       />
@@ -343,94 +380,108 @@ const MetricsPage = (): JSX.Element => {
           <div className="space-y-8">
             <OverviewStatsGrid metrics={metrics} t={t} />
 
-            <ServerHealthCards
-              metrics={metrics}
-              cacheBackend={cacheBackend}
-              cacheConnected={cacheConnected}
-              cacheFallbackReason={cacheFallbackReason}
-              t={t}
-              safeNumber={safeNumber}
-              formatBytes={formatBytes}
-              formatNumber={formatNumber}
-            />
-
-            <DatabaseMetricsCards
-              metrics={dbMetrics}
-              t={t}
-              safeNumber={safeNumber}
-              formatNumber={formatNumber}
-            />
-
-            {operationsMetricsError && !operationsMetrics && (
-              <OperationsUnavailableBanner error={operationsMetricsError} t={t} />
-            )}
-
-            {operationsMetrics && (
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                <OperationsInfraCards
-                  metrics={operationsMetrics}
+            <DeferredRender delayMs={500}>
+              <Suspense fallback={null}>
+                <ServerHealthCards
+                  metrics={metrics}
+                  cacheBackend={cacheBackend}
+                  cacheConnected={cacheConnected}
+                  cacheFallbackReason={cacheFallbackReason}
                   t={t}
                   safeNumber={safeNumber}
-                  formatNumber={formatNumber}
                   formatBytes={formatBytes}
+                  formatNumber={formatNumber}
                 />
+              </Suspense>
+            </DeferredRender>
 
-                <BatchImportMetricsCard
-                  metrics={batchImportMetrics}
-                  successRatio={batchImportSuccessRatio}
+            {secondaryReady ? (
+              <Suspense fallback={null}>
+                <>
+                  <DatabaseMetricsCards
+                    metrics={dbMetrics}
+                    t={t}
+                    safeNumber={safeNumber}
+                    formatNumber={formatNumber}
+                  />
+
+                  {operationsMetricsError && !operationsMetrics && (
+                    <OperationsUnavailableBanner error={operationsMetricsError} t={t} />
+                  )}
+
+                  {operationsMetrics && (
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                      <OperationsInfraCards
+                        metrics={operationsMetrics}
+                        t={t}
+                        safeNumber={safeNumber}
+                        formatNumber={formatNumber}
+                        formatBytes={formatBytes}
+                      />
+
+                      <BatchImportMetricsCard
+                        metrics={batchImportMetrics}
+                        successRatio={batchImportSuccessRatio}
+                        t={t}
+                        safeNumber={safeNumber}
+                        formatNumber={formatNumber}
+                        formatBytes={formatBytes}
+                      />
+                      <AiModifyMetricsCard
+                        metrics={aiModifyMetrics}
+                        successRatio={aiModifySuccessRatio}
+                        t={t}
+                        safeNumber={safeNumber}
+                        formatNumber={formatNumber}
+                      />
+
+                      <ProfileMatchingMetricsCard
+                        metrics={profileMatchingMetrics}
+                        requestedToScoredRatio={requestedToScoredRatio}
+                        scoredToExplainedRatio={scoredToExplainedRatio}
+                        scoredToReturnedRatio={scoredToReturnedRatio}
+                        alerts={profileMatchingAlerts}
+                        t={t}
+                        safeNumber={safeNumber}
+                        formatNumber={formatNumber}
+                      />
+
+                      <OperationLLMCard
+                        metrics={improvementMetrics}
+                        successRatio={improvementSuccessRatio}
+                        mode="improvement"
+                        t={t}
+                        safeNumber={safeNumber}
+                        formatNumber={formatNumber}
+                      />
+
+                      <OperationLLMCard
+                        metrics={adaptationMetrics}
+                        successRatio={adaptationSuccessRatio}
+                        mode="adaptation"
+                        t={t}
+                        safeNumber={safeNumber}
+                        formatNumber={formatNumber}
+                      />
+                    </div>
+                  )}
+
+                  <ApmMetricsSection metrics={apmMetrics} t={t} safeNumber={safeNumber} />
+                </>
+              </Suspense>
+            ) : null}
+
+            <DeferredRender delayMs={700}>
+              <Suspense fallback={null}>
+                <HttpTrafficCards
+                  metrics={metrics}
+                  ProgressBar={ProgressBar}
                   t={t}
                   safeNumber={safeNumber}
                   formatNumber={formatNumber}
-                  formatBytes={formatBytes}
                 />
-                <AiModifyMetricsCard
-                  metrics={aiModifyMetrics}
-                  successRatio={aiModifySuccessRatio}
-                  t={t}
-                  safeNumber={safeNumber}
-                  formatNumber={formatNumber}
-                />
-
-                <ProfileMatchingMetricsCard
-                  metrics={profileMatchingMetrics}
-                  requestedToScoredRatio={requestedToScoredRatio}
-                  scoredToExplainedRatio={scoredToExplainedRatio}
-                  scoredToReturnedRatio={scoredToReturnedRatio}
-                  alerts={profileMatchingAlerts}
-                  t={t}
-                  safeNumber={safeNumber}
-                  formatNumber={formatNumber}
-                />
-
-                <OperationLLMCard
-                  metrics={improvementMetrics}
-                  successRatio={improvementSuccessRatio}
-                  mode="improvement"
-                  t={t}
-                  safeNumber={safeNumber}
-                  formatNumber={formatNumber}
-                />
-
-                <OperationLLMCard
-                  metrics={adaptationMetrics}
-                  successRatio={adaptationSuccessRatio}
-                  mode="adaptation"
-                  t={t}
-                  safeNumber={safeNumber}
-                  formatNumber={formatNumber}
-                />
-              </div>
-            )}
-
-            <ApmMetricsSection metrics={apmMetrics} t={t} safeNumber={safeNumber} />
-
-            <HttpTrafficCards
-              metrics={metrics}
-              ProgressBar={ProgressBar}
-              t={t}
-              safeNumber={safeNumber}
-              formatNumber={formatNumber}
-            />
+              </Suspense>
+            </DeferredRender>
           </div>
         </div>
       </div>
