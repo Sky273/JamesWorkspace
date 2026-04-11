@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
 
 import userService from '../utils/userService';
 import logger from '../utils/logger.frontend';
 import {
   buildUsersManagementStats,
   createDeleteTarget,
-  getCapitalizedRole,
   getTotalPages,
 } from './UsersManagement.hookUtils';
 
@@ -60,6 +60,8 @@ export const USERS_PAGE_SIZE = 12;
 
 export function useUsersManagementDashboard() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const tRef = useRef(t);
   const [firms, setFirms] = useState<Firm[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,6 +81,18 @@ export function useUsersManagementDashboard() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedFirm, setSelectedFirm] = useState<Firm | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const canManageFirms = user?.role === 'admin';
+  const canAssignSuperAdmin = user?.role === 'admin';
+  const currentUserFirm = useMemo(
+    () => (user?.firmId
+      ? { id: user.firmId, name: user.firmName || user.firm || 'Cabinet' }
+      : null),
+    [user?.firm, user?.firmId, user?.firmName],
+  );
+
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -93,18 +107,22 @@ export function useUsersManagementDashboard() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [customerData, userData] = await Promise.all([
-        userService.getCustomersPaginated({ page: firmsPage, pageSize: USERS_PAGE_SIZE, search: debouncedSearch }),
-        userService.getUsersPaginated({ page: usersPage, pageSize: USERS_PAGE_SIZE, search: debouncedSearch }),
-      ]);
+      const userDataPromise = userService.getUsersPaginated({ page: usersPage, pageSize: USERS_PAGE_SIZE, search: debouncedSearch });
+      const customerDataPromise = canManageFirms
+        ? userService.getCustomersPaginated({ page: firmsPage, pageSize: USERS_PAGE_SIZE, search: debouncedSearch })
+        : Promise.resolve(null);
 
-      if (customerData.customers) {
+      const [customerData, userData] = await Promise.all([customerDataPromise, userDataPromise]);
+
+      if (customerData?.customers) {
         setFirms(customerData.customers);
         setFirmsTotalCount(customerData.pagination?.totalCount || customerData.customers.length);
         setFirmsHasMore(customerData.pagination?.hasMore || false);
       } else {
-        setFirms(Array.isArray(customerData) ? customerData : []);
-        setFirmsTotalCount(Array.isArray(customerData) ? customerData.length : 0);
+        const scopedFirms = currentUserFirm ? [currentUserFirm] : [];
+        setFirms(scopedFirms);
+        setFirmsTotalCount(scopedFirms.length);
+        setFirmsHasMore(false);
       }
 
       if (userData.users) {
@@ -117,15 +135,21 @@ export function useUsersManagementDashboard() {
       }
     } catch (error) {
       logger.error('Error loading data:', error);
-      toast.error(t('common.error'));
+      toast.error(tRef.current('common.error'));
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, firmsPage, t, usersPage]);
+  }, [canManageFirms, currentUserFirm, debouncedSearch, firmsPage, usersPage]);
 
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    if (!canManageFirms && activeTab !== 'users') {
+      setActiveTab('users');
+    }
+  }, [activeTab, canManageFirms]);
 
   const usersTotalPages = getTotalPages(usersTotalCount, USERS_PAGE_SIZE);
   const firmsTotalPages = getTotalPages(firmsTotalCount, USERS_PAGE_SIZE);
@@ -144,8 +168,6 @@ export function useUsersManagementDashboard() {
 
   const handleUserSubmit = useCallback(async (formData: UserFormData) => {
     try {
-      const capitalizedRole = getCapitalizedRole(formData.role);
-
       if (selectedUser) {
         await userService.updateUser(selectedUser.id, {
           name: formData.name,
@@ -153,7 +175,7 @@ export function useUsersManagementDashboard() {
           jobTitle: formData.jobTitle || '',
           phone: formData.phone || '',
           firmId: formData.firmId || undefined,
-          role: capitalizedRole,
+          role: formData.role,
           status: formData.status,
         });
         toast.success(t('users.management.messages.userUpdated'));
@@ -164,7 +186,7 @@ export function useUsersManagementDashboard() {
           jobTitle: formData.jobTitle || '',
           phone: formData.phone || '',
           firmId: formData.firmId,
-          role: capitalizedRole,
+          role: formData.role,
           status: formData.status,
         });
         toast.success(t('users.management.messages.userCreatedInvitationSent'));
@@ -303,6 +325,8 @@ export function useUsersManagementDashboard() {
     handleFirmSubmit,
     handleForcePasswordReset,
     handleUserSubmit,
+    canAssignSuperAdmin,
+    canManageFirms,
     loading,
     openCreateFirm: () => {
       setSelectedFirm(null);

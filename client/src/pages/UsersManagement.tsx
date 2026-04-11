@@ -40,6 +40,8 @@ const UsersManagement = (): JSX.Element => {
     handleFirmSubmit,
     handleForcePasswordReset,
     handleUserSubmit,
+    canAssignSuperAdmin,
+    canManageFirms,
     loading,
     openCreateFirm,
     openCreateUser,
@@ -75,9 +77,10 @@ const UsersManagement = (): JSX.Element => {
       className="cv-surface app-page-shell"
     >
       <UsersManagementHeader />
-      <UsersManagementStatsCards stats={stats} />
+      <UsersManagementStatsCards stats={stats} showFirmsStats={canManageFirms} />
       <UsersManagementToolbar
         activeTab={activeTab}
+        canManageFirms={canManageFirms}
         firmsCount={firms.length}
         onCreate={activeTab === 'users' ? openCreateUser : openCreateFirm}
         onRefresh={fetchData}
@@ -120,15 +123,19 @@ const UsersManagement = (): JSX.Element => {
         onSubmit={handleUserSubmit}
         user={selectedUser}
         firms={firms}
+        canAssignSuperAdmin={canAssignSuperAdmin}
+        canChangeFirm={canManageFirms}
         t={t}
       />
-      <FirmFormModal
-        isOpen={firmModalOpen}
-        onClose={closeFirmModal}
-        onSubmit={handleFirmSubmit}
-        firm={selectedFirm}
-        t={t}
-      />
+      {canManageFirms ? (
+        <FirmFormModal
+          isOpen={firmModalOpen}
+          onClose={closeFirmModal}
+          onSubmit={handleFirmSubmit}
+          firm={selectedFirm}
+          t={t}
+        />
+      ) : null}
       <PasswordModal
         isOpen={passwordModalOpen}
         onClose={closePasswordModal}

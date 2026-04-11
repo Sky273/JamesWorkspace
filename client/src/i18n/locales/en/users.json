@@ -18,7 +18,8 @@
         "pending": "Pending"
       },
       "roles": {
-        "admin": "Admin",
+        "admin": "Super administrator",
+        "localAdmin": "Administrator",
         "user": "User"
       },
       "tabs": {
@@ -94,7 +95,7 @@
         "totalUsers": "Total Users",
         "totalFirms": "Total Firms",
         "activeUsers": "Active Users",
-        "admins": "Admins"
+        "admins": "Administrators"
       }
     }
   }

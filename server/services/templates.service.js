@@ -36,14 +36,14 @@ export async function listTemplates({ isAdmin, userFirmId, search, status, page 
     const params = [];
     let paramIndex = 1;
 
-    // Firm filter: non-admins see only their firm's templates + global templates
+    // Firm filter: non-admins see only their firm's templates
     if (!isAdmin) {
         if (userFirmId) {
-            conditions.push(`(t.firm_id = $${paramIndex} OR t.firm_id IS NULL)`);
+            conditions.push(`t.firm_id = $${paramIndex}`);
             params.push(userFirmId);
             paramIndex++;
         } else {
-            conditions.push('t.firm_id IS NULL');
+            conditions.push('1 = 0');
         }
     }
 
@@ -114,7 +114,7 @@ export async function getTemplateByIdWithAccess(id, { isAdmin, userFirmId }) {
         throw err;
     }
 
-    if (template.firm_id !== null && template.firm_id !== userFirmId) {
+    if (template.firm_id !== userFirmId) {
         const err = new Error('Template not found');
         err.statusCode = 404;
         throw err;
@@ -158,6 +158,33 @@ export async function createTemplate(templateData) {
         values
     );
     return result.rows[0];
+}
+
+/**
+ * Duplicate a template into another firm
+ * @param {string} id
+ * @param {Object} templateData
+ * @returns {Promise<Object>}
+ */
+export async function duplicateTemplate(id, templateData = {}) {
+    const sourceTemplate = await getTemplateById(id);
+
+    const duplicatedTemplate = {
+        name: `${sourceTemplate.name} (copie)`,
+        description: sourceTemplate.description,
+        popular: sourceTemplate.popular,
+        status: sourceTemplate.status,
+        tags: sourceTemplate.tags,
+        preview_image_url: sourceTemplate.preview_image_url,
+        header_content: sourceTemplate.header_content,
+        template_content: sourceTemplate.template_content,
+        footer_content: sourceTemplate.footer_content,
+        footer_height: sourceTemplate.footer_height,
+        stylesheet: sourceTemplate.stylesheet,
+        firm_id: templateData.firm_id,
+    };
+
+    return createTemplate(duplicatedTemplate);
 }
 
 /**

@@ -8,16 +8,20 @@ import { ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outl
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext';
 import PageHeader from '../../components/page/PageHeader';
 import type { EmailTemplate, EmailTemplateKeywords } from '../../types/entities';
 import emailTemplateService from '../../services/emailTemplateService';
+import userService from '../../utils/userService';
 import {
+  EmailTemplatesDuplicateModal,
   EmailTemplatesEditModal,
   EmailTemplatesHeader,
   EmailTemplatesList,
   EmailTemplatesPreviewModal,
 } from './EmailTemplatesPage.sections';
 import type {
+  DuplicateFirmOption,
   EmailTemplateFormState,
   ModalMode,
 } from './EmailTemplatesPage.types';
@@ -32,6 +36,8 @@ const EMPTY_FORM: EmailTemplateFormState = {
 
 const EmailTemplatesPage = (): JSX.Element => {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'admin';
 
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [keywords, setKeywords] = useState<EmailTemplateKeywords | null>(null);
@@ -46,6 +52,10 @@ const EmailTemplatesPage = (): JSX.Element => {
   const [previewHtml, setPreviewHtml] = useState('');
   const [previewSubject, setPreviewSubject] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [duplicateTemplateTarget, setDuplicateTemplateTarget] = useState<EmailTemplate | null>(null);
+  const [duplicateFirmId, setDuplicateFirmId] = useState('');
+  const [duplicateFirms, setDuplicateFirms] = useState<DuplicateFirmOption[]>([]);
+  const [duplicating, setDuplicating] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -139,15 +149,43 @@ const EmailTemplatesPage = (): JSX.Element => {
   const handleDuplicate = useCallback(
     async (template: EmailTemplate) => {
       try {
-        await emailTemplateService.duplicateTemplate(template.id);
-        toast.success(t('emailTemplates.success.duplicated'));
-        loadData();
+        if (!isSuperAdmin) {
+          return;
+        }
+
+        const response = await userService.getCustomersPaginated({ page: 1, pageSize: 100 });
+        setDuplicateFirms((response.customers || []).filter((firm) => firm.id !== template.firm_id));
+        setDuplicateTemplateTarget(template);
+        setDuplicateFirmId('');
       } catch {
-        toast.error(t('emailTemplates.errors.duplicateFailed'));
+        toast.error(t('emailTemplates.duplicateLoadFirmsError'));
       }
     },
-    [loadData, t],
+    [isSuperAdmin, t],
   );
+
+  const closeDuplicateModal = useCallback(() => {
+    setDuplicateTemplateTarget(null);
+    setDuplicateFirmId('');
+  }, []);
+
+  const confirmDuplicate = useCallback(async () => {
+    if (!duplicateTemplateTarget || !duplicateFirmId) {
+      return;
+    }
+
+    setDuplicating(true);
+    try {
+      await emailTemplateService.duplicateTemplate(duplicateTemplateTarget.id, duplicateFirmId);
+      toast.success(t('emailTemplates.success.duplicated'));
+      closeDuplicateModal();
+      await loadData();
+    } catch {
+      toast.error(t('emailTemplates.errors.duplicateFailed'));
+    } finally {
+      setDuplicating(false);
+    }
+  }, [closeDuplicateModal, duplicateFirmId, duplicateTemplateTarget, loadData, t]);
 
   const handleDelete = useCallback(
     async (template: EmailTemplate) => {
@@ -303,6 +341,9 @@ const EmailTemplatesPage = (): JSX.Element => {
 
         <div className="section-shell rounded-[2rem] p-6">
           <EmailTemplatesList
+            canDuplicate={isSuperAdmin}
+            firmLabel={t('emailTemplates.firmLabel')}
+            globalFirmLabel={t('emailTemplates.globalFirm')}
             templates={templates}
             loading={loading}
             noTemplatesLabel={t('emailTemplates.noTemplates')}
@@ -320,6 +361,20 @@ const EmailTemplatesPage = (): JSX.Element => {
           />
         </div>
       </div>
+
+      <EmailTemplatesDuplicateModal
+        firms={duplicateFirms}
+        isOpen={Boolean(duplicateTemplateTarget)}
+        isSubmitting={duplicating}
+        onClose={closeDuplicateModal}
+        onConfirm={() => {
+          void confirmDuplicate();
+        }}
+        onFirmChange={setDuplicateFirmId}
+        selectedFirmId={duplicateFirmId}
+        template={duplicateTemplateTarget}
+        t={t}
+      />
 
       {(modalMode === 'create' || modalMode === 'edit') && (
         <EmailTemplatesEditModal

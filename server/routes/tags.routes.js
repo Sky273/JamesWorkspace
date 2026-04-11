@@ -4,7 +4,7 @@
  */
 
 import express from 'express';
-import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
+import { authenticateToken, requireUserManager, isUserAdmin } from '../middleware/auth.middleware.js';
 import { validateBody, renameTagSchema, escoRecalculateSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { aggregateRawTags, aggregateCleanedTags, aggregateEscoTags, fetchResumeBatch, updateResumeTags, renameTag } from '../services/tags.service.js';
@@ -49,7 +49,7 @@ function buildStandardTagsResponse(row = {}) {
 }
 
 async function resolveTagsAccess(req, res, { requireFirmForNonAdmin = true } = {}) {
-    const isAdmin = req.user?.role === 'admin';
+    const isAdmin = isUserAdmin(req);
     const userFirmId = await getUserFirmId(req);
 
     if (requireFirmForNonAdmin && !isAdmin && !userFirmId) {
@@ -116,9 +116,13 @@ router.get('/cleaned', authenticateToken, async (req, res) => {
 });
 
 // POST /api/tags/cleaned/recalculate - Recalculate cleaned tags for all resumes (batch processing)
-router.post('/cleaned/recalculate', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/cleaned/recalculate', authenticateToken, requireUserManager, async (req, res) => {
     try {
         const { processAnalysisTags } = await import('../utils/tagCleaner.js');
+        const access = await resolveTagsAccess(req, res);
+        if (!access) {
+            return;
+        }
         
         const BATCH_SIZE = 100;
         let offset = 0;
@@ -133,7 +137,8 @@ router.post('/cleaned/recalculate', authenticateToken, requireAdmin, async (req,
             // Fetch batch of resumes
             const records = await fetchResumeBatch(
                 ['id', 'skills', 'industries', 'tools', 'soft_skills'],
-                BATCH_SIZE, offset
+                BATCH_SIZE, offset,
+                { firmId: access.isAdmin ? null : access.userFirmId }
             );
             
             if (records.length === 0) break;
@@ -244,9 +249,13 @@ router.get('/esco', authenticateToken, async (req, res) => {
 });
 
 // POST /api/tags/esco/recalculate - Recalculate ESCO tags for all resumes from cleaned tags (batch processing)
-router.post('/esco/recalculate', authenticateToken, requireAdmin, validateBody(escoRecalculateSchema), async (req, res) => {
+router.post('/esco/recalculate', authenticateToken, requireUserManager, validateBody(escoRecalculateSchema), async (req, res) => {
     try {
         const { language = 'fr' } = req.body;
+        const access = await resolveTagsAccess(req, res);
+        if (!access) {
+            return;
+        }
         
         const BATCH_SIZE = 50; // Smaller batch for ESCO (API calls)
         let offset = 0;
@@ -261,7 +270,8 @@ router.post('/esco/recalculate', authenticateToken, requireAdmin, validateBody(e
             // Fetch batch of resumes
             const records = await fetchResumeBatch(
                 ['id', 'skills_cleaned', 'industries_cleaned', 'tools_cleaned', 'soft_skills_cleaned'],
-                BATCH_SIZE, offset
+                BATCH_SIZE, offset,
+                { firmId: access.isAdmin ? null : access.userFirmId }
             );
             
             if (records.length === 0) break;
@@ -332,9 +342,13 @@ router.post('/esco/recalculate', authenticateToken, requireAdmin, validateBody(e
 });
 
 // PUT /api/tags/rename - Rename tag across all resumes (optimized SQL)
-router.put('/rename', authenticateToken, requireAdmin, validateBody(renameTagSchema), async (req, res) => {
+router.put('/rename', authenticateToken, requireUserManager, validateBody(renameTagSchema), async (req, res) => {
     try {
         const { category, oldName, newName } = req.body;
+        const access = await resolveTagsAccess(req, res);
+        if (!access) {
+            return;
+        }
         
         if (!category || !oldName || !newName) {
             return res.status(400).json({ error: 'Missing required fields: category, oldName, newName' });
@@ -353,7 +367,9 @@ router.put('/rename', authenticateToken, requireAdmin, validateBody(renameTagSch
             return res.status(400).json({ error: 'Invalid category' });
         }
 
-        const result = await renameTag(dbField, oldName, newName);
+        const result = await renameTag(dbField, oldName, newName, {
+            firmId: access.isAdmin ? null : access.userFirmId
+        });
         const updatedCount = result.length;
 
         // Clear caches

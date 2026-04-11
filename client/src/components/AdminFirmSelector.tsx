@@ -92,7 +92,9 @@ const AdminFirmSelector = ({
         <span className="flex items-center gap-2">
           <BuildingOfficeIcon className="w-4 h-4 text-purple-500" />
           {label || t('common.selectFirm', 'Cabinet')}
-          <span className="text-xs text-purple-500 font-normal">(Admin)</span>
+          <span className="text-xs text-purple-500 font-normal">
+            ({t('users.management.roles.admin', 'Super administrateur')})
+          </span>
         </span>
       </label>
       <select
@@ -113,7 +115,7 @@ const AdminFirmSelector = ({
         ))}
       </select>
       <p className="mt-1 text-xs text-purple-600 dark:text-purple-400">
-        {t('common.adminFirmHint', 'En tant qu\'admin, vous pouvez creer cet element pour un autre cabinet')}
+        {t('common.adminFirmHint', 'En tant que super administrateur, vous pouvez creer cet element pour un autre cabinet')}
       </p>
     </div>
   );

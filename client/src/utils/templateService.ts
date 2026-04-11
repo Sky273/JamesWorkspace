@@ -265,6 +265,20 @@ export const templateService = {
         }
     },
 
+    async duplicateTemplate(id: string, firmId: string): Promise<Template> {
+        try {
+            const response = await authPost(`/api/templates/${id}/duplicate`, { firmId });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to duplicate template');
+            }
+            return await response.json();
+        } catch (error) {
+            logger.error('Error duplicating template:', error);
+            throw error;
+        }
+    },
+
     async extractFromCV(file: File): Promise<ExtractTemplateResponse> {
         try {
             const formData = new FormData();

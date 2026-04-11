@@ -1,8 +1,9 @@
 import express from 'express';
-import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
+import { authenticateToken, requireUserManager, isUserAdmin } from '../middleware/auth.middleware.js';
 import { validateBody, validateParams, updateUserProfileSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import * as usersService from '../services/users.service.js';
+import { getUserFirmId } from '../utils/firmHelpers.js';
 
 const router = express.Router();
 
@@ -23,7 +24,7 @@ function parsePositiveInteger(value, fallback, max = null) {
 // ============================================
 
 // GET /api/users - Get all users (admin function, with server-side pagination)
-router.get('/', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/', authenticateToken, requireUserManager, async (req, res) => {
     try {
         const pageInput = req.query.page;
         const limitInput = req.query.limit;
@@ -35,10 +36,18 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
             return res.status(400).json({ error: 'Invalid pagination parameters' });
         }
 
+        const superAdmin = isUserAdmin(req);
+        const userFirmId = await getUserFirmId(req);
+
+        if (!superAdmin && !userFirmId) {
+            return res.status(403).json({ error: 'No firm association' });
+        }
+
         const { users, hasMore } = await usersService.listUsers({
             search,
             role,
             status,
+            firmId: superAdmin ? undefined : userFirmId,
             page: pageResult.value,
             limit: limitResult.value
         });

@@ -220,10 +220,17 @@ export function extractRoleFromUser(fields) {
     }
     
     const normalizedRole = String(roleField).toLowerCase().trim();
-    
-    const validRoles = ['admin', 'user'];
-    if (validRoles.includes(normalizedRole)) {
-        return normalizedRole;
+
+    if (normalizedRole === 'admin') {
+        return 'admin';
+    }
+
+    if (normalizedRole === 'localadmin' || normalizedRole === 'local_admin') {
+        return 'localAdmin';
+    }
+
+    if (normalizedRole === 'user') {
+        return 'user';
     }
     
     return 'user';

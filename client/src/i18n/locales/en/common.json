@@ -29,7 +29,7 @@
     "openMenu": "Open menu",
     "selectFirm": "Firm",
     "myFirm": "My firm (default)",
-    "adminFirmHint": "As an admin, you can create this item for another firm",
+    "adminFirmHint": "As a super administrator, you can create this item for another firm",
     "refresh": "Refresh",
     "expand": "Expand",
     "collapse": "Collapse",

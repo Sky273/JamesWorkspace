@@ -103,6 +103,7 @@ export type EmailTemplateStatus = 'active' | 'inactive';
 export interface EmailTemplate {
   id: string;
   firm_id?: string;
+  firm_name?: string;
   name: string;
   description?: string;
   subject_template: string;

@@ -188,7 +188,7 @@ export function createAuthSwaggerPaths({
                 summary: 'Create user (admin)',
                 description: 'Admin creates a new user with specified role and firm',
                 security: securityCsrf,
-                requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['email', 'password', 'name'], properties: { email: { type: 'string', format: 'email' }, password: { type: 'string' }, name: { type: 'string' }, role: { type: 'string', enum: ['admin', 'user'] }, firm_id: { type: 'string', format: 'uuid' } } } } } },
+requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['email', 'password', 'name'], properties: { email: { type: 'string', format: 'email' }, password: { type: 'string' }, name: { type: 'string' }, role: { type: 'string', enum: ['admin', 'localAdmin', 'user'] }, firm_id: { type: 'string', format: 'uuid' } } } } } },
                 responses: { 201: { description: 'User created' }, 401: auth401, 403: forbidden403, 409: { description: 'Email exists' } }
             }
         },

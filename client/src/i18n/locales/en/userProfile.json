@@ -3,7 +3,8 @@
     "anonymous": "User",
     "noCompany": "No Company",
     "roles": {
-      "admin": "Administrator",
+      "admin": "Super administrator",
+      "localAdmin": "Administrator",
       "user": "User"
     },
     "title": "My account",

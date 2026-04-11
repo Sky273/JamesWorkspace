@@ -103,8 +103,8 @@ export async function deleteTemplate(id: string): Promise<void> {
 /**
  * Duplicate a template
  */
-export async function duplicateTemplate(id: string): Promise<EmailTemplate> {
-  const response = await authPost(`${API_BASE}/${id}/duplicate`, {});
+export async function duplicateTemplate(id: string, firmId?: string): Promise<EmailTemplate> {
+  const response = await authPost(`${API_BASE}/${id}/duplicate`, firmId ? { firmId } : {});
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to duplicate template');

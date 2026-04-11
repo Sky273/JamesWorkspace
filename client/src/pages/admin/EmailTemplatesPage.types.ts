@@ -32,3 +32,8 @@ export interface EmailTemplatesPreviewModalProps {
   previewLoading: boolean;
   onClose: () => void;
 }
+
+export interface DuplicateFirmOption {
+  id: string;
+  name: string;
+}

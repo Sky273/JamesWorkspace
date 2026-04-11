@@ -18,7 +18,8 @@
         "pending": "En attente"
       },
       "roles": {
-        "admin": "Administrateur",
+        "admin": "Super administrateur",
+        "localAdmin": "Administrateur",
         "user": "Utilisateur"
       },
       "tabs": {

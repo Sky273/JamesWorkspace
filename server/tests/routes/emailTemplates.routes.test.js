@@ -18,10 +18,12 @@ const mockDeleteTemplate = vi.fn();
 const mockDuplicateTemplate = vi.fn();
 const mockRenderTemplate = vi.fn();
 const mockPreviewTemplate = vi.fn();
+const mockGetFirmById = vi.fn();
 const mockGetUserFirmIdFromReq = vi.fn();
 const mockGetUserFirmIdFromUser = vi.fn();
 const mockGetUserFirmNameFromUser = vi.fn();
 const mockIsUserAdmin = vi.fn();
+const mockIsUserManager = vi.fn();
 vi.mock('../../services/emailTemplates.service.js', () => ({
     getTemplates: (...args) => mockGetTemplates(...args),
     getTemplate: (...args) => mockGetTemplate(...args),
@@ -32,6 +34,7 @@ vi.mock('../../services/emailTemplates.service.js', () => ({
     duplicateTemplate: (...args) => mockDuplicateTemplate(...args),
     renderTemplate: (...args) => mockRenderTemplate(...args),
     previewTemplate: (...args) => mockPreviewTemplate(...args),
+    getFirmById: (...args) => mockGetFirmById(...args),
     getUserFirmId: (...args) => mockGetUserFirmId(...args),
     getFirmIdByName: (...args) => mockGetFirmIdByName(...args),
     TEMPLATE_KEYWORDS: [
@@ -47,7 +50,8 @@ vi.mock('../../utils/firmHelpers.js', () => ({
     getUserFirmId: (...args) => mockGetUserFirmIdFromReq(...args),
     getUserFirmIdFromUser: (...args) => mockGetUserFirmIdFromUser(...args),
     getUserFirmNameFromUser: (...args) => mockGetUserFirmNameFromUser(...args),
-    isUserAdmin: (...args) => mockIsUserAdmin(...args)
+    isUserAdmin: (...args) => mockIsUserAdmin(...args),
+    isUserManager: (...args) => mockIsUserManager(...args)
 }));
 
 // Mock logger
@@ -109,7 +113,7 @@ describe('Email Templates Routes', () => {
     let app;
 
     beforeEach(() => {
-        vi.clearAllMocks();
+        vi.resetAllMocks();
         app = createTestApp();
         // Default: getFirmIdForUser resolves via user.firm_id (no DB fallback needed)
         mockGetUserFirmId.mockResolvedValue(null);
@@ -118,6 +122,8 @@ describe('Email Templates Routes', () => {
         mockGetUserFirmIdFromUser.mockImplementation((user) => user?.firmId ?? user?.firm_id ?? null);
         mockGetUserFirmNameFromUser.mockImplementation((user) => user?.firmName ?? user?.firm ?? null);
         mockIsUserAdmin.mockImplementation((req) => req?.user?.role === 'admin');
+        mockIsUserManager.mockImplementation((req) => req?.user?.role === 'admin' || req?.user?.role === 'localAdmin');
+        mockGetFirmById.mockResolvedValue({ id: 'firm-123', name: 'Test Firm' });
     });
 
     // ==========================================
@@ -139,6 +145,20 @@ describe('Email Templates Routes', () => {
             expect(res.status).toBe(200);
             expect(res.body.templates).toHaveLength(1);
             expect(res.body.templates[0].name).toBe('Welcome Email');
+        });
+
+        it('should allow admin with a firm to get templates across all firms', async () => {
+            mockGetTemplates.mockResolvedValueOnce([
+                sampleTemplate,
+                { ...sampleTemplate, id: 'et-999', firm_id: 'firm-999', firm_name: 'Other Firm' }
+            ]);
+
+            const res = await request(app)
+                .get('/api/email-templates')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+            expect(mockGetTemplates).toHaveBeenCalledWith(null, true);
         });
 
         it('should return empty list for non-admin without firm', async () => {
@@ -273,12 +293,24 @@ describe('Email Templates Routes', () => {
             expect(res.status).toBe(404);
         });
 
-        it('should return 403 if template belongs to another firm', async () => {
+        it('should allow super admin to access a template from another firm', async () => {
             mockGetTemplate.mockResolvedValueOnce({ ...sampleTemplate, firm_id: 'other-firm' });
 
             const res = await request(app)
                 .get('/api/email-templates/et-other')
                 .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+            expect(res.body.template.firm_id).toBe('other-firm');
+        });
+
+        it('should block local admin from accessing a template from another firm', async () => {
+            mockGetTemplate.mockResolvedValueOnce({ ...sampleTemplate, firm_id: 'other-firm' });
+
+            const res = await request(app)
+                .get('/api/email-templates/et-other')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'localAdmin');
 
             expect(res.status).toBe(403);
             expect(res.body.error).toBe('Access denied to this template');
@@ -325,6 +357,23 @@ describe('Email Templates Routes', () => {
 
             expect(res.status).toBe(201);
             expect(res.body.template).toBeDefined();
+            expect(mockCreateTemplate).toHaveBeenCalledWith(
+                'firm-123',
+                expect.objectContaining({ name: 'New Template' }),
+                'user-123'
+            );
+        });
+
+        it('should force local admin email template creation to their own firm', async () => {
+            mockCreateTemplate.mockResolvedValueOnce({ ...sampleTemplate, id: 'et-local' });
+
+            const res = await request(app)
+                .post('/api/email-templates')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'localAdmin')
+                .send(newBody);
+
+            expect(res.status).toBe(201);
             expect(mockCreateTemplate).toHaveBeenCalledWith(
                 'firm-123',
                 expect.objectContaining({ name: 'New Template' }),
@@ -422,12 +471,25 @@ describe('Email Templates Routes', () => {
             expect(res.body.error).toBe('Cannot modify system template');
         });
 
-        it('should return 403 for another firms template', async () => {
+        it('should allow super admin to update another firms template', async () => {
+            mockGetTemplate.mockResolvedValueOnce({ ...sampleTemplate, firm_id: 'other-firm' });
+            mockUpdateTemplate.mockResolvedValueOnce({ ...sampleTemplate, firm_id: 'other-firm', name: 'Updated' });
+
+            const res = await request(app)
+                .put('/api/email-templates/et-other')
+                .set('Authorization', 'Bearer valid-token')
+                .send(updateBody);
+
+            expect(res.status).toBe(200);
+        });
+
+        it('should block local admin from updating another firms template', async () => {
             mockGetTemplate.mockResolvedValueOnce({ ...sampleTemplate, firm_id: 'other-firm' });
 
             const res = await request(app)
                 .put('/api/email-templates/et-other')
                 .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'localAdmin')
                 .send(updateBody);
 
             expect(res.status).toBe(403);
@@ -545,12 +607,25 @@ describe('Email Templates Routes', () => {
             expect(res.body.error).toBe('Admin access required');
         });
 
-        it('should return 403 for another firms template', async () => {
+        it('should allow super admin to delete another firms template', async () => {
             mockGetTemplate.mockResolvedValueOnce({ ...sampleTemplate, firm_id: 'other-firm' });
+            mockDeleteTemplate.mockResolvedValueOnce(true);
 
             const res = await request(app)
                 .delete('/api/email-templates/et-other')
                 .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+            expect(mockDeleteTemplate).toHaveBeenCalledWith('et-other', { isAdmin: true });
+        });
+
+        it('should block local admin from deleting another firms template', async () => {
+            mockGetTemplate.mockResolvedValueOnce({ ...sampleTemplate, firm_id: 'other-firm' });
+
+            const res = await request(app)
+                .delete('/api/email-templates/et-other')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'localAdmin');
 
             expect(res.status).toBe(403);
         });
@@ -572,6 +647,20 @@ describe('Email Templates Routes', () => {
             expect(mockDuplicateTemplate).toHaveBeenCalledWith('et-123', 'firm-123', 'user-123');
         });
 
+        it('should duplicate template into the requested firm for super admin', async () => {
+            mockGetTemplate.mockResolvedValueOnce(sampleTemplate);
+            mockGetFirmById.mockResolvedValueOnce({ id: 'firm-999', name: 'Other Firm' });
+            mockDuplicateTemplate.mockResolvedValueOnce({ ...sampleTemplate, id: 'et-dup-2', firm_id: 'firm-999' });
+
+            const res = await request(app)
+                .post('/api/email-templates/et-123/duplicate')
+                .set('Authorization', 'Bearer valid-token')
+                .send({ firmId: 'firm-999' });
+
+            expect(res.status).toBe(201);
+            expect(mockDuplicateTemplate).toHaveBeenCalledWith('et-123', 'firm-999', 'user-123');
+        });
+
         it('should reject non-admin duplication', async () => {
             const res = await request(app)
                 .post('/api/email-templates/et-123/duplicate')
@@ -582,14 +671,43 @@ describe('Email Templates Routes', () => {
             expect(res.body.error).toBe('Admin access required');
         });
 
-        it('should reject admin without firm on duplication', async () => {
+        it('should reject admin without firm when no target firm is provided', async () => {
             const res = await request(app)
                 .post('/api/email-templates/et-123/duplicate')
                 .set('Authorization', 'Bearer valid-token')
                 .set('x-test-no-firm', 'true');
 
             expect(res.status).toBe(400);
-            expect(res.body.error).toContain('Firm ID not found');
+            expect(res.body.error).toBe('Target firm is required');
+        });
+
+        it('should allow admin without firm to duplicate when a target firm is provided', async () => {
+            mockGetTemplate.mockResolvedValueOnce({ ...sampleTemplate, firm_id: null, is_system: true });
+            mockGetFirmById.mockResolvedValueOnce({ id: 'firm-999', name: 'Other Firm' });
+            mockDuplicateTemplate.mockResolvedValueOnce({ ...sampleTemplate, id: 'et-dup-3', firm_id: 'firm-999' });
+
+            const res = await request(app)
+                .post('/api/email-templates/et-123/duplicate')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-no-firm', 'true')
+                .send({ firmId: 'firm-999' });
+
+            expect(res.status).toBe(201);
+            expect(mockDuplicateTemplate).toHaveBeenCalledWith('et-123', 'firm-999', 'user-123');
+        });
+
+        it('should reject duplication when the target firm does not exist', async () => {
+            mockGetTemplate.mockResolvedValueOnce(sampleTemplate);
+            mockGetFirmById.mockResolvedValueOnce(null);
+
+            const res = await request(app)
+                .post('/api/email-templates/et-123/duplicate')
+                .set('Authorization', 'Bearer valid-token')
+                .send({ firmId: 'firm-999' });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Specified firm not found');
+            expect(mockDuplicateTemplate).not.toHaveBeenCalled();
         });
 
         it('should return 404 if original not found', async () => {
@@ -602,12 +720,25 @@ describe('Email Templates Routes', () => {
             expect(res.status).toBe(404);
         });
 
-        it('should return 403 if original belongs to another firm', async () => {
+        it('should allow super admin to duplicate a template from another firm', async () => {
+            mockGetTemplate.mockResolvedValueOnce({ ...sampleTemplate, firm_id: 'other-firm' });
+            mockDuplicateTemplate.mockResolvedValueOnce({ ...sampleTemplate, id: 'et-dup-4', firm_id: 'firm-123' });
+
+            const res = await request(app)
+                .post('/api/email-templates/et-other/duplicate')
+                .set('Authorization', 'Bearer valid-token')
+                .send({ firmId: 'firm-123' });
+
+            expect(res.status).toBe(201);
+        });
+
+        it('should block local admin from duplicating a template from another firm', async () => {
             mockGetTemplate.mockResolvedValueOnce({ ...sampleTemplate, firm_id: 'other-firm' });
 
             const res = await request(app)
                 .post('/api/email-templates/et-other/duplicate')
-                .set('Authorization', 'Bearer valid-token');
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'localAdmin');
 
             expect(res.status).toBe(403);
         });
@@ -642,6 +773,21 @@ describe('Email Templates Routes', () => {
                 .send({ context: {} });
 
             expect(res.status).toBe(404);
+        });
+
+        it('should allow super admin to preview a template from another firm', async () => {
+            mockGetTemplate.mockResolvedValueOnce({ ...sampleTemplate, firm_id: 'other-firm' });
+            mockRenderTemplate.mockResolvedValueOnce({
+                html: '<html>Rendered</html>',
+                subject: 'Hello John'
+            });
+
+            const res = await request(app)
+                .post('/api/email-templates/et-other/preview')
+                .set('Authorization', 'Bearer valid-token')
+                .send({ context: { candidate_name: 'John' } });
+
+            expect(res.status).toBe(200);
         });
 
         it('should reject non-admin preview', async () => {

@@ -29,6 +29,10 @@ export const getUserFirmNameFromUser = (user) => {
     return user.firmName ?? user.firm_name ?? null;
 };
 
+function getNormalizedUserRole(req) {
+    return req?.user?.role?.toLowerCase().trim() || '';
+}
+
 /**
  * Get user's firm_id from request
  * Uses only firm_id (UUID) - no fallback to firm name
@@ -86,5 +90,14 @@ export const getFirmById = async (firmId) => {
 };
 
 export function isUserAdmin(req) {
-    return req?.user?.role?.toLowerCase() === 'admin';
+    return getNormalizedUserRole(req) === 'admin';
+}
+
+export function isUserLocalAdmin(req) {
+    return getNormalizedUserRole(req) === 'localadmin';
+}
+
+export function isUserManager(req) {
+    const role = getNormalizedUserRole(req);
+    return role === 'admin' || role === 'localadmin';
 }

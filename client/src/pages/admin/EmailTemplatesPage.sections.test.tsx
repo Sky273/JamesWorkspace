@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import {
+  EmailTemplatesDuplicateModal,
   EmailTemplatesEditModal,
   EmailTemplatesHeader,
   EmailTemplatesList,
@@ -42,6 +43,7 @@ const template = {
   name: 'Relance client',
   description: 'Description relance',
   subject_template: 'Sujet relance',
+  firm_name: 'Cabinet Alpha',
   is_system: false,
   is_default: true,
 } as const;
@@ -81,6 +83,9 @@ describe('EmailTemplatesPage sections', () => {
 
     render(
       <EmailTemplatesList
+        canDuplicate={true}
+        firmLabel="Cabinet"
+        globalFirmLabel="Global"
         templates={[template as never]}
         loading={false}
         noTemplatesLabel="Aucun template"
@@ -100,6 +105,7 @@ describe('EmailTemplatesPage sections', () => {
 
     expect(screen.getByText('Relance client')).toBeInTheDocument();
     expect(screen.getByText('Description relance')).toBeInTheDocument();
+    expect(screen.getByText('Cabinet: Cabinet Alpha')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Aperçu' }));
     fireEvent.click(screen.getByRole('button', { name: 'Modifier' }));
@@ -110,6 +116,96 @@ describe('EmailTemplatesPage sections', () => {
     expect(onEdit).toHaveBeenCalledWith(template);
     expect(onDuplicate).toHaveBeenCalledWith(template);
     expect(onDelete).toHaveBeenCalledWith(template);
+  });
+
+  it('masque l’action de duplication quand elle n’est pas autorisée', () => {
+    render(
+      <EmailTemplatesList
+        canDuplicate={false}
+        firmLabel="Cabinet"
+        globalFirmLabel="Global"
+        templates={[template as never]}
+        loading={false}
+        noTemplatesLabel="Aucun template"
+        systemTemplateLabel="Système"
+        defaultTemplateLabel="Défaut"
+        subjectLabel="Sujet"
+        previewLabel="Aperçu"
+        editLabel="Modifier"
+        duplicateLabel="Dupliquer"
+        deleteLabel="Supprimer"
+        onPreview={vi.fn()}
+        onEdit={vi.fn()}
+        onDuplicate={vi.fn()}
+        onDelete={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByRole('button', { name: 'Dupliquer' })).not.toBeInTheDocument();
+  });
+
+  it('affiche le badge global quand aucun cabinet n’est défini', () => {
+    render(
+      <EmailTemplatesList
+        canDuplicate={false}
+        firmLabel="Cabinet"
+        globalFirmLabel="Global"
+        templates={[{ ...template, id: 'tpl-2', firm_name: undefined } as never]}
+        loading={false}
+        noTemplatesLabel="Aucun template"
+        systemTemplateLabel="Système"
+        defaultTemplateLabel="Défaut"
+        subjectLabel="Sujet"
+        previewLabel="Aperçu"
+        editLabel="Modifier"
+        duplicateLabel="Dupliquer"
+        deleteLabel="Supprimer"
+        onPreview={vi.fn()}
+        onEdit={vi.fn()}
+        onDuplicate={vi.fn()}
+        onDelete={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Cabinet: Global')).toBeInTheDocument();
+  });
+
+  it('affiche la modal de duplication avec la liste des cabinets', () => {
+    const onClose = vi.fn();
+    const onConfirm = vi.fn();
+    const onFirmChange = vi.fn();
+    const t = (key: string, options?: Record<string, unknown>) => {
+      const map: Record<string, string> = {
+        'emailTemplates.duplicateTitle': 'Dupliquer le template',
+        'emailTemplates.duplicateMessage': `Copier ${options?.name ?? ''}`,
+        'emailTemplates.targetFirmLabel': 'Cabinet cible',
+        'emailTemplates.selectTargetFirm': 'Choisir un cabinet',
+        'emailTemplates.duplicate': 'Dupliquer',
+        'common.cancel': 'Annuler',
+        'common.saving': 'Enregistrement',
+      };
+      return map[key] ?? key;
+    };
+
+    render(
+      <EmailTemplatesDuplicateModal
+        firms={[{ id: 'firm-2', name: 'Cabinet B' }]}
+        isOpen
+        isSubmitting={false}
+        onClose={onClose}
+        onConfirm={onConfirm}
+        onFirmChange={onFirmChange}
+        selectedFirmId=""
+        template={template as never}
+        t={t}
+      />
+    );
+
+    expect(screen.getByText('Dupliquer le template')).toBeInTheDocument();
+    fireEvent.change(screen.getByDisplayValue('Choisir un cabinet'), { target: { value: 'firm-2' } });
+    expect(onFirmChange).toHaveBeenCalledWith('firm-2');
+    fireEvent.click(screen.getByText('Annuler'));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('gère la modal d’édition avec preview et sauvegarde', () => {

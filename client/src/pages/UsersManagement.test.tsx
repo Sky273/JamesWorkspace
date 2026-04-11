@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import UsersManagement from './UsersManagement';
 
+const useAuthMock = vi.fn();
 const getCustomersPaginatedMock = vi.fn();
 const getUsersPaginatedMock = vi.fn();
 const createUserMock = vi.fn();
@@ -27,6 +28,10 @@ vi.mock('react-hot-toast', () => ({
     success: (...args: unknown[]) => toastSuccessMock(...args),
     error: (...args: unknown[]) => toastErrorMock(...args),
   },
+}));
+
+vi.mock('../context/AuthContext', () => ({
+  useAuth: () => useAuthMock(),
 }));
 
 vi.mock('../utils/logger.frontend', () => ({
@@ -80,7 +85,7 @@ vi.mock('../components/UsersManagement', () => ({
           jobTitle: '',
           phone: '',
           firmId: 'firm-1',
-          role: 'admin',
+          role: 'localAdmin',
           status: 'Active',
         })}
       >
@@ -93,6 +98,13 @@ vi.mock('../components/UsersManagement', () => ({
 describe('UsersManagement', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthMock.mockReturnValue({
+      user: {
+        role: 'admin',
+        firmId: 'firm-1',
+        firmName: 'Acme',
+      },
+    });
 
     getCustomersPaginatedMock.mockResolvedValue({
       customers: [
@@ -121,7 +133,7 @@ describe('UsersManagement', () => {
       id: 'user-2',
       name: 'Lookman',
       email: 'lookman@yopmail.com',
-      role: 'Admin',
+      role: 'localAdmin',
       status: 'Active',
     });
   });
@@ -142,7 +154,7 @@ describe('UsersManagement', () => {
         jobTitle: '',
         phone: '',
         firmId: 'firm-1',
-        role: 'Admin',
+        role: 'localAdmin',
         status: 'Active',
       });
     });
@@ -150,5 +162,44 @@ describe('UsersManagement', () => {
     expect(toastSuccessMock).toHaveBeenCalledWith('users.management.messages.userCreatedInvitationSent');
     expect(getUsersPaginatedMock.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(getCustomersPaginatedMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('hides firms management for local admins and avoids loading firms list', async () => {
+    useAuthMock.mockReturnValue({
+      user: {
+        role: 'localAdmin',
+        firmId: 'firm-1',
+        firmName: 'Acme',
+      },
+    });
+
+    render(<UsersManagement />);
+
+    expect(await screen.findByText('users.management.title')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(getUsersPaginatedMock).toHaveBeenCalled();
+    });
+
+    expect(getCustomersPaginatedMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /users\.management\.tabs\.firms/i })).not.toBeInTheDocument();
+  });
+
+  it('does not refetch indefinitely for local admins', async () => {
+    useAuthMock.mockReturnValue({
+      user: {
+        role: 'localAdmin',
+        firmId: 'firm-1',
+        firmName: 'Acme',
+      },
+    });
+
+    render(<UsersManagement />);
+
+    expect(await screen.findByText('users.management.title')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(getUsersPaginatedMock).toHaveBeenCalledTimes(1);
+    });
   });
 });

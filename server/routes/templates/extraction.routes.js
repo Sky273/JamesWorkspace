@@ -4,7 +4,7 @@
  */
 
 import express from 'express';
-import { authenticateToken, requireAdmin } from '../../middleware/auth.middleware.js';
+import { authenticateToken, requireUserManager } from '../../middleware/auth.middleware.js';
 import { userRateLimit } from '../../middleware/rateLimit.middleware.js';
 import { createExtractFromCvHandler } from './extraction/handlers.js';
 import { upload } from './extraction/extractors.js';
@@ -44,7 +44,7 @@ function templateExtractionConcurrencyLimit(req, res, next) {
 router.post(
     '/extract-from-cv',
     authenticateToken,
-    requireAdmin,
+    requireUserManager,
     userRateLimit(10, 15 * 60 * 1000),
     templateExtractionConcurrencyLimit,
     upload.single('file'),

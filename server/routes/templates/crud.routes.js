@@ -4,7 +4,7 @@
  */
 
 import express from 'express';
-import { authenticateToken, requireAdmin, isUserAdmin } from '../../middleware/auth.middleware.js';
+import { authenticateToken, requireUserManager, isUserAdmin } from '../../middleware/auth.middleware.js';
 import { validateBody, validateParams, createTemplateSchema, updateTemplateSchema, normalizeRequestBodyAliases } from '../../utils/validation.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../services/security.service.js';
 import { invalidateTemplatesCaches } from '../../services/cache.service.js';
@@ -113,12 +113,16 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
 });
 
 // POST /api/templates - Create template
-router.post('/', authenticateToken, requireAdmin, validateBody(createTemplateSchema), async (req, res) => {
+router.post('/', authenticateToken, requireUserManager, validateBody(createTemplateSchema), async (req, res) => {
     try {
         await invalidateTemplatesCaches();
         
         const isAdmin = isUserAdmin(req);
         const userFirmId = await getUserFirmId(req);
+
+        if (!isAdmin && !userFirmId) {
+            return res.status(403).json({ error: 'No firm association' });
+        }
         
         // Determine target firm_id: admin can specify a different firm or create global templates
         const normalizedTemplate = normalizeTemplatePayload(req.body);
@@ -168,15 +172,24 @@ router.post('/', authenticateToken, requireAdmin, validateBody(createTemplateSch
 });
 
 // PUT /api/templates/:id - Update template
-router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), validateBody(updateTemplateSchema), async (req, res) => {
+router.put('/:id', authenticateToken, requireUserManager, validateParams('id'), validateBody(updateTemplateSchema), async (req, res) => {
     try {
         await invalidateTemplatesCaches();
         
         const { id } = req.params;
         const isAdmin = isUserAdmin(req);
+        const userFirmId = await getUserFirmId(req);
+
+        if (!isAdmin && !userFirmId) {
+            return res.status(403).json({ error: 'No firm association' });
+        }
         
         // Get existing template to check firm_id
         const existingTemplate = await templatesService.getTemplateById(id);
+
+        if (!isAdmin && existingTemplate.firm_id !== userFirmId) {
+            return res.status(404).json({ error: 'Template not found' });
+        }
         
         // Handle firm_id update (admin only)
         const normalizedTemplate = normalizeTemplatePayload(req.body);
@@ -230,9 +243,22 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
 });
 
 // DELETE /api/templates/:id - Delete template
-router.delete('/:id', authenticateToken, requireAdmin, validateParams('id'), async (req, res) => {
+router.delete('/:id', authenticateToken, requireUserManager, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
+        const isAdmin = isUserAdmin(req);
+        const userFirmId = await getUserFirmId(req);
+
+        if (!isAdmin && !userFirmId) {
+            return res.status(403).json({ error: 'No firm association' });
+        }
+
+        if (!isAdmin) {
+            const existingTemplate = await templatesService.getTemplateById(id);
+            if (existingTemplate.firm_id !== userFirmId) {
+                return res.status(404).json({ error: 'Template not found' });
+            }
+        }
         
         await invalidateTemplatesCaches();
         await templatesService.deleteTemplate(id);
@@ -253,6 +279,59 @@ router.delete('/:id', authenticateToken, requireAdmin, validateParams('id'), asy
         safeLog('error', 'Error deleting template', { error: error.message, templateId: req.params.id });
         return res.status(500).json({ 
             error: 'Failed to delete template' 
+        });
+    }
+});
+
+// POST /api/templates/:id/duplicate - Duplicate template
+router.post('/:id/duplicate', authenticateToken, requireUserManager, validateParams('id'), async (req, res) => {
+    try {
+        await invalidateTemplatesCaches();
+
+        const { id } = req.params;
+        const isAdmin = isUserAdmin(req);
+        const userFirmId = await getUserFirmId(req);
+        const requestedFirmId = typeof req.body?.firmId === 'string' ? req.body.firmId.trim() : '';
+
+        if (!isAdmin && !userFirmId) {
+            return res.status(403).json({ error: 'No firm association' });
+        }
+
+        const sourceTemplate = await templatesService.getTemplateById(id);
+
+        if (!isAdmin && sourceTemplate.firm_id !== userFirmId) {
+            return res.status(404).json({ error: 'Template not found' });
+        }
+
+        let targetFirmId = userFirmId;
+
+        if (isAdmin) {
+            if (!requestedFirmId) {
+                return res.status(400).json({ error: 'Target firm is required' });
+            }
+
+            const firm = await templatesService.getFirmIfExists(requestedFirmId);
+            if (!firm) {
+                return res.status(400).json({ error: 'Specified firm not found' });
+            }
+
+            targetFirmId = firm.id;
+        }
+
+        const duplicated = await templatesService.duplicateTemplate(id, { firm_id: targetFirmId });
+        return res.status(201).json(mapTemplateToFrontend(duplicated));
+    } catch (error) {
+        if (error.statusCode === 404) {
+            return res.status(404).json({ error: 'Template not found' });
+        }
+        if (error.code === '23505') {
+            return res.status(400).json({
+                error: 'Template with this name already exists'
+            });
+        }
+        safeLog('error', 'Error duplicating template', { error: error.message, templateId: req.params.id });
+        return res.status(500).json({
+            error: 'Failed to duplicate template'
         });
     }
 });

@@ -34,6 +34,20 @@ export const AdminRoute = ({ children }: RouteProps): JSX.Element => {
   return <>{children}</>;
 };
 
+export const ManagerRoute = ({ children }: RouteProps): JSX.Element => {
+  const { isAuthenticated, user } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/signin" replace />;
+  }
+
+  if (user?.role !== 'admin' && user?.role !== 'localAdmin') {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+};
+
 export const PublicHomeRoute = (): JSX.Element => {
   const { isAuthenticated } = useAuth();
 

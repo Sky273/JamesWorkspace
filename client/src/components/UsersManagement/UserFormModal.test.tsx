@@ -22,7 +22,7 @@ describe('UserFormModal', () => {
     { id: 'firm-2', name: 'Globex' },
   ];
 
-  it('submits a new admin user with the selected firm and no password field', () => {
+  it('submits a new local admin user with the selected firm and no password field', () => {
     const onSubmit = vi.fn();
     const { container } = render(
       <UserFormModal
@@ -41,7 +41,7 @@ describe('UserFormModal', () => {
     fireEvent.change(textInputs[0], { target: { value: 'Lookman' } });
     fireEvent.change(textInputs[1], { target: { value: 'lookman@yopmail.com' } });
     fireEvent.change(selects[0], { target: { value: 'firm-1' } });
-    fireEvent.change(selects[1], { target: { value: 'admin' } });
+    fireEvent.change(selects[1], { target: { value: 'localAdmin' } });
     fireEvent.change(selects[2], { target: { value: 'Active' } });
 
     fireEvent.click(screen.getByRole('button', { name: 'users.management.modal.save' }));
@@ -50,7 +50,7 @@ describe('UserFormModal', () => {
       name: 'Lookman',
       email: 'lookman@yopmail.com',
       firmId: 'firm-1',
-      role: 'admin',
+      role: 'localAdmin',
       status: 'Active',
     }));
     expect(container.querySelector('input[type="password"]')).not.toBeInTheDocument();
@@ -80,5 +80,29 @@ describe('UserFormModal', () => {
     expect((container.querySelectorAll('select')[0] as HTMLSelectElement).value).toBe('firm-2');
     expect((container.querySelectorAll('select')[2] as HTMLSelectElement).value).toBe('Active');
     expect(container.querySelector('input[type="password"]')).not.toBeInTheDocument();
+  });
+
+  it('hides super admin role and locks firm selection when local admin permissions are applied', () => {
+    render(
+      <UserFormModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        user={null}
+        firms={firms}
+        canAssignSuperAdmin={false}
+        canChangeFirm={false}
+        t={t}
+      />
+    );
+
+    const selects = screen.getAllByRole('combobox');
+    const firmSelect = selects[0] as HTMLSelectElement;
+    const roleSelect = selects[1] as HTMLSelectElement;
+
+    expect(firmSelect).toBeDisabled();
+    expect(screen.queryByRole('option', { name: 'users.management.roles.admin' })).not.toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'users.management.roles.localAdmin' })).toBeInTheDocument();
+    expect(roleSelect.value).toBe('user');
   });
 });

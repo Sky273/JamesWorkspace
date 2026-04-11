@@ -78,6 +78,7 @@ const Layout = (): JSX.Element => {
     if (!role) return t('userProfile.roles.user');
     const roleLower = role.toLowerCase();
     if (roleLower === 'admin') return t('userProfile.roles.admin');
+    if (roleLower === 'localadmin') return t('userProfile.roles.localAdmin');
     return t('userProfile.roles.user');
   };
 

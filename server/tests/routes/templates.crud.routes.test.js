@@ -29,6 +29,7 @@ const mockGetFirmIfExists = vi.fn();
 const mockCreateTemplate = vi.fn();
 const mockUpdateTemplate = vi.fn();
 const mockDeleteTemplate = vi.fn();
+const mockDuplicateTemplate = vi.fn();
 vi.mock('../../services/templates.service.js', () => ({
     listTemplates: (...args) => mockListTemplates(...args),
     getTemplateById: (...args) => mockGetTemplateById(...args),
@@ -36,7 +37,8 @@ vi.mock('../../services/templates.service.js', () => ({
     getFirmIfExists: (...args) => mockGetFirmIfExists(...args),
     createTemplate: (...args) => mockCreateTemplate(...args),
     updateTemplate: (...args) => mockUpdateTemplate(...args),
-    deleteTemplate: (...args) => mockDeleteTemplate(...args)
+    deleteTemplate: (...args) => mockDeleteTemplate(...args),
+    duplicateTemplate: (...args) => mockDuplicateTemplate(...args)
 }));
 
 // Mock cache service
@@ -107,8 +109,8 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
             res.status(401).json({ error: 'Unauthorized' });
         }
     },
-    requireAdmin: (req, res, next) => {
-        if (req.user?.role === 'admin') {
+    requireUserManager: (req, res, next) => {
+        if (req.user?.role === 'admin' || req.user?.role === 'localAdmin') {
             next();
         } else {
             res.status(403).json({ error: 'Admin access required' });
@@ -152,7 +154,7 @@ describe('Templates CRUD Routes', () => {
     let app;
 
     beforeEach(() => {
-        vi.clearAllMocks();
+        vi.resetAllMocks();
         app = createTestApp();
         mockGetUserFirmId.mockResolvedValue('firm-123');
     });
@@ -426,6 +428,27 @@ describe('Templates CRUD Routes', () => {
             expect(mockCreateTemplate).toHaveBeenCalled();
         });
 
+        it('should force local admin template creation to their own firm', async () => {
+            mockCreateTemplate.mockResolvedValueOnce({
+                ...sampleTemplateRow,
+                id: 'tpl-local-admin',
+                name: 'Local Admin Template'
+            });
+
+            const res = await request(app)
+                .post('/api/templates')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'localAdmin')
+                .send({
+                    ...newTemplateBody,
+                    firmId: 'other-firm'
+                });
+
+            expect(res.status).toBe(200);
+            const createArgs = mockCreateTemplate.mock.calls[0][0];
+            expect(createArgs.firm_id).toBe('firm-123');
+        });
+
         it('should create template with camelCase payload', async () => {
             mockCreateTemplate.mockResolvedValueOnce({ ...sampleTemplateRow, name: 'Camel Template' });
 
@@ -659,6 +682,77 @@ describe('Templates CRUD Routes', () => {
                 .send(updateBody);
 
             expect(invalidateTemplatesCaches).toHaveBeenCalled();
+        });
+    });
+
+    // ==========================================
+    // POST /api/templates/:id/duplicate
+    // ==========================================
+    describe('POST /api/templates/:id/duplicate', () => {
+        it('should require a target firm for super admin duplication', async () => {
+            const res = await request(app)
+                .post('/api/templates/tpl-123/duplicate')
+                .set('Authorization', 'Bearer valid-token')
+                .send({});
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Target firm is required');
+        });
+
+        it('should duplicate template into the requested firm for super admin', async () => {
+            mockGetTemplateById.mockResolvedValueOnce(sampleTemplateRow);
+            mockGetFirmIfExists.mockResolvedValueOnce({ id: 'firm-456', name: 'Other Firm' });
+            mockDuplicateTemplate.mockResolvedValueOnce({ ...sampleTemplateRow, id: 'tpl-dup', firm_id: 'firm-456' });
+
+            const res = await request(app)
+                .post('/api/templates/tpl-123/duplicate')
+                .set('Authorization', 'Bearer valid-token')
+                .send({ firmId: 'firm-456' });
+
+            expect(res.status).toBe(201);
+            expect(mockDuplicateTemplate).toHaveBeenCalledWith('tpl-123', { firm_id: 'firm-456' });
+            expect(res.body.FirmId).toBe('firm-456');
+        });
+
+        it('should reject duplication when target firm does not exist', async () => {
+            mockGetTemplateById.mockResolvedValueOnce(sampleTemplateRow);
+            mockGetFirmIfExists.mockResolvedValueOnce(null);
+
+            const res = await request(app)
+                .post('/api/templates/tpl-123/duplicate')
+                .set('Authorization', 'Bearer valid-token')
+                .send({ firmId: 'missing-firm' });
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toBe('Specified firm not found');
+            expect(mockDuplicateTemplate).not.toHaveBeenCalled();
+        });
+
+        it('should force local admin duplication to their own firm', async () => {
+            mockGetTemplateById.mockResolvedValueOnce(sampleTemplateRow);
+            mockDuplicateTemplate.mockResolvedValueOnce({ ...sampleTemplateRow, id: 'tpl-local-dup', firm_id: 'firm-123' });
+
+            const res = await request(app)
+                .post('/api/templates/tpl-123/duplicate')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'localAdmin')
+                .send({ firmId: 'firm-999' });
+
+            expect(res.status).toBe(201);
+            expect(mockDuplicateTemplate).toHaveBeenCalledWith('tpl-123', { firm_id: 'firm-123' });
+        });
+
+        it('should reject local admin duplication for a template from another firm', async () => {
+            mockGetTemplateById.mockResolvedValueOnce({ ...sampleTemplateRow, firm_id: 'other-firm' });
+
+            const res = await request(app)
+                .post('/api/templates/tpl-123/duplicate')
+                .set('Authorization', 'Bearer valid-token')
+                .set('x-test-role', 'localAdmin')
+                .send({ firmId: 'firm-123' });
+
+            expect(res.status).toBe(404);
+            expect(res.body.error).toBe('Template not found');
         });
     });
 

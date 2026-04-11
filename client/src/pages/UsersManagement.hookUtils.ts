@@ -9,10 +9,6 @@ export function getTotalPages(totalCount: number, pageSize: number): number {
   return Math.max(1, Math.ceil(totalCount / pageSize)) || 1;
 }
 
-export function getCapitalizedRole(role: string): string {
-  return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
-}
-
 export function buildUsersManagementStats(
   users: User[],
   usersTotalCount: number,
@@ -22,7 +18,7 @@ export function buildUsersManagementStats(
     totalUsers: usersTotalCount,
     totalFirms: firmsTotalCount,
     activeUsers: users.filter((user) => user.status === 'active').length,
-    admins: users.filter((user) => user.role === 'admin').length,
+    admins: users.filter((user) => user.role === 'admin' || user.role === 'localAdmin').length,
   };
 }
 

@@ -87,7 +87,7 @@ export const swaggerDocument = {
                     id: { type: 'string', format: 'uuid' },
                     email: { type: 'string', format: 'email' },
                     name: { type: 'string' },
-                    role: { type: 'string', enum: ['admin', 'user'] },
+                    role: { type: 'string', enum: ['admin', 'localAdmin', 'user'] },
                     status: { type: 'string', enum: ['active', 'inactive', 'pending'] },
                     firm_id: { type: 'string', format: 'uuid', nullable: true },
                     firm_name: { type: 'string', nullable: true },

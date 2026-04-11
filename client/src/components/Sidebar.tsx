@@ -39,6 +39,7 @@ interface NavItem {
   href: string;
   icon: HeroIcon;
   adminOnly?: boolean;
+  superAdminOnly?: boolean;
 }
 
 interface NavSection {
@@ -58,7 +59,9 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
   const { user } = useAuth();
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
 
-  const isAdmin = user?.role === 'admin';
+  const isSuperAdmin = user?.role === 'admin';
+  const isLocalAdmin = user?.role === 'localAdmin';
+  const canAccessManagerScreens = isSuperAdmin || isLocalAdmin;
 
   useEffect(() => {
     const checkDarkMode = (): void => {
@@ -94,9 +97,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
       { name: t('navigation.emailTemplates'), href: '/email-templates', icon: EnvelopeIcon },
       { name: t('navigation.tags'), href: '/dashboard/tags', icon: TagIcon },
       { name: t('navigation.users'), href: '/dashboard/users', icon: UsersIcon },
-      { name: t('navigation.security'), href: '/dashboard/security-logs', icon: ShieldCheckIcon },
-      { name: t('navigation.gdprAudit'), href: '/dashboard/gdpr-audit', icon: ClipboardDocumentListIcon },
-      { name: t('navigation.metrics'), href: '/dashboard/metrics', icon: ChartBarIcon },
+      { name: t('navigation.metrics'), href: '/dashboard/metrics', icon: ChartBarIcon, superAdminOnly: true },
     ],
     adminOnly: true,
   };
@@ -105,6 +106,8 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
     { name: t('navigation.settings'), href: '/settings', icon: Cog6ToothIcon, adminOnly: true },
     { name: t('navigation.jobs', 'Jobs'), href: '/batch-jobs', icon: QueueListIcon, adminOnly: true },
     { name: t('navigation.backup'), href: '/dashboard/backup', icon: ServerStackIcon, adminOnly: true },
+    { name: t('navigation.security'), href: '/dashboard/security-logs', icon: ShieldCheckIcon, adminOnly: true },
+    { name: t('navigation.gdprAudit'), href: '/dashboard/gdpr-audit', icon: ClipboardDocumentListIcon, adminOnly: true },
     { name: t('navigation.userGuide'), href: '/guide', icon: BookOpenIcon },
   ];
 
@@ -141,7 +144,17 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
   };
 
   const renderSection = (section: NavSection) => {
-    const visibleItems = section.items.filter((item) => !item.adminOnly || isAdmin);
+    const visibleItems = section.items.filter((item) => {
+      if (item.superAdminOnly) {
+        return isSuperAdmin;
+      }
+
+      if (item.adminOnly) {
+        return isSuperAdmin;
+      }
+
+      return true;
+    });
 
     if (visibleItems.length === 0) return null;
 
@@ -181,11 +194,11 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
         <nav className="mt-5 flex flex-1 flex-col" onClick={handleNavClick}>
           <div className="space-y-1">{renderNavItem(homeItem)}</div>
           {renderSection(gestionSection)}
-          {isAdmin && renderSection(adminSection)}
+          {canAccessManagerScreens && renderSection(adminSection)}
           <div className="min-h-4 flex-1" />
           <div className="relative mt-4 space-y-1 pt-4">
             <span className="absolute left-3 right-3 top-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent dark:via-white/10" />
-            {bottomItems.filter((item) => !item.adminOnly || isAdmin).map((item) => renderNavItem(item))}
+            {bottomItems.filter((item) => !item.adminOnly || isSuperAdmin).map((item) => renderNavItem(item))}
           </div>
         </nav>
       </div>

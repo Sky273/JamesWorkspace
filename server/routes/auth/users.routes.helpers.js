@@ -23,8 +23,17 @@ export function resolveRequiredFirmId(normalizedPayload = {}) {
 }
 
 export function normalizeRole(role) {
-    const normalizedRole = String(role || 'user').toLowerCase();
-    return ['admin', 'user'].includes(normalizedRole) ? normalizedRole : 'user';
+    const normalizedRole = String(role || 'user').trim().toLowerCase();
+
+    if (normalizedRole === 'admin') {
+        return 'admin';
+    }
+
+    if (normalizedRole === 'localadmin' || normalizedRole === 'local_admin') {
+        return 'localAdmin';
+    }
+
+    return normalizedRole === 'user' ? 'user' : 'user';
 }
 
 export function buildAdminUserUpdateData(normalizedPayload, currentUser) {
@@ -41,7 +50,7 @@ export function buildAdminUserUpdateData(normalizedPayload, currentUser) {
         updateData.email = email.toLowerCase();
     }
     if (status) updateData.status = status.toLowerCase();
-    if (role) updateData.role = role.toLowerCase();
+    if (role) updateData.role = normalizeRole(role);
     if (jobTitle !== undefined) updateData.job_title = jobTitle || null;
     if (phone !== undefined) updateData.phone = phone || null;
     return updateData;

@@ -12,7 +12,7 @@ import { selectWithTimeout, escapeLike, createWithTimeout, updateWithTimeout, de
  * @param {Object} options - { search, role, status, page, limit }
  * @returns {Promise<{ users: Object[], hasMore: boolean }>}
  */
-export async function listUsers({ search, role, status, page = 1, limit = 100 } = {}) {
+export async function listUsers({ search, role, status, firmId, page = 1, limit = 100 } = {}) {
     const normalizedPage = Math.max(1, page);
     const normalizedLimit = Math.max(1, Math.min(limit, 100));
     const offset = (normalizedPage - 1) * normalizedLimit;
@@ -35,6 +35,12 @@ export async function listUsers({ search, role, status, page = 1, limit = 100 } 
     if (status && status !== 'all') {
         conditions.push(`status = $${paramIndex}`);
         params.push(status.toLowerCase());
+        paramIndex++;
+    }
+
+    if (firmId) {
+        conditions.push(`firm_id = $${paramIndex}`);
+        params.push(firmId);
         paramIndex++;
     }
 

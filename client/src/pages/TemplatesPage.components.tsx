@@ -16,6 +16,7 @@ import {
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import type { Firm } from './UsersManagement.hooks';
 
 import CardActionButton from '../components/page/CardActionButton';
 import AnimatedCard from '../components/page/AnimatedCard';
@@ -32,12 +33,16 @@ const ExtractTemplateModal = lazy(() => import('../components/ExtractTemplateMod
 const TemplatePreviewFrame = lazy(() => import('../components/TemplatePreviewFrame'));
 
 function TemplateCard({
+  canDuplicate,
   index,
+  onDuplicateClick,
   onDeleteClick,
   onPreviewClick,
   template,
 }: {
+  canDuplicate: boolean;
   index: number;
+  onDuplicateClick: (template: Template) => void;
   onDeleteClick: (template: Template) => void;
   onPreviewClick: (template: Template) => void;
   template: Template;
@@ -123,6 +128,18 @@ function TemplateCard({
 
         <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
           <CardActionButton icon={PencilSquareIcon} label={t('templates.actions.edit')} onClick={handleEditClick} className="btn btn-primary flex-1 px-3 py-2" tone="primary" />
+          {canDuplicate ? (
+            <CardActionButton
+              icon={DocumentDuplicateIcon}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onDuplicateClick(template);
+              }}
+              title={t('templates.actions.duplicate')}
+              tone="info"
+            />
+          ) : null}
           <CardActionButton
             icon={TrashIcon}
             onClick={(event) => {
@@ -236,9 +253,11 @@ export function TemplatesToolbar({
 }
 
 export function TemplatesResults({
+  canDuplicate,
   currentPage,
   error,
   loading,
+  onDuplicateClick,
   onDeleteClick,
   onPageChange,
   onPreviewClick,
@@ -247,9 +266,11 @@ export function TemplatesResults({
   totalCount,
   totalPages,
 }: {
+  canDuplicate: boolean;
   currentPage: number;
   error: string | null;
   loading: boolean;
+  onDuplicateClick: (template: Template) => void;
   onDeleteClick: (template: Template) => void;
   onPageChange: (page: number) => void;
   onPreviewClick: (template: Template) => void;
@@ -279,11 +300,81 @@ export function TemplatesResults({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {templates.map((template, index) => (
-            <TemplateCard key={template.id} template={template} index={index} onDeleteClick={onDeleteClick} onPreviewClick={onPreviewClick} />
+            <TemplateCard
+              key={template.id}
+              canDuplicate={canDuplicate}
+              template={template}
+              index={index}
+              onDeleteClick={onDeleteClick}
+              onDuplicateClick={onDuplicateClick}
+              onPreviewClick={onPreviewClick}
+            />
           ))}
         </div>
       )}
     </>
+  );
+}
+
+export function TemplatesDuplicateModal({
+  firms,
+  isOpen,
+  isSubmitting,
+  onClose,
+  onConfirm,
+  onFirmChange,
+  selectedFirmId,
+  template,
+}: {
+  firms: Firm[];
+  isOpen: boolean;
+  isSubmitting: boolean;
+  onClose: () => void;
+  onConfirm: () => Promise<void>;
+  onFirmChange: (firmId: string) => void;
+  selectedFirmId: string;
+  template: Template | null;
+}) {
+  const { t } = useTranslation();
+
+  if (!isOpen || !template) {
+    return null;
+  }
+
+  return (
+    <ConfirmDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      onConfirm={() => {
+        void onConfirm();
+      }}
+      disabled={isSubmitting || !selectedFirmId}
+      title={t('templates.duplicate.title')}
+      cancelLabel={t('common.cancel')}
+      confirmLabel={isSubmitting ? t('common.saving') : t('templates.actions.duplicate')}
+      content={(
+        <div className="space-y-4">
+          <p>{t('templates.duplicate.message', { templateName: template.Name })}</p>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              {t('templates.duplicate.targetFirm')}
+            </label>
+            <select
+              value={selectedFirmId}
+              onChange={(event) => onFirmChange(event.target.value)}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+            >
+              <option value="">{t('templates.duplicate.selectFirm')}</option>
+              {firms.map((firm) => (
+                <option key={firm.id} value={firm.id}>
+                  {firm.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+    />
   );
 }
 

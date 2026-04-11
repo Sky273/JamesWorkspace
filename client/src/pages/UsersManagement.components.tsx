@@ -33,48 +33,54 @@ export function UsersManagementHeader() {
   return <PageHeader title={t('users.management.title')} subtitle={t('users.management.subtitle')} />;
 }
 
-export function UsersManagementStatsCards({ stats }: { stats: UsersManagementStats }) {
+export function UsersManagementStatsCards({ stats, showFirmsStats = true }: { stats: UsersManagementStats; showFirmsStats?: boolean }) {
   const { t } = useTranslation();
+
+  const items = [
+    {
+      icon: UsersIcon,
+      iconBgClassName: 'bg-blue-100 dark:bg-blue-900/30',
+      iconClassName: 'text-blue-600 dark:text-blue-400',
+      label: t('users.management.stats.totalUsers'),
+      value: stats.totalUsers,
+    },
+    {
+      icon: UserIcon,
+      iconBgClassName: 'bg-emerald-100 dark:bg-emerald-900/30',
+      iconClassName: 'text-emerald-600 dark:text-emerald-400',
+      label: t('users.management.stats.activeUsers'),
+      value: stats.activeUsers,
+    },
+    {
+      icon: ShieldCheckIcon,
+      iconBgClassName: 'bg-purple-100 dark:bg-purple-900/30',
+      iconClassName: 'text-purple-600 dark:text-purple-400',
+      label: t('users.management.stats.admins'),
+      value: stats.admins,
+    },
+  ];
+
+  if (showFirmsStats) {
+    items.splice(1, 0, {
+      icon: BuildingOfficeIcon,
+      iconBgClassName: 'bg-green-100 dark:bg-green-900/30',
+      iconClassName: 'text-green-600 dark:text-green-400',
+      label: t('users.management.stats.totalFirms'),
+      value: stats.totalFirms,
+    });
+  }
 
   return (
     <StatCardsGrid
-      className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6"
-      items={[
-        {
-          icon: UsersIcon,
-          iconBgClassName: 'bg-blue-100 dark:bg-blue-900/30',
-          iconClassName: 'text-blue-600 dark:text-blue-400',
-          label: t('users.management.stats.totalUsers'),
-          value: stats.totalUsers,
-        },
-        {
-          icon: BuildingOfficeIcon,
-          iconBgClassName: 'bg-green-100 dark:bg-green-900/30',
-          iconClassName: 'text-green-600 dark:text-green-400',
-          label: t('users.management.stats.totalFirms'),
-          value: stats.totalFirms,
-        },
-        {
-          icon: UserIcon,
-          iconBgClassName: 'bg-emerald-100 dark:bg-emerald-900/30',
-          iconClassName: 'text-emerald-600 dark:text-emerald-400',
-          label: t('users.management.stats.activeUsers'),
-          value: stats.activeUsers,
-        },
-        {
-          icon: ShieldCheckIcon,
-          iconBgClassName: 'bg-purple-100 dark:bg-purple-900/30',
-          iconClassName: 'text-purple-600 dark:text-purple-400',
-          label: t('users.management.stats.admins'),
-          value: stats.admins,
-        },
-      ]}
+      className={`grid grid-cols-1 ${showFirmsStats ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4 mb-6`}
+      items={items}
     />
   );
 }
 
 export function UsersManagementToolbar({
   activeTab,
+  canManageFirms,
   firmsCount,
   onCreate,
   onRefresh,
@@ -85,6 +91,7 @@ export function UsersManagementToolbar({
   usersCount,
 }: {
   activeTab: UsersManagementTab;
+  canManageFirms: boolean;
   firmsCount: number;
   onCreate: () => void;
   onRefresh: () => Promise<void>;
@@ -101,7 +108,7 @@ export function UsersManagementToolbar({
       <div className="flex flex-col border-b border-[var(--cv-outline)] p-4 md:flex-row md:items-center md:justify-between">
         <div className="flex gap-4 mb-4 md:mb-0">
           <button onClick={() => onTabChange('users')} className={`app-tab-button ${activeTab === 'users' ? 'app-tab-button-active' : ''}`}><UsersIcon className="w-5 h-5" />{t('users.management.tabs.users')} ({usersCount})</button>
-          <button onClick={() => onTabChange('firms')} className={`app-tab-button ${activeTab === 'firms' ? 'app-tab-button-active' : ''}`}><BuildingOfficeIcon className="w-5 h-5" />{t('users.management.tabs.firms')} ({firmsCount})</button>
+          {canManageFirms ? <button onClick={() => onTabChange('firms')} className={`app-tab-button ${activeTab === 'firms' ? 'app-tab-button-active' : ''}`}><BuildingOfficeIcon className="w-5 h-5" />{t('users.management.tabs.firms')} ({firmsCount})</button> : null}
         </div>
         <div className="flex gap-2">
           <button onClick={() => void onRefresh()} className="app-button-secondary rounded-2xl p-2.5" title={t('users.management.refresh')}><ArrowPathIcon className="w-5 h-5" /></button>

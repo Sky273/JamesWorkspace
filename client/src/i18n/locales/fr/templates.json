@@ -32,10 +32,20 @@
     },
     "actions": {
       "edit": "Modifier le modèle",
+      "duplicate": "Dupliquer le modèle",
       "delete": "Supprimer le modèle"
     },
     "delete": {
       "title": "Supprimer le modèle"
+    },
+    "duplicate": {
+      "title": "Dupliquer le modèle",
+      "message": "Dupliquez \"{{templateName}}\" vers un autre cabinet.",
+      "targetFirm": "Cabinet cible",
+      "selectFirm": "Sélectionnez un cabinet",
+      "success": "Modèle dupliqué avec succès",
+      "error": "Échec de la duplication du modèle",
+      "loadFirmsError": "Erreur lors du chargement des cabinets"
     },
     "editor": {
       "title": {

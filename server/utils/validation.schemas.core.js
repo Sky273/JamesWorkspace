@@ -1,5 +1,30 @@
 import { z } from 'zod';
 
+const roleSchema = z.preprocess(
+  (value) => {
+    if (typeof value !== 'string') {
+      return value;
+    }
+
+    const normalized = value.trim().toLowerCase();
+
+    if (normalized === 'admin') {
+      return 'admin';
+    }
+
+    if (normalized === 'localadmin' || normalized === 'local_admin') {
+      return 'localAdmin';
+    }
+
+    if (normalized === 'user') {
+      return 'user';
+    }
+
+    return value;
+  },
+  z.enum(['user', 'admin', 'localAdmin'])
+);
+
 // Common schemas
 export const emailSchema = z.string().email().max(255);
 export const passwordSchema = z.string().min(8).max(100);
@@ -36,7 +61,7 @@ export const createUserSchema = z.object({
   name: nameSchema,
   jobTitle: z.string().max(255).optional(),
   phone: z.string().max(50).optional(),
-  role: z.preprocess(v => typeof v === 'string' ? v.toLowerCase() : v, z.enum(['user', 'admin'])).optional(),
+  role: roleSchema.optional(),
   status: z.preprocess(v => typeof v === 'string' ? v.toLowerCase() : v, z.enum(['active', 'inactive', 'pending'])).optional(),
   firmId: z.string().uuid().optional().nullable()
 }).refine(
@@ -154,7 +179,7 @@ export const updateAdminUserSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   email: z.string().email().optional(),
   status: lowercaseEnum(['active', 'inactive', 'pending']).optional(),
-  role: lowercaseEnum(['user', 'admin']).optional(),
+  role: roleSchema.optional(),
   jobTitle: z.string().max(255).optional().nullable(),
   phone: z.string().max(50).optional().nullable(),
   firmId: z.string().uuid().optional().nullable()

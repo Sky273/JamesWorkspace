@@ -136,37 +136,28 @@ export async function getTemplates(firmId, includeSystemTemplates = false) {
     let params;
     
     if (includeSystemTemplates) {
-        if (firmId) {
-            // Admin with firm: include firm templates AND system templates
-            sql = `
-                SELECT id, firm_id, name, description, subject_template, 
-                       is_system, is_default, status, created_at, updated_at
-                FROM email_templates
-                WHERE (firm_id = $1 OR firm_id IS NULL)
-                  AND status = 'active'
-                ORDER BY is_system DESC, is_default DESC, name ASC
-            `;
-            params = [firmId];
-        } else {
-            // Admin without firm: cross-firm view over all active templates
-            sql = `
-                SELECT id, firm_id, name, description, subject_template, 
-                       is_system, is_default, status, created_at, updated_at
-                FROM email_templates
-                WHERE status = 'active'
-                ORDER BY is_system DESC, is_default DESC, name ASC
-            `;
-            params = [];
-        }
+        // Super admin: cross-firm view over all active templates
+        sql = `
+            SELECT et.id, et.firm_id, et.name, et.description, et.subject_template,
+                   et.is_system, et.is_default, et.status, et.created_at, et.updated_at,
+                   f.name AS firm_name
+            FROM email_templates et
+            LEFT JOIN firms f ON f.id = et.firm_id
+            WHERE et.status = 'active'
+            ORDER BY et.is_system DESC, et.is_default DESC, et.name ASC
+        `;
+        params = [];
     } else {
         // Non-admin: only firm templates (exclude system templates without firm_id)
         sql = `
-            SELECT id, firm_id, name, description, subject_template, 
-                   is_system, is_default, status, created_at, updated_at
-            FROM email_templates
-            WHERE firm_id = $1
-              AND status = 'active'
-            ORDER BY is_default DESC, name ASC
+            SELECT et.id, et.firm_id, et.name, et.description, et.subject_template,
+                   et.is_system, et.is_default, et.status, et.created_at, et.updated_at,
+                   f.name AS firm_name
+            FROM email_templates et
+            LEFT JOIN firms f ON f.id = et.firm_id
+            WHERE et.firm_id = $1
+              AND et.status = 'active'
+            ORDER BY et.is_default DESC, et.name ASC
         `;
         params = [firmId];
     }
@@ -527,4 +518,12 @@ export async function getUserFirmId(userId) {
         [userId]
     );
     return result.rows.length > 0 ? result.rows[0].firm_id : null;
+}
+
+export async function getFirmById(firmId) {
+    const result = await query(
+        'SELECT id, name FROM firms WHERE id = $1',
+        [firmId]
+    );
+    return result.rows[0] || null;
 }

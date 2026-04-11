@@ -1366,7 +1366,7 @@ CREATE TABLE public.users (
     totp_pending_backup_codes text,
     totp_enabled_at timestamp with time zone,
     must_change_password boolean DEFAULT false NOT NULL,
-    CONSTRAINT users_role_check CHECK (((role)::text = ANY (ARRAY[('admin'::character varying)::text, ('user'::character varying)::text]))),
+    CONSTRAINT users_role_check CHECK (((role)::text = ANY (ARRAY[('admin'::character varying)::text, ('localAdmin'::character varying)::text, ('user'::character varying)::text]))),
     CONSTRAINT users_status_check CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('inactive'::character varying)::text, ('pending'::character varying)::text])))
 );
 
@@ -1880,14 +1880,6 @@ ALTER TABLE ONLY public.schema_migrations
 
 ALTER TABLE ONLY public.schema_migrations
     ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (id);
-
-
---
--- Name: templates templates_name_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.templates
-    ADD CONSTRAINT templates_name_key UNIQUE (name);
 
 
 --
@@ -2753,6 +2745,20 @@ CREATE INDEX idx_templates_firm_id ON public.templates USING btree (firm_id);
 --
 
 CREATE INDEX idx_templates_name ON public.templates USING btree (name);
+
+
+--
+-- Name: idx_templates_name_firm_id_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_templates_name_firm_id_unique ON public.templates USING btree (name, firm_id) WHERE (firm_id IS NOT NULL);
+
+
+--
+-- Name: idx_templates_name_global_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_templates_name_global_unique ON public.templates USING btree (name) WHERE (firm_id IS NULL);
 
 
 --

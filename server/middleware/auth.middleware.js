@@ -1,7 +1,13 @@
 import { verifyToken } from '../services/jwt.service.js';
 import { findUserById } from '../services/users.service.js';
 import { safeLog } from '../utils/logger.backend.js';
-import { getUserFirmIdFromUser, getUserFirmNameFromUser } from '../utils/firmHelpers.js';
+import {
+    getUserFirmIdFromUser,
+    getUserFirmNameFromUser,
+    isUserAdmin as hasSuperAdminRole,
+    isUserLocalAdmin as hasLocalAdminRole,
+    isUserManager as hasManagerRole
+} from '../utils/firmHelpers.js';
 
 const AUTH_USER_CACHE_TTL_MS = Math.max(1000, Number.parseInt(process.env.AUTH_USER_CACHE_TTL_MS || '2000', 10) || 2000);
 const authUserCache = new Map();
@@ -187,7 +193,7 @@ export async function authenticateToken(req, res, next) {
  * Require admin role
  */
 export function requireAdmin(req, res, next) {
-    if (req.user?.role?.toLowerCase() !== 'admin') {
+    if (!hasSuperAdminRole(req)) {
         return res.status(403).json({ 
             error: 'Access denied. Admin privileges required.' 
         });
@@ -204,7 +210,25 @@ export function requireAdmin(req, res, next) {
  * Check if user is admin
  */
 export function isUserAdmin(req) {
-    return req.user?.role?.toLowerCase() === 'admin';
+    return hasSuperAdminRole(req);
+}
+
+export function isUserLocalAdmin(req) {
+    return hasLocalAdminRole(req);
+}
+
+export function isUserManager(req) {
+    return hasManagerRole(req);
+}
+
+export function requireUserManager(req, res, next) {
+    if (!isUserManager(req)) {
+        return res.status(403).json({
+            error: 'Access denied. Management privileges required.'
+        });
+    }
+
+    next();
 }
 
 /**

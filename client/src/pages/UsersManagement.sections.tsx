@@ -16,18 +16,28 @@ import type { Firm, User } from './UsersManagement.hooks';
 
 function UserRoleBadge({ role }: { role: string | undefined }) {
   const { t } = useTranslation();
-  const isAdmin = role === 'admin';
+  const isSuperAdmin = role === 'admin';
+  const isLocalAdmin = role === 'localAdmin';
+  const isAdminRole = isSuperAdmin || isLocalAdmin;
+
+  const badgeClassName = isSuperAdmin
+    ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+    : isLocalAdmin
+      ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300'
+      : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+
+  const roleLabel = isSuperAdmin
+    ? t('users.management.roles.admin')
+    : isLocalAdmin
+      ? t('users.management.roles.localAdmin')
+      : t('users.management.roles.user');
 
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${
-        isAdmin
-          ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
-          : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-      }`}
+      className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${badgeClassName}`}
     >
-      {isAdmin ? <ShieldCheckIcon className="w-3 h-3" /> : <UserIcon className="w-3 h-3" />}
-      {isAdmin ? t('users.management.roles.admin') : t('users.management.roles.user')}
+      {isAdminRole ? <ShieldCheckIcon className="w-3 h-3" /> : <UserIcon className="w-3 h-3" />}
+      {roleLabel}
     </span>
   );
 }

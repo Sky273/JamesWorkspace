@@ -32,6 +32,7 @@
     },
     "actions": {
       "edit": "Edit Template",
+      "duplicate": "Duplicate Template",
       "delete": "Delete Template"
     },
     "editor": {
@@ -84,6 +85,15 @@
     },
     "delete": {
       "title": "Delete Template"
+    },
+    "duplicate": {
+      "title": "Duplicate template",
+      "message": "Duplicate \"{{templateName}}\" to another firm.",
+      "targetFirm": "Target firm",
+      "selectFirm": "Select a firm",
+      "success": "Template duplicated successfully",
+      "error": "Failed to duplicate template",
+      "loadFirmsError": "Failed to load firms"
     },
     "selectTemplate": "Select Template",
     "extract": {

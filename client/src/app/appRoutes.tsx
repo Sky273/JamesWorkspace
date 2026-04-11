@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { AdminRoute, ProtectedRoute, PublicHomeRoute } from './routeGuards';
+import { AdminRoute, ManagerRoute, ProtectedRoute, PublicHomeRoute } from './routeGuards';
 import {
   HomePage,
   ResumesPage,
@@ -81,17 +81,17 @@ export function AppRoutes(): JSX.Element {
         <Route path="profile-matching" element={<ProfileMatchingPage />} />
         <Route path="guide" element={<UserGuidePage />} />
         <Route path="profile" element={<UserProfilePage />} />
-        <Route path="templates" element={<AdminRoute><TemplatesPage /></AdminRoute>} />
-        <Route path="templates/new" element={<AdminRoute><NewTemplatePage /></AdminRoute>} />
-        <Route path="templates/edit/:id" element={<AdminRoute><NewTemplatePage /></AdminRoute>} />
-        <Route path="dashboard/tags" element={<AdminRoute><TagsManagement /></AdminRoute>} />
-        <Route path="dashboard/users" element={<AdminRoute><UsersManagement /></AdminRoute>} />
+        <Route path="templates" element={<ManagerRoute><TemplatesPage /></ManagerRoute>} />
+        <Route path="templates/new" element={<ManagerRoute><NewTemplatePage /></ManagerRoute>} />
+        <Route path="templates/edit/:id" element={<ManagerRoute><NewTemplatePage /></ManagerRoute>} />
+        <Route path="dashboard/tags" element={<ManagerRoute><TagsManagement /></ManagerRoute>} />
+        <Route path="dashboard/users" element={<ManagerRoute><UsersManagement /></ManagerRoute>} />
         <Route path="dashboard/security-logs" element={<AdminRoute><SecurityLogs /></AdminRoute>} />
         <Route path="dashboard/metrics" element={<AdminRoute><MetricsPage /></AdminRoute>} />
         <Route path="settings" element={<AdminRoute><SettingsPage /></AdminRoute>} />
         <Route path="facts" element={<FactsPage />} />
         <Route path="metiers" element={<AdminRoute><MetiersPage /></AdminRoute>} />
-        <Route path="email-templates" element={<AdminRoute><EmailTemplatesPage /></AdminRoute>} />
+        <Route path="email-templates" element={<ManagerRoute><EmailTemplatesPage /></ManagerRoute>} />
         <Route path="dashboard/email-templates" element={<Navigate to="/email-templates" replace />} />
         <Route path="dashboard/gdpr-audit" element={<AdminRoute><GdprAuditPage /></AdminRoute>} />
         <Route path="dashboard/backup" element={<AdminRoute><BackupPage /></AdminRoute>} />

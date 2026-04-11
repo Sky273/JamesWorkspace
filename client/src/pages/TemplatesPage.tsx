@@ -1,7 +1,14 @@
 import { motion } from 'framer-motion';
+import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
+import userService from '../utils/userService';
+import { templateService } from '../utils/templateService';
 
 import {
   TemplatesDeleteModal,
+  TemplatesDuplicateModal,
   TemplatesExtractDialog,
   TemplatesHeader,
   TemplatesLoadingState,
@@ -10,9 +17,16 @@ import {
   TemplatesStats,
   TemplatesToolbar,
 } from './TemplatesPage.components';
-import { useTemplatesDashboard } from './TemplatesPage.hooks';
+import { useTemplatesDashboard, type Template } from './TemplatesPage.hooks';
 
 const TemplatesPage = (): JSX.Element => {
+  const { t } = useTranslation();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'admin';
+  const [duplicateTarget, setDuplicateTarget] = useState<Template | null>(null);
+  const [duplicateFirmId, setDuplicateFirmId] = useState('');
+  const [duplicateFirms, setDuplicateFirms] = useState<{ id: string; name: string }[]>([]);
+  const [duplicateSubmitting, setDuplicateSubmitting] = useState(false);
   const {
     closeDeleteConfirmModal,
     currentPage,
@@ -45,6 +59,49 @@ const TemplatesPage = (): JSX.Element => {
     totalPages,
   } = useTemplatesDashboard();
 
+  const availableDuplicateFirms = useMemo(
+    () => duplicateFirms.filter((firm) => firm.id !== duplicateTarget?.FirmId),
+    [duplicateFirms, duplicateTarget?.FirmId],
+  );
+
+  const closeDuplicateModal = useCallback(() => {
+    setDuplicateTarget(null);
+    setDuplicateFirmId('');
+  }, []);
+
+  const openDuplicateModal = useCallback(async (template: Template) => {
+    if (!isSuperAdmin) {
+      return;
+    }
+
+    try {
+      const response = await userService.getCustomersPaginated({ page: 1, pageSize: 100 });
+      setDuplicateFirms(response.customers || []);
+      setDuplicateTarget(template);
+      setDuplicateFirmId('');
+    } catch {
+      toast.error(t('templates.duplicate.loadFirmsError'));
+    }
+  }, [isSuperAdmin, t]);
+
+  const handleDuplicateConfirm = useCallback(async () => {
+    if (!duplicateTarget || !duplicateFirmId) {
+      return;
+    }
+
+    setDuplicateSubmitting(true);
+    try {
+      await templateService.duplicateTemplate(duplicateTarget.id, duplicateFirmId);
+      toast.success(t('templates.duplicate.success'));
+      closeDuplicateModal();
+      await fetchTemplates();
+    } catch {
+      toast.error(t('templates.duplicate.error'));
+    } finally {
+      setDuplicateSubmitting(false);
+    }
+  }, [closeDuplicateModal, duplicateFirmId, duplicateTarget, fetchTemplates, t]);
+
   if (!mounted || loading) {
     return <TemplatesLoadingState />;
   }
@@ -64,9 +121,11 @@ const TemplatesPage = (): JSX.Element => {
         sortBy={sortBy}
       />
       <TemplatesResults
+        canDuplicate={isSuperAdmin}
         currentPage={currentPage}
         error={error}
         loading={loading}
+        onDuplicateClick={openDuplicateModal}
         onDeleteClick={openDeleteConfirmModal}
         onPageChange={goToPage}
         onPreviewClick={openPreviewModal}
@@ -89,6 +148,16 @@ const TemplatesPage = (): JSX.Element => {
           setPreviewTemplate(null);
         }}
         template={previewTemplate}
+      />
+      <TemplatesDuplicateModal
+        firms={availableDuplicateFirms}
+        isOpen={Boolean(duplicateTarget)}
+        isSubmitting={duplicateSubmitting}
+        onClose={closeDuplicateModal}
+        onConfirm={handleDuplicateConfirm}
+        onFirmChange={setDuplicateFirmId}
+        selectedFirmId={duplicateFirmId}
+        template={duplicateTarget}
       />
       <TemplatesExtractDialog
         isOpen={isExtractModalOpen}

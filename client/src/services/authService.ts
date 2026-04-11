@@ -25,7 +25,7 @@ export interface User {
   email: string;
   jobTitle?: string;
   phone?: string;
-  role: 'admin' | 'user' | 'viewer';
+  role: 'admin' | 'localAdmin' | 'user' | 'viewer';
   status: 'active' | 'inactive' | 'pending';
   firmId?: string;
   firmName?: string;
