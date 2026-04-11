@@ -202,4 +202,24 @@ describe('UsersManagement', () => {
       expect(getUsersPaginatedMock).toHaveBeenCalledTimes(1);
     });
   });
+
+  it('supports local admins when the session exposes the legacy firm_id field', async () => {
+    useAuthMock.mockReturnValue({
+      user: {
+        role: 'localAdmin',
+        firm_id: 'firm-1',
+        firmName: 'Acme',
+      },
+    });
+
+    render(<UsersManagement />);
+
+    expect(await screen.findByText('users.management.title')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(getUsersPaginatedMock).toHaveBeenCalledTimes(1);
+    });
+
+    expect(getCustomersPaginatedMock).not.toHaveBeenCalled();
+  });
 });

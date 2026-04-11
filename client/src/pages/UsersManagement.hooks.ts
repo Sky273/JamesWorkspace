@@ -83,11 +83,12 @@ export function useUsersManagementDashboard() {
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const canManageFirms = user?.role === 'admin';
   const canAssignSuperAdmin = user?.role === 'admin';
+  const currentUserFirmId = user?.firmId || user?.firm_id || '';
   const currentUserFirm = useMemo(
-    () => (user?.firmId
-      ? { id: user.firmId, name: user.firmName || user.firm || 'Cabinet' }
+    () => (currentUserFirmId
+      ? { id: currentUserFirmId, name: user?.firmName || user?.firm || 'Cabinet' }
       : null),
-    [user?.firm, user?.firmId, user?.firmName],
+    [currentUserFirmId, user?.firm, user?.firmName],
   );
 
   useEffect(() => {

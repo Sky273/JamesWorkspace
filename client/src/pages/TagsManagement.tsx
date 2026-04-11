@@ -23,6 +23,7 @@ import TagsToolbar from '../components/TagsManagement/TagsToolbar';
 import TagsDescriptionBanner from '../components/TagsManagement/TagsDescriptionBanner';
 import TagsCategoryGrid from '../components/TagsManagement/TagsCategoryGrid';
 import TagEditModal from '../components/TagsManagement/TagEditModal';
+import { useAuth } from '../context/AuthContext';
 
 const categoryConfig: Record<string, CategoryConfig> = {
   Skills: {
@@ -115,6 +116,8 @@ function _cleanTagsForCategory(tags: string[], softClean = false): string[] {
 
 const TagsManagement = (): JSX.Element => {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'admin';
   const [tags, setTags] = useState<Tags>({});
   const [cleanedTags, setCleanedTags] = useState<CleanedTags>({});
   const [escoTags, setEscoTags] = useState<EscoTags>({ skills: [], industries: [], tools: [], softSkills: [] });
@@ -325,6 +328,7 @@ const TagsManagement = (): JSX.Element => {
         <div className="section-shell rounded-[2rem] p-6">
           <TagsToolbar
             activeTab={activeTab}
+            canRunAdminRecalculations={isSuperAdmin}
             searchTerm={searchTerm}
             totalTags={totalTags}
             totalCleanedTags={totalCleanedTags}

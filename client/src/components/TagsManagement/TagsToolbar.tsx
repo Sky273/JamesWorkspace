@@ -9,6 +9,7 @@ import SearchField from '../page/SearchField';
 
 interface TagsToolbarProps {
   activeTab: TabType;
+  canRunAdminRecalculations: boolean;
   searchTerm: string;
   totalTags: number;
   totalCleanedTags: number;
@@ -25,6 +26,7 @@ interface TagsToolbarProps {
 
 export default function TagsToolbar({
   activeTab,
+  canRunAdminRecalculations,
   searchTerm,
   totalTags,
   totalCleanedTags,
@@ -50,7 +52,7 @@ export default function TagsToolbar({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {activeTab === 'cleaned' && (
+          {canRunAdminRecalculations && activeTab === 'cleaned' && (
             <button
               onClick={onRecalculateCleanedTags}
               disabled={savingCleanedTags}
@@ -64,7 +66,7 @@ export default function TagsToolbar({
               {t('tags.recalculateCleanedTags')}
             </button>
           )}
-          {activeTab === 'esco' && (
+          {canRunAdminRecalculations && activeTab === 'esco' && (
             <button
               onClick={onRecalculateEscoTags}
               disabled={convertingToEsco}

@@ -15,6 +15,38 @@ vi.mock('./Modal', () => ({
   }) => (isOpen ? <div><h2>{title}</h2>{children}</div> : null),
 }));
 
+vi.mock('../AdminFirmSelector', () => ({
+  default: ({
+    selectedFirmId,
+    onFirmChange,
+    disabled,
+    firms,
+    label,
+  }: {
+    selectedFirmId: string;
+    onFirmChange: (firmId: string) => void;
+    disabled?: boolean;
+    firms?: Array<{ id: string; name: string }>;
+    label?: string;
+  }) => (
+    <div>
+      <label htmlFor="firm-selector">{label}</label>
+      <select
+        id="firm-selector"
+        value={selectedFirmId}
+        onChange={(event) => onFirmChange(event.target.value)}
+        disabled={disabled}
+      >
+        {firms?.map((firm) => (
+          <option key={firm.id} value={firm.id}>
+            {firm.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  ),
+}));
+
 describe('UserFormModal', () => {
   const t = (key: string) => key;
   const firms = [
@@ -89,7 +121,7 @@ describe('UserFormModal', () => {
         onClose={vi.fn()}
         onSubmit={vi.fn()}
         user={null}
-        firms={firms}
+        firms={[firms[0]]}
         canAssignSuperAdmin={false}
         canChangeFirm={false}
         t={t}
@@ -101,6 +133,7 @@ describe('UserFormModal', () => {
     const roleSelect = selects[1] as HTMLSelectElement;
 
     expect(firmSelect).toBeDisabled();
+    expect(firmSelect.value).toBe('firm-1');
     expect(screen.queryByRole('option', { name: 'users.management.roles.admin' })).not.toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'users.management.roles.localAdmin' })).toBeInTheDocument();
     expect(roleSelect.value).toBe('user');
