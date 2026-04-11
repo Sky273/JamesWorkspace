@@ -30,6 +30,9 @@ const cspScriptSources = [
     "'sha256-FID3c60H9c7lktAfbhJ+B/txDAbRaj0JQWM8iPEiRXk='",  // Cloudflare injected script (variant 5)
     "'sha256-nileZXtiIiKtSt6FJjdZt1szHltIjlRss/RxLHOpD0U='",  // Cloudflare injected script (variant 6)
     "'sha256-9/iGFMNY/CbhlXfMrWEY3i4mlcr9rSmQhnjr6XrXZ+Y='",  // Cloudflare injected script (variant 7)
+    "'sha256-UFeEB6QOsP3dj5nAthz/Vj+mBX8YsHKuWsej2r/bdtQ='",  // Cloudflare injected script (variant 8)
+    "'sha256-qaj05s9NhZOXkIoIZ+kerlMPfSrHx/V6d1npNfWzDPg='",  // Cloudflare injected script (variant 9)
+    "'sha256-rhg1WTVNH6IH7t21vpjRMtoTx/6b+Ehu0Ah6+2f5srg='",  // Cloudflare challenge platform inline bootstrap (variant 2)
     "'sha256-xdWZbq58NNjYTvyvH8NKkmmavhR878q1602rldMTf1k='"   // Cloudflare challenge platform inline bootstrap
 ];
 

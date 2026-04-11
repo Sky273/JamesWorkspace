@@ -317,9 +317,9 @@ const ProfileMatchingPage = (): JSX.Element => {
         {!results && !loading ? (
           <div className="cv-panel rounded-[2rem] p-12 text-center">
             <MagnifyingGlassIcon className="mx-auto mb-4 h-16 w-16 text-slate-300 dark:text-slate-600" />
-            <h3 className="mb-2 text-lg font-medium text-slate-950 dark:text-[var(--cv-text)]">
+            <h2 className="mb-2 text-lg font-medium text-slate-950 dark:text-[var(--cv-text)]">
               {t('profileMatching.emptyState.title')}
-            </h3>
+            </h2>
             <p className="mx-auto max-w-md text-slate-500 dark:text-[var(--cv-muted)]">
               {t('profileMatching.emptyState.description')}
             </p>

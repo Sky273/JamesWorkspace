@@ -68,17 +68,23 @@ export default function ProfileMatchSearchPanel({
   onRefreshKeywords
 }: ProfileMatchSearchPanelProps) {
   const { t } = useTranslation();
+  const dealSelectId = 'profile-matching-deal-select';
+  const missionSelectId = 'profile-matching-mission-select';
 
   return (
     <div className="cv-panel mb-6 rounded-[2rem] p-5 sm:p-6">
       <div className="space-y-4">
         {deals.length > 0 && (
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+            <label
+              htmlFor={dealSelectId}
+              className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200"
+            >
               <BriefcaseIcon className="mr-2 inline h-4 w-4" />
               {t('profileMatching.selectDeal')}
             </label>
             <select
+              id={dealSelectId}
               value={selectedDealId}
               onChange={(e) => setSelectedDealId(e.target.value)}
               disabled={loadingMissions}
@@ -95,11 +101,15 @@ export default function ProfileMatchSearchPanel({
         )}
 
         <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+          <label
+            htmlFor={missionSelectId}
+            className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200"
+          >
             <BriefcaseIcon className="mr-2 inline h-4 w-4" />
             {t('profileMatching.selectMission')}
           </label>
           <select
+            id={missionSelectId}
             value={selectedMissionId}
             onChange={(e) => setSelectedMissionId(e.target.value)}
             disabled={loadingMissions}

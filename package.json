@@ -20,6 +20,7 @@
     "test:client:watch": "vitest --config client/vitest.config.ts",
     "quickstart": "node scripts/quickstart.js",
     "quickstart:prod": "node scripts/quickstart.js --prod",
+    "analyze:runtime-chunk": "node scripts/analyze-vite-runtime-chunk.mjs",
     "profile:memory": "node scripts/profile-memory.mjs --start-stack --duration 300 --interval 5",
     "backup:db": "node server/scripts/backup-db.js",
     "migrate": "node server/scripts/migrate.js",

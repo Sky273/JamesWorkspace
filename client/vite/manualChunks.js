@@ -1,19 +1,19 @@
-const chunkRules = [
+export const chunkRules = [
   {
     chunk: 'vendor-tiptap',
-    matches: ['@tiptap', 'prosemirror'],
+    matches: ['@tiptap', 'prosemirror', 'lowlight'],
   },
   {
     chunk: 'vendor-react',
-    matches: ['react-dom', 'react-router', '/react/', 'react-i18next'],
+    matches: ['react-dom', 'react-router', '/react/', 'react/jsx-runtime', 'react/jsx-dev-runtime', 'react-i18next', 'scheduler', 'use-sync-external-store', 'react-is'],
   },
   {
     chunk: 'vendor-ui',
-    matches: ['framer-motion', '@headlessui', '@heroicons', 'react-hot-toast'],
+    matches: ['framer-motion', 'motion-dom', 'motion-utils', '@floating-ui', 'goober', '@headlessui', '@heroicons', 'react-hot-toast'],
   },
   {
     chunk: 'vendor-markdown',
-    matches: ['react-markdown', 'remark-gfm', 'remark-', 'rehype-', 'micromark', 'mdast-util', 'hast-util', 'unist-', 'unified', 'vfile'],
+    matches: ['react-markdown', 'remark-gfm', 'remark-', 'rehype-', 'micromark', 'mdast-util', 'hast-util', 'unist-', 'unified', 'vfile', 'highlight.js'],
   },
   {
     chunk: 'vendor-charts',
@@ -34,6 +34,10 @@ const chunkRules = [
   {
     chunk: 'vendor-map-geo',
     matches: ['supercluster', 'kdbush', 'pbf', 'geojson-vt', 'vector-tile', 'vt-pbf'],
+  },
+  {
+    chunk: 'vendor-map-core',
+    matches: ['maplibre-gl', '@mapbox'],
   },
   {
     chunk: 'vendor-pdf',
@@ -60,5 +64,13 @@ export function manualChunks(id) {
     }
   }
 
-  return undefined;
+  return 'vendor-misc';
+}
+
+export function createCodeSplittingGroups() {
+  return chunkRules.map((rule, index) => ({
+    name: rule.chunk,
+    priority: chunkRules.length - index,
+    test: (id) => id.includes('node_modules') && rule.matches.some((match) => id.includes(match)),
+  }));
 }
