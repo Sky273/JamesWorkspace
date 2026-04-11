@@ -30,6 +30,17 @@ const PROVIDER_MODEL_CATALOG = Object.freeze({
         { value: 'claude-3-5-sonnet-20241022', label: 'claude-3-5-sonnet-20241022' },
         { value: 'claude-3-5-haiku-20241022', label: 'claude-3-5-haiku-20241022' }
     ],
+    gemma: [
+        { value: 'gemma-4-31b-it', label: 'Gemma 4 31B Instruct (gemma-4-31b-it)' },
+        { value: 'gemma-4-26b-a4b-it', label: 'Gemma 4 26B A4B Instruct (gemma-4-26b-a4b-it)' },
+        { value: 'gemma-3-270m-it', label: 'Gemma 3 270M Instruct (gemma-3-270m-it)' },
+        { value: 'gemma-3-1b-it', label: 'Gemma 3 1B Instruct (gemma-3-1b-it)' },
+        { value: 'gemma-3-4b-it', label: 'Gemma 3 4B Instruct (gemma-3-4b-it)' },
+        { value: 'gemma-3-12b-it', label: 'Gemma 3 12B Instruct (gemma-3-12b-it)' },
+        { value: 'gemma-3-27b-it', label: 'Gemma 3 27B Instruct (gemma-3-27b-it)' },
+        { value: 'gemma-3n-e2b-it', label: 'Gemma 3n E2B Instruct (gemma-3n-e2b-it)' },
+        { value: 'gemma-3n-e4b-it', label: 'Gemma 3n E4B Instruct (gemma-3n-e4b-it)' }
+    ],
     deepseek: [
         { value: 'deepseek-chat', label: 'DeepSeek-V3.2 - Standard (API: deepseek-chat)' },
         { value: 'deepseek-reasoner', label: 'DeepSeek-V3.2 - Raisonnement (API: deepseek-reasoner)' }
@@ -59,6 +70,11 @@ function getModelKey(provider, model) {
     if (provider === 'ollama') {
         return String(model || '').trim();
     }
+
+    if (provider === 'gemma') {
+        return String(model || '').trim().toLowerCase();
+    }
+
     return String(model || '').trim();
 }
 

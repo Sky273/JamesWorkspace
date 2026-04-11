@@ -2,6 +2,7 @@ import axios from 'axios';
 import {
     ANTHROPIC_API_KEY,
     DEEPSEEK_API_KEY,
+    GEMINI_API_KEY,
     GLM_API_KEY,
     MAX_PROMPT_LENGTH,
     OPENAI_API_KEY
@@ -13,6 +14,7 @@ import { getLLMSettings } from '../services/settings.service.js';
 import { withRetry } from '../services/retry.service.js';
 import { callOllama } from '../services/ollama.service.js';
 import { callDeepSeekWithCircuitBreaker } from '../services/deepseek.service.js';
+import { callGemmaChat } from '../services/gemma.service.js';
 import { callGLMWithCircuitBreaker } from '../services/glm.service.js';
 import { callMiniMaxOpenAICompatible, callMiniMaxAnthropicCompatible } from '../services/minimax.service.js';
 import {
@@ -34,19 +36,131 @@ import {
     validateMessageLengths
 } from './llmRouteHelpers.js';
 
+function normalizeRequestId(rawValue) {
+    if (typeof rawValue !== 'string') {
+        return '';
+    }
+
+    const trimmed = rawValue.trim();
+    if (!trimmed) {
+        return '';
+    }
+
+    return trimmed.replace(/[^a-zA-Z0-9._:-]/g, '_').slice(0, 128);
+}
+
+function resolveRequestId(req, res) {
+    return req.requestId
+        || res.locals?.requestId
+        || normalizeRequestId(Array.isArray(req.headers['x-request-id']) ? req.headers['x-request-id'][0] : req.headers['x-request-id'])
+        || '';
+}
+
+function summarizeProviderDetails(rawDetails) {
+    if (typeof rawDetails === 'string') {
+        return rawDetails.trim();
+    }
+
+    if (Array.isArray(rawDetails) && rawDetails.length > 0) {
+        return rawDetails
+            .map((detail) => {
+                if (typeof detail === 'string') {
+                    return detail.trim();
+                }
+                if (detail && typeof detail === 'object') {
+                    const detailMessage = typeof detail.message === 'string' ? detail.message.trim() : '';
+                    if (detailMessage) {
+                        return detailMessage;
+                    }
+                    const detailReason = typeof detail.reason === 'string' ? detail.reason.trim() : '';
+                    if (detailReason) {
+                        return detailReason;
+                    }
+                }
+                return '';
+            })
+            .filter(Boolean)
+            .join(' | ');
+    }
+
+    return '';
+}
+
+function summarizeProviderPayload(rawPayload) {
+    if (rawPayload === null || rawPayload === undefined) {
+        return '';
+    }
+
+    if (typeof rawPayload === 'string') {
+        return rawPayload.trim();
+    }
+
+    try {
+        const serialized = JSON.stringify(rawPayload);
+        if (!serialized) {
+            return '';
+        }
+
+        return serialized.length > 600
+            ? `${serialized.slice(0, 600)}...`
+            : serialized;
+    } catch {
+        return '';
+    }
+}
+
 function buildSanitizedProxyErrorResponse(provider, fallbackMessage, error) {
     const providerName = String(provider || 'llm').toLowerCase();
     const statusCode = error?.statusCode || error?.response?.status || 500;
     const statusText = typeof error?.response?.statusText === 'string'
         ? error.response.statusText.trim()
         : '';
+    const providerErrorData = error?.response?.data?.error;
+    const providerErrorMessage = typeof error?.response?.data?.error?.message === 'string'
+        ? error.response.data.error.message.trim()
+        : '';
+    const providerErrorStatus = typeof providerErrorData?.status === 'string'
+        ? providerErrorData.status.trim()
+        : '';
+    const providerErrorCode = providerErrorData?.code ?? null;
+    const providerErrorDetails = summarizeProviderDetails(providerErrorData?.details);
+    const providerPayload = summarizeProviderPayload(error?.response?.data);
+    const genericMessage = `${providerName.toUpperCase()} provider request failed${statusText ? ` (${statusText})` : ''}.`;
     const stableMessage = statusCode >= 500
         ? fallbackMessage
-        : `${providerName.toUpperCase()} provider request failed${statusText ? ` (${statusText})` : ''}.`;
+        : (providerName === 'gemma' && providerErrorMessage ? providerErrorMessage : genericMessage);
+    const requestId = error?.requestId || '';
+
+    const body = {
+        error: stableMessage,
+        ...(requestId ? { requestId } : {})
+    };
+
+    if (providerName === 'gemma') {
+        if (providerErrorMessage) {
+            body.providerError = providerErrorMessage;
+        }
+        if (providerErrorDetails) {
+            body.providerDetails = providerErrorDetails;
+        }
+        if (providerPayload && providerPayload.toLowerCase() !== 'gemma api error') {
+            body.providerPayload = providerPayload;
+        }
+        body.debug = {
+            provider: 'gemma',
+            statusCode,
+            ...(statusText ? { statusText } : {}),
+            ...(providerErrorStatus ? { providerStatus: providerErrorStatus } : {}),
+            ...(providerErrorCode !== null && providerErrorCode !== undefined ? { providerCode: providerErrorCode } : {}),
+            ...(providerErrorMessage ? { providerError: providerErrorMessage } : {}),
+            ...(providerErrorDetails ? { providerDetails: providerErrorDetails } : {}),
+            ...(providerPayload && providerPayload.toLowerCase() !== 'gemma api error' ? { providerPayload } : {})
+        };
+    }
 
     return {
         statusCode,
-        body: { error: stableMessage }
+        body
     };
 }
 
@@ -158,6 +272,32 @@ async function handleDeepSeekRequest(req, res, model, metadata) {
     return res.json(sanitizeOpenAICompatibleResponseBody(response));
 }
 
+async function handleGemmaRequest(req, res, model, metadata) {
+    if (!GEMINI_API_KEY) {
+        return res.status(500).json({ error: 'Gemini API key not configured on server.' });
+    }
+
+    securityLog(LOG_LEVELS.INFO, SECURITY_EVENTS.LLM_REQUEST, {
+        ...metadata,
+        message: 'Gemma API request',
+        metadata: {
+            model,
+            messageCount: req.body.messages?.length || 0
+        }
+    });
+
+    const response = await callGemmaChat({
+        model,
+        messages: req.body.messages || [],
+        ...req.body,
+        maxTokens: getRequestedMaxTokens(req.body),
+        timeout: 120000,
+        operationType: `Gemma ${model} request`
+    });
+
+    return res.json(sanitizeOpenAICompatibleResponseBody(response));
+}
+
 async function handleGLMRequest(req, res, model, metadata) {
     if (!GLM_API_KEY) {
         return res.status(500).json({ error: 'GLM API key not configured on server.' });
@@ -204,6 +344,11 @@ async function maybeHandleCompatibleProviderRequest(req, res, settings, response
     if (provider === 'deepseek' && responseShape === 'openai') {
         safeLog('info', 'Routing openai-compatible request through DeepSeek', { model, provider });
         return handleDeepSeekRequest(req, res, model, metadata);
+    }
+
+    if (provider === 'gemma' && responseShape === 'openai') {
+        safeLog('info', 'Routing openai-compatible request through Gemma', { model, provider });
+        return handleGemmaRequest(req, res, model, metadata);
     }
 
     if (provider === 'glm' && responseShape === 'openai') {
@@ -350,6 +495,12 @@ export function createCompatibleProxyHandler({
     return async (req, res) => {
         const metadata = getRequestMetadata(req);
         let model = req.body.model;
+        let effectiveProxyProvider = proxyProvider;
+        const requestId = resolveRequestId(req, res);
+
+        if (requestId) {
+            res.setHeader('x-request-id', requestId);
+        }
 
         try {
             const settings = await getLLMSettings();
@@ -364,6 +515,7 @@ export function createCompatibleProxyHandler({
                 responseShape
             });
             model = runtimeConfig.model;
+            effectiveProxyProvider = runtimeConfig.provider || proxyProvider;
             applyResolvedModelParameters(req, settings, runtimeConfig.provider, model);
 
             const compatibleResponse = await maybeHandleCompatibleProviderRequest(
@@ -384,14 +536,15 @@ export function createCompatibleProxyHandler({
 
             return await proxyOpenAIRequest(req, res, model, metadata, { allowResponsesApi });
         } catch (error) {
+            error.requestId = requestId;
             metrics.trackLLMRequest(
-                buildLLMMetricLabel(proxyProvider, req.body.model || model || proxyProvider),
+                buildLLMMetricLabel(effectiveProxyProvider, req.body.model || model || effectiveProxyProvider),
                 0,
                 false,
                 0,
                 0
             );
-            const sanitized = buildSanitizedProxyErrorResponse(proxyProvider, fallbackErrorMessage, error);
+            const sanitized = buildSanitizedProxyErrorResponse(effectiveProxyProvider, fallbackErrorMessage, error);
             return res.status(sanitized.statusCode).json(sanitized.body);
         }
     };

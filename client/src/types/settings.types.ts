@@ -1,6 +1,6 @@
 export interface Settings {
   id?: string;
-  llmProvider?: 'openai' | 'anthropic' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
+  llmProvider?: 'openai' | 'anthropic' | 'gemma' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
   llmModel?: string;
   llmAvailability?: Record<string, { highspeedEnabled?: boolean; runtimeUnavailableModels?: string[] }>;
   llmModelCatalog?: Record<string, Array<{ value: string; label: string }>>;

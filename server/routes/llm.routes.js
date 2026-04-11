@@ -1,5 +1,5 @@
 import express from 'express';
-import { OPENAI_API_KEY, ANTHROPIC_API_KEY, DEEPSEEK_API_KEY, GLM_API_KEY, MINIMAX_API_KEY } from '../config/constants.js';
+import { OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, DEEPSEEK_API_KEY, GLM_API_KEY, MINIMAX_API_KEY } from '../config/constants.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { llmLimiter, combinedRateLimit } from '../middleware/rateLimit.middleware.js';
 import { getCircuitBreakerStates } from '../services/retry.service.js';
@@ -72,6 +72,7 @@ router.get('/circuit-breakers', authenticateToken, requireAdmin, (req, res) => {
     res.json(buildConfiguredCircuitBreakerIndicators(states, {
         openai: Boolean(OPENAI_API_KEY),
         anthropic: Boolean(ANTHROPIC_API_KEY),
+        gemma: Boolean(GEMINI_API_KEY),
         deepseek: Boolean(DEEPSEEK_API_KEY),
         glm: Boolean(GLM_API_KEY),
         minimax: Boolean(MINIMAX_API_KEY),

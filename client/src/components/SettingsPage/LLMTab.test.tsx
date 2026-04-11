@@ -17,6 +17,7 @@ describe('LLMTab', () => {
           ollamaBaseUrl: '',
         }}
         onInputChange={onInputChange}
+        onTestConnection={vi.fn()}
         t={(key) => key}
         llmModelCatalog={{ openai: [{ value: 'gpt-4o', label: 'gpt-4o' }] }}
       />
@@ -46,6 +47,7 @@ describe('LLMTab', () => {
           ollamaBaseUrl: '',
         }}
         onInputChange={onInputChange}
+        onTestConnection={vi.fn()}
         t={(key) => key}
         llmModelCatalog={{ openai: [{ value: 'gpt-4o', label: 'gpt-4o' }] }}
       />
@@ -72,6 +74,7 @@ describe('LLMTab', () => {
           ollamaBaseUrl: '',
         }}
         onInputChange={onInputChange}
+        onTestConnection={vi.fn()}
         t={(key) => key}
         llmModelCatalog={{ openai: [{ value: 'gpt-4o', label: 'gpt-4o' }] }}
       />
@@ -101,6 +104,7 @@ describe('LLMTab', () => {
           ollamaBaseUrl: '',
         }}
         onInputChange={onInputChange}
+        onTestConnection={vi.fn()}
         t={(key) => key}
         llmModelCatalog={{ openai: [{ value: 'gpt-4o', label: 'gpt-4o' }] }}
       />
@@ -126,6 +130,7 @@ describe('LLMTab', () => {
           ollamaBaseUrl: 'http://ollama.local:11434',
         }}
         onInputChange={onInputChange}
+        onTestConnection={vi.fn()}
         t={(key) => key}
         llmModelCatalog={{ ollama: [{ value: 'llama3.2:latest', label: 'llama3.2:latest' }] }}
         llmParameterDefinitions={{
@@ -154,5 +159,48 @@ describe('LLMTab', () => {
       'llmModelParametersJson',
       '{\n  "ollama": {\n    "llama3.2:latest": {\n      "num_ctx": 16384\n    }\n  }\n}'
     );
+  });
+
+  it('exposes Gemma Cloud as a selectable provider', () => {
+    render(
+      <LLMTab
+        formData={{
+          llmProvider: 'gemma',
+          llmModel: 'gemma-3-4b-it',
+          llmModelParametersJson: '{}',
+          cvMode: 'nominative',
+          webglEnabled: 'on',
+          ollamaBaseUrl: '',
+        }}
+        onInputChange={vi.fn()}
+        onTestConnection={vi.fn()}
+        t={(key) => key}
+        llmModelCatalog={{ gemma: [{ value: 'gemma-3-4b-it', label: 'Gemma 3 4B Instruct (gemma-3-4b-it)' }] }}
+      />
+    );
+
+    expect(screen.getByDisplayValue('Gemma Cloud')).toBeInTheDocument();
+    expect(screen.getByText('Select a hosted Gemma model exposed through the Google AI OpenAI-compatible endpoint.')).toBeInTheDocument();
+  });
+
+  it('renders the test model action', () => {
+    render(
+      <LLMTab
+        formData={{
+          llmProvider: 'openai',
+          llmModel: 'gpt-4o',
+          llmModelParametersJson: '{}',
+          cvMode: 'nominative',
+          webglEnabled: 'on',
+          ollamaBaseUrl: '',
+        }}
+        onInputChange={vi.fn()}
+        onTestConnection={vi.fn()}
+        t={(key) => key}
+        llmModelCatalog={{ openai: [{ value: 'gpt-4o', label: 'gpt-4o' }] }}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Tester le modele' })).toBeInTheDocument();
   });
 });

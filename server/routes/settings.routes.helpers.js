@@ -1,5 +1,5 @@
 import { resolveAvailableModel } from '../services/llmAvailability.service.js';
-import { getProviderDefaultModel } from '../services/llmConfiguration.service.js';
+import { getProviderDefaultModel, normalizeModelForProvider } from '../services/llmConfiguration.service.js';
 import { buildLlmAdminMetadataWithOptions, sanitizeLlmModelParameters } from '../services/llmAdminParameters.service.js';
 import { getPromptContract, getPromptDefinition } from '../config/llmGovernance.js';
 import { validateOllamaModelExists } from '../services/ollamaAdmin.service.js';
@@ -24,13 +24,14 @@ export function normalizeRequestedSettingsModel(settingsData = {}) {
         return settingsData;
     }
 
+    const requestedModel = normalizeModelForProvider(settingsData.llmProvider, settingsData.llmModel);
     const normalizedModel = resolveAvailableModel(
         settingsData.llmProvider,
-        settingsData.llmModel,
+        requestedModel,
         getProviderDefaultModel(settingsData.llmProvider)
     );
 
-    if (!normalizedModel.adjusted) {
+    if (!normalizedModel.adjusted && normalizedModel.model === settingsData.llmModel) {
         return settingsData;
     }
 
@@ -141,7 +142,7 @@ function buildNextPromptTexts(currentSettingsRecord = {}, incomingSettings = {})
     };
 }
 
-export async function prepareSettingsMutationPayload(settingsData, { getProviderAvailabilityFlags, validatePersistedLlmSettings, reqUser, currentSettingsRecord }) {
+export async function prepareSettingsMutationPayload(settingsData, { getProviderAvailabilityFlags, reqUser, currentSettingsRecord }) {
     let preparedSettings = settingsData;
     let ollamaDiscovery = null;
 
@@ -175,8 +176,6 @@ export async function prepareSettingsMutationPayload(settingsData, { getProvider
             })
         };
     }
-
-    await validatePersistedLlmSettings(preparedSettings, reqUser);
 
     return {
         ...preparedSettings,

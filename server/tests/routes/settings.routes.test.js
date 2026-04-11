@@ -8,7 +8,7 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import { discoverOllamaModels } from '../../services/ollamaAdmin.service.js';
-import { validatePersistedLlmSettings } from '../../services/llmSettingsValidation.service.js';
+import { validatePersistedLlmSettings, testLlmSettingsConnection } from '../../services/llmSettingsValidation.service.js';
 
 // Mock constants
 vi.mock('../../config/constants.js', () => ({
@@ -90,7 +90,12 @@ vi.mock('../../services/llmAdminParameters.service.js', () => ({
 }));
 
 vi.mock('../../services/llmSettingsValidation.service.js', () => ({
-    validatePersistedLlmSettings: vi.fn(async () => undefined)
+    validatePersistedLlmSettings: vi.fn(async () => undefined),
+    testLlmSettingsConnection: vi.fn(async () => ({
+        provider: 'openai',
+        model: 'gpt-4o',
+        contentPreview: 'OK'
+    }))
 }));
 
 vi.mock('../../services/ollamaAdmin.service.js', () => ({
@@ -543,10 +548,7 @@ describe('Settings Routes', () => {
                     })
                 })
             }));
-            expect(validatePersistedLlmSettings).toHaveBeenCalledWith(
-                expect.objectContaining({ llmModel: 'gpt-4-turbo' }),
-                expect.objectContaining({ id: 'user-123' })
-            );
+            expect(validatePersistedLlmSettings).not.toHaveBeenCalled();
         });
 
         it('should return 403 for non-admin', async () => {
@@ -623,34 +625,79 @@ describe('Settings Routes', () => {
             }));
         });
 
-        it('rejects settings when provider/model validation call fails', async () => {
-            validatePersistedLlmSettings.mockRejectedValueOnce(Object.assign(
-                new Error('Saved parameters are invalid for deepseek/deepseek-reasoner: upstream error'),
-                { statusCode: 400 }
-            ));
+        it('persists gemma settings without runtime validation on save', async () => {
+            mockUpsertSettings.mockResolvedValue({
+                id: 'set-1',
+                llm_provider: 'gemma',
+                llm_model: 'gemma-4-31b-it'
+            });
 
             const res = await request(app)
                 .put('/api/settings/set-1')
                 .set(authHeader)
                 .send({
-                    llmProvider: 'deepseek',
-                    llmModel: 'deepseek-reasoner',
-                    llmModelParameters: {
-                        deepseek: {
-                            'deepseek-reasoner': {
-                                temperature: 0
-                            }
-                        }
-                    }
+                    llmProvider: 'gemma',
+                    llmModel: 'gemma-4-31b-it'
+                });
+
+            expect(res.status).toBe(200);
+            expect(mockUpsertSettings).toHaveBeenCalledWith('set-1', expect.objectContaining({
+                llmProvider: 'gemma',
+                llmModel: 'gemma-4-31b-it'
+            }));
+            expect(validatePersistedLlmSettings).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('POST /api/settings/test-llm', () => {
+        it('tests the configured model without saving settings', async () => {
+            const res = await request(app)
+                .post('/api/settings/test-llm')
+                .set(authHeader)
+                .send({
+                    llmProvider: 'openai',
+                    llmModel: 'gpt-4o'
+                });
+
+            expect(res.status).toBe(200);
+            expect(res.body).toEqual({
+                success: true,
+                provider: 'openai',
+                model: 'gpt-4o',
+                contentPreview: 'OK'
+            });
+            expect(testLlmSettingsConnection).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    llmProvider: 'openai',
+                    llmModel: 'gpt-4o'
+                }),
+                expect.objectContaining({ id: 'user-123' })
+            );
+            expect(mockUpsertSettings).not.toHaveBeenCalled();
+            expect(mockCreateSettings).not.toHaveBeenCalled();
+        });
+
+        it('returns 400 when the explicit model test fails', async () => {
+            testLlmSettingsConnection.mockRejectedValueOnce(Object.assign(
+                new Error('LLM test failed for gemma/gemma-4-e4b-it: invalid request'),
+                { statusCode: 400 }
+            ));
+
+            const res = await request(app)
+                .post('/api/settings/test-llm')
+                .set(authHeader)
+                .send({
+                    llmProvider: 'gemma',
+                    llmModel: 'gemma-4-e4b-it'
                 });
 
             expect(res.status).toBe(400);
-            expect(res.body.error).toContain('Saved parameters are invalid');
+            expect(res.body.error).toContain('LLM test failed');
         });
     });
 
     describe('POST /api/settings', () => {
-        it('validates persisted provider/model parameters before creating settings', async () => {
+        it('creates settings without runtime provider/model validation', async () => {
             mockCreateSettings.mockResolvedValue({
                 id: 'set-new',
                 llm_model: 'gpt-4o',
@@ -666,13 +713,7 @@ describe('Settings Routes', () => {
                 });
 
             expect(res.status).toBe(201);
-            expect(validatePersistedLlmSettings).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    llmProvider: 'openai',
-                    llmModel: 'gpt-4o'
-                }),
-                expect.objectContaining({ id: 'user-123' })
-            );
+            expect(validatePersistedLlmSettings).not.toHaveBeenCalled();
         });
         it('should create settings', async () => {
             mockCreateSettings.mockResolvedValue({

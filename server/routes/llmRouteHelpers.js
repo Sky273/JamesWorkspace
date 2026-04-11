@@ -1,4 +1,4 @@
-export const LLM_FAMILY_INDICATORS = ['openai', 'anthropic', 'deepseek', 'glm', 'minimax', 'ollama'];
+export const LLM_FAMILY_INDICATORS = ['openai', 'anthropic', 'gemma', 'deepseek', 'glm', 'minimax', 'ollama'];
 
 export function normalizeCircuitBreakerIndicator(provider, indicator) {
     if (indicator && typeof indicator === 'object' && !Array.isArray(indicator)) {

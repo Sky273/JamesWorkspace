@@ -28,7 +28,7 @@ vi.mock('../../services/llmAdminParameters.service.js', () => ({
 }));
 
 import { callProviderChat } from '../../services/llmGateway.service.js';
-import { validatePersistedLlmSettings } from '../../services/llmSettingsValidation.service.js';
+import { testLlmSettingsConnection, validatePersistedLlmSettings } from '../../services/llmSettingsValidation.service.js';
 
 describe('llmSettingsValidation.service', () => {
     beforeEach(() => {
@@ -36,8 +36,19 @@ describe('llmSettingsValidation.service', () => {
         callProviderChat.mockResolvedValue({ content: 'OK' });
     });
 
-    it('validates the selected configured model with its resolved parameters', async () => {
-        await validatePersistedLlmSettings({
+    it('skips runtime validation during persistence', async () => {
+        await expect(validatePersistedLlmSettings({
+            llmProvider: 'deepseek',
+            llmModel: 'deepseek-reasoner'
+        }, {
+            email: 'admin@test.local'
+        })).resolves.toBeUndefined();
+
+        expect(callProviderChat).not.toHaveBeenCalled();
+    });
+
+    it('tests the selected configured model with its resolved parameters', async () => {
+        await testLlmSettingsConnection({
             llmProvider: 'deepseek',
             llmModel: 'deepseek-reasoner'
         }, {
@@ -50,13 +61,13 @@ describe('llmSettingsValidation.service', () => {
             options: expect.objectContaining({
                 temperature: 0,
                 max_tokens: 4096,
-                operationType: 'LLM settings validation'
+                operationType: 'LLM settings test'
             })
         }));
     });
 
-    it('validates explicit persisted model entries and skips ollama pseudo-keys', async () => {
-        await validatePersistedLlmSettings({
+    it('tests explicit persisted model entries and skips ollama pseudo-keys', async () => {
+        await testLlmSettingsConnection({
             llmProvider: 'ollama',
             llmModel: 'llama3.2:latest',
             ollamaBaseUrl: 'http://ollama.local:11434',
@@ -79,26 +90,29 @@ describe('llmSettingsValidation.service', () => {
         }));
     });
 
-    it('raises a 400 error when the validation call fails', async () => {
+    it('raises a 400 error when the explicit test call fails', async () => {
         callProviderChat.mockRejectedValueOnce(new Error('upstream validation failed'));
 
-        await expect(validatePersistedLlmSettings({
+        await expect(testLlmSettingsConnection({
             llmProvider: 'openai',
             llmModel: 'gpt-4o'
         })).rejects.toMatchObject({
             statusCode: 400,
-            message: expect.stringContaining('Saved parameters are invalid for openai/gpt-4o')
+            message: expect.stringContaining('LLM test failed for openai/gpt-4o')
         });
     });
 
-    it('does not block persistence when ollama validation fails', async () => {
+    it('surfaces ollama test failures to the caller', async () => {
         callProviderChat.mockRejectedValueOnce(new Error('ollama unavailable'));
 
-        await expect(validatePersistedLlmSettings({
+        await expect(testLlmSettingsConnection({
             llmProvider: 'ollama',
             llmModel: 'llama3.2:latest',
             ollamaBaseUrl: 'http://ollama.local:11434'
-        })).resolves.toBeUndefined();
+        })).rejects.toMatchObject({
+            statusCode: 400,
+            message: expect.stringContaining('LLM test failed for ollama/llama3.2:latest')
+        });
 
         expect(callProviderChat).toHaveBeenCalledWith(expect.objectContaining({
             provider: 'ollama',

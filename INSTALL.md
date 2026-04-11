@@ -212,6 +212,12 @@ OPENAI_API_KEY=sk-votre-cle-openai
 # Obtenir une clé: https://console.anthropic.com/
 ANTHROPIC_API_KEY=sk-ant-votre-cle-anthropic
 
+# Gemini / Gemma Cloud
+# Obtenir une clé: https://aistudio.google.com/app/apikey
+GEMINI_API_KEY=votre-cle-gemini
+# Optionnel: surcharger l'endpoint OpenAI-compatible Google AI Studio
+GEMINI_OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+
 # MiniMax
 # Obtenir une clé: https://platform.minimax.io/
 MINIMAX_API_KEY=sk-api-votre-cle-minimax
@@ -420,6 +426,7 @@ HTTPS_PORT=3443
 # APIs LLM (optionnel)
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
+GEMINI_API_KEY=...
 
 # Google OAuth (optionnel)
 GOOGLE_CLIENT_ID=votre-client-id
@@ -456,6 +463,7 @@ C'est tout ! L'application sera accessible sur https://localhost:3443
 # Avec les clés API (optionnel)
 $env:OPENAI_API_KEY = "sk-..."
 $env:ANTHROPIC_API_KEY = "sk-ant-..."
+$env:GEMINI_API_KEY = "..."
 
 .\docker\docker-build.ps1 -Run
 ```
@@ -597,6 +605,7 @@ La configuration complète du fichier `.env` est détaillée dans la section [In
 |----------|-------------|--------------|
 | `OPENAI_API_KEY` | Clé API OpenAI (GPT-4/GPT-5) | https://platform.openai.com/api-keys |
 | `ANTHROPIC_API_KEY` | Clé API Anthropic (Claude) | https://console.anthropic.com/ |
+| `GEMINI_API_KEY` | Clé API Gemini / Gemma Cloud | https://aistudio.google.com/app/apikey |
 | `MINIMAX_API_KEY` | Clé API MiniMax | https://platform.minimax.io/ |
 | `OLLAMA_BASE_URL` | URL de l'instance Ollama distante | Votre instance Ollama auto-hébergée |
 
@@ -624,6 +633,7 @@ Notes :
 ### Notes LLM supplémentaires
 
 - **MiniMax** : le provider `minimax` utilise `MINIMAX_API_KEY`. Les URLs `MINIMAX_OPENAI_BASE_URL` et `MINIMAX_ANTHROPIC_BASE_URL` sont optionnelles.
+- **Gemma Cloud** : le provider `gemma` utilise `GEMINI_API_KEY`. `GEMINI_OPENAI_BASE_URL` est optionnelle et pointe par défaut vers l'endpoint OpenAI-compatible Google AI Studio.
 - **Ollama** : seule une instance **distante** est supportée. ResumeConverter n'embarque plus de runtime Ollama dans le conteneur.
 - Si vous utilisez Ollama, configurez l'URL distante dans `OLLAMA_BASE_URL` et aussi dans les paramètres de l'application (`ollamaBaseUrl`).
 - Avec Ollama, l'application peut fonctionner sans `llmModel` explicite si l'instance distante impose déjà son modèle.

@@ -17,6 +17,10 @@ vi.mock('../../services/deepseek.service.js', () => ({
     callDeepSeekWithCircuitBreaker: vi.fn()
 }));
 
+vi.mock('../../services/gemma.service.js', () => ({
+    callGemmaChat: vi.fn()
+}));
+
 vi.mock('../../services/glm.service.js', () => ({
     callGLMWithCircuitBreaker: vi.fn()
 }));
@@ -43,6 +47,7 @@ vi.mock('../../utils/logger.backend.js', () => ({
 
 import { callOpenAI } from '../../services/openai/apiClient.js';
 import { callDeepSeekWithCircuitBreaker } from '../../services/deepseek.service.js';
+import { callGemmaChat } from '../../services/gemma.service.js';
 import { callOllama } from '../../services/ollama.service.js';
 import { callProviderChat } from '../../services/llmGateway.service.js';
 
@@ -111,6 +116,38 @@ describe('llmGateway.service', () => {
 
         expect(callDeepSeekWithCircuitBreaker).toHaveBeenCalledWith(expect.objectContaining({
             model: 'deepseek-chat',
+            maxTokens: 555,
+            metadata: { source: 'admin' },
+            stop: ['END'],
+            timeout: 1234,
+            operationType: 'Gateway test'
+        }));
+    });
+
+    it('forwards persisted advanced Gemma parameters to the provider client', async () => {
+        callGemmaChat.mockResolvedValueOnce({
+            model: 'gemma-4-31b-it',
+            choices: [{ message: { content: 'ok' } }],
+            usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
+        });
+
+        await callProviderChat({
+            provider: 'gemma',
+            model: 'gemma-4-31b-it',
+            messages: [{ role: 'user', content: 'hello' }],
+            options: {
+                max_tokens: 555,
+                temperature: 0.3,
+                top_p: 0.9,
+                metadata: { source: 'admin' },
+                stop: ['END'],
+                timeout: 1234,
+                operationType: 'Gateway test'
+            }
+        });
+
+        expect(callGemmaChat).toHaveBeenCalledWith(expect.objectContaining({
+            model: 'gemma-4-31b-it',
             maxTokens: 555,
             metadata: { source: 'admin' },
             stop: ['END'],

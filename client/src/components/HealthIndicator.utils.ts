@@ -39,6 +39,7 @@ export interface HealthStatus {
     ocr?: HealthCheck;
     openai?: ProviderCheck;
     anthropic?: ProviderCheck;
+    gemma?: ProviderCheck;
     deepseek?: ProviderCheck;
     glm?: ProviderCheck;
     minimax?: ProviderCheck;
@@ -73,7 +74,7 @@ export interface CircuitBreakerMap {
 export type StatusLevel = 'healthy' | 'degraded' | 'unhealthy' | 'unknown';
 export type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
-export const PROVIDERS = ['openai', 'anthropic', 'deepseek', 'glm', 'minimax', 'ollama'] as const;
+export const PROVIDERS = ['openai', 'anthropic', 'gemma', 'deepseek', 'glm', 'minimax', 'ollama'] as const;
 const MEMORY_WARNING_MB = 300;
 const MEMORY_ERROR_MB = 1024;
 

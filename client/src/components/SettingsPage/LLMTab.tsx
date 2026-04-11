@@ -17,6 +17,8 @@ import {
 const LLMTab = ({
   formData,
   onInputChange,
+  onTestConnection,
+  testingConnection,
   t,
   llmAvailability,
   llmModelCatalog,
@@ -39,6 +41,7 @@ const LLMTab = ({
     () => [
       { value: 'openai', label: 'OpenAI' },
       { value: 'anthropic', label: 'Anthropic' },
+      { value: 'gemma', label: 'Gemma Cloud' },
       { value: 'deepseek', label: 'DeepSeek' },
       { value: 'glm', label: 'GLM (Z.AI)' },
       { value: 'minimax', label: 'MiniMax' },
@@ -167,6 +170,8 @@ const LLMTab = ({
         onProviderChange={handleProviderChange}
         onModelChange={handleModelChange}
         onOllamaUrlChange={handleTextChange('ollamaBaseUrl')}
+        onTestConnection={onTestConnection}
+        testingConnection={testingConnection}
         ollamaDiscoveryLoading={ollamaDiscoveryLoading}
         ollamaModelCapabilities={ollamaModelCapabilities}
         t={t}

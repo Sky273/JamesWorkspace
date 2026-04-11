@@ -20,6 +20,7 @@ const rateLimitMocks = vi.hoisted(() => {
 vi.mock('../../config/constants.js', () => ({
     OPENAI_API_KEY: 'test-openai-key',
     ANTHROPIC_API_KEY: 'test-anthropic-key',
+    GEMINI_API_KEY: 'test-gemini-key',
     DEEPSEEK_API_KEY: 'test-deepseek-key',
     GLM_API_KEY: 'test-glm-key',
     MAX_PROMPT_LENGTH: 10000,
@@ -132,6 +133,11 @@ vi.mock('../../services/deepseek.service.js', () => ({
     callDeepSeekWithCircuitBreaker: (...args) => mockCallDeepSeekWithCircuitBreaker(...args)
 }));
 
+const mockCallGemmaChat = vi.fn();
+vi.mock('../../services/gemma.service.js', () => ({
+    callGemmaChat: (...args) => mockCallGemmaChat(...args)
+}));
+
 const mockCallGLMWithCircuitBreaker = vi.fn();
 vi.mock('../../services/glm.service.js', () => ({
     callGLMWithCircuitBreaker: (...args) => mockCallGLMWithCircuitBreaker(...args)
@@ -242,6 +248,72 @@ describe('LLM Routes', () => {
                 model: 'deepseek-chat',
                 messages: [{ role: 'user', content: 'Hello' }]
             }));
+        });
+
+        it('routes through Gemma when configured', async () => {
+            mockGetLLMSettings.mockResolvedValueOnce({ llmProvider: 'gemma', llmModel: 'gemma-4-31b-it' });
+            mockCallGemmaChat.mockResolvedValueOnce({
+                model: 'gemma-4-31b-it',
+                choices: [{ message: { content: 'Hi from Gemma' } }],
+                usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
+            });
+
+            const res = await request(app)
+                .post('/api/llm/openai')
+                .set(AUTH)
+                .send({ messages: [{ role: 'user', content: 'Hello' }] });
+
+            expect(res.status).toBe(200);
+            expect(res.body.choices[0].message.content).toBe('Hi from Gemma');
+            expect(mockCallGemmaChat).toHaveBeenCalledWith(expect.objectContaining({
+                model: 'gemma-4-31b-it',
+                messages: [{ role: 'user', content: 'Hello' }]
+            }));
+        });
+
+        it('surfaces sanitized Gemma provider error details and request id', async () => {
+            mockGetLLMSettings.mockResolvedValueOnce({ llmProvider: 'gemma', llmModel: 'gemma-4-31b-it' });
+            mockCallGemmaChat.mockRejectedValueOnce({
+                response: {
+                    status: 400,
+                    statusText: 'Bad Request',
+                    data: {
+                        error: {
+                            message: 'Request contains an invalid argument.',
+                            status: 'INVALID_ARGUMENT',
+                            code: 400,
+                            details: [
+                                { message: 'Model gemma-4-31b-it does not support response_format=json_schema.' }
+                            ]
+                        }
+                    }
+                }
+            });
+
+            const res = await request(app)
+                .post('/api/llm/openai')
+                .set({ ...AUTH, 'x-request-id': 'req-123' })
+                .send({ messages: [{ role: 'user', content: 'Hello' }] });
+
+            expect(res.status).toBe(400);
+            expect(res.headers['x-request-id']).toBe('req-123');
+            expect(res.body).toEqual({
+                error: 'Request contains an invalid argument.',
+                requestId: 'req-123',
+                providerError: 'Request contains an invalid argument.',
+                providerDetails: 'Model gemma-4-31b-it does not support response_format=json_schema.',
+                providerPayload: '{"error":{"message":"Request contains an invalid argument.","status":"INVALID_ARGUMENT","code":400,"details":[{"message":"Model gemma-4-31b-it does not support response_format=json_schema."}]}}',
+                debug: {
+                    provider: 'gemma',
+                    statusCode: 400,
+                    statusText: 'Bad Request',
+                    providerStatus: 'INVALID_ARGUMENT',
+                    providerCode: 400,
+                    providerError: 'Request contains an invalid argument.',
+                    providerDetails: 'Model gemma-4-31b-it does not support response_format=json_schema.',
+                    providerPayload: '{"error":{"message":"Request contains an invalid argument.","status":"INVALID_ARGUMENT","code":400,"details":[{"message":"Model gemma-4-31b-it does not support response_format=json_schema."}]}}'
+                }
+            });
         });
 
         it('routes through MiniMax when configured', async () => {
@@ -528,6 +600,7 @@ describe('LLM Routes', () => {
             expect(res.body).toEqual({
                 openai: { provider: 'openai', supported: true, configured: true, state: 'CLOSED', failures: 0, lastFailureTime: null },
                 anthropic: { provider: 'anthropic', supported: true, configured: true, state: 'CLOSED', failures: 0, lastFailureTime: null },
+                gemma: { provider: 'gemma', supported: true, configured: true, state: 'UNKNOWN', failures: 0, lastFailureTime: null },
                 deepseek: { provider: 'deepseek', supported: true, configured: true, state: 'CLOSED', failures: 1, lastFailureTime: 12345 },
                 glm: { provider: 'glm', supported: true, configured: true, state: 'CLOSED', failures: 0, lastFailureTime: null },
                 minimax: { provider: 'minimax', supported: true, configured: true, state: 'HALF_OPEN', failures: 2, lastFailureTime: 67890 },

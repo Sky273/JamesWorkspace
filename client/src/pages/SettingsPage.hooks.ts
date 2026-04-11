@@ -13,6 +13,7 @@ import {
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import { useChatbot } from '../context/ChatbotContext';
 import logger from '../utils/logger.frontend';
+import { getResponseErrorMessage } from '../utils/apiInterceptor';
 import type { SettingsTabItem } from '../components/SettingsPage/SettingsTabsNav';
 import {
   defaultFormData,
@@ -44,6 +45,7 @@ export function useSettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
   const [ollamaDiscoveryLoading, setOllamaDiscoveryLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('llm');
   const [formData, setFormData] = useState<SettingsFormData>(defaultFormData);
@@ -169,6 +171,35 @@ export function useSettingsPage() {
     }
   }, [authPost, authPut, formData, setChatbotEnabled, settings?.id, t]);
 
+  const handleTestConnection = useCallback(async (): Promise<void> => {
+    try {
+      setTestingConnection(true);
+
+      const payloadResult = buildSettingsSavePayload(formData);
+      if ('error' in payloadResult) {
+        toast.error(payloadResult.error);
+        return;
+      }
+
+      const response = await authPost('/api/settings/test-llm', payloadResult.payload);
+      if (!response.ok) {
+        const errorMessage = await getResponseErrorMessage(response, 'Failed to test LLM settings');
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json() as { provider?: string; model?: string; contentPreview?: string };
+      const summary = [data.provider, data.model].filter(Boolean).join(' / ');
+      toast.success(data.contentPreview
+        ? `Test OK: ${summary} - ${data.contentPreview}`
+        : `Test OK: ${summary}`);
+    } catch (error) {
+      logger.error('Error testing LLM settings:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to test LLM settings');
+    } finally {
+      setTestingConnection(false);
+    }
+  }, [authPost, formData]);
+
   const handleInputChange = useCallback((
     field: string,
     value: string | number | boolean
@@ -212,6 +243,7 @@ export function useSettingsPage() {
     settings,
     loading,
     saving,
+    testingConnection,
     ollamaDiscoveryLoading,
     ollamaModelCatalog,
     ollamaModelCapabilities,
@@ -221,6 +253,7 @@ export function useSettingsPage() {
     tabs,
     totalWeight,
     handleSave,
+    handleTestConnection,
     handleInputChange,
     resetToDefaults,
     fetchOllamaModels

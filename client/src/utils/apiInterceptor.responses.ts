@@ -21,9 +21,45 @@ export const getResponseErrorMessage = async (response: Response, fallbackMessag
   if (contentType.includes('application/json')) {
     const errorData = await response.clone().json().catch(() => null) as Record<string, unknown> | null;
     const nestedError = errorData?.error;
+    const providerError = typeof errorData?.providerError === 'string' ? errorData.providerError.trim() : '';
+    const providerDetails = typeof errorData?.providerDetails === 'string' ? errorData.providerDetails.trim() : '';
+    const providerPayload = typeof errorData?.providerPayload === 'string' ? errorData.providerPayload.trim() : '';
+    const debugProviderError = typeof (errorData?.debug as Record<string, unknown> | undefined)?.providerError === 'string'
+      ? String((errorData?.debug as Record<string, unknown>).providerError).trim()
+      : '';
+    const debugProviderDetails = typeof (errorData?.debug as Record<string, unknown> | undefined)?.providerDetails === 'string'
+      ? String((errorData?.debug as Record<string, unknown>).providerDetails).trim()
+      : '';
+    const debugProviderPayload = typeof (errorData?.debug as Record<string, unknown> | undefined)?.providerPayload === 'string'
+      ? String((errorData?.debug as Record<string, unknown>).providerPayload).trim()
+      : '';
+
+    if (providerError) {
+      if (providerDetails) {
+        return `${providerError}\n\nDétails API: ${providerDetails}`;
+      }
+      if (providerPayload) {
+        return `${providerError}\n\nPayload API: ${providerPayload}`;
+      }
+      return providerError;
+    }
+
+    if (debugProviderError) {
+      if (debugProviderDetails) {
+        return `${debugProviderError}\n\nDétails API: ${debugProviderDetails}`;
+      }
+      if (debugProviderPayload) {
+        return `${debugProviderError}\n\nPayload API: ${debugProviderPayload}`;
+      }
+      return debugProviderError;
+    }
 
     if (typeof nestedError === 'string' && nestedError.trim()) {
-      return nestedError.trim();
+      const nestedMessage = nestedError.trim();
+      if (nestedMessage === 'Gemma API error' && providerPayload) {
+        return `${nestedMessage}\n\nPayload API: ${providerPayload}`;
+      }
+      return nestedMessage;
     }
 
     if (nestedError && typeof nestedError === 'object' && typeof (nestedError as Record<string, unknown>).message === 'string') {

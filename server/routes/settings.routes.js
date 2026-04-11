@@ -16,8 +16,9 @@ import {
 import { safeLog } from '../utils/logger.backend.js';
 import { mapSettingsToFrontend, mapSettingsFromFrontend } from '../utils/mappers.js';
 import { getProviderAvailabilityFlags } from '../services/llmAvailability.service.js';
-import { discoverOllamaModels } from '../services/ollamaAdmin.service.js';
-import { validatePersistedLlmSettings } from '../services/llmSettingsValidation.service.js';
+import { discoverOllamaModels, validateOllamaModelExists } from '../services/ollamaAdmin.service.js';
+import { sanitizeLlmModelParameters } from '../services/llmAdminParameters.service.js';
+import { testLlmSettingsConnection } from '../services/llmSettingsValidation.service.js';
 import { normalizeBaseUrl } from '../services/ollama.request.js';
 import { getProviderDefaultModel } from '../services/llmConfiguration.service.js';
 import {
@@ -179,6 +180,42 @@ router.get('/ollama/models', authenticateToken, requireAdmin, createSettingsRout
         });
     }));
 
+router.post('/test-llm', authenticateToken, requireAdmin, validateBody(updateSettingsSchema), createSettingsRouteHandler('Error testing LLM settings', 'Failed to test LLM settings', async (req, res) => {
+        let settingsData = normalizeRequestedSettingsModel(normalizeWeights(req.body));
+        let ollamaDiscovery = null;
+
+        if (settingsData.llmProvider === 'ollama') {
+            const selectedOllamaModel = String(settingsData.llmModel || '').trim();
+            if (selectedOllamaModel) {
+                try {
+                    const validation = await validateOllamaModelExists(settingsData.ollamaBaseUrl, selectedOllamaModel);
+                    ollamaDiscovery = validation.discovery;
+                } catch (error) {
+                    safeLog('warn', 'Failed to refresh Ollama catalog before testing LLM settings', {
+                        baseUrl: settingsData.ollamaBaseUrl,
+                        model: settingsData.llmModel,
+                        error: error.message
+                    });
+                }
+            }
+        }
+
+        if (settingsData.llmModelParameters) {
+            settingsData = {
+                ...settingsData,
+                llmModelParameters: sanitizeLlmModelParameters(settingsData.llmModelParameters, getProviderAvailabilityFlags(), {
+                    ollamaModels: ollamaDiscovery?.modelCatalog || []
+                })
+            };
+        }
+
+        const result = await testLlmSettingsConnection(settingsData, req.user);
+        return res.json({
+            success: true,
+            ...result
+        });
+    }));
+
 // PUT /api/settings/:id - Update settings (or create if not exists)
 router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), validateBody(updateSettingsSchema), createSettingsRouteHandler('Error updating settings', 'Failed to update settings', async (req, res) => {
         const { id } = req.params;
@@ -193,7 +230,6 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
         const currentSettingsRecord = await getSettings();
         updateData = await prepareSettingsMutationPayload(updateData, {
             getProviderAvailabilityFlags,
-            validatePersistedLlmSettings,
             reqUser: req.user,
             currentSettingsRecord
         });
@@ -225,7 +261,6 @@ router.post('/', authenticateToken, requireAdmin, validateBody(updateSettingsSch
         const currentSettingsRecord = await getSettings();
         settingsData = await prepareSettingsMutationPayload(settingsData, {
             getProviderAvailabilityFlags,
-            validatePersistedLlmSettings,
             reqUser: req.user,
             currentSettingsRecord
         });

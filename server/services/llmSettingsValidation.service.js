@@ -65,47 +65,57 @@ function collectValidationTargets(settingsData = {}) {
 }
 
 export async function validatePersistedLlmSettings(settingsData = {}, user = null) {
-    const targets = collectValidationTargets(settingsData);
+    safeLog('debug', 'Skipping runtime LLM validation during settings persistence', {
+        targets: collectValidationTargets(settingsData).map(({ provider, model }) => `${provider}/${model}`),
+        requestedBy: user?.email || 'system'
+    });
+}
 
-    for (const target of targets) {
-        const { provider, model } = target;
-        const { parameters } = resolveEffectiveModelParameters({
-            settings: settingsData,
+export async function testLlmSettingsConnection(settingsData = {}, user = null) {
+    const provider = String(settingsData.llmProvider || '').trim().toLowerCase();
+    const model = String(settingsData.llmModel || '').trim() || getProviderDefaultModel(provider);
+
+    if (!provider) {
+        throw createValidationError('LLM provider is required for test.', { provider, model });
+    }
+
+    if (!model && provider !== 'ollama') {
+        throw createValidationError('LLM model is required for test.', { provider, model });
+    }
+
+    const { parameters } = resolveEffectiveModelParameters({
+        settings: settingsData,
+        provider,
+        model,
+        overrides: {}
+    });
+
+    try {
+        const result = await callProviderChat({
             provider,
             model,
-            overrides: {}
+            messages: SETTINGS_VALIDATION_MESSAGES,
+            settings: settingsData,
+            options: {
+                ...parameters,
+                timeout: 15000,
+                operationType: 'LLM settings test',
+                userMetadata: user ? {
+                    email: user.email || 'admin',
+                    action: 'SETTINGS_TEST'
+                } : undefined
+            }
         });
 
-        try {
-            await callProviderChat({
-                provider,
-                model,
-                messages: SETTINGS_VALIDATION_MESSAGES,
-                settings: settingsData,
-                options: {
-                    ...parameters,
-                    timeout: 15000,
-                    operationType: 'LLM settings validation',
-                    userMetadata: user ? {
-                        email: user.email || 'admin',
-                        action: 'SETTINGS_VALIDATION'
-                    } : undefined
-                }
-            });
-        } catch (error) {
-            if (provider === 'ollama') {
-                safeLog('warn', 'Ollama settings validation failed; persisting settings anyway', {
-                    provider,
-                    model,
-                    error: error.message
-                });
-                continue;
-            }
-
-            throw createValidationError(
-                `Saved parameters are invalid for ${provider}/${model}: ${error.message}`,
-                { provider, model }
-            );
-        }
+        return {
+            provider,
+            model,
+            contentPreview: typeof result?.content === 'string' ? result.content.trim().slice(0, 120) : ''
+        };
+    } catch (error) {
+        throw createValidationError(
+            `LLM test failed for ${provider}/${model}: ${error.message}`,
+            { provider, model }
+        );
     }
 }

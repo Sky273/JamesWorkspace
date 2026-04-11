@@ -1,5 +1,5 @@
 export interface FormData {
-  llmProvider: 'openai' | 'anthropic' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
+  llmProvider: 'openai' | 'anthropic' | 'gemma' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
   llmModel: string;
   ollamaBaseUrl?: string;
   llmModelParametersJson?: string;
@@ -49,6 +49,8 @@ export interface OllamaCapabilitySummary {
 export interface LLMTabProps {
   formData: FormData;
   onInputChange: (key: string, value: string | number) => void;
+  onTestConnection: () => Promise<void>;
+  testingConnection?: boolean;
   t: (key: string) => string;
   llmAvailability?: LLMAvailability;
   llmModelCatalog?: Record<string, ModelOption[]>;

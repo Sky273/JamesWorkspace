@@ -84,6 +84,9 @@ export const PROVIDER_DEFAULT_PARAMETERS = Object.freeze({
         service_tier: createStringDefinition({ key: 'service_tier', label: 'Service tier', maxLength: 64 }),
         stream: createBooleanDefinition({ key: 'stream', label: 'Stream' })
     },
+    gemma: {
+        ...SHARED_OPENAI_COMPATIBLE_PARAMETERS
+    },
     deepseek: {
         ...SHARED_OPENAI_COMPATIBLE_PARAMETERS,
         thinking: createObjectDefinition({ key: 'thinking', label: 'Thinking' })
@@ -141,6 +144,17 @@ export const PROVIDER_CAPABILITIES = {
     deepseek: [
         { match: /^deepseek-chat$/i, maxOutputTokens: 8192, tokenParameter: 'max_tokens' },
         { match: /^deepseek-reasoner$/i, maxOutputTokens: 64000, tokenParameter: 'max_tokens', unsupportedParameters: ['temperature', 'top_p', 'presence_penalty', 'frequency_penalty', 'logprobs', 'top_logprobs'] }
+    ],
+    gemma: [
+        { match: /^gemma-4-31b-it$/i, maxOutputTokens: 8192, tokenParameter: 'max_tokens' },
+        { match: /^gemma-4-26b-a4b-it$/i, maxOutputTokens: 8192, tokenParameter: 'max_tokens' },
+        { match: /^gemma-3-270m-it$/i, maxOutputTokens: 8192, tokenParameter: 'max_tokens' },
+        { match: /^gemma-3-1b-it$/i, maxOutputTokens: 8192, tokenParameter: 'max_tokens' },
+        { match: /^gemma-3-4b-it$/i, maxOutputTokens: 8192, tokenParameter: 'max_tokens' },
+        { match: /^gemma-3-12b-it$/i, maxOutputTokens: 8192, tokenParameter: 'max_tokens' },
+        { match: /^gemma-3-27b-it$/i, maxOutputTokens: 8192, tokenParameter: 'max_tokens' },
+        { match: /^gemma-3n-e2b-it$/i, maxOutputTokens: 8192, tokenParameter: 'max_tokens' },
+        { match: /^gemma-3n-e4b-it$/i, maxOutputTokens: 8192, tokenParameter: 'max_tokens' }
     ],
     glm: [
         { match: /^glm-5\.1(?:$|-)/i, maxOutputTokens: 131072, tokenParameter: 'max_tokens', supportsResponseFormat: true, temperatureRange: { min: 0, maxInclusive: 1 }, topPRange: { min: 0, maxInclusive: 1 }, supportedParameters: ['thinking'] },

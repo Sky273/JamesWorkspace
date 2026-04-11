@@ -7,6 +7,12 @@ export function fallbackText(t: (key: string) => string, key: string, fallback: 
 
 export function getProviderDescription(provider: FormData['llmProvider'], t: (key: string) => string): string {
   if (provider === 'ollama') return t('settings.llm.ollamaDescription');
+  if (provider === 'gemma') {
+    const description = t('settings.llm.gemmaDescription');
+    return description === 'settings.llm.gemmaDescription'
+      ? 'Select a hosted Gemma model exposed through the Google AI OpenAI-compatible endpoint.'
+      : description;
+  }
   if (provider === 'deepseek') return t('settings.llm.deepseekDescription');
   if (provider === 'glm') return t('settings.llm.glmDescription');
   if (provider === 'minimax') return t('settings.llm.minimaxDescription');

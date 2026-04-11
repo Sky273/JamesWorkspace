@@ -39,7 +39,7 @@ Application professionnelle de gestion et d'analyse de CVs avec intelligence art
 
 ### Chatbot IA
 - **Assistant conversationnel** : Aide à la rédaction et conseils carrière
-- **Multi-modèles** : Support OpenAI (GPT-5.4 / GPT-5.4-pro / GPT-5.2 / GPT-5.1 / GPT-5 / GPT-4.1 / GPT-4o), Anthropic (Claude Opus 4.x / Sonnet 4 / Claude 3.7 / Claude 3.5), DeepSeek (DeepSeek-V3.2 via `deepseek-chat` et `deepseek-reasoner`), GLM (`glm-5.1`, `glm-5`), MiniMax et Ollama distant
+- **Multi-modèles** : Support OpenAI (GPT-5.4 / GPT-5.4-pro / GPT-5.2 / GPT-5.1 / GPT-5 / GPT-4.1 / GPT-4o), Anthropic (Claude Opus 4.x / Sonnet 4 / Claude 3.7 / Claude 3.5), DeepSeek (DeepSeek-V3.2 via `deepseek-chat` et `deepseek-reasoner`), Gemma Cloud via Gemini, GLM (`glm-5.1`, `glm-5`), MiniMax et Ollama distant
 - **Contexte CV** : Réponses personnalisées basées sur le profil
 
 ### Administration
@@ -169,11 +169,11 @@ Application professionnelle de gestion et d'analyse de CVs avec intelligence art
 - `POST /api/tags/extract` - Extraire les tags d'un texte
 
 ### LLM (Proxy)
-- `POST /api/llm/openai` - Proxy OpenAI (GPT-5, GPT-4o) avec routage compatible DeepSeek / GLM / MiniMax / Ollama selon configuration
+- `POST /api/llm/openai` - Proxy OpenAI (GPT-5, GPT-4o) avec routage compatible DeepSeek / Gemma / GLM / MiniMax / Ollama selon configuration
 - `POST /api/llm/anthropic` - Proxy Anthropic (Claude) avec routage compatible MiniMax selon configuration
 - `POST /api/llm/messages` - Proxy Anthropic / providers compatibles
-- `POST /api/llm/chat/completions` - Proxy OpenAI-compatible unifié (OpenAI, DeepSeek, GLM, MiniMax, Ollama selon configuration)
-- `GET /api/llm/circuit-breakers` - Etat des familles LLM (`openai`, `anthropic`, `deepseek`, `glm`, `minimax`, `ollama`)
+- `POST /api/llm/chat/completions` - Proxy OpenAI-compatible unifié (OpenAI, DeepSeek, Gemma, GLM, MiniMax, Ollama selon configuration)
+- `GET /api/llm/circuit-breakers` - Etat des familles LLM (`openai`, `anthropic`, `gemma`, `deepseek`, `glm`, `minimax`, `ollama`)
 
 ### Cabinets (Firms)
 - `GET /api/firms` - Liste des cabinets
@@ -277,6 +277,11 @@ L'application supporte plusieurs fournisseurs LLM :
 - **DeepSeek-V3.2 - Standard** : appelé via l'identifiant API `deepseek-chat`
 - **DeepSeek-V3.2 - Raisonnement** : appelé via l'identifiant API `deepseek-reasoner`, avec sanitation serveur du `reasoning_content`
 
+### Gemma Cloud (via Gemini)
+- **Gemma 3 27B / 12B / 4B** : variantes instruction disponibles via l'endpoint OpenAI-compatible Google
+- **Gemma 4 31B / 27B** : variantes Gemma Cloud compatibles avec le provider `gemma`
+- Variables serveur : `GEMINI_API_KEY` et `GEMINI_OPENAI_BASE_URL` (par défaut `https://generativelanguage.googleapis.com/v1beta/openai`)
+
 ### GLM (Z.AI)
 - **GLM-5.1** : modèle par défaut de la famille GLM dans l'application
 - **GLM-5** : variante compatible OpenAI-compatible via l'API Z.AI
@@ -292,7 +297,7 @@ L'application supporte plusieurs fournisseurs LLM :
 - URL configurable dans les paramètres LLM
 - `keep_alive` et `num_ctx` pilotables via les paramètres stockés
 
-Configuration via les paramètres de l'application ou variables d'environnement. L'orchestration serveur passe par un gateway LLM unique avec retries, circuit breakers, sanitation du contenu et métriques bornées. Les providers distants (`openai`, `anthropic`, `deepseek`, `glm`, `minimax`) utilisent retry + circuit breaker, tandis que `ollama` utilise uniquement un retry réseau léger, sans circuit breaker.
+Configuration via les paramètres de l'application ou variables d'environnement. L'orchestration serveur passe par un gateway LLM unique avec retries, circuit breakers, sanitation du contenu et métriques bornées. Les providers distants (`openai`, `anthropic`, `gemma`, `deepseek`, `glm`, `minimax`) utilisent retry + circuit breaker, tandis que `ollama` utilise uniquement un retry réseau léger, sans circuit breaker.
 
 ## 🐳 Docker
 

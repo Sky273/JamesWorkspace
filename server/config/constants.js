@@ -40,6 +40,8 @@ export const SALT_ROUNDS = 10;
 // LLM API Keys
 export const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 export const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+export const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+export const GEMINI_OPENAI_BASE_URL = process.env.GEMINI_OPENAI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai';
 export const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 export const DEEPSEEK_BASE_URL = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com';
 export const GLM_API_KEY = process.env.GLM_API_KEY;

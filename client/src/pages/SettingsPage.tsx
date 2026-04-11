@@ -19,6 +19,7 @@ const SettingsPage = (): JSX.Element => {
     settings,
     loading,
     saving,
+    testingConnection,
     ollamaDiscoveryLoading,
     ollamaModelCatalog,
     ollamaModelCapabilities,
@@ -28,6 +29,7 @@ const SettingsPage = (): JSX.Element => {
     tabs,
     totalWeight,
     handleSave,
+    handleTestConnection,
     handleInputChange,
     resetToDefaults,
   } = useSettingsPage();
@@ -117,6 +119,8 @@ const SettingsPage = (): JSX.Element => {
           <LLMTab
             formData={formData}
             onInputChange={handleInputChange}
+            onTestConnection={handleTestConnection}
+            testingConnection={testingConnection}
             t={t}
             llmAvailability={settings?.llmAvailability}
             llmModelCatalog={{

@@ -3,11 +3,30 @@ import { resolveAvailableModel } from './llmAvailability.service.js';
 export const LLM_PROVIDER_DEFAULT_MODELS = {
     openai: 'gpt-4o',
     anthropic: 'claude-3-5-sonnet-20241022',
+    gemma: 'gemma-4-31b-it',
     deepseek: 'deepseek-chat',
     glm: 'glm-5.1',
     minimax: 'MiniMax-M2.7',
     ollama: null
 };
+
+export function normalizeModelForProvider(provider, model) {
+    const normalizedProvider = String(provider || '').trim().toLowerCase();
+    const normalizedModel = String(model || '').trim();
+    if (!normalizedModel) {
+        return normalizedModel;
+    }
+
+    if (normalizedProvider === 'gemma') {
+        const normalizedGemmaModel = normalizedModel.toLowerCase();
+        if (normalizedGemmaModel === 'gemma-4-e2b-it' || normalizedGemmaModel === 'gemma-4-e4b-it') {
+            return LLM_PROVIDER_DEFAULT_MODELS.gemma;
+        }
+        return normalizedGemmaModel;
+    }
+
+    return normalizedModel;
+}
 
 export function getProviderDefaultModel(provider) {
     return LLM_PROVIDER_DEFAULT_MODELS[provider] || LLM_PROVIDER_DEFAULT_MODELS.openai;
@@ -67,6 +86,10 @@ export function isLikelyDeepSeekModel(model = '') {
     return /^deepseek/i.test(String(model || '').trim());
 }
 
+export function isLikelyGemmaModel(model = '') {
+    return /^gemma(?:[-\d]|$)/i.test(String(model || '').trim());
+}
+
 export function isLikelyGlmModel(model = '') {
     return /^glm/i.test(String(model || '').trim());
 }
@@ -83,8 +106,13 @@ export function resolveLLMModel({ provider, settings = {}, requestedModel } = {}
     const candidateModel = provider === 'ollama'
         ? (requestedModel || settings.llmModel || null)
         : (requestedModel || settings.llmModel || getProviderDefaultModel(provider));
+    const normalizedCandidateModel = normalizeModelForProvider(provider, candidateModel);
 
-    const resolved = resolveAvailableModel(provider, candidateModel, getProviderDefaultModel(provider));
+    const resolved = resolveAvailableModel(
+        provider,
+        normalizedCandidateModel,
+        normalizeModelForProvider(provider, getProviderDefaultModel(provider))
+    );
     return resolved.model;
 }
 
@@ -96,7 +124,7 @@ export function resolveLLMRuntimeConfig(settings = {}, requestedModel) {
 
 export function resolveCompatibleProviderRuntimeConfig({ settings = {}, requestedModel, responseShape = 'openai' } = {}) {
     const configuredProvider = resolveLLMProvider(settings);
-    const candidateModel = String(requestedModel || settings.llmModel || '').trim();
+    const candidateModel = normalizeModelForProvider(configuredProvider, String(requestedModel || settings.llmModel || '').trim());
 
     if (configuredProvider === 'ollama') {
         return {
@@ -118,6 +146,20 @@ export function resolveCompatibleProviderRuntimeConfig({ settings = {}, requeste
                 model: isLikelyAnthropicModel(candidateModel) ? candidateModel : getProviderDefaultModel('anthropic')
             };
         }
+
+    if (configuredProvider === 'gemma' || (candidateModel && isLikelyGemmaModel(candidateModel))) {
+        if (responseShape === 'openai') {
+            return {
+                provider: 'gemma',
+                model: resolveLLMModel({ provider: 'gemma', settings, requestedModel })
+            };
+        }
+
+        return {
+            provider: 'anthropic',
+            model: isLikelyAnthropicModel(candidateModel) ? candidateModel : getProviderDefaultModel('anthropic')
+        };
+    }
 
     if (configuredProvider === 'glm' || (candidateModel && isLikelyGlmModel(candidateModel))) {
         if (responseShape === 'openai') {
@@ -144,6 +186,7 @@ export function resolveCompatibleProviderRuntimeConfig({ settings = {}, requeste
         isLikelyOpenAIModel(candidateModel) ||
         isLikelyAnthropicModel(candidateModel) ||
         isLikelyDeepSeekModel(candidateModel) ||
+        isLikelyGemmaModel(candidateModel) ||
         isLikelyGlmModel(candidateModel) ||
         isLikelyMiniMaxModel(candidateModel);
 
