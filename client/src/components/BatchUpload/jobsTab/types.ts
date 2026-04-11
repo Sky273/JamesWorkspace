@@ -55,4 +55,13 @@ export interface Job {
   export_file_available?: boolean;
 }
 
+export interface JobProgressSnapshot {
+  jobId: string;
+  processedItems: number;
+  totalItems: number;
+  startedAt: string | null;
+  observedAt: number;
+  status: Job['status'];
+}
+
 export type TranslateFn = (key: string, options?: unknown) => string;

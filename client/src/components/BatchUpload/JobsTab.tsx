@@ -7,6 +7,13 @@ import logger from '../../utils/logger.frontend';
 import JobsTabHeader from './jobsTab/JobsTabHeader';
 import JobCard from './jobsTab/JobCard';
 import type { Job, TranslateFn } from './jobsTab/types';
+import {
+  loadJobProgressSnapshots,
+  persistJobProgressSnapshots,
+  syncSingleJobProgressSnapshot,
+  syncJobProgressSnapshots,
+} from './jobsTab/helpers';
+import type { JobProgressSnapshot } from './jobsTab/types';
 
 
 const JobsTab = (): JSX.Element => {
@@ -22,6 +29,8 @@ const JobsTab = (): JSX.Element => {
   const [autoRefreshEnabled] = useState(true);
   const [pendingNameInputs, setPendingNameInputs] = useState<Record<string, string>>({});
   const [submittingName, setSubmittingName] = useState<string | null>(null);
+  const [progressSnapshots, setProgressSnapshots] = useState<Record<string, JobProgressSnapshot>>(() => loadJobProgressSnapshots());
+  const [now, setNow] = useState(() => Date.now());
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -29,6 +38,7 @@ const JobsTab = (): JSX.Element => {
       if (response.ok) {
         const data = await response.json();
         setJobs(data);
+        setProgressSnapshots((prev) => syncJobProgressSnapshots(prev, data, Date.now()));
       }
     } catch (error) {
       logger.error('Error fetching jobs:', error);
@@ -44,6 +54,7 @@ const JobsTab = (): JSX.Element => {
       if (response.ok) {
         const data = await response.json();
         setJobs(prev => prev.map(j => (j.id === jobId ? data : j)));
+        setProgressSnapshots((prev) => syncSingleJobProgressSnapshot(prev, data, Date.now()));
       }
     } catch (error) {
       logger.error('Error fetching job details:', error);
@@ -69,6 +80,23 @@ const JobsTab = (): JSX.Element => {
 
     return () => clearInterval(interval);
   }, [autoRefreshEnabled, jobs, expandedJobId, fetchJobs, fetchJobDetails]);
+
+  useEffect(() => {
+    persistJobProgressSnapshots(progressSnapshots);
+  }, [progressSnapshots]);
+
+  useEffect(() => {
+    const hasProcessingJobs = jobs.some((job) => job.status === 'processing');
+    if (!hasProcessingJobs) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [jobs]);
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
@@ -216,7 +244,9 @@ const JobsTab = (): JSX.Element => {
               job={job}
               expanded={expandedJobId === job.id}
               pendingNameInputs={pendingNameInputs}
+              progressSnapshot={progressSnapshots[job.id]}
               submittingName={submittingName}
+              now={now}
               onToggleExpand={handleToggleExpand}
               onCancelJob={handleCancelJob}
               onDeleteJob={handleDeleteJob}

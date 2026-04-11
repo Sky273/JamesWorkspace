@@ -13,7 +13,9 @@ import {
   XCircleIcon,
   ArrowPathIcon,
 } from '@heroicons/react/24/outline';
-import type { Job, TranslateFn } from './types';
+import type { Job, JobProgressSnapshot, TranslateFn } from './types';
+
+const JOB_PROGRESS_SNAPSHOTS_STORAGE_KEY = 'resumeconverter.batchJobs.progressSnapshots';
 
 export function getStatusIcon(status: Job['status']): JSX.Element {
   switch (status) {
@@ -50,6 +52,167 @@ export function getEstimatedTimeRemaining(job: Job): string | null {
   }
 
   return `~${Math.round(estimatedRemaining / 60000)}min`;
+}
+
+export function loadJobProgressSnapshots(): Record<string, JobProgressSnapshot> {
+  if (typeof window === 'undefined') {
+    return {};
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(JOB_PROGRESS_SNAPSHOTS_STORAGE_KEY);
+    if (!raw) {
+      return {};
+    }
+
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed as Record<string, JobProgressSnapshot> : {};
+  } catch {
+    return {};
+  }
+}
+
+export function persistJobProgressSnapshots(snapshots: Record<string, JobProgressSnapshot>): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(JOB_PROGRESS_SNAPSHOTS_STORAGE_KEY, JSON.stringify(snapshots));
+  } catch {
+    // Ignore storage errors, the UI can still rely on live server updates.
+  }
+}
+
+export function syncJobProgressSnapshots(
+  currentSnapshots: Record<string, JobProgressSnapshot>,
+  jobs: Job[],
+  observedAt: number,
+): Record<string, JobProgressSnapshot> {
+  const nextSnapshots: Record<string, JobProgressSnapshot> = {};
+
+  jobs.forEach((job) => {
+    if (job.status !== 'processing') {
+      return;
+    }
+
+    const currentSnapshot = currentSnapshots[job.id];
+    const nextStartedAt = job.started_at || currentSnapshot?.startedAt || null;
+    const hasFreshServerProgress =
+      !currentSnapshot ||
+      currentSnapshot.processedItems !== job.processed_items ||
+      currentSnapshot.totalItems !== job.total_items ||
+      currentSnapshot.status !== job.status ||
+      currentSnapshot.startedAt !== nextStartedAt;
+
+    nextSnapshots[job.id] = hasFreshServerProgress
+      ? {
+          jobId: job.id,
+          processedItems: job.processed_items,
+          totalItems: job.total_items,
+          startedAt: nextStartedAt,
+          observedAt,
+          status: job.status,
+        }
+      : currentSnapshot;
+  });
+
+  return nextSnapshots;
+}
+
+export function syncSingleJobProgressSnapshot(
+  currentSnapshots: Record<string, JobProgressSnapshot>,
+  job: Job,
+  observedAt: number,
+): Record<string, JobProgressSnapshot> {
+  if (job.status !== 'processing') {
+    const nextSnapshots = { ...currentSnapshots };
+    delete nextSnapshots[job.id];
+    return nextSnapshots;
+  }
+
+  const currentSnapshot = currentSnapshots[job.id];
+  const nextStartedAt = job.started_at || currentSnapshot?.startedAt || null;
+  const hasFreshServerProgress =
+    !currentSnapshot ||
+    currentSnapshot.processedItems !== job.processed_items ||
+    currentSnapshot.totalItems !== job.total_items ||
+    currentSnapshot.status !== job.status ||
+    currentSnapshot.startedAt !== nextStartedAt;
+
+  if (!hasFreshServerProgress) {
+    return currentSnapshots;
+  }
+
+  return {
+    ...currentSnapshots,
+    [job.id]: {
+      jobId: job.id,
+      processedItems: job.processed_items,
+      totalItems: job.total_items,
+      startedAt: nextStartedAt,
+      observedAt,
+      status: job.status,
+    },
+  };
+}
+
+export function getDisplayProgress(job: Job, snapshot: JobProgressSnapshot | undefined, now: number): {
+  processedItems: number;
+  progressPercentage: number;
+  estimatedTimeRemaining: string | null;
+} {
+  if (
+    job.status !== 'processing' ||
+    !snapshot ||
+    !snapshot.startedAt ||
+    snapshot.processedItems <= 0 ||
+    snapshot.totalItems <= 0
+  ) {
+    return {
+      processedItems: job.processed_items,
+      progressPercentage: getProgressPercentage(job),
+      estimatedTimeRemaining: getEstimatedTimeRemaining(job),
+    };
+  }
+
+  const startedAtMs = new Date(snapshot.startedAt).getTime();
+  if (!Number.isFinite(startedAtMs) || snapshot.observedAt <= startedAtMs || now <= snapshot.observedAt) {
+    return {
+      processedItems: job.processed_items,
+      progressPercentage: getProgressPercentage(job),
+      estimatedTimeRemaining: getEstimatedTimeRemaining(job),
+    };
+  }
+
+  const elapsedAtObservation = snapshot.observedAt - startedAtMs;
+  const ratePerMs = snapshot.processedItems / elapsedAtObservation;
+  const projectedProcessed = snapshot.processedItems + (now - snapshot.observedAt) * ratePerMs;
+  const maxProjectedProcessed =
+    snapshot.processedItems < snapshot.totalItems
+      ? Math.max(snapshot.processedItems, snapshot.totalItems - 1)
+      : snapshot.totalItems;
+  const displayProcessed = Math.max(
+    job.processed_items,
+    Math.min(maxProjectedProcessed, Math.floor(projectedProcessed)),
+  );
+  const progressPercentage = snapshot.totalItems === 0
+    ? 0
+    : Math.round((displayProcessed / snapshot.totalItems) * 100);
+  const remainingItems = Math.max(snapshot.totalItems - displayProcessed, 0);
+  const estimatedRemaining = remainingItems / ratePerMs;
+  const estimatedTimeRemaining =
+    remainingItems === 0
+      ? null
+      : estimatedRemaining < 60000
+        ? `~${Math.max(1, Math.round(estimatedRemaining / 1000))}s`
+        : `~${Math.max(1, Math.round(estimatedRemaining / 60000))}min`;
+
+  return {
+    processedItems: displayProcessed,
+    progressPercentage,
+    estimatedTimeRemaining,
+  };
 }
 
 export function getStatusText(status: Job['status'], t: TranslateFn): string {

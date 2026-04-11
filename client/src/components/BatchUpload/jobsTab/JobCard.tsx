@@ -8,13 +8,12 @@ import {
 } from '@heroicons/react/24/outline';
 import CollectionJobDetails from './CollectionJobDetails';
 import JobItemsDetails from './JobItemsDetails';
-import type { Job, TranslateFn } from './types';
+import type { Job, JobProgressSnapshot, TranslateFn } from './types';
 import {
   formatDate,
-  getEstimatedTimeRemaining,
   getJobTypeIcon,
   getJobTypeText,
-  getProgressPercentage,
+  getDisplayProgress,
   getStatusBadgeClass,
   getStatusIcon,
   getStatusText,
@@ -25,7 +24,9 @@ import {
 interface JobCardProps {
   job: Job;
   expanded: boolean;
+  now: number;
   pendingNameInputs: Record<string, string>;
+  progressSnapshot?: JobProgressSnapshot;
   submittingName: string | null;
   onToggleExpand: (jobId: string) => void;
   onCancelJob: (jobId: string) => void;
@@ -39,7 +40,9 @@ interface JobCardProps {
 export default function JobCard({
   job,
   expanded,
+  now,
   pendingNameInputs,
+  progressSnapshot,
   submittingName,
   onToggleExpand,
   onCancelJob,
@@ -49,8 +52,11 @@ export default function JobCard({
   onProvideName,
   t,
 }: JobCardProps): JSX.Element {
-  const progressPercentage = getProgressPercentage(job);
-  const estimatedTimeRemaining = getEstimatedTimeRemaining(job);
+  const {
+    estimatedTimeRemaining,
+    processedItems: displayProcessedItems,
+    progressPercentage,
+  } = getDisplayProgress(job, progressSnapshot, now);
   const isCollection = isCollectionJob(job.job_type);
 
   return (
@@ -74,7 +80,7 @@ export default function JobCard({
 
           <div className="flex items-center gap-4">
             <div className="text-right min-w-[80px]">
-              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{job.processed_items} / {job.total_items}</div>
+              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{displayProcessedItems} / {job.total_items}</div>
               <div className="text-xs text-gray-500 dark:text-gray-400">{getSummaryText(job)}</div>
             </div>
 
