@@ -185,7 +185,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
           <img src={isDarkMode ? resumeConverterLogoDark : resumeConverterLogoLight} alt="Resume Converter" className="h-auto max-w-[176px] object-contain" />
           <button
             onClick={onClose}
-            className="rounded-xl p-1.5 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-white/8 dark:hover:text-slate-200 md:hidden"
+            className="rounded-xl p-1.5 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-white/8 dark:hover:text-slate-200 lg:hidden"
           >
             <XMarkIcon className="h-5 w-5" />
           </button>
@@ -208,13 +208,13 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
   return (
     <>
       {isOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
+        <div className="fixed inset-0 z-40 lg:hidden">
           <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm transition-opacity" onClick={onClose} />
           <div className="fixed inset-y-0 left-0 flex w-72 max-w-[88vw] flex-col">{sidebarContent}</div>
         </div>
       )}
 
-      <div className="hidden md:fixed md:inset-y-0 md:flex md:w-64 md:flex-col">{sidebarContent}</div>
+      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">{sidebarContent}</div>
     </>
   );
 };

@@ -122,26 +122,27 @@ const Layout = (): JSX.Element => {
       <ScrollToTop />
       <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
 
-      <div className="min-h-screen md:pl-64">
+      <div className="min-h-screen lg:pl-64">
         <div className={`flex min-h-screen flex-1 flex-col${isEditorialMigratedRoute ? ` editorial-migrated-shell${editorialRouteClassName}` : ''}`}>
         <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/92 shadow-[0_1px_0_rgba(15,23,42,0.04)] backdrop-blur-xl dark:border-white/6 dark:bg-[#0c1222]/95 dark:shadow-[0_1px_0_rgba(255,255,255,0.03)]">
-          <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-            <div className="flex min-w-0 items-center gap-3.5">
-              <button
-                className={`md:hidden ${headerIconButtonClassName}`}
-                onClick={() => setIsMobileMenuOpen(true)}
-              >
-                <span className="sr-only">{t('common.openMenu')}</span>
-                <Bars3Icon className={headerIconClassName} aria-hidden="true" />
-              </button>
-              <div className="hidden h-6 w-px bg-slate-200/80 md:block dark:bg-white/8" />
+          <div className="relative flex min-h-16 items-center justify-between gap-3 px-4 py-2 sm:h-16 sm:gap-4 sm:py-0 sm:px-6 lg:px-8">
+            <button
+              className={`absolute left-4 top-1/2 z-10 -translate-y-1/2 shrink-0 lg:hidden ${headerIconButtonClassName}`}
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <span className="sr-only">{t('common.openMenu')}</span>
+              <Bars3Icon className={headerIconClassName} aria-hidden="true" />
+            </button>
+
+            <div className="hidden min-w-0 flex-1 items-center gap-2 sm:gap-3.5 md:flex">
+              <div className="hidden h-6 w-px bg-slate-200/80 lg:block dark:bg-white/8" />
               <div className="min-w-0 rounded-full border border-slate-200/80 bg-white/70 px-3 py-2 dark:border-white/8 dark:bg-white/[0.03]">
                 <Breadcrumbs tone="header" />
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5 text-slate-700 dark:text-slate-300">
-              <div className="flex items-center gap-2 rounded-full border border-slate-200/80 bg-slate-50/80 px-1.5 py-1 shadow-sm shadow-slate-200/40 dark:border-white/8 dark:bg-white/[0.03] dark:shadow-none">
+            <div className="ml-auto flex w-full items-center justify-end gap-2 pl-14 text-slate-700 dark:text-slate-300 sm:gap-2.5 md:w-auto md:pl-0">
+              <div className="flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50/80 px-1 py-1 shadow-sm shadow-slate-200/40 dark:border-white/8 dark:bg-white/[0.03] dark:shadow-none sm:gap-2 sm:px-1.5">
                 <button className={headerIconButtonClassName} onClick={toggleTheme}>
                   <span className="sr-only">
                     {theme === 'dark' ? t('header.theme.light') : t('header.theme.dark')}
@@ -181,7 +182,7 @@ const Layout = (): JSX.Element => {
                   <div className="hidden h-7 w-px bg-slate-200/80 lg:block dark:bg-white/8" />
                   <Link
                     to="/profile"
-                    className="flex min-w-0 items-center gap-3 rounded-full border border-slate-200/90 bg-white px-2.5 py-1.5 shadow-sm shadow-slate-200/50 transition-all hover:-translate-y-px hover:border-slate-300 dark:border-white/8 dark:bg-white/[0.045] dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08]"
+                    className="flex min-w-0 items-center gap-2 rounded-full border border-slate-200/90 bg-white px-1.5 py-1.5 shadow-sm shadow-slate-200/50 transition-all hover:-translate-y-px hover:border-slate-300 dark:border-white/8 dark:bg-white/[0.045] dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08] sm:gap-3 sm:px-2.5"
                     title={t('userProfile.viewProfile') || 'Mon compte'}
                   >
                     <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 via-violet-500 to-sky-500 text-[11px] font-semibold text-white shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
