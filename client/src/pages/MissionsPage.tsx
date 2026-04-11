@@ -3,8 +3,8 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 
 import ConfirmDialog from '../components/page/ConfirmDialog';
-import { DeferredTiptapEditor as TiptapEditor } from '../components/TiptapEditor';
-import type { TiptapEditorRef } from '../components/TiptapEditor';
+import TiptapEditor from '../components/TiptapEditor/DeferredTiptapEditor';
+import type { TiptapEditorRef } from '../components/TiptapEditor/TiptapEditor';
 import MissionFormModal from './MissionFormModal';
 import {
   MissionsByDealView,

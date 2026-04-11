@@ -28,7 +28,9 @@ const cspScriptSources = [
     "'sha256-OJ/4e+qcd2xOGOLtsh+uuewAvle/9b2F/3/WwzgLXoE='",  // Cloudflare injected script (variant 3)
     "'sha256-oR7U6/Q03fkV/ymCI4KGJsn1/qEg14weQX35BoNd6/8='",  // Cloudflare injected script (variant 4)
     "'sha256-FID3c60H9c7lktAfbhJ+B/txDAbRaj0JQWM8iPEiRXk='",  // Cloudflare injected script (variant 5)
-    "'sha256-nileZXtiIiKtSt6FJjdZt1szHltIjlRss/RxLHOpD0U='"   // Cloudflare injected script (variant 6)
+    "'sha256-nileZXtiIiKtSt6FJjdZt1szHltIjlRss/RxLHOpD0U='",  // Cloudflare injected script (variant 6)
+    "'sha256-9/iGFMNY/CbhlXfMrWEY3i4mlcr9rSmQhnjr6XrXZ+Y='",  // Cloudflare injected script (variant 7)
+    "'sha256-xdWZbq58NNjYTvyvH8NKkmmavhR878q1602rldMTf1k='"   // Cloudflare challenge platform inline bootstrap
 ];
 
 // ============================================

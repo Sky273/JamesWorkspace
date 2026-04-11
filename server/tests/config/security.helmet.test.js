@@ -33,5 +33,7 @@ describe('configureHelmet', () => {
         expect(res.headers['content-security-policy']).toContain("'sha256-oR7U6/Q03fkV/ymCI4KGJsn1/qEg14weQX35BoNd6/8='");
         expect(res.headers['content-security-policy']).toContain("'sha256-FID3c60H9c7lktAfbhJ+B/txDAbRaj0JQWM8iPEiRXk='");
         expect(res.headers['content-security-policy']).toContain("'sha256-nileZXtiIiKtSt6FJjdZt1szHltIjlRss/RxLHOpD0U='");
+        expect(res.headers['content-security-policy']).toContain("'sha256-9/iGFMNY/CbhlXfMrWEY3i4mlcr9rSmQhnjr6XrXZ+Y='");
+        expect(res.headers['content-security-policy']).toContain("'sha256-xdWZbq58NNjYTvyvH8NKkmmavhR878q1602rldMTf1k='");
     });
 });

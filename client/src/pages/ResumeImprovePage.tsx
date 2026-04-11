@@ -33,12 +33,10 @@ import {
   normalizeTemplateStylesheet,
   summarizeTemplatePayload,
 } from '../utils/templateFragments';
-import {
-  DeferredTiptapEditor as TiptapEditor,
-  parseSuggestions,
-  removeSuggestionMarkers,
-} from '../components/TiptapEditor';
-import type { TiptapEditorRef } from '../components/TiptapEditor';
+import TiptapEditor from '../components/TiptapEditor/DeferredTiptapEditor';
+import { parseSuggestions } from '../components/TiptapEditor/suggestions.shared';
+import { removeSuggestionMarkers } from '../components/TiptapEditor/suggestionsHtml';
+import type { TiptapEditorRef } from '../components/TiptapEditor/TiptapEditor';
 import { extractImprovedSkillProofs } from '../components/ResumeAnalysis/skillProofs';
 
 const ResumeImprovePage = (): JSX.Element => {

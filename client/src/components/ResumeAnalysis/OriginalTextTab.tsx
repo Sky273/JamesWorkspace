@@ -7,12 +7,10 @@ import { useEffect, useState, useRef, useCallback, ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { UserIcon, BriefcaseIcon, SparklesIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { useResume } from '../../context/ResumeContext';
-import {
-  DeferredTiptapEditor as TiptapEditor,
-  parseSuggestions,
-  removeSuggestionMarkers,
-} from '../TiptapEditor';
-import type { TiptapEditorRef } from '../TiptapEditor';
+import TiptapEditor from '../TiptapEditor/DeferredTiptapEditor';
+import { parseSuggestions } from '../TiptapEditor/suggestions.shared';
+import { removeSuggestionMarkers } from '../TiptapEditor/suggestionsHtml';
+import type { TiptapEditorRef } from '../TiptapEditor/TiptapEditor';
 import { extractCurrentSkillProofs } from './skillProofs';
 import toast from 'react-hot-toast';
 import logger from '../../utils/logger.frontend';

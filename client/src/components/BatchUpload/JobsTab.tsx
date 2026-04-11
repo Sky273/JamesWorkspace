@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowPathIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { ClockIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterceptor';
 import logger from '../../utils/logger.frontend';
@@ -15,6 +15,51 @@ import {
 } from './jobsTab/helpers';
 import type { JobProgressSnapshot } from './jobsTab/types';
 
+const JobsTabLoadingSkeleton = (): JSX.Element => (
+  <div className="space-y-4">
+    <div className="rounded-3xl border border-slate-200/80 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-slate-900/70">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="space-y-3">
+          <div className="h-7 w-44 animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
+          <div className="h-4 w-72 max-w-full animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
+        </div>
+        <div className="h-11 w-36 animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
+      </div>
+
+      <div className="mt-4 rounded-2xl border border-slate-200/70 bg-slate-50/90 p-4 dark:border-white/10 dark:bg-slate-950/40">
+        <div className="grid gap-3 sm:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="space-y-2 rounded-2xl bg-white/80 p-4 dark:bg-white/[0.03]">
+              <div className="h-4 w-20 animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
+              <div className="h-8 w-14 animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <div className="space-y-3">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div
+          key={index}
+          className="rounded-3xl border border-slate-200/80 bg-white/85 p-5 shadow-sm dark:border-white/10 dark:bg-slate-900/75"
+        >
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0 flex-1 space-y-3">
+              <div className="h-5 w-48 animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
+              <div className="h-4 w-full max-w-2xl animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
+              <div className="h-3 w-full max-w-xl animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
+            </div>
+            <div className="flex gap-2">
+              <div className="h-9 w-24 animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
+              <div className="h-9 w-24 animate-pulse rounded-full bg-slate-200 dark:bg-slate-700" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
 const JobsTab = (): JSX.Element => {
   const { t } = useTranslation();
@@ -220,11 +265,7 @@ const JobsTab = (): JSX.Element => {
   }, [expandedJobId, fetchJobDetails, pendingNameInputs, t]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <ArrowPathIcon className="w-8 h-8 text-indigo-500 animate-spin" />
-      </div>
-    );
+    return <JobsTabLoadingSkeleton />;
   }
 
   return (

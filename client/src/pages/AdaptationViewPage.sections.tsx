@@ -7,10 +7,10 @@ import {
   DocumentTextIcon,
   EnvelopeIcon,
 } from '@heroicons/react/24/outline';
-import { DeferredTiptapEditor as TiptapEditor } from '../components/TiptapEditor';
+import TiptapEditor from '../components/TiptapEditor/DeferredTiptapEditor';
 import AdaptationAnalysisView from '../components/AdaptationAnalysisView';
 import { createSafeHtml } from '../utils/sanitizer.frontend';
-import type { TiptapEditorRef } from '../components/TiptapEditor';
+import type { TiptapEditorRef } from '../components/TiptapEditor/TiptapEditor';
 import type { Adaptation, AdaptationViewTab } from './AdaptationViewPage.types';
 
 type TranslateFn = TFunction<'translation', undefined>;

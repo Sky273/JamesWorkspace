@@ -18,8 +18,8 @@ import {
   summarizeTemplatePayload,
 } from '../utils/templateFragments';
 
-import { DeferredTiptapEditor as TiptapEditor } from '../components/TiptapEditor';
-import type { TiptapEditorRef } from '../components/TiptapEditor';
+import TiptapEditor from '../components/TiptapEditor/DeferredTiptapEditor';
+import type { TiptapEditorRef } from '../components/TiptapEditor/TiptapEditor';
 
 interface FormData {
   name: string;
