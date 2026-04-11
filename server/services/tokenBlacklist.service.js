@@ -18,6 +18,7 @@
 
 import { safeLog } from '../utils/logger.backend.js';
 import { query } from '../config/database.js';
+import { buildApplicationCacheMetrics } from './cacheMetrics.service.js';
 
 // ============================================
 // TOKEN BLACKLIST (with in-memory cache)
@@ -358,14 +359,20 @@ export async function isTokenBlacklistedAsync(tokenId, userId = null, tokenIssue
  * Get blacklist statistics
  */
 export function getBlacklistStats() {
-    return {
+    return buildApplicationCacheMetrics({
+        size: tokenCache.size + userCache.size,
+        maxSize: MAX_TOKEN_CACHE_SIZE + MAX_USER_CACHE_SIZE,
+        ageMs: lastCacheRefresh ? Date.now() - lastCacheRefresh : null,
+        ttlMs: CACHE_TTL,
+        extra: {
         blacklistedTokens: tokenCache.size,
         blacklistedUsers: userCache.size,
         maxTokenCacheSize: MAX_TOKEN_CACHE_SIZE,
         maxUserCacheSize: MAX_USER_CACHE_SIZE,
         cacheAgeMs: lastCacheRefresh ? Date.now() - lastCacheRefresh : null,
         cacheTtlMs: CACHE_TTL
-    };
+        }
+    });
 }
 
 /**

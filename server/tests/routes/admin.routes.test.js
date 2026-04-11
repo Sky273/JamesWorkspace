@@ -32,6 +32,11 @@ vi.mock('../../services/cache.service.js', () => ({
     getCacheRegistryStats: () => ({
         settings: {
             backend: 'memory',
+            configuredBackend: 'memory',
+            effectiveBackend: 'memory',
+            cacheLayer: 'application',
+            applicationCacheActive: true,
+            message: 'Application cache active in memory mode.',
             disabledReason: null,
             hits: 4,
             misses: 1,
@@ -41,6 +46,11 @@ vi.mock('../../services/cache.service.js', () => ({
         },
         templates: {
             backend: 'memory',
+            configuredBackend: 'memory',
+            effectiveBackend: 'memory',
+            cacheLayer: 'application',
+            applicationCacheActive: true,
+            message: 'Application cache active in memory mode.',
             disabledReason: null,
             hits: 2,
             misses: 3,
@@ -50,6 +60,11 @@ vi.mock('../../services/cache.service.js', () => ({
         },
         firms: {
             backend: 'memory',
+            configuredBackend: 'memory',
+            effectiveBackend: 'memory',
+            cacheLayer: 'application',
+            applicationCacheActive: true,
+            message: 'Application cache active in memory mode.',
             disabledReason: null,
             hits: 1,
             misses: 0,
@@ -60,34 +75,113 @@ vi.mock('../../services/cache.service.js', () => ({
     })
 }));
 vi.mock('../../services/tokenBlacklist.service.js', () => ({
-    getBlacklistStats: () => ({ size: 5 })
+    getBlacklistStats: () => ({
+        size: 5,
+        configuredBackend: 'redis',
+        effectiveBackend: 'memory',
+        storageBackend: 'memory',
+        cacheLayer: 'application',
+        applicationCacheActive: true,
+        connected: true,
+        message: 'Application cache active in memory mode. This cache remains process-local and does not use Redis.',
+        blacklistedTokens: 3,
+        blacklistedUsers: 2
+    })
 }));
 vi.mock('../../services/settings.service.js', () => ({
     getSettingsCacheStats: () => ({
         entries: 2,
         cache: {
             backend: 'memory',
-            disabledReason: null
+            configuredBackend: 'redis',
+            effectiveBackend: 'memory',
+            storageBackend: 'memory',
+            cacheLayer: 'application',
+            applicationCacheActive: true,
+            connected: true,
+            disabledReason: null,
+            size: 2,
+            message: 'Application cache active in memory mode. Redis is configured but not selected because CACHE_BACKEND=memory.'
         }
     })
 }));
 vi.mock('../../services/marketFacts.service.js', () => ({
-    getFactsCacheStats: () => ({ entries: 100 })
+    getFactsCacheStats: () => ({
+        entries: 100,
+        size: 100,
+        configuredBackend: 'redis',
+        effectiveBackend: 'memory',
+        storageBackend: 'memory',
+        cacheLayer: 'application',
+        applicationCacheActive: true,
+        connected: null,
+        message: 'Application cache active in memory mode. This cache remains process-local and does not use Redis.'
+    })
 }));
 vi.mock('../../services/marketTrends.service.js', () => ({
-    getTrendsCacheStats: () => ({ entries: 500 })
+    getTrendsCacheStats: () => ({
+        entries: 500,
+        size: 500,
+        configuredBackend: 'redis',
+        effectiveBackend: 'memory',
+        storageBackend: 'memory',
+        cacheLayer: 'application',
+        applicationCacheActive: true,
+        connected: null,
+        message: 'Application cache active in memory mode. This cache remains process-local and does not use Redis.'
+    })
 }));
 vi.mock('../../services/rome.service.js', () => ({
-    getMetiersCacheStats: () => ({ entries: 50 })
+    getMetiersCacheStats: () => ({
+        entries: 50,
+        size: 50,
+        configuredBackend: 'redis',
+        effectiveBackend: 'memory',
+        storageBackend: 'memory',
+        cacheLayer: 'application',
+        applicationCacheActive: true,
+        connected: null,
+        message: 'Application cache active in memory mode. This cache remains process-local and does not use Redis.'
+    })
 }));
 vi.mock('./../../services/tagsCache.service.js', () => ({
-    getTagsCacheStats: () => ({ entries: 30 })
+    getTagsCacheStats: () => ({
+        entries: 30,
+        size: 30,
+        configuredBackend: 'redis',
+        effectiveBackend: 'memory',
+        storageBackend: 'memory',
+        cacheLayer: 'application',
+        applicationCacheActive: true,
+        connected: true,
+        message: 'Application cache active in memory mode. Redis is configured but not selected because CACHE_BACKEND=memory.'
+    })
 }));
 vi.mock('../../services/escoService.js', () => ({
-    getEscoCacheStats: () => ({ entries: 200 })
+    getEscoCacheStats: () => ({
+        entries: 200,
+        size: 200,
+        configuredBackend: 'redis',
+        effectiveBackend: 'memory',
+        storageBackend: 'memory',
+        cacheLayer: 'application',
+        applicationCacheActive: true,
+        connected: null,
+        message: 'Application cache active in memory mode. This cache remains process-local and does not use Redis.'
+    })
 }));
 vi.mock('./../../routes/resumes/stats.routes.js', () => ({
-    getStatsCacheStats: () => ({ entries: 10 })
+    getStatsCacheStats: () => ({
+        entries: 10,
+        size: 10,
+        configuredBackend: 'redis',
+        effectiveBackend: 'memory',
+        storageBackend: 'memory',
+        cacheLayer: 'application',
+        applicationCacheActive: true,
+        connected: null,
+        message: 'Application cache active in memory mode. This cache remains process-local and does not use Redis.'
+    })
 }));
 
 // Mock users service
@@ -294,8 +388,19 @@ describe('Admin Routes', () => {
             expect(res.body.cacheBackend).toEqual({
                 configuredBackend: 'memory',
                 backend: 'memory',
-                connected: null,
-                fallbackReason: null
+                effectiveBackend: 'memory',
+                cacheLayer: 'application',
+                applicationCacheActive: true,
+                connected: true,
+                fallbackReason: null,
+                message: 'Application cache active in memory mode. Redis is configured but not selected because CACHE_BACKEND=memory.',
+                backendBreakdown: {
+                    memory: {
+                        caches: 10,
+                        activityScore: 1811,
+                        size: 902
+                    }
+                }
             });
             expect(res.body.cacheSummary).toEqual({
                 hits: 7,
@@ -323,18 +428,37 @@ describe('Admin Routes', () => {
             expect(res.body.cacheBackend).toEqual({
                 configuredBackend: 'memory',
                 backend: 'memory',
-                connected: null,
-                fallbackReason: null
+                effectiveBackend: 'memory',
+                cacheLayer: 'application',
+                applicationCacheActive: true,
+                connected: true,
+                fallbackReason: null,
+                message: 'Application cache active in memory mode. Redis is configured but not selected because CACHE_BACKEND=memory.',
+                backendBreakdown: {
+                    memory: {
+                        caches: 10,
+                        activityScore: 1811,
+                        size: 902
+                    }
+                }
             });
             expect(res.body.cacheSummary.hits).toBe(7);
             expect(res.body.cacheSummary.misses).toBe(4);
             expect(res.body.caches).toBeDefined();
-            expect(res.body.caches.tokenBlacklist).toEqual({ size: 5 });
+            expect(res.body.caches.tokenBlacklist).toMatchObject({ size: 5, effectiveBackend: 'memory' });
             expect(res.body.caches.settings).toEqual({
                 entries: 2,
                 cache: {
                     backend: 'memory',
-                    disabledReason: null
+                    configuredBackend: 'redis',
+                    effectiveBackend: 'memory',
+                    storageBackend: 'memory',
+                    cacheLayer: 'application',
+                    applicationCacheActive: true,
+                    connected: true,
+                    disabledReason: null,
+                    size: 2,
+                    message: 'Application cache active in memory mode. Redis is configured but not selected because CACHE_BACKEND=memory.'
                 }
             });
         });

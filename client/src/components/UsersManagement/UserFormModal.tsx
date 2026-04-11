@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
+import type { TFunction } from 'i18next';
 import {
   BriefcaseIcon,
   BuildingOffice2Icon,
@@ -53,7 +54,7 @@ interface UserFormModalProps {
   firms: Firm[];
   canAssignSuperAdmin?: boolean;
   canChangeFirm?: boolean;
-  t: (key: string) => string;
+  t: TFunction;
 }
 
 const inputClassName = 'w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-gray-900 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100';

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const hookState = vi.hoisted(() => ({
+const hookState = vi.hoisted((): { value: any } => ({
   value: {
     settings: {
       llmAvailability: {},

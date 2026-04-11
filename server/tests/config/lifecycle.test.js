@@ -43,6 +43,8 @@ const mockDestroyGoogleapis = vi.fn();
 const mockDestroyMjml = vi.fn();
 const mockDestroySettingsCache = vi.fn(async () => {});
 const mockInitializeLLMAvailabilityState = vi.fn(async () => {});
+const mockSubscribeToCacheInvalidations = vi.fn(async () => {});
+const mockUnsubscribeFromCacheInvalidations = vi.fn(async () => {});
 const mockSafeLog = vi.fn();
 const mockHttpAgentDestroy = vi.fn();
 const mockHttpsAgentDestroy = vi.fn();
@@ -67,7 +69,8 @@ vi.mock('../../middleware/rateLimit.middleware.js', () => ({
 }));
 
 vi.mock('../../services/cache.service.js', () => ({
-    cleanupAllCaches: (...args) => mockCleanupAllCaches(...args)
+    cleanupAllCaches: (...args) => mockCleanupAllCaches(...args),
+    handleCacheInvalidationNotification: vi.fn()
 }));
 
 vi.mock('../../utils/fileCleanup.js', () => ({
@@ -164,6 +167,11 @@ vi.mock('../../services/llmAvailability.service.js', () => ({
     initializeLLMAvailabilityState: (...args) => mockInitializeLLMAvailabilityState(...args)
 }));
 
+vi.mock('../../services/cacheVersion.service.js', () => ({
+    subscribeToCacheInvalidations: (...args) => mockSubscribeToCacheInvalidations(...args),
+    unsubscribeFromCacheInvalidations: (...args) => mockUnsubscribeFromCacheInvalidations(...args)
+}));
+
 vi.mock('../../services/memoryMonitor.service.js', () => ({
     registerCacheCleanupFunctions: (...args) => mockRegisterCacheCleanupFunctions(...args),
     startMemoryMonitor: (...args) => mockStartMemoryMonitor(...args),
@@ -181,6 +189,13 @@ import { startServer } from '../../config/lifecycle.js';
 describe('Lifecycle config', () => {
     const originalExit = process.exit;
     const flushImmediate = () => new Promise((resolve) => setImmediate(resolve));
+    const listenMock = (server) => vi.fn((...args) => {
+        const callback = args[args.length - 1];
+        if (typeof callback === 'function') {
+            setImmediate(callback);
+        }
+        return server;
+    });
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -201,10 +216,7 @@ describe('Lifecycle config', () => {
         };
 
         const app = {
-            listen: vi.fn((port, cb) => {
-                setImmediate(cb);
-                return server;
-            })
+            listen: listenMock(server)
         };
 
         startServer(app, 'C:\\Users\\mail\\CascadeProjects\\ResumeConverter\\server');
@@ -249,10 +261,7 @@ describe('Lifecycle config', () => {
         };
 
         const app = {
-            listen: vi.fn((port, cb) => {
-                setImmediate(cb);
-                return server;
-            })
+            listen: listenMock(server)
         };
 
         const startedServer = startServer(app, 'C:\\Users\\mail\\CascadeProjects\\ResumeConverter\\server');
@@ -270,8 +279,39 @@ describe('Lifecycle config', () => {
         expect(mockCleanupAllCaches).toHaveBeenCalled();
         expect(mockStopPeriodicCleanup).toHaveBeenCalled();
         expect(mockStopBatchJobsWorker).toHaveBeenCalled();
+        expect(mockUnsubscribeFromCacheInvalidations).toHaveBeenCalled();
         expect(mockClosePool).toHaveBeenCalled();
         expect(process.exit).toHaveBeenCalledWith(0);
+    });
+
+    it('should start and stop cache invalidation listener when database init succeeds', async () => {
+        mockInitializeDatabase.mockResolvedValue(true);
+
+        const server = {
+            timeout: 0,
+            keepAliveTimeout: 0,
+            headersTimeout: 0,
+            close: vi.fn()
+        };
+
+        const app = {
+            listen: listenMock(server)
+        };
+
+        const startedServer = startServer(app, 'C:\\Users\\mail\\CascadeProjects\\ResumeConverter\\server');
+        await flushImmediate();
+        await flushImmediate();
+
+        expect(mockSubscribeToCacheInvalidations).toHaveBeenCalled();
+
+        process.exit = vi.fn();
+        server.close.mockImplementation((callback) => callback());
+
+        await startedServer.gracefulShutdown('SIGTERM', 0);
+        await flushImmediate();
+        await flushImmediate();
+
+        expect(mockUnsubscribeFromCacheInvalidations).toHaveBeenCalled();
     });
 
     it('should fail closed when server.close reports an error', async () => {
@@ -288,10 +328,7 @@ describe('Lifecycle config', () => {
         };
 
         const app = {
-            listen: vi.fn((port, cb) => {
-                setImmediate(cb);
-                return server;
-            })
+            listen: listenMock(server)
         };
 
         const startedServer = startServer(app, 'C:\\Users\\mail\\CascadeProjects\\ResumeConverter\\server');

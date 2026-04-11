@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useRef } from 'react';
-import type { Marker, NavigationControl, Popup, Map as MaplibreMap } from 'maplibre-gl';
+import { Marker, Popup, type NavigationControl, type Map as MaplibreMap } from 'maplibre-gl';
 
 import {
   MAP_STYLES,

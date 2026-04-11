@@ -115,8 +115,6 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
 // POST /api/templates - Create template
 router.post('/', authenticateToken, requireUserManager, validateBody(createTemplateSchema), async (req, res) => {
     try {
-        await invalidateTemplatesCaches();
-        
         const isAdmin = isUserAdmin(req);
         const userFirmId = await getUserFirmId(req);
 
@@ -155,6 +153,7 @@ router.post('/', authenticateToken, requireUserManager, validateBody(createTempl
         };
 
         const created = await templatesService.createTemplate(templateData);
+        await invalidateTemplatesCaches();
         
         // Map back to frontend format
         res.json(mapTemplateToFrontend(created));
@@ -174,8 +173,6 @@ router.post('/', authenticateToken, requireUserManager, validateBody(createTempl
 // PUT /api/templates/:id - Update template
 router.put('/:id', authenticateToken, requireUserManager, validateParams('id'), validateBody(updateTemplateSchema), async (req, res) => {
     try {
-        await invalidateTemplatesCaches();
-        
         const { id } = req.params;
         const isAdmin = isUserAdmin(req);
         const userFirmId = await getUserFirmId(req);
@@ -223,6 +220,7 @@ router.put('/:id', authenticateToken, requireUserManager, validateParams('id'), 
         };
 
         const updated = await templatesService.updateTemplate(id, templateData);
+        await invalidateTemplatesCaches();
         
         // Map back to frontend format
         res.json(mapTemplateToFrontend(updated));
@@ -286,8 +284,6 @@ router.delete('/:id', authenticateToken, requireUserManager, validateParams('id'
 // POST /api/templates/:id/duplicate - Duplicate template
 router.post('/:id/duplicate', authenticateToken, requireUserManager, validateParams('id'), async (req, res) => {
     try {
-        await invalidateTemplatesCaches();
-
         const { id } = req.params;
         const isAdmin = isUserAdmin(req);
         const userFirmId = await getUserFirmId(req);
@@ -319,6 +315,7 @@ router.post('/:id/duplicate', authenticateToken, requireUserManager, validatePar
         }
 
         const duplicated = await templatesService.duplicateTemplate(id, { firm_id: targetFirmId });
+        await invalidateTemplatesCaches();
         return res.status(201).json(mapTemplateToFrontend(duplicated));
     } catch (error) {
         if (error.statusCode === 404) {

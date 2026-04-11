@@ -1,146 +1,71 @@
 /**
  * Tags Cache Service
- * Owns in-memory cache state for tags aggregation
+ * Thin wrapper around the shared versioned cache namespace for tags aggregations.
  */
 
-import { safeLog } from '../utils/logger.backend.js';
+import { CACHE_KEYS, getNamedCacheStats, invalidateTagsCaches, tagsCache as sharedTagsCache } from './cache.service.js';
 
-const TAGS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
-const MAX_TAGS_CACHE_ENTRIES = 100;
+const CLEANED_TAG_KEYS = new Set();
+let hasEscoCache = false;
+let hasRawCache = false;
 
-const cleanedTagsCache = new Map();
-const cleanedTagsCacheTime = new Map();
-let escoTagsCache = null;
-let escoTagsCacheTime = 0;
-let tagsCacheCleanupInterval = null;
-
-function isEntryFresh(timestamp, ttlMs = TAGS_CACHE_TTL) {
-    return typeof timestamp === 'number' && (Date.now() - timestamp) < ttlMs;
+export async function getCachedRawTags(cacheKey) {
+    return sharedTagsCache.get(cacheKey, { scope: CACHE_KEYS.tags.RAW });
 }
 
-function evictOldestCleanedTagsEntry() {
-    const oldestKey = cleanedTagsCache.keys().next().value;
-    if (oldestKey !== undefined) {
-        cleanedTagsCache.delete(oldestKey);
-        cleanedTagsCacheTime.delete(oldestKey);
-    }
+export async function setCachedRawTags(cacheKey, result) {
+    hasRawCache = true;
+    return sharedTagsCache.set(cacheKey, result, { scope: CACHE_KEYS.tags.RAW });
 }
 
-function runTagsCacheCleanup() {
-    const now = Date.now();
-    let expiredCount = 0;
-
-    for (const [key, timestamp] of cleanedTagsCacheTime.entries()) {
-        if (now - timestamp > TAGS_CACHE_TTL * 2) {
-            cleanedTagsCache.delete(key);
-            cleanedTagsCacheTime.delete(key);
-            expiredCount++;
-        }
-    }
-
-    if (expiredCount > 0) {
-        safeLog('debug', 'Tags: cleaned tags cache auto-expired', { expiredCount });
-    }
-
-    if (escoTagsCacheTime && now - escoTagsCacheTime > TAGS_CACHE_TTL * 2) {
-        escoTagsCache = null;
-        escoTagsCacheTime = 0;
-        safeLog('debug', 'Tags: ESCO tags cache auto-expired');
-    }
+export async function getCachedCleanedTags(cacheKey) {
+    return sharedTagsCache.get(cacheKey, { scope: CACHE_KEYS.tags.CLEANED });
 }
 
-function clearCleanedTagsCache() {
-    cleanedTagsCache.clear();
-    cleanedTagsCacheTime.clear();
+export async function setCachedCleanedTags(cacheKey, result) {
+    CLEANED_TAG_KEYS.add(cacheKey);
+    return sharedTagsCache.set(cacheKey, result, { scope: CACHE_KEYS.tags.CLEANED });
 }
 
-function clearEscoTagsCache() {
-    escoTagsCache = null;
-    escoTagsCacheTime = 0;
+export async function getCachedEscoTags(cacheKey = 'admin') {
+    return sharedTagsCache.get(cacheKey, { scope: CACHE_KEYS.tags.ESCO });
 }
 
-export function getCachedCleanedTags(cacheKey) {
-    const cachedResult = cleanedTagsCache.get(cacheKey);
-    const cachedTime = cleanedTagsCacheTime.get(cacheKey);
-
-    if (!cachedResult || !cachedTime) {
-        return null;
-    }
-
-    if (!isEntryFresh(cachedTime)) {
-        cleanedTagsCache.delete(cacheKey);
-        cleanedTagsCacheTime.delete(cacheKey);
-        return null;
-    }
-
-    return cachedResult;
+export async function setCachedEscoTags(result, cacheKey = 'admin') {
+    hasEscoCache = true;
+    return sharedTagsCache.set(cacheKey, result, { scope: CACHE_KEYS.tags.ESCO });
 }
 
-export function setCachedCleanedTags(cacheKey, result) {
-    if (cleanedTagsCache.size >= MAX_TAGS_CACHE_ENTRIES) {
-        evictOldestCleanedTagsEntry();
-    }
-
-    cleanedTagsCache.set(cacheKey, result);
-    cleanedTagsCacheTime.set(cacheKey, Date.now());
+export async function invalidateTagsCache() {
+    CLEANED_TAG_KEYS.clear();
+    hasEscoCache = false;
+    hasRawCache = false;
+    await invalidateTagsCaches();
 }
 
-export function getCachedEscoTags() {
-    if (!escoTagsCache || !escoTagsCacheTime) {
-        return null;
-    }
-
-    if (!isEntryFresh(escoTagsCacheTime)) {
-        clearEscoTagsCache();
-        return null;
-    }
-
-    return escoTagsCache;
+export async function destroyTagsCache() {
+    CLEANED_TAG_KEYS.clear();
+    hasEscoCache = false;
+    hasRawCache = false;
 }
 
-export function setCachedEscoTags(result) {
-    escoTagsCache = result;
-    escoTagsCacheTime = Date.now();
-}
-
-export function invalidateTagsCache() {
-    clearCleanedTagsCache();
-    clearEscoTagsCache();
-    safeLog('debug', 'Tags: cache invalidated');
-}
-
-export function destroyTagsCache() {
-    if (tagsCacheCleanupInterval) {
-        clearInterval(tagsCacheCleanupInterval);
-        tagsCacheCleanupInterval = null;
-    }
-
-    clearCleanedTagsCache();
-    clearEscoTagsCache();
-    safeLog('info', 'Tags: cache destroyed');
-}
-
-export function getTagsCacheStats() {
+export async function getTagsCacheStats() {
+    const cache = await getNamedCacheStats('tags');
     return {
         cleanedTags: {
-            size: cleanedTagsCache.size,
-            maxSize: MAX_TAGS_CACHE_ENTRIES,
-            keys: [...cleanedTagsCache.keys()]
+            size: CLEANED_TAG_KEYS.size,
+            keys: [...CLEANED_TAG_KEYS]
         },
         escoTags: {
-            hasData: !!escoTagsCache,
-            ageMs: escoTagsCacheTime ? Date.now() - escoTagsCacheTime : null
+            hasData: hasEscoCache
         },
-        ttlMinutes: TAGS_CACHE_TTL / (60 * 1000)
+        rawTags: {
+            hasData: hasRawCache
+        },
+        cache
     };
 }
 
-export function startTagsCacheCleanup(intervalMs = TAGS_CACHE_TTL) {
-    if (tagsCacheCleanupInterval) {
-        return tagsCacheCleanupInterval;
-    }
-
-    tagsCacheCleanupInterval = setInterval(runTagsCacheCleanup, intervalMs);
-    return tagsCacheCleanupInterval;
+export function startTagsCacheCleanup() {
+    return null;
 }
-

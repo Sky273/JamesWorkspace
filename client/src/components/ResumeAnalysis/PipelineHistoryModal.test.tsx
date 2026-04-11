@@ -34,16 +34,18 @@ describe('PipelineHistoryModal', () => {
         history={[
           {
             id: 'history-1',
+            pipeline_id: 'pipeline-1',
             from_stage: 'stage-1',
             to_stage: 'stage-2',
+            changed_by: 'user-1',
             created_at: '2026-04-10T12:00:00.000Z',
             changed_by_name: 'Luc',
             notes: 'Passed technical screening',
           },
         ]}
         stages={[
-          { id: 'stage-1', label: 'Nouveau', labelEn: 'New', color: '#111111' },
-          { id: 'stage-2', label: 'Préselection', labelEn: 'Screened', color: '#222222' },
+          { id: 'stage-1', label: 'Nouveau', labelEn: 'New', order: 1, color: '#111111' },
+          { id: 'stage-2', label: 'Preselection', labelEn: 'Screened', order: 2, color: '#222222' },
         ]}
         isEnglish={false}
         formatDate={(value) => `formatted:${value}`}
@@ -52,7 +54,7 @@ describe('PipelineHistoryModal', () => {
     );
 
     expect(screen.getByText('Nouveau')).toBeInTheDocument();
-    expect(screen.getByText('Préselection')).toBeInTheDocument();
+    expect(screen.getByText('Preselection')).toBeInTheDocument();
     expect(screen.getByText('Passed technical screening')).toBeInTheDocument();
     expect(screen.getByText(/formatted:2026-04-10T12:00:00.000Z/)).toBeInTheDocument();
   });

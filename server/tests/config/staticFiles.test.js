@@ -143,4 +143,5 @@ describe('configureStaticFiles', () => {
         expect(res.headers['cache-control']).toBe('no-cache, max-age=0, must-revalidate');
         expect(res.text).toContain('<!doctype html>');
     });
+
 });

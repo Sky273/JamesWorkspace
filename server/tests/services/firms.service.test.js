@@ -13,6 +13,21 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+const { mockFirmsCache } = vi.hoisted(() => ({
+    mockFirmsCache: {
+        getOrLoad: vi.fn(async (_key, loader) => loader())
+    }
+}));
+
+vi.mock('../../services/cache.service.js', () => ({
+    firmsCache: mockFirmsCache,
+    CACHE_KEYS: {
+        firms: {
+            ALL_FIRMS: 'all'
+        }
+    }
+}));
+
 import { query } from '../../config/database.js';
 import {
     listFirms,
@@ -29,6 +44,7 @@ import {
 describe('Firms Service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockFirmsCache.getOrLoad.mockImplementation(async (_key, loader) => loader());
     });
 
     describe('listFirms', () => {

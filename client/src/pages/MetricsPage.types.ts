@@ -39,8 +39,17 @@ export interface CacheAdminMetrics {
   cacheBackend?: {
     configuredBackend?: string;
     backend?: string;
+    effectiveBackend?: string;
+    cacheLayer?: string | null;
+    applicationCacheActive?: boolean;
     connected?: boolean | null;
     fallbackReason?: string | null;
+    message?: string | null;
+    backendBreakdown?: Record<string, {
+      caches?: number;
+      activityScore?: number;
+      size?: number;
+    }> | null;
   };
   cacheSummary?: {
     hits?: number;

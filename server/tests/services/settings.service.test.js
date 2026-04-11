@@ -86,10 +86,10 @@ import {
 import { updateWithTimeout, createWithTimeout } from '../../utils/postgresHelpers.js';
 
 describe('Settings Service', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
         vi.clearAllMocks();
         settingsCacheStore.clear();
-        invalidateSettingsCache(); // Clear cache before each test
+        await invalidateSettingsCache();
     });
 
     afterEach(() => {
@@ -208,7 +208,7 @@ describe('Settings Service', () => {
             await getLLMSettings();
             
             // Invalidate and cause error
-            invalidateSettingsCache();
+            await invalidateSettingsCache();
             selectWithTimeout.mockRejectedValueOnce(new Error('DB error'));
             
             await expect(getLLMSettings()).rejects.toMatchObject({

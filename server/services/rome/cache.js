@@ -1,3 +1,5 @@
+import { buildApplicationCacheMetrics } from '../cacheMetrics.service.js';
+
 const METIERS_CACHE_TTL = 10 * 60 * 1000;
 const METIERS_CACHE_MAX_SIZE = 5000;
 
@@ -92,12 +94,12 @@ function destroyMetiersCache(log) {
 }
 
 function getMetiersCacheStats() {
-    return {
+    return buildApplicationCacheMetrics({
         size: metiersCache?.length || 0,
         maxSize: METIERS_CACHE_MAX_SIZE,
-        ttlMinutes: METIERS_CACHE_TTL / (60 * 1000),
-        ageMs: metiersCacheTime ? Date.now() - metiersCacheTime : null
-    };
+        ageMs: metiersCacheTime ? Date.now() - metiersCacheTime : null,
+        ttlMs: METIERS_CACHE_TTL
+    });
 }
 
 export {

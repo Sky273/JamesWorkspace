@@ -12,9 +12,9 @@ vi.mock('../../services/cache.service.js', () => ({
     templatesCache: { size: () => 3 },
     firmsCache: { size: () => 2 },
     getCacheRegistryStats: vi.fn(() => ({
-        settings: { name: 'settings', size: 5, backend: 'redis', effectiveBackend: 'redis', connected: true, disabledReason: null },
-        templates: { name: 'templates', size: 3, backend: 'redis', effectiveBackend: 'redis', connected: true, disabledReason: null },
-        firms: { name: 'firms', size: 2, backend: 'redis', effectiveBackend: 'redis', connected: true, disabledReason: null }
+        settings: { name: 'settings', size: 5, backend: 'redis', configuredBackend: 'redis', effectiveBackend: 'redis', cacheLayer: 'application', applicationCacheActive: true, connected: true, disabledReason: null, message: 'Application cache active with Redis as storage backend.' },
+        templates: { name: 'templates', size: 3, backend: 'redis', configuredBackend: 'redis', effectiveBackend: 'redis', cacheLayer: 'application', applicationCacheActive: true, connected: true, disabledReason: null, message: 'Application cache active with Redis as storage backend.' },
+        firms: { name: 'firms', size: 2, backend: 'redis', configuredBackend: 'redis', effectiveBackend: 'redis', cacheLayer: 'application', applicationCacheActive: true, connected: true, disabledReason: null, message: 'Application cache active with Redis as storage backend.' }
     }))
 }));
 
@@ -207,8 +207,13 @@ describe('Health Routes', () => {
             expect(response.checks.minimax.status).toBe('configured');
             expect(response.checks.cache.status).toBe('ok');
             expect(response.checks.cache.backend).toBe('redis');
+            expect(response.checks.cache.configuredBackend).toBe('redis');
+            expect(response.checks.cache.effectiveBackend).toBe('redis');
+            expect(response.checks.cache.cacheLayer).toBe('application');
+            expect(response.checks.cache.applicationCacheActive).toBe(true);
             expect(response.checks.cache.connected).toBe(true);
             expect(response.checks.cache.fallbackReason).toBeNull();
+            expect(response.checks.cache.message).toBe('Application cache active with Redis as storage backend.');
             expect(response.checks.ocr.status).toBe('ok');
             expect(response.checks.ocr.preferredEngine).toBe('tesseract-cli');
             expect(response.checks.ocr.advancedBackend).toBe('paddleocr');

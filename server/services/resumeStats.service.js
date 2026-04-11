@@ -6,6 +6,7 @@
 
 import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { buildApplicationCacheMetrics } from './cacheMetrics.service.js';
 
 // ============================================
 // STATS CACHE (30 seconds TTL per firm)
@@ -60,11 +61,11 @@ export function invalidateStatsCache(firmId = null) {
  * Get stats cache statistics
  */
 export function getStatsCacheStats() {
-    return {
+    return buildApplicationCacheMetrics({
         size: statsCache.size,
         maxSize: MAX_STATS_CACHE_ENTRIES,
-        ttlSeconds: STATS_CACHE_TTL / 1000
-    };
+        ttlMs: STATS_CACHE_TTL
+    });
 }
 
 // ============================================

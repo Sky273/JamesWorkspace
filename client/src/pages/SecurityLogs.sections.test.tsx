@@ -56,10 +56,8 @@ describe('SecurityLogs sections', () => {
       <SecurityStatsGrid
         stats={{
           total: 12,
-          recent: { lastHour: 2, last24h: 5, last7Days: 0 },
+          recent: { lastHour: 2, last24h: 5 },
           byLevel: { ERROR: 3, INFO: 9 },
-          bySource: {},
-          byEvent: {},
         }}
         onResetFilters={onResetFilters}
         t={t}

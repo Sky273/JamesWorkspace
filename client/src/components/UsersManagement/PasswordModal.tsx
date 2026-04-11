@@ -3,13 +3,14 @@
  */
 
 import Modal from './Modal';
+import type { TFunction } from 'i18next';
 
 interface PasswordModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: () => void;
   userName: string;
-  t: (key: string) => string;
+  t: TFunction;
 }
 
 const PasswordModal = ({ isOpen, onClose, onSubmit, userName, t }: PasswordModalProps): JSX.Element => {

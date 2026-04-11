@@ -114,7 +114,6 @@ router.get('/:id', authenticateToken, requireAdmin, validateParams('id'), async 
 // POST /api/firms - Create firm
 router.post('/', authenticateToken, requireAdmin, validateBody(createFirmSchema), async (req, res) => {
     try {
-        await invalidateFirmsCaches();
         const normalizedPayload = normalizeFirmPayload(req.body);
         
         const firmData = {
@@ -128,6 +127,7 @@ router.post('/', authenticateToken, requireAdmin, validateBody(createFirmSchema)
         }
 
         const firm = await firmsService.createFirm(firmData);
+        await invalidateFirmsCaches();
         res.json(firm);
     } catch (error) {
         // Check for unique constraint violation
@@ -146,7 +146,6 @@ router.post('/', authenticateToken, requireAdmin, validateBody(createFirmSchema)
 // PUT /api/firms/:id - Update firm
 router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), validateBody(updateFirmSchema), async (req, res) => {
     try {
-        await invalidateFirmsCaches();
         const normalizedPayload = normalizeFirmPayload(req.body);
         
         const { id } = req.params;
@@ -161,6 +160,7 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
         }
 
         const firm = await firmsService.updateFirm(id, firmData);
+        await invalidateFirmsCaches();
         res.json(firm);
     } catch (error) {
         if (error.statusCode === 404) {

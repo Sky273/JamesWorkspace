@@ -10,6 +10,7 @@ import {
     buildPublicHealthResponse,
     buildServerCheck,
     getCacheBackendSummary,
+    getApplicationCacheDiagnosticSummary,
     getCacheDiagnosticSummary,
     getCacheUsageSummary,
     getConfiguredCheck,
@@ -23,29 +24,91 @@ import {
 describe('healthRouteHelpers', () => {
     it('summarizes cache backends and diagnostics', () => {
         const registry = {
-            settings: { effectiveBackend: 'redis', connected: true, disabledReason: null },
-            templates: { effectiveBackend: 'redis', connected: true, disabledReason: null }
+            settings: {
+                configuredBackend: 'redis',
+                effectiveBackend: 'redis',
+                cacheLayer: 'application',
+                applicationCacheActive: true,
+                connected: true,
+                disabledReason: null,
+                message: 'Application cache active with Redis as storage backend.'
+            },
+            templates: {
+                configuredBackend: 'redis',
+                effectiveBackend: 'redis',
+                cacheLayer: 'application',
+                applicationCacheActive: true,
+                connected: true,
+                disabledReason: null,
+                message: 'Application cache active with Redis as storage backend.'
+            }
         };
 
         expect(getCacheBackendSummary(registry)).toBe('redis');
         expect(getCacheDiagnosticSummary(registry)).toEqual({
             backend: 'redis',
+            configuredBackend: 'redis',
+            effectiveBackend: 'redis',
+            cacheLayer: 'application',
+            applicationCacheActive: true,
             connected: true,
-            fallbackReason: null
+            fallbackReason: null,
+            message: 'Application cache active with Redis as storage backend.'
         });
     });
 
     it('summarizes real cache usage for memory backends', () => {
         const registry = {
-            settings: { backend: 'memory', hits: 4, misses: 1, sets: 3, invalidations: 1, size: 2 },
-            templates: { backend: 'memory', hits: 2, misses: 3, sets: 5, invalidations: 0, size: 4 },
-            firms: { backend: 'memory', hits: 1, misses: 0, sets: 2, invalidations: 1, size: 1 }
+            settings: {
+                backend: 'memory',
+                configuredBackend: 'memory',
+                effectiveBackend: 'memory',
+                cacheLayer: 'application',
+                applicationCacheActive: true,
+                message: 'Application cache active in memory mode.',
+                hits: 4,
+                misses: 1,
+                sets: 3,
+                invalidations: 1,
+                size: 2
+            },
+            templates: {
+                backend: 'memory',
+                configuredBackend: 'memory',
+                effectiveBackend: 'memory',
+                cacheLayer: 'application',
+                applicationCacheActive: true,
+                message: 'Application cache active in memory mode.',
+                hits: 2,
+                misses: 3,
+                sets: 5,
+                invalidations: 0,
+                size: 4
+            },
+            firms: {
+                backend: 'memory',
+                configuredBackend: 'memory',
+                effectiveBackend: 'memory',
+                cacheLayer: 'application',
+                applicationCacheActive: true,
+                message: 'Application cache active in memory mode.',
+                hits: 1,
+                misses: 0,
+                sets: 2,
+                invalidations: 1,
+                size: 1
+            }
         };
 
         expect(getCacheDiagnosticSummary(registry)).toEqual({
             backend: 'memory',
+            configuredBackend: 'memory',
+            effectiveBackend: 'memory',
+            cacheLayer: 'application',
+            applicationCacheActive: true,
             connected: null,
-            fallbackReason: null
+            fallbackReason: null,
+            message: 'Application cache active in memory mode.'
         });
         expect(getCacheUsageSummary(registry)).toEqual({
             hits: 7,
@@ -55,6 +118,61 @@ describe('healthRouteHelpers', () => {
             size: 7,
             totalLookups: 11,
             hitRate: 7 / 11
+        });
+    });
+
+    it('summarizes application cache diagnostics across detailed caches', () => {
+        const registry = {
+            templates: {
+                configuredBackend: 'redis',
+                effectiveBackend: 'redis',
+                storageBackend: 'redis',
+                cacheLayer: 'application',
+                applicationCacheActive: true,
+                connected: true,
+                size: 1,
+                sets: 1,
+                message: 'Application cache active with Redis as storage backend.'
+            }
+        };
+        const caches = {
+            settings: {
+                cache: {
+                    configuredBackend: 'redis',
+                    effectiveBackend: 'memory',
+                    storageBackend: 'memory',
+                    cacheLayer: 'application',
+                    applicationCacheActive: true,
+                    connected: true,
+                    size: 6,
+                    message: 'Application cache active in memory mode. Redis is configured but not selected because CACHE_BACKEND=memory.'
+                }
+            },
+            marketFacts: {
+                configuredBackend: 'redis',
+                effectiveBackend: 'memory',
+                storageBackend: 'memory',
+                cacheLayer: 'application',
+                applicationCacheActive: true,
+                connected: null,
+                size: 8,
+                message: 'Application cache active in memory mode. This cache remains process-local and does not use Redis.'
+            }
+        };
+
+        expect(getApplicationCacheDiagnosticSummary({ cacheRegistry: registry, caches })).toEqual({
+            backend: 'memory',
+            configuredBackend: 'redis',
+            effectiveBackend: 'memory',
+            cacheLayer: 'application',
+            applicationCacheActive: true,
+            connected: true,
+            fallbackReason: null,
+            message: 'Application cache active in memory mode. Redis is configured and reachable, but the active cache paths are currently using in-process memory storage.',
+            backendBreakdown: {
+                memory: { caches: 2, activityScore: 14, size: 14 },
+                redis: { caches: 1, activityScore: 2, size: 1 }
+            }
         });
     });
 
@@ -108,7 +226,16 @@ describe('healthRouteHelpers', () => {
 
     it('builds cache and OCR payloads', () => {
         expect(buildCacheCheck({
-            cacheDiagnostics: { backend: 'redis', connected: true, fallbackReason: null },
+            cacheDiagnostics: {
+                backend: 'redis',
+                configuredBackend: 'redis',
+                effectiveBackend: 'redis',
+                cacheLayer: 'application',
+                applicationCacheActive: true,
+                connected: true,
+                fallbackReason: null,
+                message: 'Application cache active with Redis as storage backend.'
+            },
             settingsCacheSize: 1,
             templatesCacheSize: 2,
             firmsCacheSize: 3,
@@ -116,6 +243,11 @@ describe('healthRouteHelpers', () => {
         })).toMatchObject({
             status: 'ok',
             backend: 'redis',
+            configuredBackend: 'redis',
+            effectiveBackend: 'redis',
+            cacheLayer: 'application',
+            applicationCacheActive: true,
+            message: 'Application cache active with Redis as storage backend.',
             settings: 1,
             templates: 2,
             firms: 3

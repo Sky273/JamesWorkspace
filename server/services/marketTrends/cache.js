@@ -7,6 +7,7 @@ import { safeLog } from '../../utils/logger.backend.js';
 import { query as dbQuery } from '../../config/database.js';
 import { fetchMetadataForIds } from './queries.js';
 import { clearTokenCache } from './apiClient.js';
+import { buildApplicationCacheMetrics } from '../cacheMetrics.service.js';
 
 // PostgreSQL table name
 const MARKET_TRENDS_TABLE = 'market_trends';
@@ -148,14 +149,16 @@ export function destroyTrendsCache() {
  * Get trends cache statistics
  */
 export function getTrendsCacheStats() {
-    return {
+    return buildApplicationCacheMetrics({
         size: trendsLightCache?.length || 0,
         maxSize: TRENDS_CACHE_MAX_SIZE,
-        ttlMinutes: TRENDS_CACHE_TTL / (60 * 1000),
         ageMs: trendsCacheTime ? Date.now() - trendsCacheTime : null,
-        hasFilterOptions: !!filterOptionsCache,
-        hasSummary: !!summaryCache
-    };
+        ttlMs: TRENDS_CACHE_TTL,
+        extra: {
+            hasFilterOptions: !!filterOptionsCache,
+            hasSummary: !!summaryCache
+        }
+    });
 }
 
 /**

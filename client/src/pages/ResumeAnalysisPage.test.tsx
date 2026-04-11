@@ -45,7 +45,13 @@ let resumeContextValue: {
 };
 
 let routeParams = { id: 'resume-1' };
-let locationState: { from?: string } | null = null;
+let locationState: {
+  from?: string;
+  dealReturnContext?: {
+    dealId: string;
+    scrollY: number;
+  };
+} | null = null;
 
 vi.mock('../context/ResumeContext', () => ({
   useResume: () => resumeContextValue,

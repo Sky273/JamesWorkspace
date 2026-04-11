@@ -6,6 +6,7 @@
 
 import { query } from '../config/database.js';
 import { escapeLike } from '../utils/postgresHelpers.js';
+import { firmsCache, CACHE_KEYS } from './cache.service.js';
 
 /**
  * Allowed column names for dynamic INSERT/UPDATE on the firms table.
@@ -22,39 +23,47 @@ const ALLOWED_COLUMNS = new Set(['name', 'status', 'logo_url']);
  * @returns {Promise<{firms: Array, hasMore: boolean, totalCount: number|null}>}
  */
 export async function listFirms({ search, page = 1, limit = 100 } = {}) {
-    const offset = (page - 1) * limit;
-    const conditions = [];
-    const params = [];
-    let paramIndex = 1;
+    const cacheKey = JSON.stringify({
+        search: search || '',
+        page,
+        limit
+    });
 
-    if (search) {
-        conditions.push(`LOWER(name) LIKE $${paramIndex}`);
-        params.push(`%${escapeLike(search.toLowerCase())}%`);
-        paramIndex++;
-    }
+    return firmsCache.getOrLoad(cacheKey, async () => {
+        const offset = (page - 1) * limit;
+        const conditions = [];
+        const params = [];
+        let paramIndex = 1;
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+        if (search) {
+            conditions.push(`LOWER(name) LIKE $${paramIndex}`);
+            params.push(`%${escapeLike(search.toLowerCase())}%`);
+            paramIndex++;
+        }
 
-    // Fetch one extra to check hasMore
-    const dataResult = await query(
-        `SELECT * FROM firms ${whereClause} ORDER BY name ASC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-        [...params, limit + 1, offset]
-    );
+        const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    const hasMore = dataResult.rows.length > limit;
-    const firms = hasMore ? dataResult.rows.slice(0, limit) : dataResult.rows;
-
-    // Get total count only on first page
-    let totalCount = null;
-    if (page === 1) {
-        const countResult = await query(
-            `SELECT COUNT(*) as count FROM firms ${whereClause}`,
-            params
+        const dataResult = await query(
+            `SELECT * FROM firms ${whereClause} ORDER BY name ASC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+            [...params, limit + 1, offset]
         );
-        totalCount = parseInt(countResult.rows[0].count);
-    }
 
-    return { firms, hasMore, totalCount };
+        const hasMore = dataResult.rows.length > limit;
+        const firms = hasMore ? dataResult.rows.slice(0, limit) : dataResult.rows;
+
+        let totalCount = null;
+        if (page === 1) {
+            const countResult = await query(
+                `SELECT COUNT(*) as count FROM firms ${whereClause}`,
+                params
+            );
+            totalCount = parseInt(countResult.rows[0].count, 10);
+        }
+
+        return { firms, hasMore, totalCount };
+    }, {
+        scope: CACHE_KEYS.firms.ALL_FIRMS
+    });
 }
 
 /**
@@ -64,13 +73,17 @@ export async function listFirms({ search, page = 1, limit = 100 } = {}) {
  * @throws {Object} error with statusCode 404
  */
 export async function getFirmById(id) {
-    const result = await query('SELECT * FROM firms WHERE id = $1', [id]);
-    if (result.rows.length === 0) {
-        const err = new Error('Firm not found');
-        err.statusCode = 404;
-        throw err;
-    }
-    return result.rows[0];
+    return firmsCache.getOrLoad(`detail:${id}`, async () => {
+        const result = await query('SELECT * FROM firms WHERE id = $1', [id]);
+        if (result.rows.length === 0) {
+            const err = new Error('Firm not found');
+            err.statusCode = 404;
+            throw err;
+        }
+        return result.rows[0];
+    }, {
+        scope: CACHE_KEYS.firms.ALL_FIRMS
+    });
 }
 
 /**

@@ -41,6 +41,26 @@ vi.mock('../../services/escoService.js', () => ({
     processCleanedTagsToEsco: vi.fn().mockResolvedValue({ skills: [], industries: [], tools: [], softSkills: [] })
 }));
 
+const mockGetCachedRawTags = vi.fn(async () => null);
+const mockSetCachedRawTags = vi.fn(async (_key, value) => value);
+const mockGetCachedCleanedTags = vi.fn(async () => null);
+const mockSetCachedCleanedTags = vi.fn(async (_key, value) => value);
+const mockGetCachedEscoTags = vi.fn(async () => null);
+const mockSetCachedEscoTags = vi.fn(async (_value) => undefined);
+const mockInvalidateTagsCache = vi.fn(async () => undefined);
+vi.mock('../../services/tagsCache.service.js', () => ({
+    destroyTagsCache: vi.fn(),
+    getCachedRawTags: (...args) => mockGetCachedRawTags(...args),
+    setCachedRawTags: (...args) => mockSetCachedRawTags(...args),
+    getCachedCleanedTags: (...args) => mockGetCachedCleanedTags(...args),
+    setCachedCleanedTags: (...args) => mockSetCachedCleanedTags(...args),
+    getCachedEscoTags: (...args) => mockGetCachedEscoTags(...args),
+    setCachedEscoTags: (...args) => mockSetCachedEscoTags(...args),
+    getTagsCacheStats: vi.fn(async () => ({})),
+    invalidateTagsCache: (...args) => mockInvalidateTagsCache(...args),
+    startTagsCacheCleanup: vi.fn()
+}));
+
 // Mock logger
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn(),
@@ -95,10 +115,10 @@ describe('Tags Routes', () => {
     let app;
     const authHeader = { Authorization: 'Bearer valid-token', 'x-test-role': 'admin' };
 
-    beforeEach(() => {
+    beforeEach(async () => {
         vi.clearAllMocks();
         mockGetUserFirmId.mockResolvedValue('firm-123');
-        invalidateTagsCache();
+        await invalidateTagsCache();
         app = createTestApp();
     });
 

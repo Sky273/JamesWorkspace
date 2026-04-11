@@ -6,6 +6,7 @@
 
 import { query } from '../config/database.js';
 import { escapeLike } from '../utils/postgresHelpers.js';
+import { templatesCache, CACHE_KEYS } from './cache.service.js';
 
 /**
  * Allowed column names for dynamic INSERT/UPDATE on the templates table.
@@ -31,58 +32,69 @@ const ALLOWED_COLUMNS = new Set([
 export async function listTemplates({ isAdmin, userFirmId, search, status, page = 1, limit = 100 }) {
     const normalizedPage = Math.max(1, Number.isFinite(page) ? page : 1);
     const normalizedLimit = Math.max(1, Math.min(Number.isFinite(limit) ? limit : 100, 100));
-    const offset = (normalizedPage - 1) * normalizedLimit;
-    const conditions = [];
-    const params = [];
-    let paramIndex = 1;
+    const cacheKey = JSON.stringify({
+        isAdmin: !!isAdmin,
+        userFirmId: userFirmId || null,
+        search: search || '',
+        status: status || 'all',
+        page: normalizedPage,
+        limit: normalizedLimit
+    });
 
-    // Firm filter: non-admins see only their firm's templates
-    if (!isAdmin) {
-        if (userFirmId) {
-            conditions.push(`t.firm_id = $${paramIndex}`);
-            params.push(userFirmId);
-            paramIndex++;
-        } else {
-            conditions.push('1 = 0');
+    return templatesCache.getOrLoad(cacheKey, async () => {
+        const offset = (normalizedPage - 1) * normalizedLimit;
+        const conditions = [];
+        const params = [];
+        let paramIndex = 1;
+
+        // Firm filter: non-admins see only their firm's templates plus globals
+        if (!isAdmin) {
+            if (userFirmId) {
+                conditions.push(`(t.firm_id = $${paramIndex} OR t.firm_id IS NULL)`);
+                params.push(userFirmId);
+                paramIndex++;
+            } else {
+                conditions.push('t.firm_id IS NULL');
+            }
         }
-    }
 
-    if (status && status !== 'all') {
-        conditions.push(`t.status = $${paramIndex}`);
-        params.push(status.toLowerCase());
-        paramIndex++;
-    }
+        if (status && status !== 'all') {
+            conditions.push(`t.status = $${paramIndex}`);
+            params.push(status.toLowerCase());
+            paramIndex++;
+        }
 
-    if (search) {
-        conditions.push(`(LOWER(t.name) LIKE $${paramIndex} OR LOWER(t.description) LIKE $${paramIndex})`);
-        params.push(`%${escapeLike(search.toLowerCase())}%`);
-        paramIndex++;
-    }
+        if (search) {
+            conditions.push(`(LOWER(t.name) LIKE $${paramIndex} OR LOWER(t.description) LIKE $${paramIndex})`);
+            params.push(`%${escapeLike(search.toLowerCase())}%`);
+            paramIndex++;
+        }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+        const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    // Count total
-    const countResult = await query(
-        `SELECT COUNT(*) as total FROM templates t ${whereClause}`,
-        params
-    );
-    const totalCount = parseInt(countResult.rows[0]?.total || 0);
+        const countResult = await query(
+            `SELECT COUNT(*) as total FROM templates t ${whereClause}`,
+            params
+        );
+        const totalCount = parseInt(countResult.rows[0]?.total || 0, 10);
 
-    // Fetch with firm name join
-    const dataResult = await query(
-        `SELECT t.*, f.name as firm_name
-         FROM templates t
-         LEFT JOIN firms f ON t.firm_id = f.id
-         ${whereClause}
-         ORDER BY t.name ASC
-         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-        [...params, normalizedLimit + 1, offset]
-    );
+        const dataResult = await query(
+            `SELECT t.*, f.name as firm_name
+             FROM templates t
+             LEFT JOIN firms f ON t.firm_id = f.id
+             ${whereClause}
+             ORDER BY t.name ASC
+             LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+            [...params, normalizedLimit + 1, offset]
+        );
 
-    const hasMore = dataResult.rows.length > normalizedLimit;
-    const templates = hasMore ? dataResult.rows.slice(0, normalizedLimit) : dataResult.rows;
+        const hasMore = dataResult.rows.length > normalizedLimit;
+        const templates = hasMore ? dataResult.rows.slice(0, normalizedLimit) : dataResult.rows;
 
-    return { templates, totalCount, hasMore };
+        return { templates, totalCount, hasMore };
+    }, {
+        scope: CACHE_KEYS.templates.ALL_TEMPLATES
+    });
 }
 
 /**
@@ -92,13 +104,17 @@ export async function listTemplates({ isAdmin, userFirmId, search, status, page 
  * @throws {Object} error with statusCode 404
  */
 export async function getTemplateById(id) {
-    const result = await query('SELECT * FROM templates WHERE id = $1', [id]);
-    if (result.rows.length === 0) {
-        const err = new Error('Template not found');
-        err.statusCode = 404;
-        throw err;
-    }
-    return result.rows[0];
+    return templatesCache.getOrLoad(`detail:${id}`, async () => {
+        const result = await query('SELECT * FROM templates WHERE id = $1', [id]);
+        if (result.rows.length === 0) {
+            const err = new Error('Template not found');
+            err.statusCode = 404;
+            throw err;
+        }
+        return result.rows[0];
+    }, {
+        scope: CACHE_KEYS.templates.ALL_TEMPLATES
+    });
 }
 
 export async function getTemplateByIdWithAccess(id, { isAdmin, userFirmId }) {

@@ -12,10 +12,12 @@ import { processCleanedTagsToEsco } from '../services/escoService.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
 import {
     destroyTagsCache,
+    getCachedRawTags,
     getCachedCleanedTags,
     getCachedEscoTags,
     getTagsCacheStats,
     invalidateTagsCache,
+    setCachedRawTags,
     setCachedCleanedTags,
     setCachedEscoTags,
     startTagsCacheCleanup
@@ -80,8 +82,16 @@ router.get('/', authenticateToken, async (req, res) => {
             return;
         }
 
+        const cacheKey = access.isAdmin ? 'admin' : `firm_${access.userFirmId}`;
+        const cachedResult = await getCachedRawTags(cacheKey);
+        if (cachedResult) {
+            return res.json(cachedResult);
+        }
+
         const row = await aggregateRawTags(access);
-        res.json(buildStandardTagsResponse(row));
+        const result = buildStandardTagsResponse(row);
+        await setCachedRawTags(cacheKey, result);
+        res.json(result);
     } catch (error) {
         safeLog('error', 'Error fetching tags', { error: error.message });
         res.status(500).json({ error: 'Failed to fetch tags' });
@@ -105,7 +115,7 @@ router.get('/cleaned', applyTagsReadHeaders, authenticateToken, async (req, res)
             : `firm_${access.userFirmId}_${scope}`;
         
         // Return cached cleaned tags if available and not expired (per-firm cache)
-        const cachedResult = getCachedCleanedTags(cacheKey);
+        const cachedResult = await getCachedCleanedTags(cacheKey);
         if (cachedResult) {
             return res.json(cachedResult);
         }
@@ -114,7 +124,7 @@ router.get('/cleaned', applyTagsReadHeaders, authenticateToken, async (req, res)
         const result = buildStandardTagsResponse(row);
         
         // Update per-firm cache with timestamp (enforce max size)
-        setCachedCleanedTags(cacheKey, result);
+        await setCachedCleanedTags(cacheKey, result);
         
         res.json(result);
     } catch (error) {
@@ -195,7 +205,7 @@ router.post('/cleaned/recalculate', authenticateToken, requireUserManager, async
         }
         
         // Clear cache to force refresh
-        invalidateTagsCache();
+        await invalidateTagsCache();
         
         safeLog('info', 'Cleaned tags recalculated', { 
             totalResumes: totalProcessed,
@@ -226,7 +236,7 @@ router.get('/esco', authenticateToken, async (req, res) => {
 
         // Return cached ESCO tags if available and not expired
         if (access.isAdmin) {
-            const cachedEscoTags = getCachedEscoTags();
+            const cachedEscoTags = await getCachedEscoTags();
             if (cachedEscoTags) {
                 return res.json(cachedEscoTags);
             }
@@ -246,7 +256,7 @@ router.get('/esco', authenticateToken, async (req, res) => {
         
         // Update cache with timestamp
         if (access.isAdmin) {
-            setCachedEscoTags(result);
+            await setCachedEscoTags(result);
         }
         
         res.json(result);
@@ -328,7 +338,7 @@ router.post('/esco/recalculate', authenticateToken, requireUserManager, validate
         }
         
         // Clear cache to force refresh
-        invalidateTagsCache();
+        await invalidateTagsCache();
         
         safeLog('info', 'ESCO tags recalculated', { 
             totalResumes: totalProcessed,
@@ -381,7 +391,7 @@ router.put('/rename', authenticateToken, requireUserManager, validateBody(rename
         const updatedCount = result.length;
 
         // Clear caches
-        invalidateTagsCache();
+        await invalidateTagsCache();
 
         safeLog('info', 'Tag renamed via SQL', { 
             category, 

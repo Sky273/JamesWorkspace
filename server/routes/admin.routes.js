@@ -5,7 +5,7 @@ import { validateQuery, validators } from '../utils/validation.js';
 import { getSecurityLogs, getSecurityLogsCount } from '../services/security.service.js';
 import { getProxyLogs, getProxyLogsCount, getProxyLogsStats, safeLog } from '../utils/logger.backend.js';
 import { listUsers } from '../services/users.service.js';
-import { getCacheDiagnosticSummary, getCacheUsageSummary } from './healthRouteHelpers.js';
+import { getApplicationCacheDiagnosticSummary, getCacheUsageSummary } from './healthRouteHelpers.js';
 
 // Import cache stats functions
 import { getBlacklistStats } from '../services/tokenBlacklist.service.js';
@@ -210,11 +210,31 @@ router.get('/security-stats', authenticateToken, requireAdmin, (req, res) => {
 router.get('/cache-stats', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const memUsage = process.memoryUsage();
-        const [settingsCacheStats, cacheRegistryStats] = await Promise.all([
+        const [settingsCacheStats, cacheRegistryStats, tokenBlacklistStats, resumeStatsCache, marketFactsCache, marketTrendsCache, metiersCache, tagsCacheStats, escoCacheStats] = await Promise.all([
             getSettingsCacheStats(),
-            getCacheRegistryStats()
+            getCacheRegistryStats(),
+            Promise.resolve(getBlacklistStats()),
+            Promise.resolve(getStatsCacheStats()),
+            Promise.resolve(getFactsCacheStats()),
+            Promise.resolve(getTrendsCacheStats()),
+            Promise.resolve(getMetiersCacheStats()),
+            Promise.resolve(getTagsCacheStats()),
+            Promise.resolve(getEscoCacheStats())
         ]);
-        const effectiveCacheDiagnostics = getCacheDiagnosticSummary(cacheRegistryStats);
+        const detailedCaches = {
+            settings: settingsCacheStats,
+            tokenBlacklist: tokenBlacklistStats,
+            resumeStats: resumeStatsCache,
+            marketFacts: marketFactsCache,
+            marketTrends: marketTrendsCache,
+            metiers: metiersCache,
+            tags: tagsCacheStats,
+            esco: escoCacheStats
+        };
+        const effectiveCacheDiagnostics = getApplicationCacheDiagnosticSummary({
+            cacheRegistry: cacheRegistryStats,
+            caches: detailedCaches
+        });
         const cacheUsageSummary = getCacheUsageSummary(cacheRegistryStats);
         const stats = {
             timestamp: new Date().toISOString(),
@@ -227,19 +247,24 @@ router.get('/cache-stats', authenticateToken, requireAdmin, async (req, res) => 
             cacheBackend: {
                 configuredBackend: CACHE_BACKEND,
                 backend: effectiveCacheDiagnostics.backend,
+                effectiveBackend: effectiveCacheDiagnostics.effectiveBackend,
+                cacheLayer: effectiveCacheDiagnostics.cacheLayer,
+                applicationCacheActive: effectiveCacheDiagnostics.applicationCacheActive,
                 connected: effectiveCacheDiagnostics.connected,
-                fallbackReason: effectiveCacheDiagnostics.fallbackReason
+                fallbackReason: effectiveCacheDiagnostics.fallbackReason,
+                message: effectiveCacheDiagnostics.message,
+                backendBreakdown: effectiveCacheDiagnostics.backendBreakdown
             },
             cacheSummary: cacheUsageSummary,
             caches: {
-                tokenBlacklist: getBlacklistStats(),
+                tokenBlacklist: tokenBlacklistStats,
                 settings: settingsCacheStats,
-                resumeStats: getStatsCacheStats(),
-                marketFacts: getFactsCacheStats(),
-                marketTrends: getTrendsCacheStats(),
-                metiers: getMetiersCacheStats(),
-                tags: getTagsCacheStats(),
-                esco: getEscoCacheStats()
+                resumeStats: resumeStatsCache,
+                marketFacts: marketFactsCache,
+                marketTrends: marketTrendsCache,
+                metiers: metiersCache,
+                tags: tagsCacheStats,
+                esco: escoCacheStats
             }
         };
         

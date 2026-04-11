@@ -3353,6 +3353,17 @@ ALTER TABLE ONLY public.user_mail_tokens
 ALTER TABLE ONLY public.users
     ADD CONSTRAINT users_firm_id_fkey FOREIGN KEY (firm_id) REFERENCES public.firms(id) ON DELETE SET NULL;
 
+--
+-- Name: cache_scope_versions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE IF NOT EXISTS public.cache_scope_versions (
+    scope character varying(100) NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT cache_scope_versions_pkey PRIMARY KEY (scope)
+);
+
 
 --
 -- PostgreSQL database dump complete

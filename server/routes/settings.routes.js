@@ -221,8 +221,6 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
         const { id } = req.params;
         let updateData = req.body;
 
-        await invalidateSettingsCache();
-
         safeLog('info', 'Updating settings', { settingsId: id });
 
         delete updateData.id;
@@ -238,6 +236,7 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
 
         const fieldsToUpdate = mapSettingsFromFrontend(updateData);
         const result = await upsertSettings(id, fieldsToUpdate);
+        await invalidateSettingsCache();
 
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.SETTINGS_CHANGED, {
             ...getRequestMetadata(req),
@@ -255,8 +254,6 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
 router.post('/', authenticateToken, requireAdmin, validateBody(updateSettingsSchema), createSettingsRouteHandler('Error creating settings', 'Failed to create settings', async (req, res) => {
         let settingsData = req.body;
 
-        await invalidateSettingsCache();
-
         settingsData = normalizeRequestedSettingsModel(normalizeWeights(settingsData));
         const currentSettingsRecord = await getSettings();
         settingsData = await prepareSettingsMutationPayload(settingsData, {
@@ -272,6 +269,7 @@ router.post('/', authenticateToken, requireAdmin, validateBody(updateSettingsSch
         };
 
         const result = await createSettings(fieldsToCreate);
+        await invalidateSettingsCache();
 
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.SETTINGS_CHANGED, {
             ...getRequestMetadata(req),

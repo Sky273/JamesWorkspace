@@ -1,5 +1,6 @@
 import { safeLog } from '../utils/logger.backend.js';
 import { query as dbQuery } from '../config/database.js';
+import { buildApplicationCacheMetrics } from './cacheMetrics.service.js';
 
 const FACTS_CACHE_TTL = 5 * 60 * 1000;
 const FACTS_CACHE_MAX_SIZE = 10000;
@@ -186,14 +187,16 @@ export function destroyFactsCache() {
 }
 
 export function getFactsCacheStats() {
-    return {
+    return buildApplicationCacheMetrics({
         size: factsCache?.length || 0,
         maxSize: FACTS_CACHE_MAX_SIZE,
-        ttlMinutes: FACTS_CACHE_TTL / (60 * 1000),
         ageMs: factsCacheTime ? Date.now() - factsCacheTime : null,
-        hasFilterOptions: !!factsFilterOptionsCache,
-        hasSummary: !!factsSummaryCache
-    };
+        ttlMs: FACTS_CACHE_TTL,
+        extra: {
+            hasFilterOptions: !!factsFilterOptionsCache,
+            hasSummary: !!factsSummaryCache
+        }
+    });
 }
 
 export async function getFactsFilterOptions() {

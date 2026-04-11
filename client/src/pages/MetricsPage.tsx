@@ -322,9 +322,12 @@ const MetricsPage = (): JSX.Element => {
   const improvementMetrics = operationsMetrics?.operations?.improvement;
   const adaptationMetrics = operationsMetrics?.operations?.adaptation;
   const configuredCacheBackend = cacheAdminMetrics?.cacheBackend?.configuredBackend || 'unknown';
-  const cacheBackend = cacheAdminMetrics?.cacheBackend?.backend || 'unknown';
+  const cacheBackend = cacheAdminMetrics?.cacheBackend?.backend || cacheAdminMetrics?.cacheBackend?.effectiveBackend || 'unknown';
   const cacheConnected = cacheAdminMetrics?.cacheBackend?.connected;
   const cacheFallbackReason = cacheAdminMetrics?.cacheBackend?.fallbackReason;
+  const cacheBackendMessage = cacheAdminMetrics?.cacheBackend?.message;
+  const cacheBackendBreakdown = cacheAdminMetrics?.cacheBackend?.backendBreakdown;
+  const applicationCacheActive = cacheAdminMetrics?.cacheBackend?.applicationCacheActive;
   const requestedToScoredRatio = computeRatio(
     safeNumber(profileMatchingMetrics?.profilesScored),
     safeNumber(profileMatchingMetrics?.profilesRequested)
@@ -390,6 +393,9 @@ const MetricsPage = (): JSX.Element => {
                   cacheBackend={cacheBackend}
                   cacheConnected={cacheConnected}
                   cacheFallbackReason={cacheFallbackReason}
+                  cacheBackendMessage={cacheBackendMessage}
+                  cacheBackendBreakdown={cacheBackendBreakdown}
+                  applicationCacheActive={applicationCacheActive}
                   t={t}
                   safeNumber={safeNumber}
                   formatBytes={formatBytes}

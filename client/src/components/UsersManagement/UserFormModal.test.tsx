@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { TFunction } from 'i18next';
 
 import UserFormModal from './UserFormModal';
 
@@ -54,7 +55,7 @@ vi.mock('../../context/AuthContext', () => ({
 }));
 
 describe('UserFormModal', () => {
-  const t = (key: string) => key;
+  const t = ((key: string) => key) as TFunction;
   const firms = [
     { id: 'firm-1', name: 'Acme' },
     { id: 'firm-2', name: 'Globex' },

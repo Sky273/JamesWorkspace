@@ -6,6 +6,7 @@
 
 import axios from 'axios';
 import { safeLog } from '../utils/logger.backend.js';
+import { buildApplicationCacheMetrics } from './cacheMetrics.service.js';
 
 const ESCO_API_BASE = 'https://ec.europa.eu/esco/api';
 const ESCO_LANGUAGE = 'fr'; // Default language for searches
@@ -335,11 +336,11 @@ function destroyEscoCache() {
  * Get ESCO cache statistics
  */
 function getEscoCacheStats() {
-    return {
+    return buildApplicationCacheMetrics({
         size: escoCache.size,
         maxSize: ESCO_CACHE_MAX_SIZE,
-        ttlHours: ESCO_CACHE_TTL / (60 * 60 * 1000)
-    };
+        ttlMs: ESCO_CACHE_TTL
+    });
 }
 
 export {

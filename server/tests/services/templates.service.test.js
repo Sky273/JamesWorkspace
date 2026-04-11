@@ -9,6 +9,21 @@ vi.mock('../../config/database.js', () => ({
     query: vi.fn()
 }));
 
+const { mockTemplatesCache } = vi.hoisted(() => ({
+    mockTemplatesCache: {
+        getOrLoad: vi.fn(async (_key, loader) => loader())
+    }
+}));
+
+vi.mock('../../services/cache.service.js', () => ({
+    templatesCache: mockTemplatesCache,
+    CACHE_KEYS: {
+        templates: {
+            ALL_TEMPLATES: 'all'
+        }
+    }
+}));
+
 import { query } from '../../config/database.js';
 import {
     listTemplates,
@@ -23,6 +38,7 @@ import {
 describe('Templates Service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockTemplatesCache.getOrLoad.mockImplementation(async (_key, loader) => loader());
     });
 
     describe('listTemplates', () => {

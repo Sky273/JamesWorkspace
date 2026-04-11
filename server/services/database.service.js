@@ -40,6 +40,7 @@ export async function initializeDatabase() {
         
         const tables = tablesResult.rows.map(row => row.table_name);
         const expectedTables = [
+            'cache_scope_versions',
             'firms',
             'users',
             'llm_settings',

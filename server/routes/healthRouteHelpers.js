@@ -19,16 +19,152 @@ export function getCacheDiagnosticSummary(cacheRegistry = {}) {
     const connectedFlags = registryEntries
         .map((stats) => stats?.connected)
         .filter((flag) => typeof flag === 'boolean');
+    const configuredBackends = [...new Set(
+        registryEntries
+            .map((stats) => stats?.configuredBackend)
+            .filter(Boolean)
+    )];
+    const cacheLayers = [...new Set(
+        registryEntries
+            .map((stats) => stats?.cacheLayer)
+            .filter(Boolean)
+    )];
     const disabledReasons = [...new Set(
         registryEntries
             .map((stats) => stats?.disabledReason)
             .filter(Boolean)
     )];
+    const messages = [...new Set(
+        registryEntries
+            .map((stats) => stats?.message)
+            .filter(Boolean)
+    )];
+    const applicationCacheActive = registryEntries.some((stats) => stats?.applicationCacheActive === true);
+    const effectiveBackend = getCacheBackendSummary(cacheRegistry);
+    const configuredBackend = configuredBackends.length === 1
+        ? configuredBackends[0]
+        : configuredBackends.join(',');
 
     return {
-        backend: getCacheBackendSummary(cacheRegistry),
+        backend: effectiveBackend,
+        configuredBackend: configuredBackend || null,
+        effectiveBackend,
+        cacheLayer: cacheLayers.length === 1 ? cacheLayers[0] : cacheLayers.join(',') || null,
+        applicationCacheActive,
         connected: connectedFlags.length > 0 ? connectedFlags.every(Boolean) : null,
-        fallbackReason: disabledReasons.length === 0 ? null : disabledReasons.join(',')
+        fallbackReason: disabledReasons.length === 0 ? null : disabledReasons.join(','),
+        message: messages.length === 0 ? null : messages.join(' ')
+    };
+}
+
+function getCacheStorageBackend(stats = {}) {
+    return stats?.storageBackend || stats?.effectiveBackend || stats?.backend || 'unknown';
+}
+
+function getCacheActivityScore(stats = {}) {
+    return (
+        Number(stats?.size || 0) +
+        Number(stats?.hits || 0) +
+        Number(stats?.misses || 0) +
+        Number(stats?.sets || 0) +
+        Number(stats?.invalidations || 0) +
+        Number(stats?.loads || 0) +
+        Number(stats?.entries || 0) +
+        Number(stats?.blacklistedTokens || 0) +
+        Number(stats?.blacklistedUsers || 0)
+    );
+}
+
+export function getApplicationCacheDiagnosticSummary({ cacheRegistry = {}, caches = {} } = {}) {
+    const registryEntries = Object.values(cacheRegistry);
+    const applicationEntries = [
+        caches?.settings?.cache || cacheRegistry?.settings,
+        cacheRegistry?.templates,
+        cacheRegistry?.firms,
+        caches?.tags || cacheRegistry?.tags,
+        caches?.resumeStats,
+        caches?.marketFacts,
+        caches?.marketTrends,
+        caches?.metiers,
+        caches?.esco,
+        caches?.tokenBlacklist
+    ].filter(Boolean);
+
+    const configuredBackends = [...new Set(
+        applicationEntries
+            .map((stats) => stats?.configuredBackend)
+            .filter(Boolean)
+    )];
+    const cacheLayers = [...new Set(
+        applicationEntries
+            .map((stats) => stats?.cacheLayer)
+            .filter(Boolean)
+    )];
+    const disabledReasons = [...new Set(
+        applicationEntries
+            .map((stats) => stats?.disabledReason)
+            .filter(Boolean)
+    )];
+    const connectedFlags = applicationEntries
+        .map((stats) => stats?.connected)
+        .filter((flag) => typeof flag === 'boolean');
+
+    const backendBreakdown = applicationEntries.reduce((accumulator, stats) => {
+        const storageBackend = getCacheStorageBackend(stats);
+        if (!accumulator[storageBackend]) {
+            accumulator[storageBackend] = {
+                caches: 0,
+                activityScore: 0,
+                size: 0
+            };
+        }
+
+        accumulator[storageBackend].caches += 1;
+        accumulator[storageBackend].activityScore += getCacheActivityScore(stats);
+        accumulator[storageBackend].size += Number(stats?.size || 0);
+        return accumulator;
+    }, {});
+
+    const rankedBackends = Object.entries(backendBreakdown)
+        .sort((left, right) => {
+            const activityDelta = right[1].activityScore - left[1].activityScore;
+            if (activityDelta !== 0) {
+                return activityDelta;
+            }
+            return right[1].size - left[1].size;
+        });
+
+    const fallbackDiagnostics = getCacheDiagnosticSummary(cacheRegistry);
+    const configuredBackend = configuredBackends.length === 1
+        ? configuredBackends[0]
+        : configuredBackends.join(',') || fallbackDiagnostics.configuredBackend;
+    const effectiveBackend = rankedBackends[0]?.[0] || fallbackDiagnostics.effectiveBackend;
+    const connected = connectedFlags.length > 0 ? connectedFlags.some(Boolean) : fallbackDiagnostics.connected;
+    const applicationCacheActive = applicationEntries.some((stats) => stats?.applicationCacheActive === true);
+    const fallbackReason = disabledReasons.length === 0 ? null : disabledReasons.join(',');
+
+    let message = applicationEntries
+        .map((stats) => stats?.message)
+        .find(Boolean) || fallbackDiagnostics.message;
+
+    if (configuredBackend === 'redis' && effectiveBackend === 'memory' && connected) {
+        message = 'Application cache active in memory mode. Redis is configured and reachable, but the active cache paths are currently using in-process memory storage.';
+    } else if (configuredBackend === 'redis' && effectiveBackend === 'memory' && !connected) {
+        message = 'Application cache active in memory mode. Redis is configured but not currently available to serve the active cache paths.';
+    } else if (configuredBackend === 'redis' && effectiveBackend === 'redis' && applicationEntries.some((stats) => getCacheStorageBackend(stats) === 'memory')) {
+        message = 'Application cache active across Redis and in-process memory. Local memory caches remain active for cache paths that are not backed by Redis.';
+    }
+
+    return {
+        backend: effectiveBackend,
+        configuredBackend: configuredBackend || null,
+        effectiveBackend,
+        cacheLayer: cacheLayers.length === 1 ? cacheLayers[0] : cacheLayers.join(',') || null,
+        applicationCacheActive,
+        connected,
+        fallbackReason,
+        message,
+        backendBreakdown
     };
 }
 
@@ -155,8 +291,13 @@ export function buildCacheCheck({ cacheDiagnostics, settingsCacheSize, templates
     return {
         status: 'ok',
         backend: cacheDiagnostics.backend,
+        configuredBackend: cacheDiagnostics.configuredBackend,
+        effectiveBackend: cacheDiagnostics.effectiveBackend,
+        cacheLayer: cacheDiagnostics.cacheLayer,
+        applicationCacheActive: cacheDiagnostics.applicationCacheActive,
         connected: cacheDiagnostics.connected,
         fallbackReason: cacheDiagnostics.fallbackReason,
+        message: cacheDiagnostics.message,
         settings: settingsCacheSize,
         templates: templatesCacheSize,
         firms: firmsCacheSize,

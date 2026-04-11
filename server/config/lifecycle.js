@@ -35,6 +35,8 @@ import { destroyMjml } from '../services/emailTemplates.service.js';
 import { metrics } from '../services/metrics.service.js';
 import { destroySettingsCache } from '../services/settings.service.js';
 import { initializeLLMAvailabilityState } from '../services/llmAvailability.service.js';
+import { subscribeToCacheInvalidations, unsubscribeFromCacheInvalidations } from '../services/cacheVersion.service.js';
+import { handleCacheInvalidationNotification } from '../services/cache.service.js';
 
 // ============================================
 // MEMORY MONITORING
@@ -64,7 +66,7 @@ async function onServerStart(server, protocol, port) {
         cleanupFactsCache();
         cleanupTrendsCache();
         cleanupMetiersCache();
-        invalidateTagsCache();
+        await invalidateTagsCache();
         safeLog('info', 'All caches cleaned successfully');
     } catch (error) {
         safeLog('error', 'Error cleaning caches on startup', { error: error.message });
@@ -102,6 +104,13 @@ async function onServerStart(server, protocol, port) {
     const dbInitialized = await initializeDatabase();
     if (dbInitialized) {
         safeLog('info', 'PostgreSQL database initialized successfully');
+
+        try {
+            await subscribeToCacheInvalidations(handleCacheInvalidationNotification);
+            safeLog('info', 'Cache invalidation listener started');
+        } catch (error) {
+            safeLog('warn', 'Failed to start cache invalidation listener', { error: error.message });
+        }
 
         try {
             await initializeLLMAvailabilityState();
@@ -279,6 +288,7 @@ export function startServer(app, serverDir) {
             await destroySettingsCache();
             stopScheduler();
             stopBackupScheduler();
+            await unsubscribeFromCacheInvalidations();
             safeLog('info', 'All caches destroyed');
             
             // Close PostgreSQL connection pool

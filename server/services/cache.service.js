@@ -1,8 +1,15 @@
 import { CACHE_BACKEND, CACHE_KEY_PREFIX, CACHE_REDIS_URL, CACHE_TTL } from '../config/constants.js';
 import { safeLog } from '../utils/logger.backend.js';
+import {
+    bumpCacheScopeVersion,
+    getCacheScopeVersion,
+    publishCacheInvalidation
+} from './cacheVersion.service.js';
 
 const DEFAULT_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
 const DEFAULT_MAX_SIZE = 1000;
+const DEFAULT_SCOPE_VERSION_REFRESH_MS = 60 * 1000;
+const REDIS_URL_CONFIGURED_BY_ENV = Boolean(process.env.CACHE_REDIS_URL);
 
 const cacheRegistry = new Map();
 
@@ -21,34 +28,286 @@ function createStats(name, backend, ttl) {
         hits: 0,
         misses: 0,
         sets: 0,
-        invalidations: 0
+        invalidations: 0,
+        loads: 0
     };
 }
 
-class MemoryCacheNamespace {
-    constructor(name, ttl = 600000, maxSize = DEFAULT_MAX_SIZE) {
+function buildCacheUsageMode({
+    configuredBackend,
+    effectiveBackend,
+    connected = null,
+    disabledReason = null
+}) {
+    const applicationCacheLayer = 'application';
+
+    if (configuredBackend === 'redis' && effectiveBackend === 'redis') {
+        return {
+            cacheLayer: applicationCacheLayer,
+            applicationCacheActive: true,
+            storageBackend: 'redis',
+            mode: 'application-redis',
+            message: 'Application cache active with Redis as storage backend.',
+            connected,
+            disabledReason
+        };
+    }
+
+    if (configuredBackend === 'redis' && effectiveBackend !== 'redis') {
+        return {
+            cacheLayer: applicationCacheLayer,
+            applicationCacheActive: true,
+            storageBackend: 'memory',
+            mode: 'application-memory-fallback',
+            message: `Application cache active in memory fallback mode because Redis is configured but not currently used${disabledReason ? ` (${disabledReason})` : ''}.`,
+            connected,
+            disabledReason
+        };
+    }
+
+    if (REDIS_URL_CONFIGURED_BY_ENV) {
+        return {
+            cacheLayer: applicationCacheLayer,
+            applicationCacheActive: true,
+            storageBackend: 'memory',
+            mode: 'application-memory',
+            message: 'Application cache active in memory mode. Redis URL is configured but not selected because CACHE_BACKEND=memory.',
+            connected,
+            disabledReason
+        };
+    }
+
+    return {
+        cacheLayer: applicationCacheLayer,
+        applicationCacheActive: true,
+        storageBackend: 'memory',
+        mode: 'application-memory',
+        message: 'Application cache active in memory mode.',
+        connected,
+        disabledReason
+    };
+}
+
+function normalizeCacheKeyPart(value) {
+    if (typeof value === 'string') {
+        return value;
+    }
+
+    if (value === null || value === undefined) {
+        return '';
+    }
+
+    return JSON.stringify(value);
+}
+
+class VersionedCacheNamespace {
+    constructor(name, backend, ttl = 600000, maxSize = DEFAULT_MAX_SIZE) {
         this.name = name;
-        this.backend = 'memory';
-        this.cache = new Map();
+        this.backend = backend;
         this.ttl = ttl;
         this.maxSize = maxSize;
-        this.stats = createStats(name, this.backend, ttl);
+        this.stats = createStats(name, backend, ttl);
+        this.scopeVersions = new Map();
+        this.pendingLoads = new Map();
+        this.scopeEntries = new Map();
+    }
+
+    resolveLogicalKey(key) {
+        const normalizedKey = normalizeCacheKeyPart(key);
+        if (!normalizedKey) {
+            throw new Error(`Cache key is required for namespace "${this.name}"`);
+        }
+        return normalizedKey;
+    }
+
+    resolveScopeName(key, options = {}) {
+        const providedScope = options.scope ?? key;
+        const normalizedScope = normalizeCacheKeyPart(providedScope);
+        if (!normalizedScope) {
+            throw new Error(`Cache scope is required for namespace "${this.name}"`);
+        }
+        return `${this.name}:${normalizedScope}`;
+    }
+
+    buildVersionedKey(scope, key, version) {
+        return `${scope}:v${version}:${key}`;
+    }
+
+    rememberVersion(scope, version) {
+        this.scopeVersions.set(scope, {
+            version: Number(version),
+            timestamp: Date.now()
+        });
+    }
+
+    async resolveScopeVersion(scope, { forceRefresh = false } = {}) {
+        const cached = this.scopeVersions.get(scope);
+        const isFresh = cached && (Date.now() - cached.timestamp) < DEFAULT_SCOPE_VERSION_REFRESH_MS;
+        if (!forceRefresh && isFresh) {
+            return cached.version;
+        }
+
+        const version = await getCacheScopeVersion(scope, { createIfMissing: true });
+        const normalizedVersion = Number.isFinite(Number(version)) ? Number(version) : 1;
+        this.rememberVersion(scope, normalizedVersion);
+        return normalizedVersion;
+    }
+
+    trackScopeEntry(scope, versionedKey) {
+        const keys = this.scopeEntries.get(scope) || new Set();
+        keys.add(versionedKey);
+        this.scopeEntries.set(scope, keys);
+    }
+
+    forgetScopeEntry(scope, versionedKey) {
+        const keys = this.scopeEntries.get(scope);
+        if (!keys) {
+            return;
+        }
+
+        keys.delete(versionedKey);
+        if (keys.size === 0) {
+            this.scopeEntries.delete(scope);
+        }
+    }
+
+    async getOrLoad(key, loader, options = {}) {
+        const logicalKey = this.resolveLogicalKey(key);
+        const scope = this.resolveScopeName(logicalKey, options);
+        const version = await this.resolveScopeVersion(scope);
+        const versionedKey = this.buildVersionedKey(scope, logicalKey, version);
+        const cached = await this.get(logicalKey, { ...options, scope });
+        if (cached !== null) {
+            return cached;
+        }
+
+        if (this.pendingLoads.has(versionedKey)) {
+            return this.pendingLoads.get(versionedKey);
+        }
+
+        this.stats.loads++;
+        const pendingLoad = (async () => {
+            const loaded = await loader();
+            await this.set(logicalKey, loaded, { ...options, scope });
+            return loaded;
+        })().finally(() => {
+            this.pendingLoads.delete(versionedKey);
+        });
+
+        this.pendingLoads.set(versionedKey, pendingLoad);
+        return pendingLoad;
+    }
+
+    async invalidate(key, options = {}) {
+        const logicalKey = this.resolveLogicalKey(key);
+        const scope = this.resolveScopeName(logicalKey, options);
+        this.stats.invalidations++;
+
+        const version = await bumpCacheScopeVersion(scope);
+        this.applyInvalidationPayload({ scope, version });
+        await publishCacheInvalidation(scope, version, {
+            source: 'app',
+            reason: options.reason || 'mutation'
+        });
+    }
+
+    applyInvalidationPayload(payload = {}) {
+        const scope = String(payload.scope || '').trim();
+        if (!scope || !scope.startsWith(`${this.name}:`)) {
+            return false;
+        }
+
+        const nextVersion = Number.isFinite(Number(payload.version)) ? Number(payload.version) : null;
+        if (nextVersion !== null) {
+            this.rememberVersion(scope, nextVersion);
+        } else {
+            this.scopeVersions.delete(scope);
+        }
+
+        const keys = this.scopeEntries.get(scope);
+        if (keys) {
+            for (const versionedKey of keys) {
+                this.deleteStoredValue(versionedKey);
+            }
+            this.scopeEntries.delete(scope);
+        }
+
+        return true;
+    }
+
+    cleanupScopeMetadataForKey(versionedKey) {
+        for (const [scope, keys] of this.scopeEntries.entries()) {
+            if (!keys.has(versionedKey)) {
+                continue;
+            }
+
+            keys.delete(versionedKey);
+            if (keys.size === 0) {
+                this.scopeEntries.delete(scope);
+            }
+            return;
+        }
+    }
+
+    async clear() {
+        this.scopeVersions.clear();
+        this.pendingLoads.clear();
+        this.scopeEntries.clear();
+    }
+
+    async getStats() {
+        return {
+            ...this.stats,
+            configuredBackend: CACHE_BACKEND,
+            effectiveBackend: this.backend,
+            size: await this.size(),
+            maxSize: this.maxSize,
+            trackedScopes: this.scopeVersions.size,
+            ...buildCacheUsageMode({
+                configuredBackend: CACHE_BACKEND,
+                effectiveBackend: this.backend
+            })
+        };
+    }
+
+    async destroy() {
+        this.pendingLoads.clear();
+        this.scopeVersions.clear();
+        this.scopeEntries.clear();
+    }
+}
+
+class MemoryCacheNamespace extends VersionedCacheNamespace {
+    constructor(name, ttl = 600000, maxSize = DEFAULT_MAX_SIZE) {
+        super(name, 'memory', ttl, maxSize);
+        this.cache = new Map();
         this.cleanupInterval = setInterval(() => {
             this.cleanup();
         }, DEFAULT_CLEANUP_INTERVAL_MS);
     }
 
-    async set(key, value) {
+    async set(key, value, options = {}) {
+        const logicalKey = this.resolveLogicalKey(key);
+        const scope = this.resolveScopeName(logicalKey, options);
+        const version = await this.resolveScopeVersion(scope);
+        const versionedKey = this.buildVersionedKey(scope, logicalKey, version);
+
         this.stats.sets++;
-        this.cache.set(key, {
+        this.cache.set(versionedKey, {
             value,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            scope
         });
+        this.trackScopeEntry(scope, versionedKey);
         return value;
     }
 
-    async get(key) {
-        const item = this.cache.get(key);
+    async get(key, options = {}) {
+        const logicalKey = this.resolveLogicalKey(key);
+        const scope = this.resolveScopeName(logicalKey, options);
+        const version = await this.resolveScopeVersion(scope);
+        const versionedKey = this.buildVersionedKey(scope, logicalKey, version);
+        const item = this.cache.get(versionedKey);
         if (!item) {
             this.stats.misses++;
             return null;
@@ -56,7 +315,8 @@ class MemoryCacheNamespace {
 
         const age = Date.now() - item.timestamp;
         if (age > this.ttl) {
-            this.cache.delete(key);
+            this.cache.delete(versionedKey);
+            this.forgetScopeEntry(scope, versionedKey);
             this.stats.misses++;
             return null;
         }
@@ -65,12 +325,12 @@ class MemoryCacheNamespace {
         return item.value;
     }
 
-    async invalidate(key) {
-        this.stats.invalidations++;
-        this.cache.delete(key);
+    deleteStoredValue(versionedKey) {
+        this.cache.delete(versionedKey);
     }
 
     async clear() {
+        await super.clear();
         this.cache.clear();
     }
 
@@ -78,21 +338,14 @@ class MemoryCacheNamespace {
         return this.cache.size;
     }
 
-    async getStats() {
-        return {
-            ...this.stats,
-            size: this.cache.size,
-            maxSize: this.maxSize
-        };
-    }
-
     cleanup() {
         const now = Date.now();
         let cleaned = 0;
 
-        for (const [key, item] of this.cache.entries()) {
+        for (const [versionedKey, item] of this.cache.entries()) {
             if (now - item.timestamp > this.ttl) {
-                this.cache.delete(key);
+                this.cache.delete(versionedKey);
+                this.forgetScopeEntry(item.scope, versionedKey);
                 cleaned++;
             }
         }
@@ -101,7 +354,10 @@ class MemoryCacheNamespace {
             const entries = Array.from(this.cache.entries());
             entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
             const toRemove = entries.slice(0, this.cache.size - this.maxSize);
-            toRemove.forEach(([key]) => this.cache.delete(key));
+            for (const [versionedKey, item] of toRemove) {
+                this.cache.delete(versionedKey);
+                this.forgetScopeEntry(item.scope, versionedKey);
+            }
             cleaned += toRemove.length;
         }
 
@@ -120,6 +376,7 @@ class MemoryCacheNamespace {
             clearInterval(this.cleanupInterval);
             this.cleanupInterval = null;
         }
+        await super.destroy();
         this.cache.clear();
     }
 }
@@ -179,18 +436,14 @@ async function ensureRedisClient() {
     return redisState.initPromise;
 }
 
-class RedisCacheNamespace {
+class RedisCacheNamespace extends VersionedCacheNamespace {
     constructor(name, ttl = 600000, maxSize = DEFAULT_MAX_SIZE) {
-        this.name = name;
-        this.backend = 'redis';
-        this.ttl = ttl;
-        this.maxSize = maxSize;
-        this.stats = createStats(name, this.backend, ttl);
+        super(name, 'redis', ttl, maxSize);
         this.memoryFallback = new MemoryCacheNamespace(`${name}:fallback`, ttl, maxSize);
     }
 
-    buildKey(key) {
-        return `${CACHE_KEY_PREFIX}:${this.name}:${key}`;
+    buildRedisKey(versionedKey) {
+        return `${CACHE_KEY_PREFIX}:${this.name}:${versionedKey}`;
     }
 
     getMatchPattern() {
@@ -201,29 +454,40 @@ class RedisCacheNamespace {
         return ensureRedisClient();
     }
 
-    async set(key, value) {
+    async set(key, value, options = {}) {
+        const logicalKey = this.resolveLogicalKey(key);
+        const scope = this.resolveScopeName(logicalKey, options);
+        const version = await this.resolveScopeVersion(scope);
+        const versionedKey = this.buildVersionedKey(scope, logicalKey, version);
+
         this.stats.sets++;
         const client = await this.getClient();
         if (!client) {
-            return this.memoryFallback.set(key, value);
+            return this.memoryFallback.set(logicalKey, value, { ...options, scope });
         }
 
-        await client.set(this.buildKey(key), JSON.stringify(value), { PX: this.ttl });
+        await client.set(this.buildRedisKey(versionedKey), JSON.stringify(value), { PX: this.ttl });
+        this.trackScopeEntry(scope, versionedKey);
         return value;
     }
 
-    async get(key) {
+    async get(key, options = {}) {
+        const logicalKey = this.resolveLogicalKey(key);
+        const scope = this.resolveScopeName(logicalKey, options);
+        const version = await this.resolveScopeVersion(scope);
+        const versionedKey = this.buildVersionedKey(scope, logicalKey, version);
         const client = await this.getClient();
         if (!client) {
-            return this.memoryFallback.get(key);
+            return this.memoryFallback.get(logicalKey, { ...options, scope });
         }
 
-        const raw = await client.get(this.buildKey(key));
+        const raw = await client.get(this.buildRedisKey(versionedKey));
         if (raw === null) {
             this.stats.misses++;
             return null;
         }
 
+        this.trackScopeEntry(scope, versionedKey);
         this.stats.hits++;
         try {
             return JSON.parse(raw);
@@ -232,24 +496,16 @@ class RedisCacheNamespace {
         }
     }
 
-    async invalidate(key) {
-        this.stats.invalidations++;
-        const client = await this.getClient();
-        if (!client) {
-            return this.memoryFallback.invalidate(key);
-        }
-        await client.del(this.buildKey(key));
-    }
-
     async clear() {
+        await super.clear();
         const client = await this.getClient();
         if (!client) {
             return this.memoryFallback.clear();
         }
 
         const keys = [];
-        for await (const key of client.scanIterator({ MATCH: this.getMatchPattern(), COUNT: 100 })) {
-            keys.push(key);
+        for await (const redisKey of client.scanIterator({ MATCH: this.getMatchPattern(), COUNT: 100 })) {
+            keys.push(redisKey);
         }
         if (keys.length > 0) {
             await client.del(keys);
@@ -269,20 +525,70 @@ class RedisCacheNamespace {
         return count;
     }
 
+    deleteStoredValue(versionedKey) {
+        const clientPromise = this.getClient();
+        clientPromise.then((client) => {
+            if (!client) {
+                this.memoryFallback.deleteStoredValue?.(versionedKey);
+                return;
+            }
+
+            client.del(this.buildRedisKey(versionedKey)).catch((error) => {
+                safeLog('warn', 'Failed to delete invalidated redis cache key', {
+                    cacheName: this.name,
+                    error: error.message
+                });
+            });
+        }).catch((error) => {
+            safeLog('warn', 'Failed to resolve redis client during cache invalidation', {
+                cacheName: this.name,
+                error: error.message
+            });
+        });
+    }
+
     async getStats() {
         const size = await this.size();
+        const effectiveBackend = (!!redisState.client && redisState.available) ? 'redis' : 'memory';
         return {
             ...this.stats,
             size,
             maxSize: this.maxSize,
+            trackedScopes: this.scopeVersions.size,
+            configuredBackend: CACHE_BACKEND,
             connected: !!redisState.client && redisState.available,
             disabledReason: redisState.disabledReason || null,
-            effectiveBackend: (!!redisState.client && redisState.available) ? 'redis' : 'memory-fallback'
+            effectiveBackend,
+            ...buildCacheUsageMode({
+                configuredBackend: CACHE_BACKEND,
+                effectiveBackend,
+                connected: !!redisState.client && redisState.available,
+                disabledReason: redisState.disabledReason || null
+            })
         };
     }
 
     async destroy() {
         await this.memoryFallback.destroy();
+        await super.destroy();
+    }
+}
+
+export function handleCacheInvalidationNotification(payload) {
+    let invalidatedNamespaces = 0;
+
+    for (const cache of cacheRegistry.values()) {
+        if (typeof cache.applyInvalidationPayload === 'function' && cache.applyInvalidationPayload(payload)) {
+            invalidatedNamespaces++;
+        }
+    }
+
+    if (invalidatedNamespaces > 0) {
+        safeLog('debug', 'Applied cache invalidation notification locally', {
+            scope: payload?.scope || null,
+            version: payload?.version ?? null,
+            invalidatedNamespaces
+        });
     }
 }
 
@@ -305,12 +611,18 @@ export const CACHE_KEYS = {
     },
     firms: {
         ALL_FIRMS: 'all'
+    },
+    tags: {
+        RAW: 'raw',
+        CLEANED: 'cleaned',
+        ESCO: 'esco'
     }
 };
 
 export const settingsCache = createCacheNamespace('settings', CACHE_TTL.SETTINGS);
 export const templatesCache = createCacheNamespace('templates', CACHE_TTL.TEMPLATES);
 export const firmsCache = createCacheNamespace('firms', CACHE_TTL.FIRMS);
+export const tagsCache = createCacheNamespace('tags', CACHE_TTL.TEMPLATES);
 
 export async function invalidateSettingsCaches() {
     await Promise.all([
@@ -325,6 +637,14 @@ export async function invalidateTemplatesCaches() {
 
 export async function invalidateFirmsCaches() {
     await firmsCache.invalidate(CACHE_KEYS.firms.ALL_FIRMS);
+}
+
+export async function invalidateTagsCaches() {
+    await Promise.all([
+        tagsCache.invalidate(CACHE_KEYS.tags.RAW),
+        tagsCache.invalidate(CACHE_KEYS.tags.CLEANED),
+        tagsCache.invalidate(CACHE_KEYS.tags.ESCO)
+    ]);
 }
 
 export async function getNamedCacheStats(cacheName) {

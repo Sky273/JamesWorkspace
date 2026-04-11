@@ -261,7 +261,7 @@ function createUpdateResumeHandler() {
             }
 
             if (shouldInvalidateResumeTagsCache(updateData)) {
-                invalidateTagsCache();
+                await invalidateTagsCache();
             }
 
             const deferredPostAnalysisDecision = buildDeferredPostAnalysisDecision(changeReason, updateData);
