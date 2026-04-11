@@ -16,6 +16,7 @@ describe('MarketTrendsHeader', () => {
 
     render(
       <MarketTrendsHeader
+        canCollectMarketTrends
         error={null}
         loading={false}
         onCollect={onCollect}
@@ -29,5 +30,22 @@ describe('MarketTrendsHeader', () => {
 
     fireEvent.click(collectDynamicsButton);
     expect(onCollectDynamics).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides collection actions when the user cannot collect market trends', () => {
+    render(
+      <MarketTrendsHeader
+        canCollectMarketTrends={false}
+        error={null}
+        loading={false}
+        onCollect={vi.fn()}
+        onCollectDynamics={vi.fn()}
+        onRefresh={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'marketRadar.trends.collection.button' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'marketRadar.trends.collectDynamics.button' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'marketRadar.trends.refresh' })).toBeInTheDocument();
   });
 });

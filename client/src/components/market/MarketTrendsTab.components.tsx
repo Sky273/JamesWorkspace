@@ -48,12 +48,14 @@ export function MarketCollectionOverlay({ collecting, collectingSuccess }: { col
 }
 
 export function MarketTrendsHeader({
+  canCollectMarketTrends,
   error,
   loading,
   onCollect,
   onCollectDynamics,
   onRefresh,
 }: {
+  canCollectMarketTrends: boolean;
   error: string | null;
   loading: boolean;
   onCollect: () => void;
@@ -77,19 +79,23 @@ export function MarketTrendsHeader({
             <ArrowPathIcon className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
 
-          <button onClick={onCollect} className="btn btn-primary inline-flex items-center px-4 py-2 text-sm">
-            <ArrowPathIcon className="h-4 w-4 mr-2" />
-            {t('marketRadar.trends.collection.button')}
-          </button>
+          {canCollectMarketTrends && (
+            <>
+              <button onClick={onCollect} className="btn btn-primary inline-flex items-center px-4 py-2 text-sm">
+                <ArrowPathIcon className="h-4 w-4 mr-2" />
+                {t('marketRadar.trends.collection.button')}
+              </button>
 
-          <button
-            onClick={onCollectDynamics}
-            className="inline-flex items-center px-4 py-2 border border-orange-500 rounded-md shadow-sm text-sm font-medium text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
-            title={t('marketRadar.trends.collectDynamics.title')}
-          >
-            <SparklesIcon className="h-4 w-4 mr-2" />
-            {t('marketRadar.trends.collectDynamics.button')}
-          </button>
+              <button
+                onClick={onCollectDynamics}
+                className="inline-flex items-center px-4 py-2 border border-orange-500 rounded-md shadow-sm text-sm font-medium text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                title={t('marketRadar.trends.collectDynamics.title')}
+              >
+                <SparklesIcon className="h-4 w-4 mr-2" />
+                {t('marketRadar.trends.collectDynamics.button')}
+              </button>
+            </>
+          )}
         </div>
       </div>
 

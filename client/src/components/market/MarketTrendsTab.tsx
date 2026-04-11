@@ -4,6 +4,7 @@
 
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../context/AuthContext';
 
 import {
   MarketCollectionOverlay,
@@ -16,6 +17,8 @@ import { useMarketTrendsDashboard } from './useMarketTrendsDashboard';
 
 export default function MarketTrendsTab({ className = '' }: { className?: string }) {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const canCollectMarketTrends = user?.role === 'admin';
   const dashboard = useMarketTrendsDashboard();
 
   if (dashboard.loading && Object.keys(dashboard.trendsByType).length === 0) {
@@ -33,6 +36,7 @@ export default function MarketTrendsTab({ className = '' }: { className?: string
 
       <div className={`space-y-6 ${className}`}>
         <MarketTrendsHeader
+          canCollectMarketTrends={canCollectMarketTrends}
           error={dashboard.error}
           loading={dashboard.loading}
           onCollect={dashboard.handleCollect}
