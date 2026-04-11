@@ -183,13 +183,6 @@ export const fetchWithAuth = async (
         // Ignore JSON parse errors
       }
 
-      // If it's a TOKEN_MISSING error, the cookie has expired - redirect immediately
-      if (errorCode === 'TOKEN_MISSING') {
-        logger.warn('[API Interceptor] Cookie expired (TOKEN_MISSING), redirecting to signin');
-        triggerSessionExpiry();
-        throw new SessionRedirectError();
-      }
-
       // If it's a JWT-related error, skip refresh attempt and redirect immediately
       if (isAuthErrorMessage(errorMessage) || errorCode === 'TOKEN_INVALID') {
         logger.warn('[API Interceptor] JWT error detected, redirecting to signin:', errorMessage || errorCode);
@@ -197,7 +190,11 @@ export const fetchWithAuth = async (
         throw new SessionRedirectError();
       }
 
-      logger.warn('[API Interceptor] 401 Unauthorized - attempting token refresh');
+      if (errorCode === 'TOKEN_MISSING') {
+        logger.warn('[API Interceptor] Access token cookie missing - attempting token refresh');
+      } else {
+        logger.warn('[API Interceptor] 401 Unauthorized - attempting token refresh');
+      }
       
       if (url.includes('/api/auth/refresh')) {
         throw new Error('Refresh token expired');
@@ -223,6 +220,12 @@ export const fetchWithAuth = async (
 
     if (response.status === 403) {
       logger.warn('[API Interceptor] 403 Forbidden - checking if session related');
+
+      const csrfError = await isCsrfError(response);
+      if (csrfError) {
+        logger.warn('[API Interceptor] CSRF error detected, returning response for CSRF retry flow');
+        return response;
+      }
 
       const { errorMessage, errorCode } = await parseForbiddenResponse(response);
       if (isSessionForbiddenError(errorMessage, errorCode)) {

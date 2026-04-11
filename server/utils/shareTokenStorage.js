@@ -16,8 +16,7 @@ export function generateShareToken() {
 }
 
 export function createStoredShareToken(token) {
-    const encryptedToken = encryptSecret(token, TOKEN_OPTIONS);
-    return `${STORAGE_PREFIX}:${hashShareToken(token)}:${encryptedToken}`;
+    return token;
 }
 
 export function readStoredShareToken(storedValue) {

@@ -43,8 +43,18 @@ export function isManagedSharedPdfPath(filePath) {
         return false;
     }
 
-    const resolvedPath = path.resolve(filePath);
+    const resolvedPath = resolveManagedSharedPdfPath(filePath);
     return resolvedPath === RESOLVED_SHARED_PDF_DIR || resolvedPath.startsWith(`${RESOLVED_SHARED_PDF_DIR}${path.sep}`);
+}
+
+export function resolveManagedSharedPdfPath(filePath) {
+    if (!filePath) {
+        return null;
+    }
+
+    return path.isAbsolute(filePath)
+        ? path.resolve(filePath)
+        : path.resolve(RESOLVED_SHARED_PDF_DIR, filePath);
 }
 
 export async function deleteSharedPdfFile(filePath) {
@@ -53,7 +63,7 @@ export async function deleteSharedPdfFile(filePath) {
     }
 
     try {
-        await fs.unlink(filePath);
+        await fs.unlink(resolveManagedSharedPdfPath(filePath));
         return true;
     } catch (error) {
         if (error?.code !== 'ENOENT') {

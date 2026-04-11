@@ -4,7 +4,6 @@ import { I18nextProvider } from 'react-i18next';
 
 import App from '../App';
 import i18n, { i18nReady } from '../i18n';
-import { AuthProvider } from '../context/AuthContext';
 
 export async function mountApplication(root: Root): Promise<void> {
   await i18nReady;
@@ -12,9 +11,7 @@ export async function mountApplication(root: Root): Promise<void> {
   root.render(
     <StrictMode>
       <I18nextProvider i18n={i18n}>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
+        <App />
       </I18nextProvider>
     </StrictMode>
   );

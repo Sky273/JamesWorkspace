@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { useResume } from '../context/ResumeContext';
-import { fetchWithAuth, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
+import { fetchWithAuth, fetchWithCsrfRetry, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
 import type { Resume } from '../types/entities';
 import { resumeService } from '../utils/resumeService';
 import { templateService } from '../utils/templateService';
@@ -152,7 +152,7 @@ export function useResumeAnalysisPage() {
         });
         const payload = buildSharePayload(currentResume as Resume, templates[0]);
 
-        const response = await fetchWithAuth(`/api/share/resume/${id}/generate`, {
+        const response = await fetchWithCsrfRetry(`/api/share/resume/${id}/generate`, {
           ...options,
           method: 'POST',
           body: JSON.stringify(payload)

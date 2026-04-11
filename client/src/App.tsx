@@ -5,6 +5,7 @@
 
 import { Suspense } from 'react';
 import { BrowserRouter as Router } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 import { ResumeProvider } from './context/ResumeContext';
 import { ChatbotProvider } from './context/ChatbotContext';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -18,23 +19,50 @@ const PageLoader = () => (
   </div>
 );
 
+const isPublicShareRoute = (): boolean => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  return window.location.pathname.startsWith('/share/');
+};
+
 const App = (): JSX.Element => {
+  if (isPublicShareRoute()) {
+    return (
+      <ErrorBoundary>
+        <Router>
+          <Suspense fallback={<PageLoader />}>
+            <AppRoutes />
+          </Suspense>
+          <DeferredRender delayMs={6000}>
+            <Suspense fallback={null}>
+              <AppToaster />
+            </Suspense>
+          </DeferredRender>
+        </Router>
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary>
-      <ResumeProvider>
-        <ChatbotProvider>
-          <Router>
-            <Suspense fallback={<PageLoader />}>
-              <AppRoutes />
-            </Suspense>
-            <DeferredRender delayMs={6000}>
-              <Suspense fallback={null}>
-                <AppToaster />
+      <AuthProvider>
+        <ResumeProvider>
+          <ChatbotProvider>
+            <Router>
+              <Suspense fallback={<PageLoader />}>
+                <AppRoutes />
               </Suspense>
-            </DeferredRender>
-          </Router>
-        </ChatbotProvider>
-      </ResumeProvider>
+              <DeferredRender delayMs={6000}>
+                <Suspense fallback={null}>
+                  <AppToaster />
+                </Suspense>
+              </DeferredRender>
+            </Router>
+          </ChatbotProvider>
+        </ResumeProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 };

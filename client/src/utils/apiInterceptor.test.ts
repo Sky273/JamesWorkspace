@@ -149,10 +149,23 @@ describe('apiInterceptor', () => {
     expect(fetch).toHaveBeenCalledTimes(3);
   });
 
-  it('redirects immediately on missing token 401', async () => {
-    vi.mocked(fetch).mockResolvedValue(
-      jsonResponse({ error: 'missing', code: 'TOKEN_MISSING' }, { status: 401 })
-    );
+  it('refreshes token and retries when the access token cookie is missing', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse({ error: 'missing', code: 'TOKEN_MISSING' }, { status: 401 }))
+      .mockResolvedValueOnce(jsonResponse({}, { status: 200 }))
+      .mockResolvedValueOnce(jsonResponse({ ok: true }, { status: 200 }));
+
+    const response = await fetchWithAuth('/api/protected');
+
+    expect(response.ok).toBe(true);
+    expect(fetch).toHaveBeenNthCalledWith(2, '/api/auth/refresh', expect.objectContaining({ method: 'POST' }));
+    expect(mocks.triggerSessionExpiry).not.toHaveBeenCalled();
+  });
+
+  it('redirects on missing access token when refresh fails', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(jsonResponse({ error: 'missing', code: 'TOKEN_MISSING' }, { status: 401 }))
+      .mockResolvedValueOnce(jsonResponse({ error: 'refresh expired' }, { status: 401 }));
 
     await expect(fetchWithAuth('/api/protected')).rejects.toBeInstanceOf(SessionRedirectError);
     expect(mocks.triggerSessionExpiry).toHaveBeenCalled();
@@ -184,12 +197,25 @@ describe('apiInterceptor', () => {
   });
 
   it('redirects on session-related 403 responses', async () => {
+    mocks.isCsrfError.mockResolvedValue(false);
     vi.mocked(fetch).mockResolvedValue(
       jsonResponse({ error: 'invalid csrf token', code: 'CSRF_INVALID' }, { status: 403 })
     );
 
     await expect(fetchWithAuth('/api/protected')).rejects.toBeInstanceOf(SessionRedirectError);
     expect(mocks.triggerSessionExpiry).toHaveBeenCalled();
+  });
+
+  it('returns csrf 403 responses so fetchWithCsrfRetry can retry them', async () => {
+    mocks.isCsrfError.mockResolvedValue(true);
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({ error: 'Invalid CSRF token', code: 'CSRF_INVALID' }, { status: 403 })
+    );
+
+    const response = await fetchWithAuth('/api/protected');
+
+    expect(response.status).toBe(403);
+    expect(mocks.triggerSessionExpiry).not.toHaveBeenCalled();
   });
 
   it('triggers proactive refresh when the response warns about token expiry', async () => {

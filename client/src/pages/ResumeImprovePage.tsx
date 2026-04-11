@@ -25,7 +25,7 @@ import OverviewTab from '../components/ResumeAnalysis/OverviewTab';
 import PipelineTab from '../components/ResumeAnalysis/PipelineTab';
 import ResumeComments from '../components/ResumeComments';
 import PageHeader from '../components/page/PageHeader';
-import { fetchWithAuth, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
+import { fetchWithAuth, fetchWithCsrfRetry, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
 import { FRONTEND_LLM_AI_MODIFICATION_TIMEOUT_MS } from '../constants/llmTimeouts';
 import {
   applyTemplatePlaceholders,
@@ -247,7 +247,7 @@ const ResumeImprovePage = (): JSX.Element => {
         headers: { 'Content-Type': 'application/json' }
       });
       
-      const response = await fetchWithAuth(`/api/share/resume/${id}/generate`, {
+      const response = await fetchWithCsrfRetry(`/api/share/resume/${id}/generate`, {
         ...options,
         method: 'POST',
         body: JSON.stringify({

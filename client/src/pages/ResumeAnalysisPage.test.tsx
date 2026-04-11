@@ -8,6 +8,7 @@ const {
   setCurrentResumeMock,
   improveCurrentResumeMock,
   fetchWithAuthMock,
+  fetchWithCsrfRetryMock,
   createAuthOptionsWithCsrfMock,
   getResumeMock,
   getAllTemplatesMock,
@@ -21,6 +22,7 @@ const {
   setCurrentResumeMock: vi.fn(),
   improveCurrentResumeMock: vi.fn(),
   fetchWithAuthMock: vi.fn(),
+  fetchWithCsrfRetryMock: vi.fn(),
   createAuthOptionsWithCsrfMock: vi.fn(),
   getResumeMock: vi.fn(),
   getAllTemplatesMock: vi.fn(),
@@ -74,6 +76,7 @@ vi.mock('../utils/templateService', () => ({
 
 vi.mock('../utils/apiInterceptor', () => ({
   fetchWithAuth: fetchWithAuthMock,
+  fetchWithCsrfRetry: fetchWithCsrfRetryMock,
   createAuthOptionsWithCsrf: createAuthOptionsWithCsrfMock,
 }));
 
@@ -92,13 +95,9 @@ vi.mock('../utils/logger.frontend', () => ({
   },
 }));
 
-vi.mock('../components/TiptapEditor', async () => {
-  const actual = await vi.importActual<typeof import('../components/TiptapEditor')>('../components/TiptapEditor');
-  return {
-    ...actual,
-    removeSuggestionMarkers: removeSuggestionMarkersMock,
-  };
-});
+vi.mock('../components/TiptapEditor/suggestionsHtml', () => ({
+  removeSuggestionMarkers: removeSuggestionMarkersMock,
+}));
 
 vi.mock('../components/ui/Skeleton', () => ({
   SkeletonCard: ({ className }: { className?: string }) => <div data-testid="skeleton" className={className} />,
@@ -194,6 +193,7 @@ describe('ResumeAnalysisPage', () => {
       credentials: 'include',
       headers: { 'Content-Type': 'application/json', 'x-csrf-token': 'csrf-token' },
     });
+    fetchWithCsrfRetryMock.mockReset();
     setCurrentResumeMock.mockImplementation((resume: ResumeLike | null) => {
       resumeContextValue = {
         ...resumeContextValue,
@@ -289,7 +289,7 @@ describe('ResumeAnalysisPage', () => {
         FooterHeight: 35,
       },
     ]);
-    fetchWithAuthMock.mockResolvedValue({
+    fetchWithCsrfRetryMock.mockResolvedValue({
       json: async () => ({ success: true, token: 'token-123' }),
     });
 
@@ -309,7 +309,7 @@ describe('ResumeAnalysisPage', () => {
     expect(createAuthOptionsWithCsrfMock).toHaveBeenCalledWith({
       headers: { 'Content-Type': 'application/json' },
     });
-    expect(fetchWithAuthMock).toHaveBeenCalledWith(
+    expect(fetchWithCsrfRetryMock).toHaveBeenCalledWith(
       '/api/share/resume/resume-1/generate',
       expect.objectContaining({
         method: 'POST',

@@ -52,6 +52,7 @@ vi.mock('../utils/templateService', () => ({
 
 vi.mock('../utils/apiInterceptor', () => ({
   fetchWithAuth: vi.fn(),
+  fetchWithCsrfRetry: vi.fn(),
   createAuthOptionsWithCsrf: vi.fn(),
 }));
 
@@ -133,20 +134,27 @@ vi.mock('../components/page/PageHeader', () => ({
 }));
 
 vi.mock('../components/TiptapEditor', () => ({
-  DeferredTiptapEditor: ({
+  removeSuggestionMarkers: (value: string) => value,
+}));
+
+vi.mock('../components/TiptapEditor/DeferredTiptapEditor', () => ({
+  default: ({
     content,
     onReady,
     skillProofs,
   }: {
     content: string;
     onReady: () => void;
-    skillProofs?: Array<{ name: string }>;
+    skillProofs?: Array<{ name?: string; tool?: string }>;
   }) => {
     onReady();
-    return <div>editor:{content}:{skillProofs?.map((proof) => proof.name).join(',') || 'none'}</div>;
+    const labels = (skillProofs || []).map((proof) => proof.name || proof.tool).filter(Boolean).join(',');
+    return <div>editor:{content}:{labels || 'none'}</div>;
   },
+}));
+
+vi.mock('../components/TiptapEditor/suggestions.shared', () => ({
   parseSuggestions: () => [],
-  removeSuggestionMarkers: (value: string) => value,
 }));
 
 vi.mock('../utils/logger.frontend', () => ({

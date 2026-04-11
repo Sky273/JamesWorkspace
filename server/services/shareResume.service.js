@@ -22,7 +22,8 @@ import {
     getOrCreateShareToken,
     getShareRowByResumeId,
     isExpired,
-    isManagedSharedPdfPath
+    isManagedSharedPdfPath,
+    resolveManagedSharedPdfPath
 } from './shareResume.helpers.js';
 export { SHARE_LINK_TTL_DAYS, SHARE_LINK_TTL_MS } from './shareResume.constants.js';
 
@@ -67,15 +68,15 @@ export async function initShareResumeTable() {
  */
 export async function storeSharedPdf(resumeId, pdfBuffer, filename) {
     let pdfPath = null;
+    let storedPdfPath = null;
 
     try {
         const existingShare = await getShareRowByResumeId(resumeId);
         const token = generateShareToken();
         const storedToken = createStoredShareToken(token);
         const expiresAt = buildShareExpiryDate();
-
-        const safeFilename = filename.replace(/[^a-zA-Z0-9_-]/g, '_') + '.pdf';
-        pdfPath = path.join(SHARED_PDF_DIR, `${token}_${safeFilename}`);
+        storedPdfPath = token;
+        pdfPath = path.join(SHARED_PDF_DIR, storedPdfPath);
 
         await fs.writeFile(pdfPath, pdfBuffer);
 
@@ -83,7 +84,7 @@ export async function storeSharedPdf(resumeId, pdfBuffer, filename) {
             `UPDATE resumes
              SET shared_pdf_path = $1, shared_pdf_token = $2, shared_pdf_expires_at = $3
              WHERE id = $4`,
-            [pdfPath, storedToken, expiresAt, resumeId]
+            [storedPdfPath, storedToken, expiresAt, resumeId]
         );
 
         if (existingShare?.shared_pdf_path && existingShare.shared_pdf_path !== pdfPath) {
@@ -144,7 +145,7 @@ export async function getSharedPdfByToken(token) {
             return null;
         }
 
-        const resolvedPath = path.resolve(resume.shared_pdf_path || '');
+        const resolvedPath = resolveManagedSharedPdfPath(resume.shared_pdf_path || '');
         try {
             await fs.access(resolvedPath);
         } catch {

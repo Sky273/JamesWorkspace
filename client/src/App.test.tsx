@@ -15,15 +15,16 @@ const renderPage = (label: string) => {
 };
 
 vi.mock('./context/AuthContext', () => ({
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <div data-testid="auth-provider">{children}</div>,
   useAuth: () => authState,
 }));
 
 vi.mock('./context/ResumeContext', () => ({
-  ResumeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  ResumeProvider: ({ children }: { children: React.ReactNode }) => <div data-testid="resume-provider">{children}</div>,
 }));
 
 vi.mock('./context/ChatbotContext', () => ({
-  ChatbotProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  ChatbotProvider: ({ children }: { children: React.ReactNode }) => <div data-testid="chatbot-provider">{children}</div>,
 }));
 
 vi.mock('./components/ErrorBoundary', () => ({
@@ -138,5 +139,16 @@ describe('App routing', () => {
     render(<App />);
 
     expect(await screen.findByText('email-templates-page')).toBeInTheDocument();
+  });
+
+  it('renders public share pages without auth and app providers', async () => {
+    window.history.replaceState({}, '', '/share/pdf/public-token');
+
+    render(<App />);
+
+    expect(await screen.findByText('shared-file-page')).toBeInTheDocument();
+    expect(screen.queryByTestId('auth-provider')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('resume-provider')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('chatbot-provider')).not.toBeInTheDocument();
   });
 });
