@@ -1,3 +1,40 @@
+﻿## v1.9.0 - 2026-04-11
+### Administration multi-cabinet et propagation des templates
+
+#### Rôles et périmètres admin
+- Renommage du rôle `admin` en `Super administrateur` côté interface.
+- Introduction du rôle `localAdmin` affiché comme `Administrateur`, avec cloisonnement aux données de son cabinet.
+- Restriction des écrans accessibles aux admins locaux à `Modèles de CV`, `Templates Email`, `Etiquettes` et `Utilisateurs`, sans accès à l’onglet `Cabinets`.
+- Mise à jour de l’écran utilisateurs pour permettre l’attribution des rôles `Super administrateur` et `Administrateur`.
+
+#### Cloisonnement par cabinet
+- Filtrage backend et frontend des utilisateurs, modèles CV, templates email et étiquettes pour les admins locaux sur leur seul cabinet.
+- Verrouillage explicite des créations, éditions, duplications et suppressions hors cabinet pour les admins locaux.
+- Correction du chargement en boucle de l’écran utilisateurs provoqué par des dépendances instables dans les hooks React.
+
+#### Templates email
+- Ajout d’une vue super administrateur réellement transverse sur tous les templates email, tous cabinets confondus.
+- Ajout du badge `Cabinet` sur chaque template email avec affichage du cabinet d’appartenance ou `Global`.
+- Correction des contrôles d’accès backend pour permettre au super administrateur de consulter, prévisualiser, dupliquer, modifier et supprimer des templates email de n’importe quel cabinet.
+
+#### Modèles de CV et duplication
+- Ajout de l’action de duplication pour les super administrateurs sur les modèles de CV et les templates email, avec choix du cabinet cible.
+- Correction des validations backend pour forcer les admins locaux sur leur propre cabinet.
+- Correction de l’unicité des noms de modèles CV en base de données : unicité désormais par cabinet, avec gestion séparée des modèles globaux.
+
+#### Base de données
+- Ajout de la migration du rôle `localAdmin` dans la contrainte SQL des utilisateurs.
+- Ajout de la migration de contrainte d’unicité des modèles CV par cabinet.
+
+#### Navigation et interface admin
+- Déplacement de `Logs de sécurité` et `Journal RGPD` dans la section basse du menu, avant le `Guide utilisateur`.
+- Confirmation de l’accès au `Guide utilisateur` pour les utilisateurs standards et les admins locaux.
+
+#### Qualité
+- Renforcement des tests ciblés frontend et backend sur les rôles, le cloisonnement, les duplications et les templates email.
+- Alignement de la version applicative sur `v1.9.0`.
+
+---
 ## v1.8.9 - 2026-04-07
 ### Qualité frontend, overlays CV et gouvernance des prompts
 
