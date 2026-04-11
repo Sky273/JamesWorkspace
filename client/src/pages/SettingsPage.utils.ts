@@ -264,6 +264,20 @@ export const createSavePayload = (
   };
   delete dataToSave.llmModelParametersJson;
 
+  if (formData.llmProvider !== 'ollama') {
+    delete dataToSave.ollamaBaseUrl;
+    delete dataToSave.ollamaVisionModel;
+    delete dataToSave.ollamaKeepAlive;
+    delete dataToSave.ollamaNumCtx;
+  } else {
+    if (!String(formData.ollamaBaseUrl || '').trim()) {
+      delete dataToSave.ollamaBaseUrl;
+    }
+    if (!String(formData.ollamaVisionModel || '').trim()) {
+      delete dataToSave.ollamaVisionModel;
+    }
+  }
+
   return dataToSave;
 };
 

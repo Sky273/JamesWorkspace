@@ -75,6 +75,21 @@ describe('SettingsPage helpers', () => {
     expect(payload.llmModel).toBe('llama3.2');
   });
 
+  it('omits empty ollama fields when saving non-ollama defaults', () => {
+    const payload = createSavePayload({
+      ...defaultFormData,
+      llmProvider: 'openai',
+      llmModel: 'gpt-4o',
+      ollamaBaseUrl: '',
+      ollamaVisionModel: '',
+    });
+
+    expect(payload.ollamaBaseUrl).toBeUndefined();
+    expect(payload.ollamaVisionModel).toBeUndefined();
+    expect(payload.ollamaKeepAlive).toBeUndefined();
+    expect(payload.ollamaNumCtx).toBeUndefined();
+  });
+
   it('computes the current total weight', () => {
     expect(getTotalWeight(defaultFormData)).toBe(100);
   });
