@@ -62,6 +62,7 @@ const Layout = (): JSX.Element => {
   const [isAboutOpen, setIsAboutOpen] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const { t } = useTranslation();
+  const isSuperAdmin = user?.role === 'admin';
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -154,14 +155,16 @@ const Layout = (): JSX.Element => {
 
                 <LanguageSelector variant="header" />
 
-                <Link
-                  to="/settings"
-                  className={headerIconButtonClassName}
-                  title={t('navigation.settings')}
-                >
-                  <span className="sr-only">{t('navigation.settings')}</span>
-                  <Cog6ToothIcon className={headerIconClassName} aria-hidden="true" />
-                </Link>
+                {isSuperAdmin ? (
+                  <Link
+                    to="/settings"
+                    className={headerIconButtonClassName}
+                    title={t('navigation.settings')}
+                  >
+                    <span className="sr-only">{t('navigation.settings')}</span>
+                    <Cog6ToothIcon className={headerIconClassName} aria-hidden="true" />
+                  </Link>
+                ) : null}
 
                 <button className={headerIconButtonClassName} onClick={() => setIsAboutOpen(true)}>
                   <span className="sr-only">{t('common.about')}</span>
