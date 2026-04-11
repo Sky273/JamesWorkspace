@@ -102,9 +102,10 @@ const AdminFirmSelector = ({
 
     onFirmChange(value);
   };
+  const currentFirmOptionValue = userFirmId || MY_FIRM_VALUE;
 
   const displayValue = isSuperAdmin
-    ? (!selectedFirmId || selectedFirmId === userFirmId ? MY_FIRM_VALUE : selectedFirmId)
+    ? (!selectedFirmId || selectedFirmId === userFirmId ? currentFirmOptionValue : selectedFirmId)
     : (selectedFirmId || userFirmId);
   const currentUserFirmName = user?.firmName
     || user?.firm
@@ -131,7 +132,7 @@ const AdminFirmSelector = ({
         className="w-full px-3 py-2 border border-purple-300 dark:border-purple-600 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
       >
         {isSuperAdmin ? (
-          <option value={MY_FIRM_VALUE}>
+          <option value={currentFirmOptionValue}>
             {loading
               ? t('common.loading', 'Chargement...')
               : currentUserFirmName}

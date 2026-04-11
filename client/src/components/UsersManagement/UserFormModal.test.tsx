@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import UserFormModal from './UserFormModal';
 
@@ -47,12 +47,28 @@ vi.mock('../AdminFirmSelector', () => ({
   ),
 }));
 
+const useAuthMock = vi.fn();
+
+vi.mock('../../context/AuthContext', () => ({
+  useAuth: () => useAuthMock(),
+}));
+
 describe('UserFormModal', () => {
   const t = (key: string) => key;
   const firms = [
     { id: 'firm-1', name: 'Acme' },
     { id: 'firm-2', name: 'Globex' },
   ];
+
+  beforeEach(() => {
+    useAuthMock.mockReturnValue({
+      user: {
+        role: 'admin',
+        firmId: 'firm-1',
+        firmName: 'Acme',
+      },
+    });
+  });
 
   it('submits a new local admin user with the selected firm and no password field', () => {
     const onSubmit = vi.fn();
@@ -86,6 +102,30 @@ describe('UserFormModal', () => {
       status: 'Active',
     }));
     expect(container.querySelector('input[type="password"]')).not.toBeInTheDocument();
+  });
+
+  it('defaults a new super-admin-created user to the current admin firm', () => {
+    const onSubmit = vi.fn();
+
+    render(
+      <UserFormModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+        user={null}
+        firms={firms}
+        t={t}
+      />
+    );
+
+    const textboxes = screen.getAllByRole('textbox');
+    fireEvent.change(textboxes[0], { target: { value: 'Lookman' } });
+    fireEvent.change(textboxes[1], { target: { value: 'lookman@yopmail.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'users.management.modal.save' }));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      firmId: 'firm-1',
+    }));
   });
 
   it('pre-fills an existing user and does not render the password field in edit mode', () => {

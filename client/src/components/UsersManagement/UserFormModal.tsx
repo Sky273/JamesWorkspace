@@ -16,6 +16,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Modal from './Modal';
 import AdminFirmSelector from '../AdminFirmSelector';
+import { useAuth } from '../../context/AuthContext';
 
 interface User {
   id?: string;
@@ -68,6 +69,7 @@ const UserFormModal = ({
   canChangeFirm = true,
   t,
 }: UserFormModalProps): JSX.Element => {
+  const { user: currentUser } = useAuth();
   const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
@@ -79,6 +81,8 @@ const UserFormModal = ({
   });
 
   useEffect(() => {
+    const currentUserFirmId = currentUser?.firmId || currentUser?.firm_id || '';
+
     if (user) {
       const capitalizedStatus = user.status
         ? user.status.charAt(0).toUpperCase() + user.status.slice(1).toLowerCase()
@@ -93,9 +97,17 @@ const UserFormModal = ({
         status: capitalizedStatus,
       });
     } else {
-      setFormData({ name: '', email: '', jobTitle: '', phone: '', firmId: '', role: 'user', status: 'Active' });
+      setFormData({
+        name: '',
+        email: '',
+        jobTitle: '',
+        phone: '',
+        firmId: currentUserFirmId,
+        role: 'user',
+        status: 'Active',
+      });
     }
-  }, [user, isOpen]);
+  }, [currentUser?.firmId, currentUser?.firm_id, isOpen, user]);
 
   useEffect(() => {
     if (!isOpen || user || canChangeFirm || firms.length === 0) {

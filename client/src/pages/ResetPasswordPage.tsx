@@ -86,7 +86,10 @@ const ResetPasswordPage = (): JSX.Element => {
             </div>
           </div>
           <div className="mt-6 text-center">
-            <Link to="/signin" className="inline-flex items-center rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+            <Link
+              to="/signin"
+              className="inline-flex items-center rounded-2xl bg-indigo-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:bg-indigo-500 dark:text-white dark:hover:bg-indigo-400"
+            >
               {t('auth.resetPassword.goToSignIn')}
             </Link>
           </div>

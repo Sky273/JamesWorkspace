@@ -142,13 +142,13 @@ function PublicHeader(): JSX.Element {
             </div>
             <Link 
               to="/signin" 
-              className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg font-medium transition-colors"
+              className="public-cta-secondary px-4 py-2"
             >
               {t('common.signIn', 'Se connecter')}
             </Link>
             <Link 
               to="/register" 
-              className="bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+              className="public-cta-primary px-4 py-2"
             >
               {t('common.register', "S'inscrire")}
             </Link>
@@ -196,13 +196,13 @@ function PublicHomePage(): JSX.Element {
                 <motion.div className="flex flex-wrap gap-4">
                   <Link
                     to="/register"
-                    className="bg-primary-500 hover:bg-primary-600 text-white px-8 py-3 rounded-lg text-lg font-semibold transition-colors inline-block"
+                    className="public-cta-primary px-8 py-3 text-lg inline-block"
                   >
                     {t('public.home.getStarted', 'Commencer gratuitement')}
                   </Link>
                   <Link
                     to="/signin"
-                    className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-8 py-3 rounded-lg text-lg font-semibold transition-colors inline-block"
+                    className="public-cta-secondary px-8 py-3 text-lg inline-block"
                   >
                     {t('common.signIn', 'Se connecter')}
                   </Link>
