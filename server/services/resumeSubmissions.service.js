@@ -5,6 +5,7 @@
  */
 
 import { query } from '../config/database.js';
+import { invalidateClientsCaches } from './cache.service.js';
 
 // ============================================
 // SQL FRAGMENTS
@@ -252,6 +253,7 @@ export async function createSubmission(data) {
         [result.rows[0].id]
     );
 
+    await invalidateClientsCaches();
     return fullResult.rows[0];
 }
 
@@ -280,6 +282,7 @@ export async function updateSubmission(id, { status, notes }) {
          RETURNING *`,
         [status, notes, id]
     );
+    await invalidateClientsCaches();
     return result.rows[0];
 }
 
@@ -289,6 +292,20 @@ export async function updateSubmission(id, { status, notes }) {
  */
 export async function deleteSubmission(id) {
     await query('DELETE FROM resume_submissions WHERE id = $1', [id]);
+    await invalidateClientsCaches();
+}
+
+export async function deleteSubmissionsByResumeId(resumeId, { executor } = {}) {
+    const run = typeof executor === 'function'
+        ? executor
+        : executor && typeof executor.query === 'function'
+            ? executor.query.bind(executor)
+            : query;
+
+    await run('DELETE FROM resume_submissions WHERE resume_id = $1', [resumeId]);
+    if (!executor) {
+        await invalidateClientsCaches();
+    }
 }
 
 // ============================================

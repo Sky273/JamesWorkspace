@@ -18,6 +18,28 @@ vi.mock('../../utils/postgresHelpers.js', () => ({
     escapeLike: vi.fn((str) => str.replace(/[%_\\]/g, '\\$&'))
 }));
 
+const { mockClientsCache, mockInvalidateClientsCaches, mockInvalidateDealsCaches, mockInvalidateMissionsCaches } = vi.hoisted(() => ({
+    mockClientsCache: {
+        getOrLoad: vi.fn(async (_key, loader) => loader())
+    },
+    mockInvalidateClientsCaches: vi.fn(async () => undefined),
+    mockInvalidateDealsCaches: vi.fn(async () => undefined),
+    mockInvalidateMissionsCaches: vi.fn(async () => undefined)
+}));
+
+vi.mock('../../services/cache.service.js', () => ({
+    CACHE_KEYS: {
+        clients: {
+            ALL_CLIENTS: 'all',
+            INDUSTRIES: 'industries'
+        }
+    },
+    clientsCache: mockClientsCache,
+    invalidateClientsCaches: (...args) => mockInvalidateClientsCaches(...args),
+    invalidateDealsCaches: (...args) => mockInvalidateDealsCaches(...args),
+    invalidateMissionsCaches: (...args) => mockInvalidateMissionsCaches(...args)
+}));
+
 // Import after mocks
 import { query } from '../../config/database.js';
 import {
@@ -41,6 +63,7 @@ import {
 describe('Clients Service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockClientsCache.getOrLoad.mockImplementation(async (_key, loader) => loader());
     });
 
     // ============================================

@@ -5,6 +5,7 @@ import { parseScore } from '../helpers.js';
 import { analyzeImprovedResumeWithLLM, improveResumeWithLLM } from '../llmIntegration.js';
 import { getLLMSettings } from '../../settings.service.js';
 import { extractSummaryText, stringifyJsonField } from './shared.js';
+import { updateResume } from '../../resumes.service.js';
 
 export async function processImprovement(item, resumeId, text, analysis, job) {
     safeLog('info', 'Improving CV with LLM', { itemId: item.id, resumeId });
@@ -151,57 +152,31 @@ export async function saveImprovedData(item, resumeId, improvedResult) {
 
     const summaryText = extractSummaryText(improvedAnalysis);
 
-    await query(`
-        UPDATE resumes SET
-            improved_text = $1,
-            improved_global_rating = $2,
-            improved_skills_score = $3,
-            improved_experience_score = $4,
-            improved_education_score = $5,
-            improved_ats_score = $6,
-            improved_executive_summary_score = $7,
-            improved_hobbies_languages_score = $8,
-            improved_skills = $9,
-            improved_industries = $10,
-            improved_tools = $11,
-            improved_soft_skills = $12,
-            improved_key_improvements = $13,
-            improvement_suggestions = $14,
-            analysis_details = $15,
-            summary = COALESCE($16, summary),
-            title = COALESCE($17, title),
-            experience_years = COALESCE($18, experience_years),
-            education_level = COALESCE($19, education_level),
-            certifications = COALESCE($20, certifications),
-            languages = COALESCE($21, languages),
-            status = 'improved',
-            improvement_date = NOW(),
-            updated_at = NOW()
-        WHERE id = $22
-    `, [
-        improvedResult.text,
-        globalRating,
-        skillsScore,
-        experienceScore,
-        educationScore,
-        atsScore,
-        executiveSummaryScore,
-        hobbiesLanguagesScore,
-        JSON.stringify(improvedTags.skills || []),
-        JSON.stringify(improvedTags.industries || []),
-        JSON.stringify(improvedTags.tools || []),
-        JSON.stringify(improvedTags.softSkills || []),
-        JSON.stringify(improvedAnalysis.suggestions || {}),
-        JSON.stringify(improvedAnalysis.suggestions || {}),
-        JSON.stringify(improvedAnalysis),
-        summaryText,
-        improvedAnalysis.title || null,
-        improvedAnalysis.experienceYears ?? improvedAnalysis.experience_years ?? null,
-        improvedAnalysis.educationLevel ?? improvedAnalysis.education_level ?? null,
-        stringifyJsonField(improvedAnalysis.certifications),
-        stringifyJsonField(improvedAnalysis.languages),
-        resumeId
-    ]);
+    await updateResume(resumeId, {
+        improved_text: improvedResult.text,
+        improved_global_rating: globalRating,
+        improved_skills_score: skillsScore,
+        improved_experience_score: experienceScore,
+        improved_education_score: educationScore,
+        improved_ats_score: atsScore,
+        improved_executive_summary_score: executiveSummaryScore,
+        improved_hobbies_languages_score: hobbiesLanguagesScore,
+        improved_skills: JSON.stringify(improvedTags.skills || []),
+        improved_industries: JSON.stringify(improvedTags.industries || []),
+        improved_tools: JSON.stringify(improvedTags.tools || []),
+        improved_soft_skills: JSON.stringify(improvedTags.softSkills || []),
+        improved_key_improvements: JSON.stringify(improvedAnalysis.suggestions || {}),
+        improvement_suggestions: JSON.stringify(improvedAnalysis.suggestions || {}),
+        analysis_details: JSON.stringify(improvedAnalysis),
+        summary: summaryText,
+        title: improvedAnalysis.title || null,
+        experience_years: improvedAnalysis.experienceYears ?? improvedAnalysis.experience_years ?? null,
+        education_level: improvedAnalysis.educationLevel ?? improvedAnalysis.education_level ?? null,
+        certifications: stringifyJsonField(improvedAnalysis.certifications),
+        languages: stringifyJsonField(improvedAnalysis.languages),
+        status: 'improved',
+        improvement_date: new Date().toISOString()
+    });
 
     safeLog('info', 'CV improvement saved successfully', { itemId: item.id, resumeId });
 }
@@ -309,4 +284,3 @@ export async function processImproveItem(item, job) {
     safeLog('info', 'Improve item processing completed', { itemId: item.id, resumeId: item.resume_id });
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 95 });
 }
-

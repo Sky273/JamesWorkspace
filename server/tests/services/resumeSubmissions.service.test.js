@@ -9,6 +9,10 @@ vi.mock('../../config/database.js', () => ({
     query: vi.fn()
 }));
 
+vi.mock('../../services/cache.service.js', () => ({
+    invalidateClientsCaches: vi.fn(async () => undefined)
+}));
+
 import { query } from '../../config/database.js';
 import {
     listSubmissions,

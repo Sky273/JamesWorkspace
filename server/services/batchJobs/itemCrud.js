@@ -497,3 +497,22 @@ export async function clearJobItemFileData(itemId) {
         throw error;
     }
 }
+
+/**
+ * Clear stored file payload for processed items in bulk.
+ * @returns {Promise<number>} Cleared row count
+ */
+export async function clearProcessedJobItemFileData() {
+    try {
+        const result = await query(`
+            UPDATE batch_job_items 
+            SET file_data = NULL 
+            WHERE file_data IS NOT NULL 
+            AND status IN ('success', 'error', 'skipped', 'pending_name')
+        `);
+        return result.rowCount || 0;
+    } catch (error) {
+        safeLog('error', 'Failed to clear processed batch job file payloads', { error: error.message });
+        throw error;
+    }
+}

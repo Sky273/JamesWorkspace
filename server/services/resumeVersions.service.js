@@ -290,6 +290,16 @@ export async function hasImprovedTextChanged(resumeId, newImprovedText) {
     return normalizedCurrent !== normalizedNew;
 }
 
+export async function deleteVersionsByResumeId(resumeId, { executor } = {}) {
+    const run = typeof executor === 'function'
+        ? executor
+        : executor && typeof executor.query === 'function'
+            ? executor.query.bind(executor)
+            : query;
+
+    await run('DELETE FROM resume_versions WHERE resume_id = $1', [resumeId]);
+}
+
 // ============================================
 // HELPERS
 // ============================================

@@ -7,6 +7,19 @@
 import { query } from '../config/database.js';
 import { findWithTimeout, createWithTimeout } from '../utils/postgresHelpers.js';
 import { invalidateDashboardAndGroupedViews } from './viewCacheInvalidation.service.js';
+import { invalidateClientsCaches, invalidateDealsCaches } from './cache.service.js';
+
+function resolveExecutor(executor) {
+    if (typeof executor === 'function') {
+        return executor;
+    }
+
+    if (executor && typeof executor.query === 'function') {
+        return executor.query.bind(executor);
+    }
+
+    return query;
+}
 
 /**
  * Allowed column names for dynamic UPDATE on the resumes table.
@@ -197,7 +210,11 @@ export async function updateResume(id, updateData) {
         err.statusCode = 404;
         throw err;
     }
-    await invalidateDashboardAndGroupedViews(result.rows[0].firm_id || null);
+    await Promise.all([
+        invalidateDashboardAndGroupedViews(result.rows[0].firm_id || null),
+        invalidateClientsCaches(),
+        invalidateDealsCaches()
+    ]);
     return result.rows[0];
 }
 
@@ -208,21 +225,23 @@ export async function updateResume(id, updateData) {
  * @returns {Promise<Object>}
  */
 export async function insertResume(data) {
-    const result = await query(
+    const executor = resolveExecutor(data.executor);
+    const result = await executor(
         `INSERT INTO resumes (
-            name, title, file_name, resume_file_data, resume_file_size, resume_file_type,
+            name, title, file_name, relative_path, resume_file_data, resume_file_size, resume_file_type,
             resume_file_url, status, firm_id, firm_name, profile_type, candidate_name,
             candidate_email, consent_status, consent_token, consent_token_expires_at,
             consent_requested_at, retention_until
         ) VALUES (
-            $1, $2, $3, $4, $5, $6,
-            $7, $8, $9, $10, $11, $12,
-            $13, $14, $15, $16, $17, $18
+            $1, $2, $3, $4, $5, $6, $7,
+            $8, $9, $10, $11, $12, $13,
+            $14, $15, $16, $17, $18, $19
         ) RETURNING *`,
         [
             data.name,
             data.title,
             data.fileName,
+            data.relativePath || null,
             data.fileBuffer,
             data.fileSize,
             data.mimeType,
@@ -241,7 +260,13 @@ export async function insertResume(data) {
         ]
     );
 
-    await invalidateDashboardAndGroupedViews(result.rows[0]?.firm_id || data.firmId || null);
+    if (data.invalidateCaches !== false) {
+        await Promise.all([
+            invalidateDashboardAndGroupedViews(result.rows[0]?.firm_id || data.firmId || null),
+            invalidateClientsCaches(),
+            invalidateDealsCaches()
+        ]);
+    }
     return result.rows[0];
 }
 
@@ -251,8 +276,9 @@ export async function insertResume(data) {
  * @param {string} fileUrl
  * @returns {Promise<void>}
  */
-export async function updateResumeFileUrl(id, fileUrl) {
-    await query(
+export async function updateResumeFileUrl(id, fileUrl, { executor } = {}) {
+    const run = resolveExecutor(executor);
+    await run(
         'UPDATE resumes SET resume_file_url = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
         [fileUrl, id]
     );
@@ -264,8 +290,9 @@ export async function updateResumeFileUrl(id, fileUrl) {
  * @param {string} consentStatus
  * @returns {Promise<void>}
  */
-export async function updateConsentStatus(id, consentStatus) {
-    await query(
+export async function updateConsentStatus(id, consentStatus, { executor } = {}) {
+    const run = resolveExecutor(executor);
+    await run(
         'UPDATE resumes SET consent_status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
         [consentStatus, id]
     );
@@ -277,14 +304,87 @@ export async function updateConsentStatus(id, consentStatus) {
  * @returns {Promise<boolean>}
  */
 export async function deleteResume(id) {
-    const result = await query('DELETE FROM resumes WHERE id = $1 RETURNING id, firm_id', [id]);
+    const options = arguments[1] || {};
+    const executor = resolveExecutor(options.executor);
+    const result = await executor('DELETE FROM resumes WHERE id = $1 RETURNING id, firm_id', [id]);
     if (result.rows.length === 0) {
         const err = new Error('Resume not found');
         err.statusCode = 404;
         throw err;
     }
-    await invalidateDashboardAndGroupedViews(result.rows[0].firm_id || null);
+    if (options.invalidateCaches !== false) {
+        await Promise.all([
+            invalidateDashboardAndGroupedViews(result.rows[0].firm_id || null),
+            invalidateClientsCaches(),
+            invalidateDealsCaches()
+        ]);
+    }
     return true;
+}
+
+export async function expirePendingConsents() {
+    const result = await query(`
+        UPDATE resumes 
+        SET consent_status = 'expired',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE consent_status = 'pending_consent'
+          AND consent_token_expires_at IS NOT NULL
+          AND consent_token_expires_at < CURRENT_TIMESTAMP
+        RETURNING id, firm_id
+    `);
+    await Promise.all([...new Set(result.rows.map((row) => row.firm_id).filter(Boolean))]
+        .flatMap((firmId) => [
+            invalidateDashboardAndGroupedViews(firmId),
+            invalidateClientsCaches(),
+            invalidateDealsCaches()
+        ]));
+    return result;
+}
+
+export async function expireRetentionConsents() {
+    const result = await query(`
+        UPDATE resumes 
+        SET consent_status = 'expired',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE consent_status = 'active'
+          AND retention_until IS NOT NULL
+          AND retention_until < CURRENT_TIMESTAMP
+        RETURNING id, firm_id
+    `);
+    await Promise.all([...new Set(result.rows.map((row) => row.firm_id).filter(Boolean))]
+        .flatMap((firmId) => [
+            invalidateDashboardAndGroupedViews(firmId),
+            invalidateClientsCaches(),
+            invalidateDealsCaches()
+        ]));
+    return result;
+}
+
+export async function recordConsentReminderSent(resumeId) {
+    const result = await query(`
+        UPDATE resumes 
+        SET consent_reminder_sent_at = CURRENT_TIMESTAMP,
+            consent_reminder_count = consent_reminder_count + 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING id, firm_id
+    `, [resumeId]);
+    if (result.rows[0]?.firm_id) {
+        await Promise.all([
+            invalidateDashboardAndGroupedViews(result.rows[0].firm_id),
+            invalidateClientsCaches(),
+            invalidateDealsCaches()
+        ]);
+    }
+    return result;
+}
+
+export async function getResumeAuditInfo(resumeId) {
+    const result = await query(`
+        SELECT id, firm_id, firm_name, candidate_name, candidate_email, consent_status
+        FROM resumes WHERE id = $1
+    `, [resumeId]);
+    return result.rows[0] || null;
 }
 
 /**
@@ -312,6 +412,10 @@ export async function findMissionRecord(id) {
  */
 export async function createAdaptation(data) {
     const record = await createWithTimeout('resume_adaptations', data);
-    await invalidateDashboardAndGroupedViews(record.firm_id || data.firm_id || null);
+    await Promise.all([
+        invalidateDashboardAndGroupedViews(record.firm_id || data.firm_id || null),
+        invalidateClientsCaches(),
+        invalidateDealsCaches()
+    ]);
     return record;
 }

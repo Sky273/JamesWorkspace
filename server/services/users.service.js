@@ -6,6 +6,7 @@
 
 import { query } from '../config/database.js';
 import { selectWithTimeout, escapeLike, createWithTimeout, updateWithTimeout, destroyWithTimeout } from '../utils/postgresHelpers.js';
+import { CACHE_KEYS, invalidateClientsCaches, invalidateUsersCaches, usersCache } from './cache.service.js';
 
 /**
  * List users with pagination and filters
@@ -15,51 +16,64 @@ import { selectWithTimeout, escapeLike, createWithTimeout, updateWithTimeout, de
 export async function listUsers({ search, role, status, firmId, page = 1, limit = 100 } = {}) {
     const normalizedPage = Math.max(1, page);
     const normalizedLimit = Math.max(1, Math.min(limit, 100));
-    const offset = (normalizedPage - 1) * normalizedLimit;
-    const conditions = [];
-    const params = [];
-    let paramIndex = 1;
-
-    if (search) {
-        conditions.push(`(LOWER(name) LIKE $${paramIndex} OR LOWER(email) LIKE $${paramIndex})`);
-        params.push(`%${escapeLike(search.toLowerCase())}%`);
-        paramIndex++;
-    }
-
-    if (role && role !== 'all') {
-        conditions.push(`role = $${paramIndex}`);
-        params.push(role.toLowerCase());
-        paramIndex++;
-    }
-
-    if (status && status !== 'all') {
-        conditions.push(`status = $${paramIndex}`);
-        params.push(status.toLowerCase());
-        paramIndex++;
-    }
-
-    if (firmId) {
-        conditions.push(`firm_id = $${paramIndex}`);
-        params.push(firmId);
-        paramIndex++;
-    }
-
-    const whereClause = conditions.length > 0 ? conditions.join(' AND ') : '';
-
-    const users = await selectWithTimeout('users', {
-        where: whereClause,
-        params: params,
-        orderBy: 'name ASC',
-        limit: normalizedLimit + 1,
-        offset: offset
+    const cacheKey = JSON.stringify({
+        search: search || '',
+        role: role || 'all',
+        status: status || 'all',
+        firmId: firmId || null,
+        page: normalizedPage,
+        limit: normalizedLimit
     });
 
-    const hasMore = users.length > normalizedLimit;
-    if (hasMore) {
-        users.pop();
-    }
+    return usersCache.getOrLoad(cacheKey, async () => {
+        const offset = (normalizedPage - 1) * normalizedLimit;
+        const conditions = [];
+        const params = [];
+        let paramIndex = 1;
 
-    return { users, hasMore };
+        if (search) {
+            conditions.push(`(LOWER(name) LIKE $${paramIndex} OR LOWER(email) LIKE $${paramIndex})`);
+            params.push(`%${escapeLike(search.toLowerCase())}%`);
+            paramIndex++;
+        }
+
+        if (role && role !== 'all') {
+            conditions.push(`role = $${paramIndex}`);
+            params.push(role.toLowerCase());
+            paramIndex++;
+        }
+
+        if (status && status !== 'all') {
+            conditions.push(`status = $${paramIndex}`);
+            params.push(status.toLowerCase());
+            paramIndex++;
+        }
+
+        if (firmId) {
+            conditions.push(`firm_id = $${paramIndex}`);
+            params.push(firmId);
+            paramIndex++;
+        }
+
+        const whereClause = conditions.length > 0 ? conditions.join(' AND ') : '';
+
+        const users = await selectWithTimeout('users', {
+            where: whereClause,
+            params: params,
+            orderBy: 'name ASC',
+            limit: normalizedLimit + 1,
+            offset: offset
+        });
+
+        const hasMore = users.length > normalizedLimit;
+        if (hasMore) {
+            users.pop();
+        }
+
+        return { users, hasMore };
+    }, {
+        scope: CACHE_KEYS.users.ALL_USERS
+    });
 }
 
 /**
@@ -122,7 +136,14 @@ export async function updateUserProfile(id, fields, isAdmin) {
         params
     );
 
-    return result.rows.length > 0 ? result.rows[0] : null;
+    const updated = result.rows.length > 0 ? result.rows[0] : null;
+    if (updated) {
+        await Promise.all([
+            invalidateUsersCaches(),
+            invalidateClientsCaches()
+        ]);
+    }
+    return updated;
 }
 
 // ============================================
@@ -166,6 +187,10 @@ export async function createAdminUser(userData) {
     const records = await createWithTimeout('users', [{
         fields: userData
     }]);
+    await Promise.all([
+        invalidateUsersCaches(),
+        invalidateClientsCaches()
+    ]);
     return records[0];
 }
 
@@ -175,12 +200,16 @@ export async function createAdminUser(userData) {
  * @returns {Promise<Object|null>}
  */
 export async function findUserById(id) {
-    const users = await selectWithTimeout('users', {
-        where: 'id = $1',
-        params: [id],
-        limit: 1
+    return usersCache.getOrLoad(`detail:${id}`, async () => {
+        const users = await selectWithTimeout('users', {
+            where: 'id = $1',
+            params: [id],
+            limit: 1
+        });
+        return users.length > 0 ? users[0] : null;
+    }, {
+        scope: CACHE_KEYS.users.ALL_USERS
     });
-    return users.length > 0 ? users[0] : null;
 }
 
 /**
@@ -194,6 +223,10 @@ export async function updateAdminUser(id, fields) {
         id,
         fields
     }]);
+    await Promise.all([
+        invalidateUsersCaches(),
+        invalidateClientsCaches()
+    ]);
     return records[0];
 }
 
@@ -203,7 +236,12 @@ export async function updateAdminUser(id, fields) {
  * @returns {Promise<string[]>} Deleted IDs
  */
 export async function deleteUser(id) {
-    return destroyWithTimeout('users', [id]);
+    const deleted = await destroyWithTimeout('users', [id]);
+    await Promise.all([
+        invalidateUsersCaches(),
+        invalidateClientsCaches()
+    ]);
+    return deleted;
 }
 
 /**
@@ -211,5 +249,7 @@ export async function deleteUser(id) {
  * @returns {Promise<Object[]>}
  */
 export async function listAllUsers() {
-    return selectWithTimeout('users', {});
+    return usersCache.getOrLoad('all-users', async () => selectWithTimeout('users', {}), {
+        scope: CACHE_KEYS.users.ALL_USERS
+    });
 }

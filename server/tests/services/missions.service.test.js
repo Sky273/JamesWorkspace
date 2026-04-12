@@ -25,9 +25,19 @@ vi.mock('../../utils/postgresHelpers.js', () => ({
 }));
 
 vi.mock('../../services/cache.service.js', () => ({
+    CACHE_KEYS: {
+        missions: {
+            ALL_MISSIONS: 'all'
+        }
+    },
     buildGroupedViewScopeKey: ({ firmId = null, isAdmin = false } = {}) => (isAdmin ? 'admin' : `firm:${firmId}`),
     getNamedCacheStats: vi.fn(async () => ({ size: 0 })),
+    invalidateDealsCaches: vi.fn(async () => undefined),
+    invalidateMissionsCaches: vi.fn(async () => undefined),
     invalidateMissionGroupedViewCaches: vi.fn(async () => undefined),
+    missionsCache: {
+        getOrLoad: vi.fn(async (_key, loader) => loader())
+    },
     missionGroupedViewCache: {
         getOrLoad: vi.fn(async (_key, loader) => loader())
     }

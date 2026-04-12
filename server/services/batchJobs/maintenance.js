@@ -8,6 +8,8 @@ import path from 'path';
 
 import { query } from '../../config/database.js';
 import { safeLog } from '../../utils/logger.backend.js';
+import { clearJobExportReference, deleteOldJobs } from './jobCrud.js';
+import { clearProcessedJobItemFileData } from './itemCrud.js';
 
 const EXPORTS_DIR = path.join(os.tmpdir(), 'batch-exports');
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -23,14 +25,6 @@ export function isManagedBatchExportPath(filePath) {
     return relativePath !== ''
         && !relativePath.startsWith('..')
         && !path.isAbsolute(relativePath);
-}
-
-async function clearJobExportReference(jobId) {
-    await query(`
-        UPDATE batch_jobs
-        SET export_file_path = NULL, export_file_name = NULL
-        WHERE id = $1
-    `, [jobId]);
 }
 
 async function deleteExportArtifact(filePath) {
@@ -161,13 +155,7 @@ export async function cleanupOldJobs(maxAgeDays = 7) {
     try {
         // First, clear file_data from all processed items (success/error) to free memory
         // Keep file_data only for pending items that haven't been processed yet
-        const clearResult = await query(`
-            UPDATE batch_job_items 
-            SET file_data = NULL 
-            WHERE file_data IS NOT NULL 
-            AND status IN ('success', 'error', 'skipped', 'pending_name')
-        `);
-        const clearedFileData = clearResult.rowCount || 0;
+        const clearedFileData = await clearProcessedJobItemFileData();
 
         const safeDays = Math.max(1, Math.floor(Number(maxAgeDays) || 7));
         const exportCleanup = await cleanupJobExportArtifacts(safeDays);
@@ -186,13 +174,7 @@ export async function cleanupOldJobs(maxAgeDays = 7) {
         }
 
         // Delete old completed/failed/cancelled jobs
-        const deleteResult = await query(`
-            DELETE FROM batch_jobs 
-            WHERE status IN ('completed', 'failed', 'cancelled')
-            AND completed_at < NOW() - INTERVAL '1 day' * $1
-            RETURNING id
-        `, [safeDays]);
-        const deletedJobs = deleteResult.rowCount || 0;
+        const deletedJobs = await deleteOldJobs(safeDays);
 
         if (clearedFileData > 0 || deletedJobs > 0 || deletedExportFiles > 0 || exportCleanup.orphanExportFilesDeleted > 0 || exportCleanup.staleExportRefsCleared > 0) {
             safeLog('info', 'Batch jobs cleanup completed', { 

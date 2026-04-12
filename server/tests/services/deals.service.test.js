@@ -13,6 +13,25 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+const { mockDealsCache, mockInvalidateDealsCaches, mockInvalidateMissionsCaches } = vi.hoisted(() => ({
+    mockDealsCache: {
+        getOrLoad: vi.fn(async (_key, loader) => loader())
+    },
+    mockInvalidateDealsCaches: vi.fn(async () => undefined),
+    mockInvalidateMissionsCaches: vi.fn(async () => undefined)
+}));
+
+vi.mock('../../services/cache.service.js', () => ({
+    CACHE_KEYS: {
+        deals: {
+            ALL_DEALS: 'all'
+        }
+    },
+    dealsCache: mockDealsCache,
+    invalidateDealsCaches: (...args) => mockInvalidateDealsCaches(...args),
+    invalidateMissionsCaches: (...args) => mockInvalidateMissionsCaches(...args)
+}));
+
 import { query } from '../../config/database.js';
 import {
     DEAL_STATUS,
@@ -41,6 +60,7 @@ import {
 describe('Deals Service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockDealsCache.getOrLoad.mockImplementation(async (_key, loader) => loader());
     });
 
     // ============================================

@@ -1,5 +1,6 @@
 import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { CACHE_KEYS, dealsCache } from './cache.service.js';
 import {
     buildDealsWhereClause,
     buildDealsPaginationMetadata,
@@ -26,8 +27,12 @@ import {
 
 export async function getDealById(dealId) {
     try {
-        const result = await query(DEAL_BY_ID_SQL, [dealId]);
-        return getFirstRowOrNull(result);
+        return dealsCache.getOrLoad(`detail:${dealId}`, async () => {
+            const result = await query(DEAL_BY_ID_SQL, [dealId]);
+            return getFirstRowOrNull(result);
+        }, {
+            scope: CACHE_KEYS.deals.ALL_DEALS
+        });
     } catch (error) {
         safeLog('error', 'Error fetching deal', { error: error.message, dealId });
         throw error;
@@ -37,24 +42,30 @@ export async function getDealById(dealId) {
 export async function getDeals(firmId, filters = {}, pagination = {}) {
     try {
         const { page, limit, offset } = parseDealsPagination(pagination);
-        const { whereClause, params, nextParamIndex } = buildDealsWhereClause(firmId, filters);
+        const cacheKey = JSON.stringify({ firmId: firmId || null, filters, page, limit });
 
-        const countResult = await query(`SELECT COUNT(*) as total FROM deals d ${whereClause}`, params);
-        const totalCount = parseInt(countResult.rows[0].total, 10);
+        return dealsCache.getOrLoad(cacheKey, async () => {
+            const { whereClause, params, nextParamIndex } = buildDealsWhereClause(firmId, filters);
 
-        const dataParams = [...params, limit, offset];
-        const result = await query(`
-            ${GET_DEALS_LIST_COUNTS_CTE_SQL}
-            ${GET_DEALS_LIST_SELECT_SQL}
-            ${whereClause}
-            ${GET_DEALS_LIST_ORDER_SQL}
-            LIMIT $${nextParamIndex} OFFSET $${nextParamIndex + 1}
-        `, dataParams);
+            const countResult = await query(`SELECT COUNT(*) as total FROM deals d ${whereClause}`, params);
+            const totalCount = parseInt(countResult.rows[0].total, 10);
 
-        return {
-            data: result.rows,
-            pagination: buildDealsPaginationMetadata(page, limit, offset, totalCount, result.rows.length)
-        };
+            const dataParams = [...params, limit, offset];
+            const result = await query(`
+                ${GET_DEALS_LIST_COUNTS_CTE_SQL}
+                ${GET_DEALS_LIST_SELECT_SQL}
+                ${whereClause}
+                ${GET_DEALS_LIST_ORDER_SQL}
+                LIMIT $${nextParamIndex} OFFSET $${nextParamIndex + 1}
+            `, dataParams);
+
+            return {
+                data: result.rows,
+                pagination: buildDealsPaginationMetadata(page, limit, offset, totalCount, result.rows.length)
+            };
+        }, {
+            scope: CACHE_KEYS.deals.ALL_DEALS
+        });
     } catch (error) {
         safeLog('error', 'Error fetching deals', { error: error.message, firmId });
         throw error;
@@ -63,8 +74,12 @@ export async function getDeals(firmId, filters = {}, pagination = {}) {
 
 export async function getDealStats(firmId) {
     try {
-        const result = await query(DEAL_STATS_SQL, [firmId]);
-        return result.rows[0];
+        return dealsCache.getOrLoad(`stats:${firmId || 'admin'}`, async () => {
+            const result = await query(DEAL_STATS_SQL, [firmId]);
+            return result.rows[0];
+        }, {
+            scope: CACHE_KEYS.deals.ALL_DEALS
+        });
     } catch (error) {
         safeLog('error', 'Error fetching deal stats', { error: error.message, firmId });
         throw error;
@@ -92,14 +107,22 @@ export async function getResumeFirmId(resumeId) {
 }
 
 export async function getMissionsForDeal(dealId) {
-    const result = await query(DEAL_MISSIONS_SQL, [dealId]);
-    return result.rows;
+    return dealsCache.getOrLoad(`missions:${dealId}`, async () => {
+        const result = await query(DEAL_MISSIONS_SQL, [dealId]);
+        return result.rows;
+    }, {
+        scope: CACHE_KEYS.deals.ALL_DEALS
+    });
 }
 
 export async function getDealsForResume(resumeId, firmId) {
     try {
-        const result = await query(DEALS_FOR_RESUME_SQL, [resumeId, firmId]);
-        return result.rows;
+        return dealsCache.getOrLoad(`resume:${resumeId}:firm:${firmId || 'admin'}`, async () => {
+            const result = await query(DEALS_FOR_RESUME_SQL, [resumeId, firmId]);
+            return result.rows;
+        }, {
+            scope: CACHE_KEYS.deals.ALL_DEALS
+        });
     } catch (error) {
         safeLog('error', 'Error fetching deals for resume', { error: error.message, resumeId });
         throw error;
@@ -108,8 +131,12 @@ export async function getDealsForResume(resumeId, firmId) {
 
 export async function getResumesForDeal(dealId) {
     try {
-        const result = await query(RESUMES_FOR_DEAL_SQL, [dealId]);
-        return result.rows;
+        return dealsCache.getOrLoad(`resumes:${dealId}`, async () => {
+            const result = await query(RESUMES_FOR_DEAL_SQL, [dealId]);
+            return result.rows;
+        }, {
+            scope: CACHE_KEYS.deals.ALL_DEALS
+        });
     } catch (error) {
         safeLog('error', 'Error fetching resumes for deal', { error: error.message, dealId });
         throw error;
@@ -118,8 +145,12 @@ export async function getResumesForDeal(dealId) {
 
 export async function getDealsCountForClient(clientId) {
     try {
-        const result = await query(DEALS_COUNT_FOR_CLIENT_SQL, [clientId]);
-        return parseCountResult(result);
+        return dealsCache.getOrLoad(`client-count:${clientId}`, async () => {
+            const result = await query(DEALS_COUNT_FOR_CLIENT_SQL, [clientId]);
+            return parseCountResult(result);
+        }, {
+            scope: CACHE_KEYS.deals.ALL_DEALS
+        });
     } catch (error) {
         safeLog('error', 'Error fetching deals count for client', { error: error.message, clientId });
         throw error;

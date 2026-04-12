@@ -9,6 +9,17 @@ import { safeLog } from '../../utils/logger.backend.js';
 import { gdprMailService } from '../mail/gdprMailService.js';
 import { logGdprAction, GDPR_ACTIONS } from '../gdprAudit.service.js';
 import { getFrontendUrl, buildConsentReminderEmailHtml } from './emailTemplates.js';
+import {
+    deleteResume,
+    expirePendingConsents,
+    expireRetentionConsents,
+    getResumeAuditInfo,
+    recordConsentReminderSent
+} from '../resumes.service.js';
+import { deleteSubmissionsByResumeId } from '../resumeSubmissions.service.js';
+import { deleteVersionsByResumeId } from '../resumeVersions.service.js';
+import { deleteAdaptationsByResumeId } from '../adaptations.service.js';
+import { invalidateDashboardAndGroupedViews } from '../viewCacheInvalidation.service.js';
 
 // Constants
 const REMINDER_AFTER_DAYS = 7; // Send reminder after 1 week
@@ -28,26 +39,10 @@ function updateLastConsentSchedulerSummary(summary) {
  */
 export async function checkExpiredConsents() {
     // Mark pending consents that have expired (token expired)
-    const expiredPending = await query(`
-        UPDATE resumes 
-        SET consent_status = 'expired',
-            updated_at = CURRENT_TIMESTAMP
-        WHERE consent_status = 'pending_consent'
-          AND consent_token_expires_at IS NOT NULL
-          AND consent_token_expires_at < CURRENT_TIMESTAMP
-        RETURNING id
-    `);
+    const expiredPending = await expirePendingConsents();
 
     // Mark active consents that have exceeded retention period
-    const expiredRetention = await query(`
-        UPDATE resumes 
-        SET consent_status = 'expired',
-            updated_at = CURRENT_TIMESTAMP
-        WHERE consent_status = 'active'
-          AND retention_until IS NOT NULL
-          AND retention_until < CURRENT_TIMESTAMP
-        RETURNING id
-    `);
+    const expiredRetention = await expireRetentionConsents();
 
     const totalExpired = expiredPending.rows.length + expiredRetention.rows.length;
 
@@ -118,13 +113,7 @@ export async function sendConsentReminders() {
             });
 
             // Update reminder tracking
-            await query(`
-                UPDATE resumes 
-                SET consent_reminder_sent_at = CURRENT_TIMESTAMP,
-                    consent_reminder_count = consent_reminder_count + 1,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = $1
-            `, [resume.id]);
+            await recordConsentReminderSent(resume.id);
 
             // Log GDPR action
             await logGdprAction({
@@ -175,29 +164,34 @@ export async function purgeResume(resumeId, auditInfo = null) {
     // Get resume info for audit logging if not provided
     let resumeInfo = auditInfo;
     if (!resumeInfo) {
-        const infoResult = await query(`
-            SELECT id, firm_id, firm_name, candidate_name, candidate_email, consent_status
-            FROM resumes WHERE id = $1
-        `, [resumeId]);
-        resumeInfo = infoResult.rows[0];
+        resumeInfo = await getResumeAuditInfo(resumeId);
     }
 
     // Wrap all deletes in a transaction to prevent partial purge
     const result = await transaction(async (client) => {
         // Delete versions first (foreign key constraint)
-        await client.query(`DELETE FROM resume_versions WHERE resume_id = $1`, [resumeId]);
+        await deleteVersionsByResumeId(resumeId, { executor: client });
 
         // Delete adaptations
-        await client.query(`DELETE FROM resume_adaptations WHERE resume_id = $1`, [resumeId]);
+        await deleteAdaptationsByResumeId(resumeId, { executor: client });
 
         // Delete submissions
-        await client.query(`DELETE FROM resume_submissions WHERE resume_id = $1`, [resumeId]);
+        await deleteSubmissionsByResumeId(resumeId, { executor: client });
 
         // Delete the resume
-        return await client.query(`DELETE FROM resumes WHERE id = $1 RETURNING id`, [resumeId]);
+        try {
+            await deleteResume(resumeId, { executor: client, invalidateCaches: false });
+        } catch (error) {
+            if (error?.statusCode === 404) {
+                return { rows: [] };
+            }
+            throw error;
+        }
+        return { rows: [{ id: resumeId }] };
     });
 
     if (result.rows.length > 0) {
+        await invalidateDashboardAndGroupedViews(resumeInfo?.firm_id || null);
         safeLog('info', 'Resume purged successfully', { resumeId });
 
         // Log GDPR action

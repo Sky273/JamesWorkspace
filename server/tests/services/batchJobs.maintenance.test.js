@@ -26,6 +26,19 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+const mockClearJobExportReference = vi.fn();
+const mockDeleteOldJobs = vi.fn();
+const mockClearProcessedJobItemFileData = vi.fn();
+
+vi.mock('../../services/batchJobs/jobCrud.js', () => ({
+    clearJobExportReference: (...args) => mockClearJobExportReference(...args),
+    deleteOldJobs: (...args) => mockDeleteOldJobs(...args)
+}));
+
+vi.mock('../../services/batchJobs/itemCrud.js', () => ({
+    clearProcessedJobItemFileData: (...args) => mockClearProcessedJobItemFileData(...args)
+}));
+
 import { query } from '../../config/database.js';
 import fs from 'fs/promises';
 import {
@@ -40,6 +53,23 @@ const managedStaleJobExportPath = path.join(os.tmpdir(), 'batch-exports', 'stale
 describe('Batch Jobs - Maintenance', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockClearJobExportReference.mockImplementation((jobId) => query(`
+            UPDATE batch_jobs
+            SET export_file_path = NULL, export_file_name = NULL
+            WHERE id = $1
+        `, [jobId]));
+        mockDeleteOldJobs.mockImplementation((maxAgeDays) => query(`
+            DELETE FROM batch_jobs 
+            WHERE status IN ('completed', 'failed', 'cancelled')
+            AND completed_at < NOW() - INTERVAL '1 day' * $1
+            RETURNING id
+        `, [maxAgeDays]).then((result) => result.rowCount || 0));
+        mockClearProcessedJobItemFileData.mockImplementation(() => query(`
+            UPDATE batch_job_items 
+            SET file_data = NULL 
+            WHERE file_data IS NOT NULL 
+            AND status IN ('success', 'error', 'skipped', 'pending_name')
+        `).then((result) => result.rowCount || 0));
         vi.mocked(fs.readdir).mockRejectedValue(Object.assign(new Error('missing'), { code: 'ENOENT' }));
     });
 

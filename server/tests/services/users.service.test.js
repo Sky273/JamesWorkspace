@@ -17,6 +17,25 @@ vi.mock('../../utils/postgresHelpers.js', () => ({
     escapeLike: vi.fn((str) => str.replace(/[%_\\]/g, '\\$&'))
 }));
 
+const { mockUsersCache, mockInvalidateUsersCaches, mockInvalidateClientsCaches } = vi.hoisted(() => ({
+    mockUsersCache: {
+        getOrLoad: vi.fn(async (_key, loader) => loader())
+    },
+    mockInvalidateUsersCaches: vi.fn(async () => undefined),
+    mockInvalidateClientsCaches: vi.fn(async () => undefined)
+}));
+
+vi.mock('../../services/cache.service.js', () => ({
+    CACHE_KEYS: {
+        users: {
+            ALL_USERS: 'all'
+        }
+    },
+    usersCache: mockUsersCache,
+    invalidateUsersCaches: (...args) => mockInvalidateUsersCaches(...args),
+    invalidateClientsCaches: (...args) => mockInvalidateClientsCaches(...args)
+}));
+
 import { query } from '../../config/database.js';
 import { selectWithTimeout, createWithTimeout, updateWithTimeout, destroyWithTimeout } from '../../utils/postgresHelpers.js';
 import {
@@ -33,6 +52,7 @@ import {
 describe('Users Service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockUsersCache.getOrLoad.mockImplementation(async (_key, loader) => loader());
     });
 
     describe('listUsers', () => {

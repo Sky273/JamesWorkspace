@@ -13,6 +13,18 @@ import {
     invalidateAdaptationGroupedViewCaches
 } from './cache.service.js';
 
+function resolveExecutor(executor) {
+    if (typeof executor === 'function') {
+        return executor;
+    }
+
+    if (executor && typeof executor.query === 'function') {
+        return executor.query.bind(executor);
+    }
+
+    return query;
+}
+
 /**
  * Allowed column names for dynamic UPDATE on the resume_adaptations table.
  * Any key not in this set is silently dropped to prevent SQL injection.
@@ -363,4 +375,9 @@ export async function deleteAdaptation(id) {
         throw err;
     }
     return true;
+}
+
+export async function deleteAdaptationsByResumeId(resumeId, { executor } = {}) {
+    const run = resolveExecutor(executor);
+    return run('DELETE FROM resume_adaptations WHERE resume_id = $1', [resumeId]);
 }

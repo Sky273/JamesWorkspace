@@ -612,6 +612,19 @@ export const CACHE_KEYS = {
     firms: {
         ALL_FIRMS: 'all'
     },
+    clients: {
+        ALL_CLIENTS: 'all',
+        INDUSTRIES: 'industries'
+    },
+    deals: {
+        ALL_DEALS: 'all'
+    },
+    users: {
+        ALL_USERS: 'all'
+    },
+    missions: {
+        ALL_MISSIONS: 'all'
+    },
     tags: {
         RAW: 'raw',
         CLEANED: 'cleaned',
@@ -625,6 +638,10 @@ export const CACHE_KEYS = {
 export const settingsCache = createCacheNamespace('settings', CACHE_TTL.SETTINGS);
 export const templatesCache = createCacheNamespace('templates', CACHE_TTL.TEMPLATES);
 export const firmsCache = createCacheNamespace('firms', CACHE_TTL.FIRMS);
+export const clientsCache = createCacheNamespace('clients', CACHE_TTL.CLIENTS);
+export const dealsCache = createCacheNamespace('deals', CACHE_TTL.DEALS);
+export const usersCache = createCacheNamespace('users', CACHE_TTL.USERS);
+export const missionsCache = createCacheNamespace('missions', CACHE_TTL.MISSIONS);
 export const tagsCache = createCacheNamespace('tags', CACHE_TTL.TEMPLATES);
 export const resumeGroupedViewCache = createCacheNamespace('resumeGroupedViews', CACHE_TTL.GROUPED_VIEWS);
 export const missionGroupedViewCache = createCacheNamespace('missionGroupedViews', CACHE_TTL.GROUPED_VIEWS);
@@ -656,6 +673,25 @@ export async function invalidateTemplatesCaches() {
 
 export async function invalidateFirmsCaches() {
     await firmsCache.invalidate(CACHE_KEYS.firms.ALL_FIRMS);
+}
+
+export async function invalidateClientsCaches() {
+    await Promise.all([
+        clientsCache.invalidate(CACHE_KEYS.clients.ALL_CLIENTS),
+        clientsCache.invalidate(CACHE_KEYS.clients.INDUSTRIES)
+    ]);
+}
+
+export async function invalidateDealsCaches() {
+    await dealsCache.invalidate(CACHE_KEYS.deals.ALL_DEALS);
+}
+
+export async function invalidateUsersCaches() {
+    await usersCache.invalidate(CACHE_KEYS.users.ALL_USERS);
+}
+
+export async function invalidateMissionsCaches() {
+    await missionsCache.invalidate(CACHE_KEYS.missions.ALL_MISSIONS);
 }
 
 export async function invalidateTagsCaches() {

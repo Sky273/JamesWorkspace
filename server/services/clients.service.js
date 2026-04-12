@@ -6,6 +6,13 @@
 
 import { query } from '../config/database.js';
 import { escapeLike } from '../utils/postgresHelpers.js';
+import {
+    CACHE_KEYS,
+    clientsCache,
+    invalidateClientsCaches,
+    invalidateDealsCaches,
+    invalidateMissionsCaches
+} from './cache.service.js';
 
 // ============================================
 // CLIENTS
@@ -24,73 +31,75 @@ import { escapeLike } from '../utils/postgresHelpers.js';
 export async function listClients({ page = 1, limit = 20, search, type, firmId }) {
     page = Number.isInteger(page) && page > 0 ? page : 1;
     limit = Number.isInteger(limit) ? Math.min(Math.max(limit, 1), 100) : 20;
-    const offset = (page - 1) * limit;
-    const conditions = [];
-    const params = [];
-    let paramIndex = 1;
+    const cacheKey = JSON.stringify({ page, limit, search: search || '', type: type || '', firmId: firmId || null });
 
-    // Firm segregation
-    if (firmId) {
-        conditions.push(`firm_id = $${paramIndex}`);
-        params.push(firmId);
-        paramIndex++;
-    }
+    return clientsCache.getOrLoad(cacheKey, async () => {
+        const offset = (page - 1) * limit;
+        const conditions = [];
+        const params = [];
+        let paramIndex = 1;
 
-    // Search filter
-    if (search) {
-        conditions.push(`(LOWER(name) LIKE $${paramIndex} OR LOWER(industry) LIKE $${paramIndex})`);
-        params.push(`%${escapeLike(search.toLowerCase())}%`);
-        paramIndex++;
-    }
-
-    // Type filter
-    if (type && ['client', 'prospect'].includes(type)) {
-        conditions.push(`type = $${paramIndex}`);
-        params.push(type);
-        paramIndex++;
-    }
-
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-
-    const clientsQuery = `
-        SELECT c.*, f.name as firm_name,
-            (SELECT COUNT(*) FROM client_contacts cc WHERE cc.client_id = c.id) as contacts_count,
-            (SELECT COUNT(*) FROM resume_submissions rs WHERE rs.client_id = c.id) as submissions_count
-        FROM clients c
-        LEFT JOIN firms f ON c.firm_id = f.id
-        ${whereClause}
-        ORDER BY c.name ASC
-        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-    `;
-    params.push(limit + 1, offset);
-
-    const result = await query(clientsQuery, params);
-    const clients = result.rows;
-
-    const hasMore = clients.length > limit;
-    if (hasMore) {
-        clients.pop();
-    }
-
-    // Get total count only on first page
-    let totalCount = null;
-    if (page === 1) {
-        const countParams = params.slice(0, -2);
-        const countQuery = `SELECT COUNT(*) as count FROM clients c ${whereClause}`;
-        const countResult = await query(countQuery, countParams);
-        totalCount = parseInt(countResult.rows[0].count);
-    }
-
-    return {
-        data: clients,
-        pagination: {
-            page,
-            limit,
-            hasMore,
-            totalCount,
-            nextPage: hasMore ? page + 1 : null
+        if (firmId) {
+            conditions.push(`firm_id = $${paramIndex}`);
+            params.push(firmId);
+            paramIndex++;
         }
-    };
+
+        if (search) {
+            conditions.push(`(LOWER(name) LIKE $${paramIndex} OR LOWER(industry) LIKE $${paramIndex})`);
+            params.push(`%${escapeLike(search.toLowerCase())}%`);
+            paramIndex++;
+        }
+
+        if (type && ['client', 'prospect'].includes(type)) {
+            conditions.push(`type = $${paramIndex}`);
+            params.push(type);
+            paramIndex++;
+        }
+
+        const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+        const clientsQuery = `
+            SELECT c.*, f.name as firm_name,
+                (SELECT COUNT(*) FROM client_contacts cc WHERE cc.client_id = c.id) as contacts_count,
+                (SELECT COUNT(*) FROM resume_submissions rs WHERE rs.client_id = c.id) as submissions_count
+            FROM clients c
+            LEFT JOIN firms f ON c.firm_id = f.id
+            ${whereClause}
+            ORDER BY c.name ASC
+            LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+        `;
+        params.push(limit + 1, offset);
+
+        const result = await query(clientsQuery, params);
+        const clients = result.rows;
+
+        const hasMore = clients.length > limit;
+        if (hasMore) {
+            clients.pop();
+        }
+
+        let totalCount = null;
+        if (page === 1) {
+            const countParams = params.slice(0, -2);
+            const countQuery = `SELECT COUNT(*) as count FROM clients c ${whereClause}`;
+            const countResult = await query(countQuery, countParams);
+            totalCount = parseInt(countResult.rows[0].count);
+        }
+
+        return {
+            data: clients,
+            pagination: {
+                page,
+                limit,
+                hasMore,
+                totalCount,
+                nextPage: hasMore ? page + 1 : null
+            }
+        };
+    }, {
+        scope: CACHE_KEYS.clients.ALL_CLIENTS
+    });
 }
 
 /**
@@ -98,12 +107,16 @@ export async function listClients({ page = 1, limit = 20, search, type, firmId }
  * @returns {Promise<string[]>}
  */
 export async function listIndustries() {
-    const result = await query(
-        `SELECT DISTINCT canonical_name 
-         FROM industry_aliases 
-         ORDER BY canonical_name ASC`
-    );
-    return result.rows.map(row => row.canonical_name);
+    return clientsCache.getOrLoad(CACHE_KEYS.clients.INDUSTRIES, async () => {
+        const result = await query(
+            `SELECT DISTINCT canonical_name 
+             FROM industry_aliases 
+             ORDER BY canonical_name ASC`
+        );
+        return result.rows.map(row => row.canonical_name);
+    }, {
+        scope: CACHE_KEYS.clients.INDUSTRIES
+    });
 }
 
 /**
@@ -112,45 +125,49 @@ export async function listIndustries() {
  * @returns {Promise<Object|null>}
  */
 export async function getClientById(id) {
-    const clientResult = await query(
-        `SELECT c.*, f.name as firm_name
-         FROM clients c
-         LEFT JOIN firms f ON c.firm_id = f.id
-         WHERE c.id = $1`,
-        [id]
-    );
+    return clientsCache.getOrLoad(`detail:${id}`, async () => {
+        const clientResult = await query(
+            `SELECT c.*, f.name as firm_name
+             FROM clients c
+             LEFT JOIN firms f ON c.firm_id = f.id
+             WHERE c.id = $1`,
+            [id]
+        );
 
-    if (clientResult.rows.length === 0) {
-        return null;
-    }
+        if (clientResult.rows.length === 0) {
+            return null;
+        }
 
-    const client = clientResult.rows[0];
+        const client = clientResult.rows[0];
 
-    const contactsResult = await query(
-        `SELECT * FROM client_contacts WHERE client_id = $1 ORDER BY is_primary DESC, name ASC`,
-        [id]
-    );
+        const contactsResult = await query(
+            `SELECT * FROM client_contacts WHERE client_id = $1 ORDER BY is_primary DESC, name ASC`,
+            [id]
+        );
 
-    const submissionsResult = await query(
-        `SELECT rs.*, r.name as resume_name, r.title as resume_title,
-                cc.name as contact_name, m.title as mission_title,
-                u.name as sent_by_name
-         FROM resume_submissions rs
-         LEFT JOIN resumes r ON rs.resume_id = r.id
-         LEFT JOIN client_contacts cc ON rs.contact_id = cc.id
-         LEFT JOIN missions m ON rs.mission_id = m.id
-         LEFT JOIN users u ON rs.sent_by = u.id
-         WHERE rs.client_id = $1
-         ORDER BY rs.sent_at DESC
-         LIMIT 10`,
-        [id]
-    );
+        const submissionsResult = await query(
+            `SELECT rs.*, r.name as resume_name, r.title as resume_title,
+                    cc.name as contact_name, m.title as mission_title,
+                    u.name as sent_by_name
+             FROM resume_submissions rs
+             LEFT JOIN resumes r ON rs.resume_id = r.id
+             LEFT JOIN client_contacts cc ON rs.contact_id = cc.id
+             LEFT JOIN missions m ON rs.mission_id = m.id
+             LEFT JOIN users u ON rs.sent_by = u.id
+             WHERE rs.client_id = $1
+             ORDER BY rs.sent_at DESC
+             LIMIT 10`,
+            [id]
+        );
 
-    return {
-        ...client,
-        contacts: contactsResult.rows,
-        recentSubmissions: submissionsResult.rows
-    };
+        return {
+            ...client,
+            contacts: contactsResult.rows,
+            recentSubmissions: submissionsResult.rows
+        };
+    }, {
+        scope: CACHE_KEYS.clients.ALL_CLIENTS
+    });
 }
 
 /**
@@ -194,6 +211,11 @@ export async function createClient({ firmId, name, type, status, address, websit
             createdBy
         ]
     );
+    await Promise.all([
+        invalidateClientsCaches(),
+        invalidateDealsCaches(),
+        invalidateMissionsCaches()
+    ]);
     return result.rows[0];
 }
 
@@ -229,6 +251,11 @@ export async function updateClient(id, { name, type, status, address, website, i
          RETURNING *`,
         [name, type, status, address, website, industry, notes, firmId, id]
     );
+    await Promise.all([
+        invalidateClientsCaches(),
+        invalidateDealsCaches(),
+        invalidateMissionsCaches()
+    ]);
     return result.rows[0];
 }
 
@@ -251,6 +278,11 @@ export async function countClientSubmissions(clientId) {
  */
 export async function deleteClient(id) {
     await query('DELETE FROM clients WHERE id = $1', [id]);
+    await Promise.all([
+        invalidateClientsCaches(),
+        invalidateDealsCaches(),
+        invalidateMissionsCaches()
+    ]);
 }
 
 // ============================================
@@ -273,11 +305,15 @@ export async function getClientFirmId(clientId) {
  * @returns {Promise<Array>}
  */
 export async function listContacts(clientId) {
-    const result = await query(
-        `SELECT * FROM client_contacts WHERE client_id = $1 ORDER BY is_primary DESC, name ASC`,
-        [clientId]
-    );
-    return result.rows;
+    return clientsCache.getOrLoad(`contacts:${clientId}`, async () => {
+        const result = await query(
+            `SELECT * FROM client_contacts WHERE client_id = $1 ORDER BY is_primary DESC, name ASC`,
+            [clientId]
+        );
+        return result.rows;
+    }, {
+        scope: CACHE_KEYS.clients.ALL_CLIENTS
+    });
 }
 
 /**
@@ -298,6 +334,11 @@ export async function createContact(clientId, { name, role, email, phone, is_pri
          RETURNING *`,
         [clientId, name, role || null, email || null, phone || null, is_primary || false]
     );
+    await Promise.all([
+        invalidateClientsCaches(),
+        invalidateDealsCaches(),
+        invalidateMissionsCaches()
+    ]);
     return result.rows[0];
 }
 
@@ -326,6 +367,11 @@ export async function updateContact(contactId, clientId, { name, role, email, ph
          RETURNING *`,
         [name, role, email, phone, is_primary, contactId, clientId]
     );
+    await Promise.all([
+        invalidateClientsCaches(),
+        invalidateDealsCaches(),
+        invalidateMissionsCaches()
+    ]);
     return result.rows.length > 0 ? result.rows[0] : null;
 }
 
@@ -353,5 +399,10 @@ export async function deleteContact(contactId, clientId) {
         'DELETE FROM client_contacts WHERE id = $1 AND client_id = $2 RETURNING id',
         [contactId, clientId]
     );
+    await Promise.all([
+        invalidateClientsCaches(),
+        invalidateDealsCaches(),
+        invalidateMissionsCaches()
+    ]);
     return result.rows.length > 0;
 }

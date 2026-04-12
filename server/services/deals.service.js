@@ -8,6 +8,7 @@ import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { assertSchemaRequirements } from './schemaVerification.service.js';
 import { buildCreateDealInsertParams, buildDealUpdateStatement } from './deals.service.helpers.js';
+import { invalidateDealsCaches, invalidateMissionsCaches } from './cache.service.js';
 import {
     INSERT_DEAL_SQL,
     UPSERT_DEAL_RESUME_SQL,
@@ -108,6 +109,10 @@ export async function createDeal(data, userId, firmId) {
         const result = await query(INSERT_DEAL_SQL, params);
 
         safeLog('info', 'Deal created', { dealId: result.rows[0].id, title });
+        await Promise.all([
+            invalidateDealsCaches(),
+            invalidateMissionsCaches()
+        ]);
         return result.rows[0];
     } catch (error) {
         safeLog('error', 'Error creating deal in service', { error: error.message, stack: error.stack });
@@ -141,6 +146,10 @@ export async function updateDeal(dealId, data) {
         }
 
         safeLog('info', 'Deal updated', { dealId });
+        await Promise.all([
+            invalidateDealsCaches(),
+            invalidateMissionsCaches()
+        ]);
         return result.rows[0];
     } catch (error) {
         safeLog('error', 'Error updating deal', { error: error.message, dealId });
@@ -160,6 +169,10 @@ export async function deleteDeal(dealId) {
         }
 
         safeLog('info', 'Deal deleted', { dealId });
+        await Promise.all([
+            invalidateDealsCaches(),
+            invalidateMissionsCaches()
+        ]);
         return true;
     } catch (error) {
         safeLog('error', 'Error deleting deal', { error: error.message, dealId });
@@ -177,6 +190,10 @@ export async function addResumeToDeal(dealId, resumeId, userId, options = {}) {
         const result = await query(UPSERT_DEAL_RESUME_SQL, [dealId, resumeId, userId, notes || null, status]);
 
         safeLog('info', 'Resume added to deal', { dealId, resumeId });
+        await Promise.all([
+            invalidateDealsCaches(),
+            invalidateMissionsCaches()
+        ]);
         return result.rows[0];
     } catch (error) {
         safeLog('error', 'Error adding resume to deal', { error: error.message, dealId, resumeId });
@@ -199,6 +216,10 @@ export async function removeResumeFromDeal(dealId, resumeId) {
         }
 
         safeLog('info', 'Resume removed from deal', { dealId, resumeId });
+        await Promise.all([
+            invalidateDealsCaches(),
+            invalidateMissionsCaches()
+        ]);
         return true;
     } catch (error) {
         safeLog('error', 'Error removing resume from deal', { error: error.message, dealId, resumeId });
@@ -218,6 +239,10 @@ export async function updateDealResumeStatus(dealId, resumeId, status, notes = n
         }
 
         safeLog('info', 'Deal resume status updated', { dealId, resumeId, status });
+        await Promise.all([
+            invalidateDealsCaches(),
+            invalidateMissionsCaches()
+        ]);
         return result.rows[0];
     } catch (error) {
         safeLog('error', 'Error updating deal resume status', { error: error.message, dealId, resumeId });

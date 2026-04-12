@@ -23,6 +23,11 @@ vi.mock('../../services/viewCacheInvalidation.service.js', () => ({
     invalidateDashboardAndGroupedViews: (...args) => mockInvalidateDashboardAndGroupedViews(...args)
 }));
 
+vi.mock('../../services/cache.service.js', () => ({
+    invalidateClientsCaches: vi.fn(async () => undefined),
+    invalidateDealsCaches: vi.fn(async () => undefined)
+}));
+
 import { query } from '../../config/database.js';
 import { findWithTimeout, createWithTimeout } from '../../utils/postgresHelpers.js';
 import {

@@ -94,7 +94,31 @@ vi.mock('../../services/openai.service.js', () => ({
     matchResumeWithMission: vi.fn()
 }));
 
+const mockInsertResume = vi.fn(async (data) => {
+    const result = await mockQuery(
+        'INSERT INTO resumes (...) RETURNING *',
+        [data]
+    );
+    return result.rows[0];
+});
+const mockUpdateResume = vi.fn(async (id, data) => {
+    await mockQuery(
+        "UPDATE resumes SET ... status = 'analyzed' WHERE id = $1",
+        [data, id]
+    );
+    return { id, ...data };
+});
+const mockUpdateResumeFileUrl = vi.fn(async (id, fileUrl) => {
+    await mockQuery(
+        'UPDATE resumes SET resume_file_url = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+        [fileUrl, id]
+    );
+});
+
 vi.mock('../../services/resumes.service.js', () => ({
+    insertResume: (...args) => mockInsertResume(...args),
+    updateResume: (...args) => mockUpdateResume(...args),
+    updateResumeFileUrl: (...args) => mockUpdateResumeFileUrl(...args),
     findResumeRecord: vi.fn(),
     findMissionRecord: vi.fn()
 }));
@@ -118,6 +142,9 @@ describe('Batch Jobs Worker - Item Processors', () => {
         mockTrackBatchImportActivity.mockReset();
         mockTrackOcrActivity.mockReset();
         mockPersistResumeSkillEvidence.mockReset();
+        mockInsertResume.mockClear();
+        mockUpdateResume.mockClear();
+        mockUpdateResumeFileUrl.mockClear();
         vi.mocked(getJobItemFilePayload).mockReset();
         vi.mocked(clearJobItemFileData).mockReset();
         vi.mocked(getJobItemFilePayload).mockResolvedValue({
@@ -190,26 +217,19 @@ describe('Batch Jobs Worker - Item Processors', () => {
             await processImportItem(item, job, { improve: false });
 
             // Should create resume record
-            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO resumes'), expect.any(Array));
+            expect(mockInsertResume).toHaveBeenCalledWith(expect.objectContaining({
+                fileName: 'cv.pdf',
+                firmId: 'firm-1'
+            }));
             expect(getJobItemFilePayload).toHaveBeenCalledWith('item-1');
             // Should extract text
             expect(mockExtractText).toHaveBeenCalledWith(Buffer.from('pdf'), item.file_mime_type, item.file_name);
             // Should analyze
             expect(mockAnalyze).toHaveBeenCalledWith(expect.any(String), 'firm-1', 'cv.pdf', expect.objectContaining({ ocrUsed: false }));
             // Should update resume with analysis
-            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('UPDATE resumes SET'), expect.any(Array));
-            const finalUpdateCall = mockQuery.mock.calls.find(
-                ([sql]) => typeof sql === 'string' && sql.includes("status = 'analyzed'")
-            );
-            const persistedAnalysis = finalUpdateCall?.[1].find((value) => {
-                if (typeof value !== 'string') return false;
-                try {
-                    const parsed = JSON.parse(value);
-                    return Array.isArray(parsed?.tags?.skillsEvidence) || Array.isArray(parsed?.tags?.toolsEvidence);
-                } catch {
-                    return false;
-                }
-            });
+            expect(mockUpdateResumeFileUrl).toHaveBeenCalledWith('res-1', '/api/resumes/res-1/download');
+            const finalUpdateCall = mockUpdateResume.mock.calls.find(([, data]) => data?.status === 'analyzed');
+            const persistedAnalysis = finalUpdateCall?.[1]?.analysis_details;
             expect(persistedAnalysis).toBeTruthy();
             expect(JSON.parse(persistedAnalysis)).toEqual(expect.objectContaining({
                 tags: expect.objectContaining({
@@ -287,8 +307,8 @@ describe('Batch Jobs Worker - Item Processors', () => {
             );
 
             expect(finalUpdateCall).toBeTruthy();
-            expect(finalUpdateCall[1][0]).toBe(mockPreAnalyze.mock.calls[0][0]);
-            expect(finalUpdateCall[1][0]).not.toBe('# Experience\n- Structured resume text for analysis');
+            expect(finalUpdateCall[1][0].original_text).toBe(mockPreAnalyze.mock.calls[0][0]);
+            expect(finalUpdateCall[1][0].original_text).not.toBe('# Experience\n- Structured resume text for analysis');
         });
 
         it('should mark the item as analyzing before running the main analysis even without pre-analysis', async () => {
@@ -355,7 +375,7 @@ describe('Batch Jobs Worker - Item Processors', () => {
             );
 
             expect(finalUpdateCall).toBeTruthy();
-            expect(finalUpdateCall[1][0]).toBe(extractedText);
+            expect(finalUpdateCall[1][0].original_text).toBe(extractedText);
         });
 
         it('should throw on text too short', async () => {
@@ -436,12 +456,13 @@ describe('Batch Jobs Worker - Item Processors', () => {
                 candidateEmail: 'jane@example.com'
             });
 
-            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('candidate_name'), expect.arrayContaining([
-                'Jane Candidate',
-                'jane@example.com',
-                'external',
-                'pending_consent'
-            ]));
+            expect(mockInsertResume).toHaveBeenCalledWith(expect.objectContaining({
+                name: 'Jane Candidate',
+                candidateName: 'Jane Candidate',
+                candidateEmail: 'jane@example.com',
+                profileType: 'external',
+                consentStatus: 'pending_consent'
+            }));
             expect(mockSendConsentRequest).toHaveBeenCalledWith('res-1');
         });
 
@@ -472,7 +493,10 @@ describe('Batch Jobs Worker - Item Processors', () => {
             });
 
             expect(updateJobItemStatus).not.toHaveBeenCalledWith('item-1', 'pending_name', expect.anything());
-            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('name = COALESCE'), expect.arrayContaining(['Fallback Name']));
+            expect(mockUpdateResume).toHaveBeenCalledWith('res-1', expect.objectContaining({
+                name: 'Fallback Name',
+                status: 'analyzed'
+            }));
         });
 
         it('should import and improve when improve=true', async () => {
@@ -513,7 +537,9 @@ describe('Batch Jobs Worker - Item Processors', () => {
 
             expect(mockImprove).toHaveBeenCalled();
             // Should save improved data
-            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('improved_text'), expect.any(Array));
+            expect(mockUpdateResume).toHaveBeenCalledWith('res-1', expect.objectContaining({
+                improved_text: '<p>improved CV text</p>'
+            }));
             expect(clearJobItemFileData).toHaveBeenCalledWith('item-1');
         });
 
@@ -541,7 +567,10 @@ describe('Batch Jobs Worker - Item Processors', () => {
             });
 
             expect(mockAnalyze).toHaveBeenCalledWith(expect.stringContaining('luc.moreau@gmail.com'), 'firm-1', 'cv.pdf', expect.objectContaining({ ocrUsed: true }));
-            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('name = COALESCE'), expect.arrayContaining(['Luc Moreau']));
+            expect(mockUpdateResume).toHaveBeenCalledWith('res-1', expect.objectContaining({
+                name: 'Luc Moreau',
+                status: 'analyzed'
+            }));
             expect(updateJobItemStatus).not.toHaveBeenCalledWith('item-1', 'pending_name', expect.anything());
         });
 
@@ -693,7 +722,9 @@ describe('Batch Jobs Worker - Item Processors', () => {
             await processImproveItem({ id: 'i2', resume_id: 'res-1', file_name: 'bob.pdf' }, job, {});
 
             expect(mockImprove).toHaveBeenCalledWith('Original CV text', expect.objectContaining({ name: 'Bob' }), 'firm-1', 'bob.pdf');
-            expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('improved_text'), expect.any(Array));
+            expect(mockUpdateResume).toHaveBeenCalledWith('res-1', expect.objectContaining({
+                improved_text: '<p>improved text</p>'
+            }));
         });
 
         it('should throw after retries if improvement keeps failing', async () => {

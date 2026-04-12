@@ -4,7 +4,6 @@
  */
 
 import { safeLog } from '../../utils/logger.backend.js';
-import { query } from '../../config/database.js';
 import { processAnalysisTags } from '../../utils/tagCleaner.js';
 import { ITEM_STATUS } from '../batchJobs/constants.js';
 import { updateJobItemStatus, getJobItemFilePayload, clearJobItemFileData } from '../batchJobs/itemCrud.js';
@@ -18,6 +17,7 @@ import { processAdaptItem, processMatchItem, processProfileSearchItem, processPr
 import { metrics } from '../metrics.service.js';
 import { getLLMSettings } from '../settings.service.js';
 import { persistResumeSkillEvidence } from '../skillEvidence.service.js';
+import { insertResume, updateResume, updateResumeFileUrl } from '../resumes.service.js';
 
 function buildOcrMetricsMetadata(extractionResult, baseMetadata = {}) {
     return {
@@ -77,51 +77,29 @@ export async function processImportItem(item, job, options) {
     try {
         await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 20 });
 
-        const resumeResult = await query(`
-            INSERT INTO resumes (
-                name, 
-                file_name,
-                relative_path,
-                resume_file_data,
-                resume_file_size,
-                resume_file_type,
-                resume_file_url,
-                status, 
-                firm_id,
-                firm_name,
-                profile_type,
-                candidate_name,
-                candidate_email,
-                consent_status,
-                consent_token,
-                consent_token_expires_at,
-                consent_requested_at,
-                retention_until,
-                created_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW())
-            RETURNING id
-        `, [
-            consentMetadata.candidateName || item.file_name,
-            item.file_name,
-            item.relative_path || null,
+        const createdResume = await insertResume({
+            name: consentMetadata.candidateName || item.file_name,
+            title: null,
+            fileName: item.file_name,
+            relativePath: item.relative_path || null,
             fileBuffer,
-            fileBuffer.length || 0,
+            fileSize: fileBuffer.length || 0,
             mimeType,
-            null,
-            'processing',
-            job.firm_id,
-            job.firm_name || null,
-            consentMetadata.profileType,
-            consentMetadata.candidateName,
-            consentMetadata.candidateEmail,
-            consentMetadata.consentStatus,
-            consentMetadata.consentToken,
-            consentMetadata.consentTokenExpiresAt,
-            consentMetadata.consentRequestedAt,
-            consentMetadata.retentionUntil
-        ]);
+            fileUrl: null,
+            status: 'processing',
+            firmId: job.firm_id,
+            firmName: job.firm_name || null,
+            profileType: consentMetadata.profileType,
+            candidateName: consentMetadata.candidateName,
+            candidateEmail: consentMetadata.candidateEmail,
+            consentStatus: consentMetadata.consentStatus,
+            consentToken: consentMetadata.consentToken,
+            tokenExpiresAt: consentMetadata.consentTokenExpiresAt,
+            consentRequestedAt: consentMetadata.consentRequestedAt,
+            retentionUntil: consentMetadata.retentionUntil
+        });
 
-        const resumeId = resumeResult.rows[0].id;
+        const resumeId = createdResume.id;
 
         metrics.trackBatchImportActivity({
             event: 'resume-created',
@@ -135,10 +113,7 @@ export async function processImportItem(item, job, options) {
             }
         });
 
-        await query(
-            `UPDATE resumes SET resume_file_url = $1 WHERE id = $2`,
-            [`/api/resumes/${resumeId}/download`, resumeId]
-        );
+        await updateResumeFileUrl(resumeId, `/api/resumes/${resumeId}/download`);
 
         await sendConsentRequestIfNeeded(resumeId, consentMetadata, job.firm_id);
 
@@ -276,52 +251,29 @@ export async function processImportItem(item, job, options) {
             });
 
             const { rawTags: pendingRawTags, cleanedTags: pendingCleanedTags } = processAnalysisTags(analysis);
-            await query(`
-                UPDATE resumes SET
-                    original_text = $1,
-                    global_rating = $2,
-                    skills_score = $3,
-                    experience_score = $4,
-                    education_score = $5,
-                    ats_score = $6,
-                    executive_summary_score = $7,
-                    hobbies_languages_score = $8,
-                    skills = $9,
-                    industries = $10,
-                    tools = $11,
-                    soft_skills = $12,
-                    skills_cleaned = $13,
-                    industries_cleaned = $14,
-                    tools_cleaned = $15,
-                    soft_skills_cleaned = $16,
-                    key_improvements = $17,
-                    analysis_details = $18,
-                    title = $19,
-                    status = 'pending_name',
-                    analyzed_at = NOW()
-                WHERE id = $20
-            `, [
-                originalExtractedText,
-                parseScore(analysis.globalRating),
-                parseScore(analysis.skillsRating),
-                parseScore(analysis.experiencesRating),
-                parseScore(analysis.educationRating),
-                parseScore(analysis.atsOptimizationRating),
-                parseScore(analysis.executiveSummaryRating),
-                parseScore(analysis.hobbiesLanguagesRating),
-                JSON.stringify(pendingRawTags.skills),
-                JSON.stringify(pendingRawTags.industries),
-                JSON.stringify(pendingRawTags.tools),
-                JSON.stringify(pendingRawTags.softSkills),
-                JSON.stringify(pendingCleanedTags.skills),
-                JSON.stringify(pendingCleanedTags.industries),
-                JSON.stringify(pendingCleanedTags.tools),
-                JSON.stringify(pendingCleanedTags.softSkills),
-                JSON.stringify(analysis.suggestions || {}),
-                JSON.stringify(analysis),
-                analysis.title,
-                resumeId
-            ]);
+            await updateResume(resumeId, {
+                original_text: originalExtractedText,
+                global_rating: parseScore(analysis.globalRating),
+                skills_score: parseScore(analysis.skillsRating),
+                experience_score: parseScore(analysis.experiencesRating),
+                education_score: parseScore(analysis.educationRating),
+                ats_score: parseScore(analysis.atsOptimizationRating),
+                executive_summary_score: parseScore(analysis.executiveSummaryRating),
+                hobbies_languages_score: parseScore(analysis.hobbiesLanguagesRating),
+                skills: JSON.stringify(pendingRawTags.skills),
+                industries: JSON.stringify(pendingRawTags.industries),
+                tools: JSON.stringify(pendingRawTags.tools),
+                soft_skills: JSON.stringify(pendingRawTags.softSkills),
+                skills_cleaned: JSON.stringify(pendingCleanedTags.skills),
+                industries_cleaned: JSON.stringify(pendingCleanedTags.industries),
+                tools_cleaned: JSON.stringify(pendingCleanedTags.tools),
+                soft_skills_cleaned: JSON.stringify(pendingCleanedTags.softSkills),
+                key_improvements: JSON.stringify(analysis.suggestions || {}),
+                analysis_details: JSON.stringify(analysis),
+                title: analysis.title,
+                status: 'pending_name',
+                analyzed_at: new Date().toISOString()
+            });
 
             await persistResumeSkillEvidence({
                 candidateId: resumeId,
@@ -368,56 +320,31 @@ export async function processImportItem(item, job, options) {
             displayName
         });
 
-        await query(`
-            UPDATE resumes SET
-                original_text = $1,
-                global_rating = $2,
-                skills_score = $3,
-                experience_score = $4,
-                education_score = $5,
-                ats_score = $6,
-                executive_summary_score = $7,
-                hobbies_languages_score = $8,
-                skills = $9,
-                industries = $10,
-                tools = $11,
-                soft_skills = $12,
-                skills_cleaned = $13,
-                industries_cleaned = $14,
-                tools_cleaned = $15,
-                soft_skills_cleaned = $16,
-                key_improvements = $17,
-                analysis_details = $18,
-                name = COALESCE($19, name),
-                title = $20,
-                trigram = $21,
-                status = 'analyzed',
-                analyzed_at = NOW()
-            WHERE id = $22
-        `, [
-                originalExtractedText,
-            parseScore(analysis.globalRating),
-            parseScore(analysis.skillsRating),
-            parseScore(analysis.experiencesRating),
-            parseScore(analysis.educationRating),
-            parseScore(analysis.atsOptimizationRating),
-            parseScore(analysis.executiveSummaryRating),
-            parseScore(analysis.hobbiesLanguagesRating),
-            JSON.stringify(rawTags.skills),
-            JSON.stringify(rawTags.industries),
-            JSON.stringify(rawTags.tools),
-            JSON.stringify(rawTags.softSkills),
-            JSON.stringify(cleanedTags.skills),
-            JSON.stringify(cleanedTags.industries),
-            JSON.stringify(cleanedTags.tools),
-            JSON.stringify(cleanedTags.softSkills),
-            JSON.stringify(analysis.suggestions || {}),
-            JSON.stringify(analysis),
-            displayName,
-            analysis.title,
+        await updateResume(resumeId, {
+            original_text: originalExtractedText,
+            global_rating: parseScore(analysis.globalRating),
+            skills_score: parseScore(analysis.skillsRating),
+            experience_score: parseScore(analysis.experiencesRating),
+            education_score: parseScore(analysis.educationRating),
+            ats_score: parseScore(analysis.atsOptimizationRating),
+            executive_summary_score: parseScore(analysis.executiveSummaryRating),
+            hobbies_languages_score: parseScore(analysis.hobbiesLanguagesRating),
+            skills: JSON.stringify(rawTags.skills),
+            industries: JSON.stringify(rawTags.industries),
+            tools: JSON.stringify(rawTags.tools),
+            soft_skills: JSON.stringify(rawTags.softSkills),
+            skills_cleaned: JSON.stringify(cleanedTags.skills),
+            industries_cleaned: JSON.stringify(cleanedTags.industries),
+            tools_cleaned: JSON.stringify(cleanedTags.tools),
+            soft_skills_cleaned: JSON.stringify(cleanedTags.softSkills),
+            key_improvements: JSON.stringify(analysis.suggestions || {}),
+            analysis_details: JSON.stringify(analysis),
+            name: displayName,
+            title: analysis.title,
             trigram,
-            resumeId
-        ]);
+            status: 'analyzed',
+            analyzed_at: new Date().toISOString()
+        });
 
         await persistResumeSkillEvidence({
             candidateId: resumeId,

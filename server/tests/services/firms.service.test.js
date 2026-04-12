@@ -13,10 +13,14 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
-const { mockFirmsCache } = vi.hoisted(() => ({
+const { mockFirmsCache, mockInvalidateFirmsCaches, mockInvalidateClientsCaches, mockInvalidateDealsCaches, mockInvalidateMissionsCaches } = vi.hoisted(() => ({
     mockFirmsCache: {
         getOrLoad: vi.fn(async (_key, loader) => loader())
-    }
+    },
+    mockInvalidateFirmsCaches: vi.fn(async () => undefined),
+    mockInvalidateClientsCaches: vi.fn(async () => undefined),
+    mockInvalidateDealsCaches: vi.fn(async () => undefined),
+    mockInvalidateMissionsCaches: vi.fn(async () => undefined)
 }));
 
 vi.mock('../../services/cache.service.js', () => ({
@@ -25,7 +29,11 @@ vi.mock('../../services/cache.service.js', () => ({
         firms: {
             ALL_FIRMS: 'all'
         }
-    }
+    },
+    invalidateFirmsCaches: (...args) => mockInvalidateFirmsCaches(...args),
+    invalidateClientsCaches: (...args) => mockInvalidateClientsCaches(...args),
+    invalidateDealsCaches: (...args) => mockInvalidateDealsCaches(...args),
+    invalidateMissionsCaches: (...args) => mockInvalidateMissionsCaches(...args)
 }));
 
 import { query } from '../../config/database.js';

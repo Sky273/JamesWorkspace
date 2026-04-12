@@ -6,7 +6,14 @@
 
 import { query } from '../config/database.js';
 import { escapeLike } from '../utils/postgresHelpers.js';
-import { firmsCache, CACHE_KEYS } from './cache.service.js';
+import {
+    firmsCache,
+    CACHE_KEYS,
+    invalidateClientsCaches,
+    invalidateDealsCaches,
+    invalidateFirmsCaches,
+    invalidateMissionsCaches
+} from './cache.service.js';
 
 /**
  * Allowed column names for dynamic INSERT/UPDATE on the firms table.
@@ -110,6 +117,12 @@ export async function createFirm(firmData) {
         `INSERT INTO firms (${fields.join(', ')}) VALUES (${placeholders.join(', ')}) RETURNING *`,
         values
     );
+    await Promise.all([
+        invalidateFirmsCaches(),
+        invalidateClientsCaches(),
+        invalidateDealsCaches(),
+        invalidateMissionsCaches()
+    ]);
     return result.rows[0];
 }
 
@@ -150,6 +163,12 @@ export async function updateFirm(id, firmData) {
         err.statusCode = 404;
         throw err;
     }
+    await Promise.all([
+        invalidateFirmsCaches(),
+        invalidateClientsCaches(),
+        invalidateDealsCaches(),
+        invalidateMissionsCaches()
+    ]);
     return result.rows[0];
 }
 
@@ -176,6 +195,12 @@ export async function deleteFirm(id) {
         err.statusCode = 404;
         throw err;
     }
+    await Promise.all([
+        invalidateFirmsCaches(),
+        invalidateClientsCaches(),
+        invalidateDealsCaches(),
+        invalidateMissionsCaches()
+    ]);
     return true;
 }
 
@@ -192,6 +217,7 @@ export async function uploadFirmLogo(firmId, logoData, logoMimeType) {
         'UPDATE firms SET logo_data = $1, logo_mime_type = $2, logo_url = $3 WHERE id = $4',
         [logoData, logoMimeType, logoUrl, firmId]
     );
+    await invalidateFirmsCaches();
     return logoUrl;
 }
 
@@ -221,4 +247,5 @@ export async function deleteFirmLogo(firmId) {
         'UPDATE firms SET logo_data = NULL, logo_mime_type = NULL, logo_url = NULL WHERE id = $1',
         [firmId]
     );
+    await invalidateFirmsCaches();
 }

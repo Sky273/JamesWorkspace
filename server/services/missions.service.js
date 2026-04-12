@@ -9,8 +9,12 @@ import { safeLog } from '../utils/logger.backend.js';
 import { selectRawWithTimeout, selectWithTimeout, findWithTimeout, createWithTimeout, updateWithTimeout, destroyWithTimeout, escapeLike } from '../utils/postgresHelpers.js';
 import {
     buildGroupedViewScopeKey,
+    CACHE_KEYS,
     getNamedCacheStats,
+    invalidateDealsCaches,
+    invalidateMissionsCaches,
     invalidateMissionGroupedViewCaches,
+    missionsCache,
     missionGroupedViewCache
 } from './cache.service.js';
 
@@ -65,8 +69,12 @@ const MISSION_WITH_JOINS_SELECT = `
  * @returns {Promise<Object|null>}
  */
 export async function getMissionWithJoins(id) {
-    const result = await query(`${MISSION_WITH_JOINS_SELECT} WHERE m.id = $1`, [id]);
-    return result.rows.length > 0 ? result.rows[0] : null;
+    return missionsCache.getOrLoad(`detail:${id}`, async () => {
+        const result = await query(`${MISSION_WITH_JOINS_SELECT} WHERE m.id = $1`, [id]);
+        return result.rows.length > 0 ? result.rows[0] : null;
+    }, {
+        scope: CACHE_KEYS.missions.ALL_MISSIONS
+    });
 }
 
 // ============================================
@@ -87,71 +95,70 @@ export async function getMissionWithJoins(id) {
 export async function listMissions({ page = 1, limit = 20, search, status, dealId, firmId }) {
     page = Number.isInteger(page) && page > 0 ? page : 1;
     limit = Number.isInteger(limit) ? Math.min(Math.max(limit, 1), 100) : 20;
-    const offset = (page - 1) * limit;
-    const conditions = [];
-    const params = [];
-    let paramIndex = 1;
+    const cacheKey = JSON.stringify({ page, limit, search: search || '', status: status || 'all', dealId: dealId || null, firmId: firmId || null });
 
-    // Firm filter
-    if (firmId) {
-        conditions.push(`m.firm_id = $${paramIndex}`);
-        params.push(firmId);
-        paramIndex++;
-    }
+    return missionsCache.getOrLoad(cacheKey, async () => {
+        const offset = (page - 1) * limit;
+        const conditions = [];
+        const params = [];
+        let paramIndex = 1;
 
-    // Status filter
-    if (status && status !== 'all') {
-        conditions.push(`m.status = $${paramIndex}`);
-        params.push(status);
-        paramIndex++;
-    }
-
-    // Search filter
-    if (search) {
-        conditions.push(`(m.title ILIKE $${paramIndex} OR m.firm ILIKE $${paramIndex})`);
-        params.push(`%${escapeLike(search)}%`);
-        paramIndex++;
-    }
-
-    // Deal filter
-    if (dealId) {
-        if (dealId === 'none') {
-            conditions.push(`m.deal_id IS NULL`);
-        } else {
-            conditions.push(`m.deal_id = $${paramIndex}`);
-            params.push(dealId);
+        if (firmId) {
+            conditions.push(`m.firm_id = $${paramIndex}`);
+            params.push(firmId);
             paramIndex++;
         }
-    }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+        if (status && status !== 'all') {
+            conditions.push(`m.status = $${paramIndex}`);
+            params.push(status);
+            paramIndex++;
+        }
 
-    safeLog('info', 'Missions GET - query debug', { whereClause, params, conditions });
+        if (search) {
+            conditions.push(`(m.title ILIKE $${paramIndex} OR m.firm ILIKE $${paramIndex})`);
+            params.push(`%${escapeLike(search)}%`);
+            paramIndex++;
+        }
 
-    // Count total records
-    const countQuery = `SELECT COUNT(*) as total FROM missions m ${whereClause}`;
-    const countResult = await selectRawWithTimeout(countQuery, params, { context: 'missions.list.count' });
-    const totalCount = parseInt(countResult[0]?.total || 0);
+        if (dealId) {
+            if (dealId === 'none') {
+                conditions.push('m.deal_id IS NULL');
+            } else {
+                conditions.push(`m.deal_id = $${paramIndex}`);
+                params.push(dealId);
+                paramIndex++;
+            }
+        }
 
-    // Fetch paginated records with joins
-    const dataQuery = `
-        ${MISSION_WITH_JOINS_SELECT}
-        ${whereClause}
-        ORDER BY m.created_at DESC
-        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-    `;
-    const dataParams = [...params, limit, offset];
-    const result = await query(dataQuery, dataParams);
+        const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    const missions = result.rows.map(mapMissionRecord);
+        safeLog('info', 'Missions GET - query debug', { whereClause, params, conditions });
 
-    const totalPages = Math.ceil(totalCount / limit);
-    const hasMore = page < totalPages;
+        const countQuery = `SELECT COUNT(*) as total FROM missions m ${whereClause}`;
+        const countResult = await selectRawWithTimeout(countQuery, params, { context: 'missions.list.count' });
+        const totalCount = parseInt(countResult[0]?.total || 0);
 
-    return {
-        data: missions,
-        pagination: { page, limit, totalCount, totalPages, hasMore }
-    };
+        const dataQuery = `
+            ${MISSION_WITH_JOINS_SELECT}
+            ${whereClause}
+            ORDER BY m.created_at DESC
+            LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+        `;
+        const dataParams = [...params, limit, offset];
+        const result = await query(dataQuery, dataParams);
+
+        const missions = result.rows.map(mapMissionRecord);
+        const totalPages = Math.ceil(totalCount / limit);
+        const hasMore = page < totalPages;
+
+        return {
+            data: missions,
+            pagination: { page, limit, totalCount, totalPages, hasMore }
+        };
+    }, {
+        scope: CACHE_KEYS.missions.ALL_MISSIONS
+    });
 }
 
 // ============================================
@@ -426,6 +433,10 @@ export async function validateMissionAssociations({ clientId, contactId, dealId,
 export async function createMission(data) {
     const newMission = await createWithTimeout('missions', data);
     const record = await getMissionWithJoins(newMission.id);
+    await Promise.all([
+        invalidateMissionsCaches(),
+        invalidateDealsCaches()
+    ]);
     return record;
 }
 
@@ -447,6 +458,10 @@ export async function findMission(id) {
 export async function updateMission(id, updates) {
     const updated = await updateWithTimeout('missions', id, updates);
     const record = await getMissionWithJoins(updated.id);
+    await Promise.all([
+        invalidateMissionsCaches(),
+        invalidateDealsCaches()
+    ]);
     return record;
 }
 
@@ -456,6 +471,10 @@ export async function updateMission(id, updates) {
  */
 export async function deleteMission(id) {
     await destroyWithTimeout('missions', id);
+    await Promise.all([
+        invalidateMissionsCaches(),
+        invalidateDealsCaches()
+    ]);
 }
 
 /**

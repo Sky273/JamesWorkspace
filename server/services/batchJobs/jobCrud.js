@@ -236,6 +236,44 @@ export async function deleteJob(jobId) {
 }
 
 /**
+ * Clear export artifact metadata for a batch job.
+ * @param {string} jobId
+ * @returns {Promise<void>}
+ */
+export async function clearJobExportReference(jobId) {
+    try {
+        await query(`
+            UPDATE batch_jobs
+            SET export_file_path = NULL, export_file_name = NULL
+            WHERE id = $1
+        `, [jobId]);
+    } catch (error) {
+        safeLog('error', 'Failed to clear batch export reference', { error: error.message, jobId });
+        throw error;
+    }
+}
+
+/**
+ * Delete old completed/failed/cancelled jobs.
+ * @param {number} maxAgeDays
+ * @returns {Promise<number>} Deleted job count
+ */
+export async function deleteOldJobs(maxAgeDays) {
+    try {
+        const result = await query(`
+            DELETE FROM batch_jobs 
+            WHERE status IN ('completed', 'failed', 'cancelled')
+            AND completed_at < NOW() - INTERVAL '1 day' * $1
+            RETURNING id
+        `, [maxAgeDays]);
+        return result.rowCount || 0;
+    } catch (error) {
+        safeLog('error', 'Failed to delete old batch jobs', { error: error.message, maxAgeDays });
+        throw error;
+    }
+}
+
+/**
  * Claim pending jobs to process atomically
  * @returns {Promise<Array>} Pending jobs
  */
