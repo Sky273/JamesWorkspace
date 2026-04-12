@@ -3,17 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 
+import { useScopedViewRefresh } from '../hooks/useScopedViewRefresh';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import type { Resume as ResumeEntity } from '../types/entities';
 import { createAuthOptionsWithCsrf, fetchWithCsrfRetry } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
 import resumeAdaptationService from '../utils/resumeAdaptationService';
 import { templateService } from '../utils/templateService';
-import {
-  consumeDirtyViewScopesForConsumer,
-  markViewScopesDirty,
-  subscribeToViewRefreshForConsumer,
-} from '../utils/viewRefresh';
+import { markViewScopesDirty } from '../utils/viewRefresh';
 import { removeSuggestionMarkers } from '../components/TiptapEditor/suggestionsHtml';
 import {
   applyTemplatePlaceholders,
@@ -248,21 +245,14 @@ export function useAdaptationsDashboard() {
     void fetchAdaptations();
   }, [fetchAdaptations]);
 
-  useEffect(() => {
-    if (!consumeDirtyViewScopesForConsumer(refreshConsumerId, ['adaptations'])) {
-      return;
-    }
-
-    setGroupedRefreshToken((currentToken) => currentToken + 1);
-    void fetchAdaptations({ forceRefresh: true });
-  }, [fetchAdaptations]);
-
-  useEffect(() => {
-    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['adaptations'], () => {
+  useScopedViewRefresh({
+    consumerId: refreshConsumerId,
+    scopes: ['adaptations'],
+    onRefresh: () => {
       setGroupedRefreshToken((currentToken) => currentToken + 1);
       void fetchAdaptations({ forceRefresh: true });
-    });
-  }, [fetchAdaptations]);
+    },
+  });
 
   const totalPages = Math.max(1, Math.ceil(totalCount / ADAPTATIONS_PAGE_SIZE)) || 1;
 

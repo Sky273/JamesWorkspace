@@ -3,13 +3,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 
+import { useScopedViewRefresh } from '../hooks/useScopedViewRefresh';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import logger from '../utils/logger.frontend';
-import {
-  consumeDirtyViewScopesForConsumer,
-  markViewScopesDirty,
-  subscribeToViewRefreshForConsumer,
-} from '../utils/viewRefresh';
+import { markViewScopesDirty } from '../utils/viewRefresh';
 import {
   buildMissionFormData,
   buildMissionsSearchParams,
@@ -240,21 +237,14 @@ export function useMissionsDashboard() {
     void fetchMissions();
   }, [fetchMissions]);
 
-  useEffect(() => {
-    if (!consumeDirtyViewScopesForConsumer(refreshConsumerId, ['missions'])) {
-      return;
-    }
-
-    setGroupedRefreshToken((currentToken) => currentToken + 1);
-    void fetchMissions({ forceRefresh: true });
-  }, [fetchMissions]);
-
-  useEffect(() => {
-    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['missions'], () => {
+  useScopedViewRefresh({
+    consumerId: refreshConsumerId,
+    scopes: ['missions'],
+    onRefresh: () => {
       setGroupedRefreshToken((currentToken) => currentToken + 1);
       void fetchMissions({ forceRefresh: true });
-    });
-  }, [fetchMissions]);
+    },
+  });
 
   const resetForm = useCallback(() => {
     setEditingMission(null);

@@ -3,13 +3,12 @@ import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 
+import { useScopedViewRefresh } from '../hooks/useScopedViewRefresh';
 import userService from '../utils/userService';
 import logger from '../utils/logger.frontend';
 import {
-  consumeDirtyViewScopesForConsumer,
   markAllViewScopesDirty,
   markViewScopesDirty,
-  subscribeToViewRefreshForConsumer,
 } from '../utils/viewRefresh';
 import {
   buildUsersManagementStats,
@@ -287,35 +286,22 @@ export function useUsersManagementDashboard() {
     }
   }, [activeTab, canManageFirms]);
 
-  useEffect(() => {
-    const shouldRefreshUsers = consumeDirtyViewScopesForConsumer(refreshConsumerId, ['users']);
-    const shouldRefreshFirms = canManageFirms && consumeDirtyViewScopesForConsumer(refreshConsumerId, ['firms']);
-
-    if (shouldRefreshUsers) {
+  useScopedViewRefresh({
+    consumerId: refreshConsumerId,
+    scopes: ['users'],
+    onRefresh: () => {
       void fetchUsers({ forceRefresh: true });
-    }
+    },
+  });
 
-    if (shouldRefreshFirms) {
+  useScopedViewRefresh({
+    consumerId: refreshConsumerId,
+    scopes: ['firms'],
+    enabled: canManageFirms,
+    onRefresh: () => {
       void fetchFirms({ forceRefresh: true });
-    }
-  }, [canManageFirms, fetchFirms, fetchUsers]);
-
-  useEffect(() => {
-    const unsubscribeUsers = subscribeToViewRefreshForConsumer(refreshConsumerId, ['users'], () => {
-      void fetchUsers({ forceRefresh: true });
-    });
-
-    const unsubscribeFirms = canManageFirms
-      ? subscribeToViewRefreshForConsumer(refreshConsumerId, ['firms'], () => {
-          void fetchFirms({ forceRefresh: true });
-        })
-      : () => {};
-
-    return () => {
-      unsubscribeUsers();
-      unsubscribeFirms();
-    };
-  }, [canManageFirms, fetchFirms, fetchUsers]);
+    },
+  });
 
   const usersTotalPages = getTotalPages(usersTotalCount, USERS_PAGE_SIZE);
   const firmsTotalPages = getTotalPages(firmsTotalCount, USERS_PAGE_SIZE);

@@ -3,11 +3,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../context/AuthContext';
 import { useResume } from '../context/ResumeContext';
+import { useScopedViewRefresh } from '../hooks/useScopedViewRefresh';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import type { Resume } from '../types/entities';
 import { formatDate } from '../utils/dateFormatter';
 import logger from '../utils/logger.frontend';
-import { consumeDirtyViewScopesForConsumer, subscribeToViewRefreshForConsumer } from '../utils/viewRefresh';
+import { consumeDirtyViewScopesForConsumer } from '../utils/viewRefresh';
 import {
   buildResumesSearchParams,
   computeResumeStats,
@@ -189,8 +190,10 @@ export function useResumesDashboard() {
     ]);
   }, [fetchGlobalStats, fetchResumes, location.key, location.state]);
 
-  useEffect(() => {
-    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['resumes'], () => {
+  useScopedViewRefresh({
+    consumerId: refreshConsumerId,
+    scopes: ['resumes'],
+    onRefresh: () => {
       resumesRequestIdRef.current += 1;
       statsRequestIdRef.current += 1;
       setGroupedRefreshToken((previousValue) => previousValue + 1);
@@ -198,8 +201,8 @@ export function useResumesDashboard() {
         fetchResumes({ forceRefresh: true }),
         fetchGlobalStats({ forceRefresh: true }),
       ]);
-    });
-  }, [fetchGlobalStats, fetchResumes]);
+    },
+  });
 
   useEffect(() => {
     if (viewMode !== 'byDeal' && !isFilterExpanded) {

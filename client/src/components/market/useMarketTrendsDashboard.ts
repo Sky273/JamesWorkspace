@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
+import { useScopedViewRefresh } from '../../hooks/useScopedViewRefresh';
 import {
   getTrends,
   getTrendsSummary,
@@ -14,10 +15,6 @@ import {
   type TrendFilters,
 } from '../../services/marketRadarService';
 import { getStoredMetiers, type Metier } from '../../services/romeService';
-import {
-  consumeDirtyViewScopesForConsumer,
-  subscribeToViewRefreshForConsumer,
-} from '../../utils/viewRefresh';
 
 export const MARKET_TRENDS_PAGE_SIZE = 20;
 
@@ -140,19 +137,13 @@ export function useMarketTrendsDashboard() {
     void loadTrends();
   }, [filtersLoading, loadTrends]);
 
-  useEffect(() => {
-    if (!consumeDirtyViewScopesForConsumer(refreshConsumerId, ['marketTrends', 'rome'])) {
-      return;
-    }
-
-    void refreshAll();
-  }, [refreshAll]);
-
-  useEffect(() => {
-    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['marketTrends', 'rome'], () => {
+  useScopedViewRefresh({
+    consumerId: refreshConsumerId,
+    scopes: ['marketTrends', 'rome'],
+    onRefresh: () => {
       void refreshAll();
-    });
-  }, [refreshAll]);
+    },
+  });
 
   useEffect(() => {
     setCurrentPage(1);

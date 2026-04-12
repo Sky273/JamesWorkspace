@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
+import { useScopedViewRefresh } from '../../hooks/useScopedViewRefresh';
 import {
   collectITMetiers,
   getMetiersStats,
@@ -10,10 +11,6 @@ import {
   type MetiersStats,
 } from '../../services/romeService';
 import { createLogger } from '../../utils/logger.frontend';
-import {
-  consumeDirtyViewScopesForConsumer,
-  subscribeToViewRefreshForConsumer,
-} from '../../utils/viewRefresh';
 
 const log = createLogger('MetiersTab');
 export const METIERS_PAGE_SIZE = 20;
@@ -73,21 +70,14 @@ export function useMetiersDashboard(isAdmin: boolean) {
     void loadMetiers();
   }, [loadMetiers]);
 
-  useEffect(() => {
-    if (!consumeDirtyViewScopesForConsumer(refreshConsumerId, ['rome'])) {
-      return;
-    }
-
-    void loadMetiers({ forceRefresh: true });
-    void loadGlobalStats();
-  }, [loadGlobalStats, loadMetiers]);
-
-  useEffect(() => {
-    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['rome'], () => {
+  useScopedViewRefresh({
+    consumerId: refreshConsumerId,
+    scopes: ['rome'],
+    onRefresh: () => {
       void loadMetiers({ forceRefresh: true });
       void loadGlobalStats();
-    });
-  }, [loadGlobalStats, loadMetiers]);
+    },
+  });
 
   const handleCollect = useCallback(async () => {
     if (!isAdmin) {

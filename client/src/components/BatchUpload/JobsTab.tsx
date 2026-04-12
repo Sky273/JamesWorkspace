@@ -2,12 +2,11 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ClockIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { useScopedViewRefresh } from '../../hooks/useScopedViewRefresh';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterceptor';
 import logger from '../../utils/logger.frontend';
 import {
-  consumeDirtyViewScopesForConsumer,
   markViewScopesDirty,
-  subscribeToViewRefreshForConsumer,
   type ViewRefreshScope,
 } from '../../utils/viewRefresh';
 import JobsTabHeader from './jobsTab/JobsTabHeader';
@@ -136,19 +135,13 @@ const JobsTab = (): JSX.Element => {
     void fetchJobs();
   }, [fetchJobs]);
 
-  useEffect(() => {
-    if (!consumeDirtyViewScopesForConsumer(refreshConsumerId, ['jobs'])) {
-      return;
-    }
-
-    void fetchJobs({ forceRefresh: true });
-  }, [fetchJobs]);
-
-  useEffect(() => {
-    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['jobs'], () => {
+  useScopedViewRefresh({
+    consumerId: refreshConsumerId,
+    scopes: ['jobs'],
+    onRefresh: () => {
       void fetchJobs({ forceRefresh: true });
-    });
-  }, [fetchJobs]);
+    },
+  });
 
   useEffect(() => {
     const nextStatuses: Record<string, Job['status']> = {};

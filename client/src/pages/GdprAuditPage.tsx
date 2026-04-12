@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useAuthFetch } from '../hooks/useAuthFetch';
+import { useScopedViewRefresh } from '../hooks/useScopedViewRefresh';
 import {
   ArrowPathIcon,
   CpuChipIcon,
@@ -15,10 +16,6 @@ import {
 } from '@heroicons/react/24/outline';
 import PageHeader from '../components/page/PageHeader';
 import logger from '../utils/logger.frontend';
-import {
-  consumeDirtyViewScopesForConsumer,
-  subscribeToViewRefreshForConsumer,
-} from '../utils/viewRefresh';
 import type { ActionType, Firm, GdprAuditFilters, GdprAuditLog, Pagination, Stats } from '../components/GdprAudit/types';
 import GdprAuditStatsGrid from '../components/GdprAudit/GdprAuditStatsGrid';
 import GdprAuditFiltersPanel from '../components/GdprAudit/GdprAuditFiltersPanel';
@@ -138,23 +135,15 @@ const GdprAuditPage = (): JSX.Element => {
     void fetchStats();
   }, [fetchLogs, fetchStats]);
 
-  useEffect(() => {
-    if (!consumeDirtyViewScopesForConsumer(refreshConsumerId, ['gdprAudit', 'firms'])) {
-      return;
-    }
-
-    void fetchLogs(true);
-    void fetchStats(true);
-    void fetchFirms(true);
-  }, [fetchFirms, fetchLogs, fetchStats]);
-
-  useEffect(() => {
-    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['gdprAudit', 'firms'], () => {
+  useScopedViewRefresh({
+    consumerId: refreshConsumerId,
+    scopes: ['gdprAudit', 'firms'],
+    onRefresh: () => {
       void fetchLogs(true);
       void fetchStats(true);
       void fetchFirms(true);
-    });
-  }, [fetchFirms, fetchLogs, fetchStats]);
+    },
+  });
 
   const handleFilterChange = (key: keyof GdprAuditFilters, value: string): void => {
     setFilters(prev => ({ ...prev, [key]: value }));

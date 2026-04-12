@@ -13,13 +13,10 @@ import {
   ArrowPathIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
+import { useScopedViewRefresh } from '../../hooks/useScopedViewRefresh';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterceptor';
 import logger from '../../utils/logger.frontend';
-import {
-  consumeDirtyViewScopesForConsumer,
-  markViewScopesDirty,
-  subscribeToViewRefreshForConsumer,
-} from '../../utils/viewRefresh';
+import { markViewScopesDirty } from '../../utils/viewRefresh';
 import { Deal, Client, Contact, DealFormData, DealsTabProps, STATUS_CONFIG } from './dealsTab.types';
 import DealCard from './DealCard';
 import DealFormModal from './DealFormModal';
@@ -191,19 +188,13 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
     fetchDeals();
   }, [fetchDeals]);
 
-  useEffect(() => {
-    if (!consumeDirtyViewScopesForConsumer(refreshConsumerId, ['deals'])) {
-      return;
-    }
-
-    void fetchDeals({ forceRefresh: true });
-  }, [fetchDeals]);
-
-  useEffect(() => {
-    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['deals'], () => {
+  useScopedViewRefresh({
+    consumerId: refreshConsumerId,
+    scopes: ['deals'],
+    onRefresh: () => {
       void fetchDeals({ forceRefresh: true });
-    });
-  }, [fetchDeals]);
+    },
+  });
 
   // Update URL when client filter changes
   useEffect(() => {

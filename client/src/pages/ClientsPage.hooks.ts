@@ -3,13 +3,10 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
+import { useScopedViewRefresh } from '../hooks/useScopedViewRefresh';
 import clientService from '../utils/clientService';
 import logger from '../utils/logger.frontend';
-import {
-  consumeDirtyViewScopesForConsumer,
-  markViewScopesDirty,
-  subscribeToViewRefreshForConsumer,
-} from '../utils/viewRefresh';
+import { markViewScopesDirty } from '../utils/viewRefresh';
 import type { Client, ClientContact } from '../types/entities';
 import {
   buildCrmTabSearchParams,
@@ -135,19 +132,13 @@ export function useClientsDashboard() {
     void fetchData();
   }, [fetchData]);
 
-  useEffect(() => {
-    if (!consumeDirtyViewScopesForConsumer(refreshConsumerId, ['clients'])) {
-      return;
-    }
-
-    void fetchData({ forceRefresh: true });
-  }, [fetchData]);
-
-  useEffect(() => {
-    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['clients'], () => {
+  useScopedViewRefresh({
+    consumerId: refreshConsumerId,
+    scopes: ['clients'],
+    onRefresh: () => {
       void fetchData({ forceRefresh: true });
-    });
-  }, [fetchData]);
+    },
+  });
 
   const stats = useMemo<ClientsStats>(() => computeClientsStats(clients), [clients]);
 

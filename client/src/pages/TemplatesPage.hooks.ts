@@ -3,13 +3,10 @@ import toast from 'react-hot-toast';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
+import { useScopedViewRefresh } from '../hooks/useScopedViewRefresh';
 import logger from '../utils/logger.frontend';
 import { templateService } from '../utils/templateService';
-import {
-  consumeDirtyViewScopesForConsumer,
-  markViewScopesDirty,
-  subscribeToViewRefreshForConsumer,
-} from '../utils/viewRefresh';
+import { markViewScopesDirty } from '../utils/viewRefresh';
 
 export interface Template {
   id: string;
@@ -163,19 +160,13 @@ export function useTemplatesDashboard() {
     void fetchTemplates();
   }, [fetchTemplates]);
 
-  useEffect(() => {
-    if (!consumeDirtyViewScopesForConsumer(refreshConsumerId, ['templates'])) {
-      return;
-    }
-
-    void fetchTemplates({ clearPendingTemplate: true, forceRefresh: true });
-  }, [fetchTemplates]);
-
-  useEffect(() => {
-    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['templates'], () => {
+  useScopedViewRefresh({
+    consumerId: refreshConsumerId,
+    scopes: ['templates'],
+    onRefresh: () => {
       void fetchTemplates({ clearPendingTemplate: true, forceRefresh: true });
-    });
-  }, [fetchTemplates]);
+    },
+  });
 
   const totalPages = Math.max(1, Math.ceil(totalCount / TEMPLATES_PAGE_SIZE)) || 1;
 

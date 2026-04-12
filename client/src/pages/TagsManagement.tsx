@@ -10,12 +10,9 @@ import { useTranslation } from 'react-i18next';
 import { tagService } from '../utils/tagService';
 import { motion } from 'framer-motion';
 import PageHeader from '../components/page/PageHeader';
+import { useScopedViewRefresh } from '../hooks/useScopedViewRefresh';
 import logger from '../utils/logger.frontend';
-import {
-  consumeDirtyViewScopesForConsumer,
-  markViewScopesDirty,
-  subscribeToViewRefreshForConsumer,
-} from '../utils/viewRefresh';
+import { markViewScopesDirty } from '../utils/viewRefresh';
 import {
   WrenchScrewdriverIcon,
   BriefcaseIcon,
@@ -169,19 +166,13 @@ const TagsManagement = (): JSX.Element => {
 
   useEffect(() => { void fetchTags(); }, [fetchTags]);
 
-  useEffect(() => {
-    if (!consumeDirtyViewScopesForConsumer(refreshConsumerId, ['tags'])) {
-      return;
-    }
-
-    void fetchTags(true);
-  }, [fetchTags]);
-
-  useEffect(() => {
-    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['tags'], () => {
+  useScopedViewRefresh({
+    consumerId: refreshConsumerId,
+    scopes: ['tags'],
+    onRefresh: () => {
       void fetchTags(true);
-    });
-  }, [fetchTags]);
+    },
+  });
 
   const displayCleanedTags = useMemo(() => cleanedTags, [cleanedTags]);
 
