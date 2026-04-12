@@ -29,7 +29,11 @@ export function useUploadPageFlow() {
 
   useEffect(() => {
     if (uploadState === 'ready' && currentResumeId && currentResumeId !== entryResumeIdRef.current) {
-      navigate(`/resumes/${currentResumeId}/analysis`);
+      navigate(`/resumes/${currentResumeId}/analysis`, {
+        state: {
+          refreshResumesView: true,
+        },
+      });
     }
   }, [currentResumeId, navigate, uploadState]);
 }

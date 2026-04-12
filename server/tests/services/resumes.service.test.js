@@ -19,13 +19,23 @@ vi.mock('../../utils/logger.backend.js', () => ({
 }));
 
 const mockInvalidateDashboardAndGroupedViews = vi.fn();
+const mockInvalidateResumesCaches = vi.fn();
+const mockInvalidateClientsCaches = vi.fn();
+const mockInvalidateDealsCaches = vi.fn();
 vi.mock('../../services/viewCacheInvalidation.service.js', () => ({
     invalidateDashboardAndGroupedViews: (...args) => mockInvalidateDashboardAndGroupedViews(...args)
 }));
 
 vi.mock('../../services/cache.service.js', () => ({
-    invalidateClientsCaches: vi.fn(async () => undefined),
-    invalidateDealsCaches: vi.fn(async () => undefined)
+    CACHE_KEYS: {
+        resumes: { ALL: 'all' }
+    },
+    resumesCache: {
+        getOrLoad: vi.fn(async (_key, loader) => loader())
+    },
+    invalidateResumesCaches: (...args) => mockInvalidateResumesCaches(...args),
+    invalidateClientsCaches: (...args) => mockInvalidateClientsCaches(...args),
+    invalidateDealsCaches: (...args) => mockInvalidateDealsCaches(...args)
 }));
 
 import { query } from '../../config/database.js';
@@ -40,6 +50,8 @@ import {
     updateResume,
     deleteResume,
     insertResume,
+    initializeResumeConsent,
+    markResumeConsentError,
     updateResumeFileUrl,
     updateConsentStatus,
     findResumeRecord,
@@ -51,6 +63,9 @@ describe('Resumes Service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockInvalidateDashboardAndGroupedViews.mockResolvedValue(undefined);
+        mockInvalidateResumesCaches.mockResolvedValue(undefined);
+        mockInvalidateClientsCaches.mockResolvedValue(undefined);
+        mockInvalidateDealsCaches.mockResolvedValue(undefined);
     });
 
     describe('RESUME_SELECT_COLUMNS', () => {
@@ -77,6 +92,14 @@ describe('Resumes Service', () => {
             query.mockResolvedValueOnce({ rows: [] });
             expect(await getResumeForAccessCheck('missing')).toBeNull();
         });
+
+        it('should bypass cache when requested', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'r1', firm_id: 'f1', name: 'CV' }] });
+
+            const result = await getResumeForAccessCheck('r1', { bypassCache: true });
+
+            expect(result).toEqual({ id: 'r1', firm_id: 'f1', name: 'CV' });
+        });
     });
 
     describe('getResumeById', () => {
@@ -92,6 +115,14 @@ describe('Resumes Service', () => {
         it('should return null if not found', async () => {
             query.mockResolvedValueOnce({ rows: [] });
             expect(await getResumeById('missing')).toBeNull();
+        });
+
+        it('should bypass cache for a direct fresh read when requested', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'r1', name: 'CV', original_text: 'text' }] });
+
+            const result = await getResumeById('r1', { bypassCache: true });
+
+            expect(result.id).toBe('r1');
         });
     });
 
@@ -269,6 +300,48 @@ describe('Resumes Service', () => {
             expect(result).toEqual(created);
             expect(query.mock.calls[0][0]).toContain('INSERT INTO resumes');
             expect(mockInvalidateDashboardAndGroupedViews).toHaveBeenCalledWith('f1');
+            expect(mockInvalidateResumesCaches).toHaveBeenCalledWith();
+            expect(mockInvalidateClientsCaches).toHaveBeenCalledWith();
+            expect(mockInvalidateDealsCaches).toHaveBeenCalledWith();
+        });
+    });
+
+    describe('initializeResumeConsent', () => {
+        it('should update resume consent fields and invalidate dependent views', async () => {
+            query.mockResolvedValueOnce({
+                rows: [{ id: 'r1', firm_id: 'f1', consent_status: 'pending_consent' }]
+            });
+
+            const result = await initializeResumeConsent({
+                resumeId: 'r1',
+                profileType: 'external',
+                candidateName: 'Jane',
+                candidateEmail: 'jane@test.com',
+                consentStatus: 'pending_consent',
+                consentToken: 'a'.repeat(64),
+                tokenExpiresAt: new Date('2026-05-01T00:00:00.000Z')
+            });
+
+            expect(result.consent_status).toBe('pending_consent');
+            expect(query.mock.calls[0][0]).toContain('consent_token = $5');
+            expect(mockInvalidateDashboardAndGroupedViews).toHaveBeenCalledWith('f1');
+            expect(mockInvalidateResumesCaches).toHaveBeenCalledWith('detail:r1');
+            expect(mockInvalidateClientsCaches).toHaveBeenCalledWith();
+            expect(mockInvalidateDealsCaches).toHaveBeenCalledWith();
+        });
+    });
+
+    describe('markResumeConsentError', () => {
+        it('should update error status through the resume service and target the resume detail cache', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'r1', firm_id: 'f1' }] });
+
+            const result = await markResumeConsentError('r1', { pendingOnly: true });
+
+            expect(result).toEqual({ id: 'r1', firm_id: 'f1' });
+            expect(query.mock.calls[0][0]).toContain("consent_status = 'error'");
+            expect(query.mock.calls[0][0]).toContain('AND consent_status = $2');
+            expect(query.mock.calls[0][1]).toEqual(['r1', 'pending_consent']);
+            expect(mockInvalidateResumesCaches).toHaveBeenCalledWith('detail:r1');
         });
     });
 

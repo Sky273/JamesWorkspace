@@ -22,7 +22,9 @@ vi.mock('../../config/constants.js', () => ({
     CACHE_TTL: {
         SETTINGS: 60000,
         TEMPLATES: 60000,
-        FIRMS: 60000
+        FIRMS: 60000,
+        JOBS: 60000,
+        GDPR_AUDIT: 60000
     },
     CACHE_BACKEND: 'memory',
     CACHE_REDIS_URL: 'redis://127.0.0.1:6379',

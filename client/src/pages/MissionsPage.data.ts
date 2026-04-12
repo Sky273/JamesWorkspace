@@ -16,6 +16,10 @@ export interface Mission {
   'Deal ID'?: string;
   'Deal Title'?: string;
   'Deal Status'?: string;
+  'Adaptations Count'?: number;
+  'Submissions Count'?: number;
+  'Pipeline Count'?: number;
+  'Has Attachments'?: boolean;
   [key: string]: unknown;
 }
 
@@ -124,4 +128,34 @@ export function computeMissionStats(missions: Mission[], totalCount: number): Mi
     draft: missions.filter((mission) => mission.Status === 'Draft').length,
     closed: missions.filter((mission) => mission.Status === 'Closed').length,
   };
+}
+
+export function canDeleteMission(mission: Mission | null | undefined): boolean {
+  if (!mission) {
+    return false;
+  }
+
+  return !Boolean(mission['Has Attachments'])
+    && Number(mission['Adaptations Count'] || 0) === 0
+    && Number(mission['Submissions Count'] || 0) === 0
+    && Number(mission['Pipeline Count'] || 0) === 0;
+}
+
+export function mergePreservedMissionIntoResults(
+  missions: Mission[],
+  preservedMission: Mission | null | undefined,
+  pageSize: number,
+): Mission[] {
+  if (!preservedMission?.id) {
+    return missions;
+  }
+
+  const existingIndex = missions.findIndex((mission) => mission.id === preservedMission.id);
+  if (existingIndex >= 0) {
+    return missions.map((mission) => (
+      mission.id === preservedMission.id ? preservedMission : mission
+    ));
+  }
+
+  return [preservedMission, ...missions].slice(0, pageSize);
 }

@@ -6,6 +6,11 @@
 import { query } from '../../config/database.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { JOB_STATUS, COLLECTION_JOB_TYPES } from './constants.js';
+import { CACHE_KEYS, invalidateJobsCaches, jobsCache } from '../cache.service.js';
+
+function buildJobsListCacheKey(prefix, { firmId = null, limit = 50, offset = 0, status = null } = {}) {
+    return `${prefix}:${JSON.stringify({ firmId, limit, offset, status })}`;
+}
 
 /**
  * Create a new batch job
@@ -22,6 +27,7 @@ export async function createJob({ firmId, userId, jobType = 'import', options = 
 
         const job = result.rows[0];
         safeLog('info', 'Batch job created', { jobId: job.id, jobType, firmId });
+        await invalidateJobsCaches([`detail:${job.id}`]);
         return job;
     } catch (error) {
         safeLog('error', 'Failed to create batch job', { error: error.message });
@@ -34,9 +40,10 @@ export async function createJob({ firmId, userId, jobType = 'import', options = 
  * @param {string} jobId - Job ID
  * @returns {Promise<Object|null>} Job or null
  */
-export async function getJob(jobId) {
+export async function getJob(jobId, { bypassCache = false } = {}) {
     try {
-        const result = await query(`
+        const loadJob = async () => {
+            const result = await query(`
             SELECT bj.*, 
                    u.name as user_name,
                    f.name as firm_name
@@ -44,9 +51,18 @@ export async function getJob(jobId) {
             LEFT JOIN users u ON bj.user_id = u.id
             LEFT JOIN firms f ON bj.firm_id = f.id
             WHERE bj.id = $1
-        `, [jobId]);
+            `, [jobId]);
 
-        return result.rows[0] || null;
+            return result.rows[0] || null;
+        };
+
+        if (bypassCache) {
+            return loadJob();
+        }
+
+        return jobsCache.getOrLoad(`detail:${jobId}`, loadJob, {
+            scope: `detail:${jobId}`
+        });
     } catch (error) {
         safeLog('error', 'Failed to get batch job', { error: error.message, jobId });
         throw error;
@@ -59,27 +75,37 @@ export async function getJob(jobId) {
  * @param {Object} options - Query options
  * @returns {Promise<Array>} Jobs
  */
-export async function getJobsByFirm(firmId, { limit = 50, offset = 0, status = null } = {}) {
+export async function getJobsByFirm(firmId, { limit = 50, offset = 0, status = null, bypassCache = false } = {}) {
     try {
-        let queryText = `
+        const loadJobs = async () => {
+            let queryText = `
             SELECT bj.*, 
                    u.name as user_name
             FROM batch_jobs bj
             LEFT JOIN users u ON bj.user_id = u.id
             WHERE bj.firm_id = $1
         `;
-        const params = [firmId];
+            const params = [firmId];
 
-        if (status) {
-            queryText += ` AND bj.status = $${params.length + 1}`;
-            params.push(status);
+            if (status) {
+                queryText += ` AND bj.status = $${params.length + 1}`;
+                params.push(status);
+            }
+
+            queryText += ` ORDER BY bj.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+            params.push(limit, offset);
+
+            const result = await query(queryText, params);
+            return result.rows;
+        };
+
+        if (bypassCache) {
+            return loadJobs();
         }
 
-        queryText += ` ORDER BY bj.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-        params.push(limit, offset);
-
-        const result = await query(queryText, params);
-        return result.rows;
+        return jobsCache.getOrLoad(buildJobsListCacheKey('firm', { firmId, limit, offset, status }), loadJobs, {
+            scope: CACHE_KEYS.jobs.ALL
+        });
     } catch (error) {
         safeLog('error', 'Failed to get batch jobs by firm', { error: error.message, firmId });
         throw error;
@@ -91,9 +117,10 @@ export async function getJobsByFirm(firmId, { limit = 50, offset = 0, status = n
  * @param {Object} options - Query options
  * @returns {Promise<Array>} Jobs
  */
-export async function getAllJobs({ limit = 50, offset = 0, status = null } = {}) {
+export async function getAllJobs({ limit = 50, offset = 0, status = null, bypassCache = false } = {}) {
     try {
-        let queryText = `
+        const loadJobs = async () => {
+            let queryText = `
             SELECT bj.*, 
                    u.name as user_name,
                    f.name as firm_name
@@ -102,18 +129,27 @@ export async function getAllJobs({ limit = 50, offset = 0, status = null } = {})
             LEFT JOIN firms f ON bj.firm_id = f.id
             WHERE 1=1
         `;
-        const params = [];
+            const params = [];
 
-        if (status) {
-            queryText += ` AND bj.status = $${params.length + 1}`;
-            params.push(status);
+            if (status) {
+                queryText += ` AND bj.status = $${params.length + 1}`;
+                params.push(status);
+            }
+
+            queryText += ` ORDER BY bj.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+            params.push(limit, offset);
+
+            const result = await query(queryText, params);
+            return result.rows;
+        };
+
+        if (bypassCache) {
+            return loadJobs();
         }
 
-        queryText += ` ORDER BY bj.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-        params.push(limit, offset);
-
-        const result = await query(queryText, params);
-        return result.rows;
+        return jobsCache.getOrLoad(buildJobsListCacheKey('all', { limit, offset, status }), loadJobs, {
+            scope: CACHE_KEYS.jobs.ALL
+        });
     } catch (error) {
         safeLog('error', 'Failed to get all batch jobs', { error: error.message });
         throw error;
@@ -171,6 +207,7 @@ export async function updateJobStatus(jobId, status, updates = {}) {
         `, params);
 
         safeLog('debug', 'Updated batch job status', { jobId, status });
+        await invalidateJobsCaches(`detail:${jobId}`);
     } catch (error) {
         safeLog('error', 'Failed to update batch job status', { error: error.message, jobId });
         throw error;
@@ -214,6 +251,7 @@ export async function cancelJob(jobId) {
         `, ['skipped', jobId, 'pending']);
 
         safeLog('info', 'Batch job cancelled', { jobId });
+        await invalidateJobsCaches(`detail:${jobId}`);
     } catch (error) {
         safeLog('error', 'Failed to cancel batch job', { error: error.message, jobId });
         throw error;
@@ -229,6 +267,7 @@ export async function deleteJob(jobId) {
         // Items are deleted via CASCADE
         await query(`DELETE FROM batch_jobs WHERE id = $1`, [jobId]);
         safeLog('info', 'Batch job deleted', { jobId });
+        await invalidateJobsCaches(`detail:${jobId}`);
     } catch (error) {
         safeLog('error', 'Failed to delete batch job', { error: error.message, jobId });
         throw error;
@@ -247,6 +286,7 @@ export async function clearJobExportReference(jobId) {
             SET export_file_path = NULL, export_file_name = NULL
             WHERE id = $1
         `, [jobId]);
+        await invalidateJobsCaches(`detail:${jobId}`);
     } catch (error) {
         safeLog('error', 'Failed to clear batch export reference', { error: error.message, jobId });
         throw error;
@@ -343,6 +383,7 @@ export async function updateCollectionJobProgress(jobId, counters) {
         if (setClauses.length === 0) return;
 
         await query(`UPDATE batch_jobs SET ${setClauses.join(', ')} WHERE id = $1`, params);
+        await invalidateJobsCaches(`detail:${jobId}`);
     } catch (error) {
         safeLog('error', 'Failed to update collection job progress', { error: error.message, jobId });
     }
@@ -362,6 +403,7 @@ export async function updateJobCounters(jobId) {
                 error_count = (SELECT COUNT(*) FROM batch_job_items WHERE job_id = $1 AND status = 'error')
             WHERE id = $1
         `, [jobId]);
+        await invalidateJobsCaches(`detail:${jobId}`);
     } catch (error) {
         safeLog('error', 'Failed to update batch job counters', { error: error.message, jobId });
     }
@@ -381,6 +423,7 @@ export async function updateJobExportFile(jobId, filePath, fileName) {
             WHERE id = $3
         `, [filePath, fileName, jobId]);
         safeLog('debug', 'Updated batch job export file', { jobId, fileName });
+        await invalidateJobsCaches(`detail:${jobId}`);
     } catch (error) {
         safeLog('error', 'Failed to update batch job export file', { error: error.message, jobId });
         throw error;
@@ -395,6 +438,7 @@ export async function clearJobExportFile(jobId) {
             WHERE id = $1
         `, [jobId]);
         safeLog('debug', 'Cleared batch job export file', { jobId });
+        await invalidateJobsCaches(`detail:${jobId}`);
     } catch (error) {
         safeLog('error', 'Failed to clear batch job export file', { error: error.message, jobId });
         throw error;

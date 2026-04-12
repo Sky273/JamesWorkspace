@@ -13,12 +13,13 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
-const { mockDealsCache, mockInvalidateDealsCaches, mockInvalidateMissionsCaches } = vi.hoisted(() => ({
+const { mockDealsCache, mockInvalidateDealsCaches, mockInvalidateMissionsCaches, mockInvalidateGroupedDealViews } = vi.hoisted(() => ({
     mockDealsCache: {
         getOrLoad: vi.fn(async (_key, loader) => loader())
     },
     mockInvalidateDealsCaches: vi.fn(async () => undefined),
-    mockInvalidateMissionsCaches: vi.fn(async () => undefined)
+    mockInvalidateMissionsCaches: vi.fn(async () => undefined),
+    mockInvalidateGroupedDealViews: vi.fn(async () => undefined)
 }));
 
 vi.mock('../../services/cache.service.js', () => ({
@@ -30,6 +31,10 @@ vi.mock('../../services/cache.service.js', () => ({
     dealsCache: mockDealsCache,
     invalidateDealsCaches: (...args) => mockInvalidateDealsCaches(...args),
     invalidateMissionsCaches: (...args) => mockInvalidateMissionsCaches(...args)
+}));
+
+vi.mock('../../services/viewCacheInvalidation.service.js', () => ({
+    invalidateGroupedDealViews: (...args) => mockInvalidateGroupedDealViews(...args)
 }));
 
 import { query } from '../../config/database.js';
@@ -61,6 +66,7 @@ describe('Deals Service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockDealsCache.getOrLoad.mockImplementation(async (_key, loader) => loader());
+        mockInvalidateGroupedDealViews.mockResolvedValue(undefined);
     });
 
     // ============================================
@@ -152,6 +158,9 @@ describe('Deals Service', () => {
             expect(result).toEqual(deal);
             expect(query.mock.calls[0][0]).toContain('INSERT INTO deals');
             expect(query.mock.calls[0][1][0]).toBe('firm-1');
+            expect(mockInvalidateDealsCaches).toHaveBeenCalledTimes(1);
+            expect(mockInvalidateMissionsCaches).toHaveBeenCalledTimes(1);
+            expect(mockInvalidateGroupedDealViews).toHaveBeenCalledWith('firm-1');
         });
 
         it('should use default status and priority', async () => {
@@ -186,12 +195,15 @@ describe('Deals Service', () => {
 
     describe('updateDeal', () => {
         it('should update and return deal', async () => {
-            query.mockResolvedValueOnce({ rows: [{ id: 'd1', title: 'Updated' }] });
+            query.mockResolvedValueOnce({ rows: [{ id: 'd1', title: 'Updated', firm_id: 'f1' }] });
 
             const result = await updateDeal('d1', { title: 'Updated', status: 'won' });
 
             expect(result.title).toBe('Updated');
             expect(query.mock.calls[0][0]).toContain('UPDATE deals SET');
+            expect(mockInvalidateDealsCaches).toHaveBeenCalledTimes(1);
+            expect(mockInvalidateMissionsCaches).toHaveBeenCalledTimes(1);
+            expect(mockInvalidateGroupedDealViews).toHaveBeenCalledWith('f1');
         });
 
         it('should throw if deal not found', async () => {
@@ -200,7 +212,7 @@ describe('Deals Service', () => {
         });
 
         it('should not clear omitted optional fields during partial update', async () => {
-            query.mockResolvedValueOnce({ rows: [{ id: 'd1', title: 'Updated' }] });
+            query.mockResolvedValueOnce({ rows: [{ id: 'd1', title: 'Updated', firm_id: 'f1' }] });
 
             await updateDeal('d1', { title: 'Updated' });
 
@@ -212,7 +224,7 @@ describe('Deals Service', () => {
         });
 
         it('should allow explicit clearing of client and contact ids', async () => {
-            query.mockResolvedValueOnce({ rows: [{ id: 'd1', client_id: null, contact_id: null }] });
+            query.mockResolvedValueOnce({ rows: [{ id: 'd1', client_id: null, contact_id: null, firm_id: 'f1' }] });
 
             await updateDeal('d1', { client_id: '', contact_id: '' });
 
@@ -233,8 +245,11 @@ describe('Deals Service', () => {
 
     describe('deleteDeal', () => {
         it('should return true when deleted', async () => {
-            query.mockResolvedValueOnce({ rows: [{ id: 'd1' }] });
+            query.mockResolvedValueOnce({ rows: [{ id: 'd1', firm_id: 'f1' }] });
             expect(await deleteDeal('d1')).toBe(true);
+            expect(mockInvalidateDealsCaches).toHaveBeenCalledTimes(1);
+            expect(mockInvalidateMissionsCaches).toHaveBeenCalledTimes(1);
+            expect(mockInvalidateGroupedDealViews).toHaveBeenCalledWith('f1');
         });
 
         it('should throw if not found', async () => {
@@ -375,16 +390,21 @@ describe('Deals Service', () => {
 
     describe('addResumeToDeal', () => {
         it('should add resume to deal with upsert', async () => {
-            query.mockResolvedValueOnce({ rows: [{ deal_id: 'd1', resume_id: 'r1', status: 'proposed' }] });
+            query
+                .mockResolvedValueOnce({ rows: [{ deal_id: 'd1', resume_id: 'r1', status: 'proposed' }] })
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] });
 
             const result = await addResumeToDeal('d1', 'r1', 'u1');
 
             expect(result.status).toBe('proposed');
             expect(query.mock.calls[0][0]).toContain('ON CONFLICT');
+            expect(mockInvalidateGroupedDealViews).toHaveBeenCalledWith('f1');
         });
 
         it('should accept custom status and notes', async () => {
-            query.mockResolvedValueOnce({ rows: [{ status: 'submitted' }] });
+            query
+                .mockResolvedValueOnce({ rows: [{ status: 'submitted' }] })
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] });
 
             await addResumeToDeal('d1', 'r1', 'u1', { status: 'submitted', notes: 'Note' });
 
@@ -395,8 +415,11 @@ describe('Deals Service', () => {
 
     describe('removeResumeFromDeal', () => {
         it('should return true when removed', async () => {
-            query.mockResolvedValueOnce({ rows: [{ id: 'link1' }] });
+            query
+                .mockResolvedValueOnce({ rows: [{ id: 'link1' }] })
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] });
             expect(await removeResumeFromDeal('d1', 'r1')).toBe(true);
+            expect(mockInvalidateGroupedDealViews).toHaveBeenCalledWith('f1');
         });
 
         it('should throw if link not found', async () => {
@@ -407,12 +430,15 @@ describe('Deals Service', () => {
 
     describe('updateDealResumeStatus', () => {
         it('should update status and return link', async () => {
-            query.mockResolvedValueOnce({ rows: [{ status: 'selected' }] });
+            query
+                .mockResolvedValueOnce({ rows: [{ status: 'selected' }] })
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] });
 
             const result = await updateDealResumeStatus('d1', 'r1', 'selected', 'Good fit');
 
             expect(result.status).toBe('selected');
             expect(query.mock.calls[0][1]).toContain('selected');
+            expect(mockInvalidateGroupedDealViews).toHaveBeenCalledWith('f1');
         });
 
         it('should throw if link not found', async () => {

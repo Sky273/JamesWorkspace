@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ClockIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
@@ -76,28 +76,45 @@ const JobsTab = (): JSX.Element => {
   const [submittingName, setSubmittingName] = useState<string | null>(null);
   const [progressSnapshots, setProgressSnapshots] = useState<Record<string, JobProgressSnapshot>>(() => loadJobProgressSnapshots());
   const [now, setNow] = useState(() => Date.now());
+  const jobsRequestIdRef = useRef(0);
+  const jobDetailsRequestIdRef = useRef(0);
 
-  const fetchJobs = useCallback(async () => {
+  const fetchJobs = useCallback(async (options: { forceRefresh?: boolean } = {}) => {
+    const requestId = ++jobsRequestIdRef.current;
     try {
-      const response = await fetchWithAuth('/api/batch-jobs');
+      const suffix = options.forceRefresh ? '?refresh=1' : '';
+      const response = await fetchWithAuth(`/api/batch-jobs${suffix}`);
       if (response.ok) {
         const data = await response.json();
+        if (requestId !== jobsRequestIdRef.current) {
+          return;
+        }
         setJobs(data);
         setProgressSnapshots((prev) => syncJobProgressSnapshots(prev, data, Date.now()));
       }
     } catch (error) {
+      if (requestId !== jobsRequestIdRef.current) {
+        return;
+      }
       logger.error('Error fetching jobs:', error);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (requestId === jobsRequestIdRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, []);
 
-  const fetchJobDetails = useCallback(async (jobId: string) => {
+  const fetchJobDetails = useCallback(async (jobId: string, options: { forceRefresh?: boolean } = {}) => {
+    const requestId = ++jobDetailsRequestIdRef.current;
     try {
-      const response = await fetchWithAuth(`/api/batch-jobs/${jobId}`);
+      const suffix = options.forceRefresh ? '?refresh=1' : '';
+      const response = await fetchWithAuth(`/api/batch-jobs/${jobId}${suffix}`);
       if (response.ok) {
         const data = await response.json();
+        if (requestId !== jobDetailsRequestIdRef.current) {
+          return;
+        }
         setJobs(prev => prev.map(j => (j.id === jobId ? data : j)));
         setProgressSnapshots((prev) => syncSingleJobProgressSnapshot(prev, data, Date.now()));
       }
@@ -145,7 +162,7 @@ const JobsTab = (): JSX.Element => {
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
-    void fetchJobs();
+    void fetchJobs({ forceRefresh: true });
   }, [fetchJobs]);
 
   const handleToggleExpand = useCallback((jobId: string) => {
@@ -155,7 +172,7 @@ const JobsTab = (): JSX.Element => {
     }
 
     setExpandedJobId(jobId);
-    void fetchJobDetails(jobId);
+    void fetchJobDetails(jobId, { forceRefresh: true });
   }, [expandedJobId, fetchJobDetails]);
 
   const handleCancelJob = useCallback(async (jobId: string) => {
@@ -165,6 +182,12 @@ const JobsTab = (): JSX.Element => {
 
       if (response.ok) {
         toast.success(t('batchJobs.jobCancelled'));
+        jobsRequestIdRef.current += 1;
+        setJobs((currentJobs) => currentJobs.map((job) => (
+          job.id === jobId
+            ? { ...job, status: 'cancelled' }
+            : job
+        )));
         void fetchJobs();
         return;
       }
@@ -184,7 +207,13 @@ const JobsTab = (): JSX.Element => {
 
       if (response.ok) {
         toast.success(t('batchJobs.jobDeleted'));
+        jobsRequestIdRef.current += 1;
         setJobs(prev => prev.filter(j => j.id !== jobId));
+        setProgressSnapshots((prev) => {
+          const next = { ...prev };
+          delete next[jobId];
+          return next;
+        });
         return;
       }
 

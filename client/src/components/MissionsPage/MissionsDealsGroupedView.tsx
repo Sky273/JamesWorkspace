@@ -3,7 +3,7 @@
  * Collapsible accordion sections for each deal + unassigned missions
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ChevronDownIcon, ChevronRightIcon, FolderOpenIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,11 +18,17 @@ import {
   MissionsGroupedEmptyState,
   MissionsGroupedSummary,
   MissionsGroupedToolbar,
+  canDeleteGroupedMission,
   normalizeMissionKeywordsText,
 } from './MissionsDealsGroupedView.parts';
 import type { GroupedData, GroupedMission, MissionsDealsGroupedViewProps } from './MissionsDealsGroupedView.types';
 
-const MissionsDealsGroupedView = ({ onAddMission }: MissionsDealsGroupedViewProps): JSX.Element => {
+const MissionsDealsGroupedView = ({
+  onAddMission,
+  onEditMission,
+  onDeleteMission,
+  refreshToken,
+}: MissionsDealsGroupedViewProps): JSX.Element => {
   const { t } = useTranslation();
   const { authGet } = useAuthFetch();
 
@@ -32,18 +38,24 @@ const MissionsDealsGroupedView = ({ onAddMission }: MissionsDealsGroupedViewProp
   const [unassignedExpanded, setUnassignedExpanded] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const groupedRequestIdRef = useRef(0);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const fetchGroupedData = useCallback(async () => {
+  const fetchGroupedData = useCallback(async (options: { forceRefresh?: boolean } = {}) => {
+    const requestId = ++groupedRequestIdRef.current;
     try {
       setLoading(true);
-      const response = await authGet('/api/missions/grouped-by-deal');
+      const suffix = options.forceRefresh ? '?refresh=1' : '';
+      const response = await authGet(`/api/missions/grouped-by-deal${suffix}`);
       if (!response.ok) throw new Error('Failed to fetch grouped missions');
       const result: GroupedData = await response.json();
+      if (requestId !== groupedRequestIdRef.current) {
+        return;
+      }
       setData(result);
 
       const expanded: Record<string, boolean> = {};
@@ -60,19 +72,41 @@ const MissionsDealsGroupedView = ({ onAddMission }: MissionsDealsGroupedViewProp
         return merged;
       });
     } catch (error) {
+      if (requestId !== groupedRequestIdRef.current) {
+        return;
+      }
       const errorMessage = error instanceof Error ? error.message : '';
       if (!errorMessage.includes('Session expired')) {
         logger.error('Error fetching grouped missions:', error);
         toast.error(t('missions.grouped.fetchError'));
       }
     } finally {
-      setLoading(false);
+      if (requestId === groupedRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [authGet, t]);
+
+  const refreshGroupedData = useCallback(async (): Promise<void> => {
+    const normalizedSearch = searchQuery.trim();
+    groupedRequestIdRef.current += 1;
+    if (normalizedSearch !== debouncedSearch) {
+      setDebouncedSearch(normalizedSearch);
+    }
+    await fetchGroupedData({ forceRefresh: true });
+  }, [debouncedSearch, fetchGroupedData, searchQuery]);
 
   useEffect(() => {
     void fetchGroupedData();
   }, [fetchGroupedData]);
+
+  useEffect(() => {
+    if (refreshToken <= 0) {
+      return;
+    }
+
+    void fetchGroupedData({ forceRefresh: true });
+  }, [fetchGroupedData, refreshToken]);
 
   const toggleDeal = (dealId: string) => {
     setExpandedDeals((prev) => ({ ...prev, [dealId]: !prev[dealId] }));
@@ -128,7 +162,7 @@ const MissionsDealsGroupedView = ({ onAddMission }: MissionsDealsGroupedViewProp
     <div className="space-y-5">
       <MissionsGroupedToolbar
         onAddMission={onAddMission}
-        onRefresh={() => { void fetchGroupedData(); }}
+        onRefresh={() => { void refreshGroupedData(); }}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         totalMissions={totalRawMissions}
@@ -149,6 +183,8 @@ const MissionsDealsGroupedView = ({ onAddMission }: MissionsDealsGroupedViewProp
               key={deal.id}
               deal={deal}
               isExpanded={expandedDeals[deal.id] || false}
+              onEditMission={onEditMission}
+              onDeleteMission={onDeleteMission}
               onToggle={() => toggleDeal(deal.id)}
             />
           ))}
@@ -197,7 +233,14 @@ const MissionsDealsGroupedView = ({ onAddMission }: MissionsDealsGroupedViewProp
                   >
                     <div className="space-y-3 border-t border-slate-200/70 px-4 pb-4 pt-4 dark:border-white/8 sm:px-5 sm:pb-5">
                       {filteredUnassigned.map((mission, missionIndex) => (
-                        <MissionCardInDeal key={mission.id} mission={mission} index={missionIndex} />
+                        <MissionCardInDeal
+                          key={mission.id}
+                          mission={mission}
+                          index={missionIndex}
+                          canDelete={canDeleteGroupedMission(mission)}
+                          onEdit={onEditMission}
+                          onDelete={onDeleteMission}
+                        />
                       ))}
                     </div>
                   </motion.div>

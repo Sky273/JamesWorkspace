@@ -9,6 +9,7 @@ import { safeLog } from '../utils/logger.backend.js';
 import { assertSchemaRequirements } from './schemaVerification.service.js';
 import { buildCreateDealInsertParams, buildDealUpdateStatement } from './deals.service.helpers.js';
 import { invalidateDealsCaches, invalidateMissionsCaches } from './cache.service.js';
+import { invalidateGroupedDealViews } from './viewCacheInvalidation.service.js';
 import {
     INSERT_DEAL_SQL,
     UPSERT_DEAL_RESUME_SQL,
@@ -111,7 +112,8 @@ export async function createDeal(data, userId, firmId) {
         safeLog('info', 'Deal created', { dealId: result.rows[0].id, title });
         await Promise.all([
             invalidateDealsCaches(),
-            invalidateMissionsCaches()
+            invalidateMissionsCaches(),
+            invalidateGroupedDealViews(firmId)
         ]);
         return result.rows[0];
     } catch (error) {
@@ -148,7 +150,8 @@ export async function updateDeal(dealId, data) {
         safeLog('info', 'Deal updated', { dealId });
         await Promise.all([
             invalidateDealsCaches(),
-            invalidateMissionsCaches()
+            invalidateMissionsCaches(),
+            invalidateGroupedDealViews(result.rows[0]?.firm_id || null)
         ]);
         return result.rows[0];
     } catch (error) {
@@ -162,7 +165,7 @@ export async function updateDeal(dealId, data) {
  */
 export async function deleteDeal(dealId) {
     try {
-        const result = await query('DELETE FROM deals WHERE id = $1 RETURNING id', [dealId]);
+        const result = await query('DELETE FROM deals WHERE id = $1 RETURNING id, firm_id', [dealId]);
 
         if (result.rows.length === 0) {
             throw new Error('Deal not found');
@@ -171,7 +174,8 @@ export async function deleteDeal(dealId) {
         safeLog('info', 'Deal deleted', { dealId });
         await Promise.all([
             invalidateDealsCaches(),
-            invalidateMissionsCaches()
+            invalidateMissionsCaches(),
+            invalidateGroupedDealViews(result.rows[0]?.firm_id || null)
         ]);
         return true;
     } catch (error) {
@@ -190,9 +194,11 @@ export async function addResumeToDeal(dealId, resumeId, userId, options = {}) {
         const result = await query(UPSERT_DEAL_RESUME_SQL, [dealId, resumeId, userId, notes || null, status]);
 
         safeLog('info', 'Resume added to deal', { dealId, resumeId });
+        const firmResult = await query('SELECT firm_id FROM deals WHERE id = $1', [dealId]);
         await Promise.all([
             invalidateDealsCaches(),
-            invalidateMissionsCaches()
+            invalidateMissionsCaches(),
+            invalidateGroupedDealViews(firmResult.rows[0]?.firm_id || null)
         ]);
         return result.rows[0];
     } catch (error) {
@@ -216,9 +222,11 @@ export async function removeResumeFromDeal(dealId, resumeId) {
         }
 
         safeLog('info', 'Resume removed from deal', { dealId, resumeId });
+        const firmResult = await query('SELECT firm_id FROM deals WHERE id = $1', [dealId]);
         await Promise.all([
             invalidateDealsCaches(),
-            invalidateMissionsCaches()
+            invalidateMissionsCaches(),
+            invalidateGroupedDealViews(firmResult.rows[0]?.firm_id || null)
         ]);
         return true;
     } catch (error) {
@@ -239,9 +247,11 @@ export async function updateDealResumeStatus(dealId, resumeId, status, notes = n
         }
 
         safeLog('info', 'Deal resume status updated', { dealId, resumeId, status });
+        const firmResult = await query('SELECT firm_id FROM deals WHERE id = $1', [dealId]);
         await Promise.all([
             invalidateDealsCaches(),
-            invalidateMissionsCaches()
+            invalidateMissionsCaches(),
+            invalidateGroupedDealViews(firmResult.rows[0]?.firm_id || null)
         ]);
         return result.rows[0];
     } catch (error) {

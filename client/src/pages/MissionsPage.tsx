@@ -40,6 +40,7 @@ const MissionsPage = (): JSX.Element => {
     missionPendingDelete,
     missions,
     openCreateModal,
+    canDeleteMission,
     requestDelete,
     resetSearch,
     setEditorReady,
@@ -52,6 +53,7 @@ const MissionsPage = (): JSX.Element => {
     totalCount,
     totalPages,
     viewMode,
+    groupedRefreshToken,
   } = useMissionsDashboard();
 
   return (
@@ -65,9 +67,49 @@ const MissionsPage = (): JSX.Element => {
       <MissionsViewModeToggle value={viewMode} onChange={setViewMode} />
 
       {viewMode === 'byDeal' ? (
-        <MissionsByDealView onAddMission={openCreateModal} />
+        <MissionsByDealView
+          onAddMission={openCreateModal}
+          onEditMission={(mission) => handleEdit({
+            id: mission.id,
+            Title: mission.title,
+            Content: mission.content,
+            Status: mission.status as 'Active' | 'Closed' | 'Draft',
+            Firm: mission.firm,
+            'Client ID': mission.client_id,
+            'Client Name': mission.client_name,
+            'Client Type': mission.client_type,
+            'Contact ID': mission.contact_id,
+            'Contact Name': mission.contact_name,
+            'Contact Email': mission.contact_email,
+            'Contact Role': mission.contact_role,
+            'Adaptations Count': mission.adaptations_count,
+            'Submissions Count': mission.submissions_count,
+            'Pipeline Count': mission.pipeline_count,
+            'Has Attachments': mission.has_attached_elements,
+          })}
+          onDeleteMission={(mission) => requestDelete({
+            id: mission.id,
+            Title: mission.title,
+            Content: mission.content,
+            Status: mission.status as 'Active' | 'Closed' | 'Draft',
+            Firm: mission.firm,
+            'Client ID': mission.client_id,
+            'Client Name': mission.client_name,
+            'Client Type': mission.client_type,
+            'Contact ID': mission.contact_id,
+            'Contact Name': mission.contact_name,
+            'Contact Email': mission.contact_email,
+            'Contact Role': mission.contact_role,
+            'Adaptations Count': mission.adaptations_count,
+            'Submissions Count': mission.submissions_count,
+            'Pipeline Count': mission.pipeline_count,
+            'Has Attachments': mission.has_attached_elements,
+          })}
+          refreshToken={groupedRefreshToken}
+        />
       ) : (
         <MissionsListPanel
+          canDeleteMission={canDeleteMission}
           currentPage={currentPage}
           loading={loading}
           missions={missions}

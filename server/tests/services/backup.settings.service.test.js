@@ -18,6 +18,16 @@ vi.mock('../../utils/secretCrypto.js', () => ({
     decryptSecret: vi.fn((value) => value?.startsWith('enc:v1:test:') ? value.slice('enc:v1:test:'.length) : value)
 }));
 
+vi.mock('../../services/cache.service.js', () => ({
+    CACHE_KEYS: {
+        backupSettings: { CURRENT: 'current' }
+    },
+    backupSettingsCache: {
+        getOrLoad: vi.fn(async (_key, loader) => loader())
+    },
+    invalidateBackupSettingsCaches: vi.fn(async () => undefined)
+}));
+
 import { query } from '../../config/database.js';
 import {
     initBackupTables,

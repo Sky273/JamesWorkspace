@@ -117,6 +117,17 @@ describe('Templates Service', () => {
             expect(query.mock.calls[1][1].at(-2)).toBe(101);
             expect(query.mock.calls[1][1].at(-1)).toBe(0);
         });
+
+        it('should bypass cache when explicitly requested', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [{ total: '1' }] })
+                .mockResolvedValueOnce({ rows: [{ id: 't1' }] });
+
+            const result = await listTemplates({ isAdmin: true, page: 1, limit: 100, bypassCache: true });
+
+            expect(result.templates).toHaveLength(1);
+            expect(mockTemplatesCache.getOrLoad).not.toHaveBeenCalled();
+        });
     });
 
     describe('getTemplateById', () => {

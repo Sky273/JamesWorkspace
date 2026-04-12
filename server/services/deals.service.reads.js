@@ -39,12 +39,12 @@ export async function getDealById(dealId) {
     }
 }
 
-export async function getDeals(firmId, filters = {}, pagination = {}) {
+export async function getDeals(firmId, filters = {}, pagination = {}, { bypassCache = false } = {}) {
     try {
         const { page, limit, offset } = parseDealsPagination(pagination);
         const cacheKey = JSON.stringify({ firmId: firmId || null, filters, page, limit });
 
-        return dealsCache.getOrLoad(cacheKey, async () => {
+        const loader = async () => {
             const { whereClause, params, nextParamIndex } = buildDealsWhereClause(firmId, filters);
 
             const countResult = await query(`SELECT COUNT(*) as total FROM deals d ${whereClause}`, params);
@@ -63,7 +63,13 @@ export async function getDeals(firmId, filters = {}, pagination = {}) {
                 data: result.rows,
                 pagination: buildDealsPaginationMetadata(page, limit, offset, totalCount, result.rows.length)
             };
-        }, {
+        };
+
+        if (bypassCache) {
+            return loader();
+        }
+
+        return dealsCache.getOrLoad(cacheKey, loader, {
             scope: CACHE_KEYS.deals.ALL_DEALS
         });
     } catch (error) {
@@ -72,12 +78,18 @@ export async function getDeals(firmId, filters = {}, pagination = {}) {
     }
 }
 
-export async function getDealStats(firmId) {
+export async function getDealStats(firmId, { bypassCache = false } = {}) {
     try {
-        return dealsCache.getOrLoad(`stats:${firmId || 'admin'}`, async () => {
+        const loader = async () => {
             const result = await query(DEAL_STATS_SQL, [firmId]);
             return result.rows[0];
-        }, {
+        };
+
+        if (bypassCache) {
+            return loader();
+        }
+
+        return dealsCache.getOrLoad(`stats:${firmId || 'admin'}`, loader, {
             scope: CACHE_KEYS.deals.ALL_DEALS
         });
     } catch (error) {
@@ -106,11 +118,17 @@ export async function getResumeFirmId(resumeId) {
     return getSingleColumnValueOrNull(result, 'firm_id');
 }
 
-export async function getMissionsForDeal(dealId) {
-    return dealsCache.getOrLoad(`missions:${dealId}`, async () => {
+export async function getMissionsForDeal(dealId, { bypassCache = false } = {}) {
+    const loader = async () => {
         const result = await query(DEAL_MISSIONS_SQL, [dealId]);
         return result.rows;
-    }, {
+    };
+
+    if (bypassCache) {
+        return loader();
+    }
+
+    return dealsCache.getOrLoad(`missions:${dealId}`, loader, {
         scope: CACHE_KEYS.deals.ALL_DEALS
     });
 }
@@ -129,12 +147,18 @@ export async function getDealsForResume(resumeId, firmId) {
     }
 }
 
-export async function getResumesForDeal(dealId) {
+export async function getResumesForDeal(dealId, { bypassCache = false } = {}) {
     try {
-        return dealsCache.getOrLoad(`resumes:${dealId}`, async () => {
+        const loader = async () => {
             const result = await query(RESUMES_FOR_DEAL_SQL, [dealId]);
             return result.rows;
-        }, {
+        };
+
+        if (bypassCache) {
+            return loader();
+        }
+
+        return dealsCache.getOrLoad(`resumes:${dealId}`, loader, {
             scope: CACHE_KEYS.deals.ALL_DEALS
         });
     } catch (error) {

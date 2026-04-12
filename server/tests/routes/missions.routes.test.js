@@ -788,6 +788,24 @@ describe('Missions Routes - DELETE /api/missions/:id', () => {
         expect(res.status).toBe(200);
         expect(mockFindMission).toHaveBeenCalledWith('mission-123');
     });
+
+    it('should return 409 when mission still has linked elements', async () => {
+        mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Test Firm', firm_id: 'firm-123' }));
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        const conflictError = new Error('Cannot delete mission because linked elements are still attached');
+        conflictError.statusCode = 409;
+        conflictError.code = 'MISSION_DELETE_BLOCKED';
+        conflictError.details = { adaptationsCount: 1, submissionsCount: 0, pipelineCount: 1 };
+        mockDeleteMission.mockRejectedValueOnce(conflictError);
+
+        const res = await request(app)
+            .delete('/api/missions/mission-123')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(409);
+        expect(res.body.error).toContain('linked');
+        expect(res.body.details).toEqual({ adaptationsCount: 1, submissionsCount: 0, pipelineCount: 1 });
+    });
 });
 
 // ============================================

@@ -30,9 +30,10 @@ export interface RecalculateResult {
 }
 
 const tagService = {
-    async getAllTags(): Promise<TagCategories> {
+    async getAllTags(forceRefresh = false): Promise<TagCategories> {
         try {
-            const response = await fetchWithAuth('/api/tags', createAuthOptions({ method: 'GET' }));
+            const query = forceRefresh ? '?refresh=1' : '';
+            const response = await fetchWithAuth(`/api/tags${query}`, createAuthOptions({ method: 'GET' }));
             if (!response.ok) {
                 // Silently fail if not authenticated yet
                 if (response.status === 401 || response.status === 403) {
@@ -93,9 +94,10 @@ const tagService = {
         }
     },
 
-    async getCleanedTags(): Promise<TagCategories> {
+    async getCleanedTags(forceRefresh = false): Promise<TagCategories> {
         try {
-            const response = await fetchWithAuth('/api/tags/cleaned', createAuthOptions({ method: 'GET' }));
+            const query = forceRefresh ? '?refresh=1' : '';
+            const response = await fetchWithAuth(`/api/tags/cleaned${query}`, createAuthOptions({ method: 'GET' }));
             if (!response.ok) {
                 if (response.status === 401 || response.status === 403) {
                     logger.warn('Cleaned tags fetch skipped - not authenticated');
@@ -110,9 +112,10 @@ const tagService = {
         }
     },
 
-    async getEscoTags(): Promise<EscoTagCategories> {
+    async getEscoTags(forceRefresh = false): Promise<EscoTagCategories> {
         try {
-            const response = await fetchWithAuth('/api/tags/esco', createAuthOptions({ method: 'GET' }));
+            const query = forceRefresh ? '?refresh=1' : '';
+            const response = await fetchWithAuth(`/api/tags/esco${query}`, createAuthOptions({ method: 'GET' }));
             if (!response.ok) {
                 if (response.status === 401 || response.status === 403) {
                     logger.warn('ESCO tags fetch skipped - not authenticated');

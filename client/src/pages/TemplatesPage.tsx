@@ -32,6 +32,7 @@ const TemplatesPage = (): JSX.Element => {
     currentPage,
     error,
     fetchTemplates,
+    refreshTemplates,
     filteredTemplates,
     goToEditTemplate,
     goToNewTemplate,
@@ -113,7 +114,7 @@ const TemplatesPage = (): JSX.Element => {
       <TemplatesToolbar
         onCreate={goToNewTemplate}
         onExtract={openExtractModal}
-        onRefresh={fetchTemplates}
+        onRefresh={refreshTemplates}
         onResetSearch={resetSearch}
         onSearchChange={setSearchTerm}
         onSortChange={setSortBy}

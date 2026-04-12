@@ -27,9 +27,10 @@ const ALLOWED_COLUMNS = new Set([
  * @param {string} [options.status]
  * @param {number} [options.page=1]
  * @param {number} [options.limit=100]
+ * @param {boolean} [options.bypassCache=false]
  * @returns {Promise<{templates: Array, totalCount: number, hasMore: boolean}>}
  */
-export async function listTemplates({ isAdmin, userFirmId, search, status, page = 1, limit = 100 }) {
+export async function listTemplates({ isAdmin, userFirmId, search, status, page = 1, limit = 100, bypassCache = false }) {
     const normalizedPage = Math.max(1, Number.isFinite(page) ? page : 1);
     const normalizedLimit = Math.max(1, Math.min(Number.isFinite(limit) ? limit : 100, 100));
     const cacheKey = JSON.stringify({
@@ -41,7 +42,7 @@ export async function listTemplates({ isAdmin, userFirmId, search, status, page 
         limit: normalizedLimit
     });
 
-    return templatesCache.getOrLoad(cacheKey, async () => {
+    const loader = async () => {
         const offset = (normalizedPage - 1) * normalizedLimit;
         const conditions = [];
         const params = [];
@@ -92,7 +93,13 @@ export async function listTemplates({ isAdmin, userFirmId, search, status, page 
         const templates = hasMore ? dataResult.rows.slice(0, normalizedLimit) : dataResult.rows;
 
         return { templates, totalCount, hasMore };
-    }, {
+    };
+
+    if (bypassCache) {
+        return loader();
+    }
+
+    return templatesCache.getOrLoad(cacheKey, loader, {
         scope: CACHE_KEYS.templates.ALL_TEMPLATES
     });
 }

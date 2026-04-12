@@ -88,11 +88,12 @@ router.get('/', authenticateToken, createDealsRouteHandler('Error fetching deals
         if (!pagination.ok) {
             return res.status(400).json({ error: pagination.error });
         }
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
 
         const firmId = resolveScopedFirmId({ scopedAccess, requestedFirmId: req.query.firmId });
         const filters = buildDealsListFilters(req.query);
 
-        const result = await getDeals(firmId, filters, pagination.value);
+        const result = await getDeals(firmId, filters, pagination.value, { bypassCache });
         return res.json(result);
     });
 }));
@@ -101,7 +102,8 @@ router.get('/', authenticateToken, createDealsRouteHandler('Error fetching deals
 router.get('/stats', authenticateToken, createDealsRouteHandler('Error fetching deal stats', 'Failed to fetch deal statistics', async (req, res) => {
     await withFirmScopedAccess(req, res, firmScopedAccessDeps, async (scopedAccess) => {
         const firmId = resolveScopedFirmId({ scopedAccess, requestedFirmId: req.query.firmId });
-        const stats = await getDealStats(firmId);
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+        const stats = await getDealStats(firmId, { bypassCache });
         return res.json(stats);
     });
 }));
@@ -134,7 +136,8 @@ router.get('/:id', authenticateToken, validateParams('id'), createDealsRouteHand
 router.get('/:id/missions', authenticateToken, validateParams('id'), createDealsRouteHandler('Error fetching deal missions', 'Failed to fetch deal missions', async (req, res) => {
     const { id } = req.params;
     await withDealAccess(req, res, id, dealAccessDeps, async () => {
-        const missions = await getMissionsForDeal(id);
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+        const missions = await getMissionsForDeal(id, { bypassCache });
         return res.json(missions);
     });
 }));
@@ -223,7 +226,8 @@ router.delete('/:id', authenticateToken, validateParams('id'), userRateLimit(), 
 router.get('/:id/resumes', authenticateToken, validateParams('id'), createDealsRouteHandler('Error fetching deal resumes', 'Failed to fetch deal resumes', async (req, res) => {
     const { id } = req.params;
     await withDealAccess(req, res, id, dealAccessDeps, async () => {
-        const resumes = await getResumesForDeal(id);
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+        const resumes = await getResumesForDeal(id, { bypassCache });
         return res.json(resumes);
     });
 }));

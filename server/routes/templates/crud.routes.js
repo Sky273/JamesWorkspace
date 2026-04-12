@@ -43,6 +43,7 @@ router.get('/', authenticateToken, async (req, res) => {
         const page = Number.isNaN(parsedPage) ? 1 : parsedPage;
         const limit = Number.isNaN(parsedLimit) ? 100 : parsedLimit;
         const { search, status } = req.query;
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
         const isAdmin = isUserAdmin(req);
         const userFirmId = await getUserFirmId(req);
 
@@ -55,7 +56,7 @@ router.get('/', authenticateToken, async (req, res) => {
         }
 
         const { templates, totalCount, hasMore } = await templatesService.listTemplates({
-            isAdmin, userFirmId, search, status, page, limit
+            isAdmin, userFirmId, search, status, page, limit, bypassCache
         });
         
         // Debug log to check firm_name
@@ -258,9 +259,9 @@ router.delete('/:id', authenticateToken, requireUserManager, validateParams('id'
             }
         }
         
-        await invalidateTemplatesCaches();
         await templatesService.deleteTemplate(id);
-        
+        await invalidateTemplatesCaches();
+
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.TEMPLATE_DELETED, {
             ...getRequestMetadata(req),
             templateId: id,

@@ -3,7 +3,7 @@
  * Mirrors the pattern of MissionsDealsGroupedView for adaptations
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -30,18 +30,24 @@ const AdaptationsDealsGroupedView = (): JSX.Element => {
   const [unassignedExpanded, setUnassignedExpanded] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const groupedRequestIdRef = useRef(0);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const fetchGroupedData = useCallback(async () => {
+  const fetchGroupedData = useCallback(async (options: { forceRefresh?: boolean } = {}) => {
+    const requestId = ++groupedRequestIdRef.current;
     try {
       setLoading(true);
-      const response = await authGet('/api/adaptations/grouped-by-deal');
+      const suffix = options.forceRefresh ? '?refresh=1' : '';
+      const response = await authGet(`/api/adaptations/grouped-by-deal${suffix}`);
       if (!response.ok) throw new Error('Failed to fetch grouped adaptations');
       const result: GroupedData = await response.json();
+      if (requestId !== groupedRequestIdRef.current) {
+        return;
+      }
       setData(result);
 
       const expanded: Record<string, boolean> = {};
@@ -58,15 +64,29 @@ const AdaptationsDealsGroupedView = (): JSX.Element => {
         return merged;
       });
     } catch (error) {
+      if (requestId !== groupedRequestIdRef.current) {
+        return;
+      }
       const errorMessage = error instanceof Error ? error.message : '';
       if (!errorMessage.includes('Session expired')) {
         logger.error('Error fetching grouped adaptations:', error);
         toast.error(t('adaptations.grouped.fetchError'));
       }
     } finally {
-      setLoading(false);
+      if (requestId === groupedRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [authGet, t]);
+
+  const refreshGroupedData = useCallback(async (): Promise<void> => {
+    const normalizedSearch = searchQuery.trim();
+    groupedRequestIdRef.current += 1;
+    if (normalizedSearch !== debouncedSearch) {
+      setDebouncedSearch(normalizedSearch);
+    }
+    await fetchGroupedData({ forceRefresh: true });
+  }, [debouncedSearch, fetchGroupedData, searchQuery]);
 
   useEffect(() => {
     fetchGroupedData();
@@ -123,7 +143,7 @@ const AdaptationsDealsGroupedView = (): JSX.Element => {
       <GroupedSearchHeader
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        onRefresh={fetchGroupedData}
+        onRefresh={refreshGroupedData}
         onClear={() => setSearchQuery('')}
         t={tf}
       />

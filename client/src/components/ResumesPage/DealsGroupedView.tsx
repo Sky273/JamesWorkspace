@@ -9,7 +9,7 @@
  * - ./dealsGrouped.types.ts  : Shared types and constants
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { BriefcaseIcon } from '@heroicons/react/24/outline';
@@ -38,7 +38,7 @@ import {
   type DealsGroupedViewProps,
 } from './dealsGrouped.types';
 
-const DealsGroupedView = ({ allTags, stats }: DealsGroupedViewProps): JSX.Element => {
+const DealsGroupedView = ({ allTags, refreshToken, stats }: DealsGroupedViewProps): JSX.Element => {
   const { t } = useTranslation();
   const { user: authUser } = useAuth();
   const { deleteResume, deleting } = useResume();
@@ -72,6 +72,14 @@ const DealsGroupedView = ({ allTags, stats }: DealsGroupedViewProps): JSX.Elemen
     visibleData,
     autoExpandedDealIds,
   } = useDealsGroupedData({ allTags });
+
+  useEffect(() => {
+    if (refreshToken <= 0) {
+      return;
+    }
+
+    void fetchGroupedData();
+  }, [fetchGroupedData, refreshToken]);
 
   // Drag & Drop (extracted hook)
   const {

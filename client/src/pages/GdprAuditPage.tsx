@@ -60,9 +60,10 @@ const GdprAuditPage = (): JSX.Element => {
     }
   }, [authGet]);
 
-  const fetchFirms = useCallback(async (): Promise<void> => {
+  const fetchFirms = useCallback(async (forceRefresh = false): Promise<void> => {
     try {
-      const response = await authGet('/api/gdpr-audit/firms');
+      const suffix = forceRefresh ? '?refresh=1' : '';
+      const response = await authGet(`/api/gdpr-audit/firms${suffix}`);
       if (response.ok) {
         const data = await response.json();
         setFirms(data || []);
@@ -72,10 +73,11 @@ const GdprAuditPage = (): JSX.Element => {
     }
   }, [authGet]);
 
-  const fetchStats = useCallback(async (): Promise<void> => {
+  const fetchStats = useCallback(async (forceRefresh = false): Promise<void> => {
     try {
       const params = new URLSearchParams({ days: '30' });
       if (filters.firmId) params.append('firmId', filters.firmId);
+      if (forceRefresh) params.append('refresh', '1');
 
       const response = await authGet(`/api/gdpr-audit/stats?${params}`);
       if (response.ok) {
@@ -87,7 +89,7 @@ const GdprAuditPage = (): JSX.Element => {
     }
   }, [authGet, filters.firmId]);
 
-  const fetchLogs = useCallback(async (): Promise<void> => {
+  const fetchLogs = useCallback(async (forceRefresh = false): Promise<void> => {
     setLoading(true);
     setError(null);
 
@@ -104,6 +106,7 @@ const GdprAuditPage = (): JSX.Element => {
       if (filters.targetEmail) params.append('targetEmail', filters.targetEmail);
       if (filters.startDate) params.append('startDate', filters.startDate);
       if (filters.endDate) params.append('endDate', filters.endDate);
+      if (forceRefresh) params.append('refresh', '1');
 
       const response = await authGet(`/api/gdpr-audit/logs?${params}`);
       if (!response.ok) {
@@ -207,7 +210,7 @@ const GdprAuditPage = (): JSX.Element => {
             {t('gdprAudit.filters')}
           </button>
           <button
-            onClick={() => { void fetchLogs(); void fetchStats(); }}
+            onClick={() => { void fetchLogs(true); void fetchStats(true); void fetchFirms(true); }}
             className="cv-gradient-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-semibold"
           >
             <ArrowPathIcon className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -267,7 +270,7 @@ const GdprAuditPage = (): JSX.Element => {
               )}
               <button
                 type="button"
-                onClick={() => { void fetchLogs(); void fetchStats(); }}
+                onClick={() => { void fetchLogs(true); void fetchStats(true); void fetchFirms(true); }}
                 className="cv-gradient-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-semibold"
               >
                 {t('gdprAudit.refresh')}

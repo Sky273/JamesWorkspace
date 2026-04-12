@@ -31,6 +31,7 @@ router.get('/', authenticateToken, requireUserManager, async (req, res) => {
         const pageResult = pageInput === undefined ? { ok: true, value: 1 } : parsePositiveInteger(pageInput, 1);
         const limitResult = limitInput === undefined ? { ok: true, value: 100 } : parsePositiveInteger(limitInput, 100, 100);
         const { search, role, status } = req.query;
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
 
         if (!pageResult.ok || !limitResult.ok) {
             return res.status(400).json({ error: 'Invalid pagination parameters' });
@@ -49,7 +50,8 @@ router.get('/', authenticateToken, requireUserManager, async (req, res) => {
             status,
             firmId: superAdmin ? undefined : userFirmId,
             page: pageResult.value,
-            limit: limitResult.value
+            limit: limitResult.value,
+            ...(bypassCache ? { bypassCache: true } : {})
         });
 
         // Map to frontend format (exclude password)

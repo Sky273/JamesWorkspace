@@ -300,6 +300,61 @@ export async function deleteVersionsByResumeId(resumeId, { executor } = {}) {
     await run('DELETE FROM resume_versions WHERE resume_id = $1', [resumeId]);
 }
 
+function parseImprovedScore(value) {
+    if (value === undefined || value === null || value === '') {
+        return 0;
+    }
+
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : 0;
+    }
+
+    const normalized = Number.parseInt(String(value).replace('%', ''), 10);
+    return Number.isFinite(normalized) ? normalized : 0;
+}
+
+export async function updateVersionPostAnalysis(resumeId, versionNumber, analysis, { executor } = {}) {
+    const run = typeof executor === 'function'
+        ? executor
+        : executor && typeof executor.query === 'function'
+            ? executor.query.bind(executor)
+            : query;
+    const improvedTags = analysis?.tags || {};
+
+    await run(
+        `UPDATE resume_versions SET
+            improved_global_rating = $1,
+            improved_skills_score = $2,
+            improved_experience_score = $3,
+            improved_education_score = $4,
+            improved_ats_score = $5,
+            improved_executive_summary_score = $6,
+            improved_hobbies_languages_score = $7,
+            improved_skills = $8,
+            improved_industries = $9,
+            improved_tools = $10,
+            improved_soft_skills = $11,
+            improved_key_improvements = $12
+         WHERE resume_id = $13 AND version_number = $14`,
+        [
+            parseImprovedScore(analysis?.globalRating || analysis?.['Global Rating']),
+            parseImprovedScore(analysis?.skillsRating || analysis?.['Skills']),
+            parseImprovedScore(analysis?.experiencesRating || analysis?.['Experience']),
+            parseImprovedScore(analysis?.educationRating || analysis?.['Education']),
+            parseImprovedScore(analysis?.atsOptimizationRating || analysis?.['ATS Compatibility']),
+            parseImprovedScore(analysis?.executiveSummaryRating || analysis?.['Executive Summary']),
+            parseImprovedScore(analysis?.hobbiesLanguagesRating || analysis?.['Hobbies Languages']),
+            JSON.stringify(improvedTags.skills || []),
+            JSON.stringify(improvedTags.industries || []),
+            JSON.stringify(improvedTags.tools || []),
+            JSON.stringify(improvedTags.softSkills || []),
+            JSON.stringify(analysis?.suggestions || {}),
+            resumeId,
+            versionNumber
+        ]
+    );
+}
+
 // ============================================
 // HELPERS
 // ============================================

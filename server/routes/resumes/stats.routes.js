@@ -29,12 +29,13 @@ router.get('/grouped-by-deal', applyResumeStatsReadHeaders, authenticateToken, a
     try {
         const isAdmin = req.user?.role === 'admin';
         const userFirmId = await getUserFirmId(req);
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
         
         if (!userFirmId && !isAdmin) {
             return res.status(403).json({ error: 'No firm association' });
         }
 
-        const result = await resumeStatsService.getResumesGroupedByDeal({ firmId: userFirmId, isAdmin });
+        const result = await resumeStatsService.getResumesGroupedByDeal({ firmId: userFirmId, isAdmin, bypassCache });
         return res.json(result);
     } catch (error) {
         safeLog('error', 'Error fetching resumes grouped by deal', { error: error.message });
@@ -48,6 +49,7 @@ router.get('/stats', applyResumeStatsReadHeaders, authenticateToken, async (req,
     try {
         const isAdmin = req.user?.role === 'admin';
         const userFirmId = isAdmin ? null : await getUserFirmId(req);
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
 
         if (!isAdmin && !userFirmId) {
             return res.status(403).json({ error: 'No firm association' });
@@ -55,7 +57,7 @@ router.get('/stats', applyResumeStatsReadHeaders, authenticateToken, async (req,
         
         // Check cache first
         const cacheKey = isAdmin ? 'admin' : userFirmId;
-        const cachedStats = resumeStatsService.getCachedStats(cacheKey);
+        const cachedStats = bypassCache ? null : resumeStatsService.getCachedStats(cacheKey);
         if (cachedStats) {
             safeLog('debug', 'Stats cache hit', { cacheKey });
             return res.json(cachedStats);

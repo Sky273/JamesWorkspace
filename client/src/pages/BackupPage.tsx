@@ -4,7 +4,7 @@
  * Admin only access
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -52,13 +52,20 @@ const BackupPage = (): JSX.Element => {
     const [remoteLoadError, setRemoteLoadError] = useState<string | null>(null);
     const [restoring, setRestoring] = useState<string | null>(null);
     const [activeSection, setActiveSection] = useState<'config' | 'history' | 'restore'>('config');
+    const settingsRequestIdRef = useRef(0);
+    const historyRequestIdRef = useRef(0);
+    const remoteFilesRequestIdRef = useRef(0);
 
      
     const fetchSettings = useCallback(async () => {
+        const requestId = ++settingsRequestIdRef.current;
         try {
             const response = await authGet('/api/backup/settings');
             if (response.ok) {
                 const data = await response.json();
+                if (requestId !== settingsRequestIdRef.current) {
+                    return;
+                }
                 if (data && data.id) {
                     setSettings({ 
                         ...defaultSettings, 
@@ -68,20 +75,32 @@ const BackupPage = (): JSX.Element => {
                 }
             }
         } catch (error) {
+            if (requestId !== settingsRequestIdRef.current) {
+                return;
+            }
             logger.error('Failed to fetch backup settings:', error);
         } finally {
-            setLoading(false);
+            if (requestId === settingsRequestIdRef.current) {
+                setLoading(false);
+            }
         }
     }, [authGet]);
 
     const fetchHistory = useCallback(async () => {
+        const requestId = ++historyRequestIdRef.current;
         try {
             const response = await authGet('/api/backup/history?limit=20');
             if (response.ok) {
                 const data = await response.json();
+                if (requestId !== historyRequestIdRef.current) {
+                    return;
+                }
                 setHistory(data.items || []);
             }
         } catch (error) {
+            if (requestId !== historyRequestIdRef.current) {
+                return;
+            }
             logger.error('Failed to fetch backup history:', error);
         }
     }, [authGet]);
@@ -92,6 +111,7 @@ const BackupPage = (): JSX.Element => {
     }, [fetchSettings, fetchHistory]);
 
     const fetchRemoteFiles = async ({ silent = false }: { silent?: boolean } = {}) => {
+        const requestId = ++remoteFilesRequestIdRef.current;
         if (settings.backup_target !== 'remote' || !settings.host) {
             setRemoteFiles([]);
             setRemoteLoadError(null);
@@ -106,6 +126,9 @@ const BackupPage = (): JSX.Element => {
             const response = await authGet('/api/backup/list-remote');
             if (response.ok) {
                 const data = await response.json();
+                if (requestId !== remoteFilesRequestIdRef.current) {
+                    return;
+                }
                 if (data.success) {
                     setRemoteFiles(data.files || []);
                     setRemoteLoadError(null);
@@ -118,6 +141,9 @@ const BackupPage = (): JSX.Element => {
                     }
                 }
             } else {
+                if (requestId !== remoteFilesRequestIdRef.current) {
+                    return;
+                }
                 const fallbackMessage = t('backup.remoteListError');
                 setRemoteFiles([]);
                 setRemoteLoadError(fallbackMessage);
@@ -126,6 +152,9 @@ const BackupPage = (): JSX.Element => {
                 }
             }
         } catch (error) {
+            if (requestId !== remoteFilesRequestIdRef.current) {
+                return;
+            }
             logger.error('Failed to fetch remote files:', error);
             const fallbackMessage = t('backup.remoteListError');
             setRemoteFiles([]);
@@ -134,7 +163,9 @@ const BackupPage = (): JSX.Element => {
                 toast.error(fallbackMessage);
             }
         } finally {
-            setLoadingRemote(false);
+            if (requestId === remoteFilesRequestIdRef.current) {
+                setLoadingRemote(false);
+            }
         }
     };
 
@@ -214,6 +245,7 @@ const BackupPage = (): JSX.Element => {
 
     const handleDeleteHistory = async (id: string) => {
         try {
+            historyRequestIdRef.current += 1;
             const response = await authDelete(`/api/backup/history/${id}`);
             if (response.ok) {
                 setHistory(prev => prev.filter(item => item.id !== id));

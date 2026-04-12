@@ -109,12 +109,13 @@ router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
     try {
         const isAdmin = req.user?.role === 'admin';
         const userFirmId = await getUserFirmId(req);
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
 
         if (!userFirmId && !isAdmin) {
             return res.status(403).json({ error: 'No firm association' });
         }
 
-        const result = await adaptationsService.getAdaptationsGroupedByDeal({ firmId: userFirmId, isAdmin });
+        const result = await adaptationsService.getAdaptationsGroupedByDeal({ firmId: userFirmId, isAdmin, bypassCache });
         return res.json(result);
     } catch (error) {
         safeLog('error', 'Error fetching adaptations grouped by deal', { error: error.message });

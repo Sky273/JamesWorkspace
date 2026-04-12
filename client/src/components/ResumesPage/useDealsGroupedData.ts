@@ -27,6 +27,7 @@ export function useDealsGroupedData({ allTags }: UseDealsGroupedDataParams) {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const isInitialLoadRef = useRef(true);
+  const groupedRequestIdRef = useRef(0);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -35,12 +36,17 @@ export function useDealsGroupedData({ allTags }: UseDealsGroupedDataParams) {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const fetchGroupedData = useCallback(async () => {
+  const fetchGroupedData = useCallback(async (options: { forceRefresh?: boolean } = {}) => {
+    const requestId = ++groupedRequestIdRef.current;
     try {
       setLoading(true);
-      const response = await authGet('/api/resumes/grouped-by-deal');
+      const suffix = options.forceRefresh ? '?refresh=1' : '';
+      const response = await authGet(`/api/resumes/grouped-by-deal${suffix}`);
       if (response.ok) {
         const result = await response.json();
+        if (requestId !== groupedRequestIdRef.current) {
+          return;
+        }
         setData(result);
         // On first load, try to restore saved state, otherwise auto-expand deals with resumes
         if (isInitialLoadRef.current) {
@@ -74,11 +80,25 @@ export function useDealsGroupedData({ allTags }: UseDealsGroupedDataParams) {
         }
       }
     } catch (error) {
+      if (requestId !== groupedRequestIdRef.current) {
+        return;
+      }
       logger.error('Error fetching grouped resumes:', error);
     } finally {
-      setLoading(false);
+      if (requestId === groupedRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [authGet]);
+
+  const refreshGroupedData = useCallback(async (): Promise<void> => {
+    const normalizedSearch = searchQuery.trim().toLowerCase();
+    groupedRequestIdRef.current += 1;
+    if (normalizedSearch !== debouncedSearch) {
+      setDebouncedSearch(normalizedSearch);
+    }
+    await fetchGroupedData({ forceRefresh: true });
+  }, [debouncedSearch, fetchGroupedData, searchQuery]);
 
   useEffect(() => {
     fetchGroupedData();
@@ -261,7 +281,7 @@ export function useDealsGroupedData({ allTags }: UseDealsGroupedDataParams) {
     searchQuery,
     setSearchQuery,
     selectedTags,
-    fetchGroupedData,
+    fetchGroupedData: refreshGroupedData,
     clearFilters,
     toggleDeal,
     saveViewState,

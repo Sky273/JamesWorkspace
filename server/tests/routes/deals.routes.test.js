@@ -89,7 +89,33 @@ vi.mock('../../utils/validation.js', () => ({
     updateDealSchema: {},
     addDealResumeSchema: {},
     updateDealResumeSchema: {},
-    addResumeToMultipleDealsSchema: {}
+    addResumeToMultipleDealsSchema: {},
+    normalizeRequestBodyAliases: (value) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+            return value;
+        }
+
+        const normalized = { ...value };
+        if (Object.prototype.hasOwnProperty.call(normalized, 'clientId') && normalized.client_id === undefined) {
+            normalized.client_id = normalized.clientId;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'contactId') && normalized.contact_id === undefined) {
+            normalized.contact_id = normalized.contactId;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'expectedStartDate') && normalized.expected_start_date === undefined) {
+            normalized.expected_start_date = normalized.expectedStartDate;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'expectedEndDate') && normalized.expected_end_date === undefined) {
+            normalized.expected_end_date = normalized.expectedEndDate;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'budgetMin') && normalized.budget_min === undefined) {
+            normalized.budget_min = normalized.budgetMin;
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, 'budgetMax') && normalized.budget_max === undefined) {
+            normalized.budget_max = normalized.budgetMax;
+        }
+        return normalized;
+    }
 }));
 
 // Mock auth middleware
@@ -185,7 +211,8 @@ describe('Deals Routes - GET /api/deals', () => {
         expect(mockGetDeals).toHaveBeenCalledWith(
             'firm-123',
             expect.objectContaining({ status: 'open' }),
-            expect.any(Object)
+            expect.any(Object),
+            expect.objectContaining({ bypassCache: false })
         );
     });
 
@@ -205,7 +232,8 @@ describe('Deals Routes - GET /api/deals', () => {
         expect(mockGetDeals).toHaveBeenCalledWith(
             'firm-123',
             expect.objectContaining({ priority: 'high' }),
-            expect.any(Object)
+            expect.any(Object),
+            expect.objectContaining({ bypassCache: false })
         );
     });
 
@@ -225,7 +253,29 @@ describe('Deals Routes - GET /api/deals', () => {
         expect(mockGetDeals).toHaveBeenCalledWith(
             'firm-123',
             expect.objectContaining({ search: 'important' }),
-            expect.any(Object)
+            expect.any(Object),
+            expect.objectContaining({ bypassCache: false })
+        );
+    });
+
+    it('should bypass cache when refresh is requested', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockIsUserAdmin.mockReturnValue(false);
+        mockGetDeals.mockResolvedValueOnce({
+            deals: [],
+            pagination: { page: 1, totalCount: 0 }
+        });
+
+        const res = await request(app)
+            .get('/api/deals?refresh=1')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(mockGetDeals).toHaveBeenCalledWith(
+            'firm-123',
+            expect.any(Object),
+            expect.any(Object),
+            expect.objectContaining({ bypassCache: true })
         );
     });
 
@@ -246,7 +296,8 @@ describe('Deals Routes - GET /api/deals', () => {
         expect(mockGetDeals).toHaveBeenCalledWith(
             'firm-other',
             expect.any(Object),
-            expect.any(Object)
+            expect.any(Object),
+            expect.objectContaining({ bypassCache: false })
         );
     });
 

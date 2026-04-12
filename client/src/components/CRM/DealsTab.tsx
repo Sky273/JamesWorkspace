@@ -3,7 +3,7 @@
  * Displays deals with filtering by client and status
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -20,6 +20,32 @@ import DealCard from './DealCard';
 import DealFormModal from './DealFormModal';
 import DealDeleteModal from './DealDeleteModal';
 import SearchField from '../page/SearchField';
+
+export function mergePreservedDealIntoResults<T extends { id: string; title?: string; client_id?: string; status?: string }>(
+  deals: T[],
+  preservedDeal: T | null,
+  {
+    normalizedSearch,
+    clientFilter,
+    statusFilter,
+    pageSize,
+  }: {
+    normalizedSearch: string;
+    clientFilter: string;
+    statusFilter: string;
+    pageSize: number;
+  }
+) {
+  const shouldPreserve = preservedDeal != null
+    && (statusFilter === 'all' || !statusFilter || preservedDeal.status === statusFilter)
+    && (!clientFilter || preservedDeal.client_id === clientFilter)
+    && (normalizedSearch.length === 0 || (preservedDeal.title || '').toLowerCase().includes(normalizedSearch))
+    && !deals.some((deal) => deal.id === preservedDeal.id);
+
+  return shouldPreserve
+    ? [preservedDeal, ...deals].slice(0, pageSize)
+    : deals;
+}
 
 const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
   const { t } = useTranslation();
@@ -50,6 +76,9 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
     priority: 'medium'
   });
   const [saving, setSaving] = useState(false);
+  const dealsRequestIdRef = useRef(0);
+  const clientsRequestIdRef = useRef(0);
+  const contactsRequestIdRef = useRef(0);
 
   // Debounce search
   useEffect(() => {
@@ -62,11 +91,15 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
 
   // Fetch clients for dropdown
   const fetchClients = useCallback(async () => {
+    const requestId = ++clientsRequestIdRef.current;
     try {
       const options = await createAuthOptionsWithCsrf({ method: 'GET' });
       const response = await fetchWithAuth('/api/clients?limit=100', options);
       if (response.ok) {
         const data = await response.json();
+        if (requestId !== clientsRequestIdRef.current) {
+          return;
+        }
         setClients(data.data || []);
       }
     } catch (error) {
@@ -76,6 +109,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
 
   // Fetch contacts for selected client
   const fetchContacts = useCallback(async (clientId: string) => {
+    const requestId = ++contactsRequestIdRef.current;
     if (!clientId) {
       setContacts([]);
       return;
@@ -85,6 +119,9 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
       const response = await fetchWithAuth(`/api/clients/${clientId}`, options);
       if (response.ok) {
         const data = await response.json();
+        if (requestId !== contactsRequestIdRef.current) {
+          return;
+        }
         setContacts(data.contacts || []);
       }
     } catch (error) {
@@ -93,31 +130,50 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
   }, []);
 
   // Fetch deals
-  const fetchDeals = useCallback(async () => {
+  const fetchDeals = useCallback(async (fetchOptions: { page?: number; search?: string; forceRefresh?: boolean; preserveDeal?: Deal | null } = {}) => {
+    const requestId = ++dealsRequestIdRef.current;
+    const effectivePage = fetchOptions.page ?? page;
+    const effectiveSearch = fetchOptions.search ?? debouncedSearch;
+    const normalizedSearch = effectiveSearch.trim().toLowerCase();
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      params.set('page', page.toString());
+      params.set('page', effectivePage.toString());
       params.set('limit', pageSize.toString());
-      if (debouncedSearch) params.set('search', debouncedSearch);
+      if (effectiveSearch) params.set('search', effectiveSearch);
       if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
       if (clientFilter) params.set('clientId', clientFilter);
+      if (fetchOptions.forceRefresh) params.set('refresh', '1');
 
-      const options = await createAuthOptionsWithCsrf({ method: 'GET' });
-      const response = await fetchWithAuth(`/api/deals?${params.toString()}`, options);
+      const requestOptions = await createAuthOptionsWithCsrf({ method: 'GET' });
+      const response = await fetchWithAuth(`/api/deals?${params.toString()}`, requestOptions);
       
       if (response.ok) {
         const data = await response.json();
-        setDeals(data.data || []);
+        if (requestId !== dealsRequestIdRef.current) {
+          return;
+        }
+        const nextDeals = mergePreservedDealIntoResults(data.data || [], fetchOptions.preserveDeal || null, {
+          normalizedSearch,
+          clientFilter,
+          statusFilter,
+          pageSize,
+        });
+        setDeals(nextDeals);
         setTotalCount(data.pagination?.totalCount || 0);
       } else {
         throw new Error('Failed to fetch deals');
       }
     } catch (error) {
+      if (requestId !== dealsRequestIdRef.current) {
+        return;
+      }
       logger.error('Error fetching deals:', error);
       toast.error(t('crm.deals.messages.errorFetching'));
     } finally {
-      setLoading(false);
+      if (requestId === dealsRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [page, debouncedSearch, statusFilter, clientFilter, t]);
 
@@ -183,6 +239,18 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
       if (response.ok) {
         const deal = await response.json();
         logger.log('Deal created/updated:', deal);
+        dealsRequestIdRef.current += 1;
+        setDeals((currentDeals) => {
+          const normalizedDeal = deal?.data || deal;
+          const existingIndex = currentDeals.findIndex((currentDeal) => currentDeal.id === normalizedDeal.id);
+          if (existingIndex >= 0) {
+            return currentDeals.map((currentDeal) => (currentDeal.id === normalizedDeal.id ? normalizedDeal : currentDeal));
+          }
+          return [normalizedDeal, ...currentDeals].slice(0, pageSize);
+        });
+        if (!selectedDeal) {
+          setTotalCount((currentTotal) => currentTotal + 1);
+        }
         toast.success(selectedDeal 
           ? t('crm.deals.updated')
           : t('crm.deals.created'),
@@ -191,7 +259,15 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
         setFormModalOpen(false);
         setSelectedDeal(null);
         resetForm();
-        fetchDeals();
+        if (!selectedDeal) {
+          setPage(1);
+        }
+        void fetchDeals({
+          page: selectedDeal ? page : 1,
+          search: searchTerm.trim(),
+          forceRefresh: true,
+          preserveDeal: deal?.data || deal,
+        });
       } else {
         const errorData = await response.json();
         logger.error('Server error:', errorData);
@@ -219,10 +295,17 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
       const response = await fetchWithAuth(`/api/deals/${selectedDeal.id}`, options);
       
       if (response.ok) {
+        dealsRequestIdRef.current += 1;
+        setDeals((currentDeals) => currentDeals.filter((deal) => deal.id !== selectedDeal.id));
+        setTotalCount((currentTotal) => Math.max(0, currentTotal - 1));
         toast.success(t('crm.deals.deleted'));
         setDeleteModalOpen(false);
         setSelectedDeal(null);
-        fetchDeals();
+        void fetchDeals({
+          page,
+          search: searchTerm.trim(),
+          forceRefresh: true,
+        });
       } else {
         throw new Error('Failed to delete deal');
       }
@@ -342,6 +425,19 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
   }, [location.pathname, location.search, location.state, navigate, openEditModalById]);
 
   const totalPages = Math.ceil(totalCount / pageSize);
+  const handleRefresh = useCallback(() => {
+    const normalizedSearch = searchTerm.trim();
+    const nextPage = normalizedSearch === debouncedSearch ? page : 1;
+
+    dealsRequestIdRef.current += 1;
+    if (normalizedSearch !== debouncedSearch) {
+      setDebouncedSearch(normalizedSearch);
+    }
+    if (nextPage !== page) {
+      setPage(nextPage);
+    }
+    void fetchDeals({ page: nextPage, search: normalizedSearch, forceRefresh: true });
+  }, [debouncedSearch, fetchDeals, page, searchTerm]);
 
   return (
     <div>
@@ -389,7 +485,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
 
           <div className="flex gap-2">
             <button
-              onClick={fetchDeals}
+              onClick={handleRefresh}
               className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
               title={t('common.refresh')}
             >

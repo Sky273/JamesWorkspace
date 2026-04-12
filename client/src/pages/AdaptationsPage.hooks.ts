@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
@@ -73,6 +73,11 @@ export interface AdaptationStats {
 
 export type AdaptationsViewMode = 'list' | 'byDeal';
 export const ADAPTATIONS_PAGE_SIZE = 12;
+type FetchAdaptationsOptions = {
+  page?: number;
+  search?: string;
+  forceRefresh?: boolean;
+};
 
 export function useAdaptationsDashboard() {
   const { t } = useTranslation();
@@ -97,6 +102,9 @@ export function useAdaptationsDashboard() {
   const [exportLoading, setExportLoading] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [adaptationToExport, setAdaptationToExport] = useState<Adaptation | null>(null);
+  const adaptationsRequestIdRef = useRef(0);
+  const referenceDataRequestIdRef = useRef(0);
+  const templatesRequestIdRef = useRef(0);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -112,26 +120,36 @@ export function useAdaptationsDashboard() {
   }, [filterStatus]);
 
   const fetchTemplates = useCallback(async () => {
+    const requestId = ++templatesRequestIdRef.current;
     try {
       setLoadingTemplates(true);
       const fetchedTemplates = await templateService.getAllTemplates();
       const activeTemplates = fetchedTemplates.filter((template: Template) => template.Status === 'Active');
+      if (requestId !== templatesRequestIdRef.current) {
+        return;
+      }
       setTemplates(activeTemplates);
       if (!selectedTemplate && activeTemplates.length > 0) {
         setSelectedTemplate(activeTemplates[0].id);
       }
     } catch (error) {
+      if (requestId !== templatesRequestIdRef.current) {
+        return;
+      }
       const errorMessage = error instanceof Error ? error.message : '';
       if (!errorMessage.includes('Session expired')) {
         logger.error('Error fetching templates:', error);
         toast.error(t('templates.status.error'));
       }
     } finally {
-      setLoadingTemplates(false);
+      if (requestId === templatesRequestIdRef.current) {
+        setLoadingTemplates(false);
+      }
     }
   }, [selectedTemplate, t]);
 
   const fetchReferenceData = useCallback(async () => {
+    const requestId = ++referenceDataRequestIdRef.current;
     try {
       const [resumesResponse, missionsResponse] = await Promise.all([
         authGet('/api/resumes?limit=100'),
@@ -140,11 +158,17 @@ export function useAdaptationsDashboard() {
 
       if (resumesResponse.ok) {
         const resumesData = await resumesResponse.json();
+        if (requestId !== referenceDataRequestIdRef.current) {
+          return;
+        }
         setResumes(resumesData.data || resumesData);
       }
 
       if (missionsResponse.ok) {
         const missionsData = await missionsResponse.json();
+        if (requestId !== referenceDataRequestIdRef.current) {
+          return;
+        }
         setMissions(missionsData.data || missionsData);
       }
     } catch (error) {
@@ -155,17 +179,23 @@ export function useAdaptationsDashboard() {
     }
   }, [authGet]);
 
-  const fetchAdaptations = useCallback(async () => {
+  const fetchAdaptations = useCallback(async (options: FetchAdaptationsOptions = {}) => {
+    const requestId = ++adaptationsRequestIdRef.current;
+    const effectivePage = options.page ?? currentPage;
+    const effectiveSearch = options.search ?? debouncedSearch;
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      params.append('page', String(currentPage));
+      params.append('page', String(effectivePage));
       params.append('limit', String(ADAPTATIONS_PAGE_SIZE));
-      if (debouncedSearch) {
-        params.append('search', debouncedSearch);
+      if (effectiveSearch) {
+        params.append('search', effectiveSearch);
       }
       if (filterStatus !== 'all') {
         params.append('status', filterStatus);
+      }
+      if (options.forceRefresh) {
+        params.append('refresh', '1');
       }
 
       const response = await authGet(`/api/adaptations?${params.toString()}`);
@@ -174,6 +204,9 @@ export function useAdaptationsDashboard() {
       }
 
       const data = await response.json();
+      if (requestId !== adaptationsRequestIdRef.current) {
+        return;
+      }
       if (data.data && data.pagination) {
         setAdaptations(data.data);
         setTotalCount(data.pagination.totalCount || data.data.length);
@@ -184,13 +217,18 @@ export function useAdaptationsDashboard() {
         setHasMore(false);
       }
     } catch (error) {
+      if (requestId !== adaptationsRequestIdRef.current) {
+        return;
+      }
       const errorMessage = error instanceof Error ? error.message : '';
       if (!errorMessage.includes('Session expired')) {
         logger.error('Error fetching adaptations:', error);
         toast.error(t('adaptations.messages.loadError', 'Erreur lors du chargement des adaptations'));
       }
     } finally {
-      setLoading(false);
+      if (requestId === adaptationsRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [authGet, currentPage, debouncedSearch, filterStatus, t]);
 
@@ -218,6 +256,7 @@ export function useAdaptationsDashboard() {
     }
 
     try {
+      adaptationsRequestIdRef.current += 1;
       await resumeAdaptationService.deleteAdaptation(adaptationId);
       setAdaptations((currentAdaptations) => currentAdaptations.filter((adaptation) => adaptation.id !== adaptationId));
       setTotalCount((count) => Math.max(0, count - 1));
@@ -370,6 +409,21 @@ export function useAdaptationsDashboard() {
     setFilterStatus('all');
   }, []);
 
+  const refreshAdaptations = useCallback(async (): Promise<void> => {
+    const normalizedSearch = searchTerm.trim();
+    const nextPage = normalizedSearch === debouncedSearch ? currentPage : 1;
+
+    adaptationsRequestIdRef.current += 1;
+    if (normalizedSearch !== debouncedSearch) {
+      setDebouncedSearch(normalizedSearch);
+    }
+    if (nextPage !== currentPage) {
+      setCurrentPage(nextPage);
+    }
+
+    await fetchAdaptations({ page: nextPage, search: normalizedSearch, forceRefresh: true });
+  }, [currentPage, debouncedSearch, fetchAdaptations, searchTerm]);
+
   return {
     adaptationToExport,
     adaptations,
@@ -377,7 +431,7 @@ export function useAdaptationsDashboard() {
     closeExportModal,
     currentPage,
     exportLoading,
-    fetchAdaptations,
+    fetchAdaptations: refreshAdaptations,
     filterStatus,
     getMissionTitle,
     getResumeName,

@@ -43,6 +43,11 @@ vi.mock('../../services/cache.service.js', () => ({
     }
 }));
 
+const mockInvalidateGroupedDealViews = vi.fn();
+vi.mock('../../services/viewCacheInvalidation.service.js', () => ({
+    invalidateGroupedDealViews: (...args) => mockInvalidateGroupedDealViews(...args)
+}));
+
 // Import after mocks
 import { query } from '../../config/database.js';
 import { selectRawWithTimeout, selectWithTimeout, findWithTimeout, createWithTimeout, updateWithTimeout, destroyWithTimeout } from '../../utils/postgresHelpers.js';
@@ -58,6 +63,7 @@ import {
     validateMissionAssociations,
     createMission,
     findMission,
+    getMissionAttachmentCounts,
     updateMission,
     deleteMission,
     listMissionAdaptations
@@ -66,6 +72,7 @@ import {
 describe('Missions Service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockInvalidateGroupedDealViews.mockResolvedValue(undefined);
     });
 
     // ============================================
@@ -228,6 +235,8 @@ describe('Missions Service', () => {
                 .mockResolvedValueOnce({ rows: [{ id: 'd1', title: 'Deal 1' }] }) // deals
                 .mockResolvedValueOnce({ rows: [{ id: 'm1', title: 'Mission 1', deal_id: 'd1' }] }) // missions
                 .mockResolvedValueOnce({ rows: [{ mission_id: 'm1', count: '2' }] }) // adaptation counts
+                .mockResolvedValueOnce({ rows: [{ mission_id: 'm1', count: '1' }] }) // submission counts
+                .mockResolvedValueOnce({ rows: [{ mission_id: 'm1', count: '1' }] }) // pipeline counts
                 .mockResolvedValueOnce({ rows: [{ deal_id: 'd1', count: '3' }] }) // resume counts
                 .mockResolvedValueOnce({ rows: [] }); // unassigned
 
@@ -236,6 +245,8 @@ describe('Missions Service', () => {
             expect(result.deals).toHaveLength(1);
             expect(result.deals[0].missions).toHaveLength(1);
             expect(result.deals[0].missions[0].adaptations_count).toBe(2);
+            expect(result.deals[0].missions[0].submissions_count).toBe(1);
+            expect(result.deals[0].missions[0].pipeline_count).toBe(1);
             expect(result.deals[0].resumes_count).toBe(3);
         });
 
@@ -243,7 +254,9 @@ describe('Missions Service', () => {
             query
                 .mockResolvedValueOnce({ rows: [] }) // deals
                 .mockResolvedValueOnce({ rows: [{ id: 'm1', title: 'Orphan' }] }) // unassigned
-                .mockResolvedValueOnce({ rows: [] }); // unassigned adaptation counts
+                .mockResolvedValueOnce({ rows: [] }) // unassigned adaptation counts
+                .mockResolvedValueOnce({ rows: [] }) // unassigned submission counts
+                .mockResolvedValueOnce({ rows: [] }); // unassigned pipeline counts
 
             const result = await getMissionsGroupedByDeal({ firmId: 'f1', isAdmin: false });
 
@@ -371,12 +384,13 @@ describe('Missions Service', () => {
     describe('createMission', () => {
         it('should create mission and return it with joins', async () => {
             createWithTimeout.mockResolvedValueOnce({ id: 'm1' });
-            query.mockResolvedValueOnce({ rows: [{ id: 'm1', title: 'New', client_name: 'A' }] });
+            query.mockResolvedValueOnce({ rows: [{ id: 'm1', title: 'New', client_name: 'A', firm_id: 'f1' }] });
 
             const result = await createMission({ title: 'New', firm_id: 'f1' });
 
             expect(createWithTimeout).toHaveBeenCalledWith('missions', { title: 'New', firm_id: 'f1' });
             expect(result.title).toBe('New');
+            expect(mockInvalidateGroupedDealViews).toHaveBeenCalledWith('f1');
         });
     });
 
@@ -393,23 +407,60 @@ describe('Missions Service', () => {
 
     describe('updateMission', () => {
         it('should update and return mission with joins', async () => {
+            findWithTimeout.mockResolvedValueOnce({ id: 'm1', firm_id: 'f1' });
             updateWithTimeout.mockResolvedValueOnce({ id: 'm1' });
-            query.mockResolvedValueOnce({ rows: [{ id: 'm1', title: 'Updated', client_name: 'B' }] });
+            query.mockResolvedValueOnce({ rows: [{ id: 'm1', title: 'Updated', client_name: 'B', firm_id: 'f1' }] });
 
             const result = await updateMission('m1', { title: 'Updated' });
 
+            expect(findWithTimeout).toHaveBeenCalledWith('missions', 'm1');
             expect(updateWithTimeout).toHaveBeenCalledWith('missions', 'm1', { title: 'Updated' });
             expect(result.title).toBe('Updated');
+            expect(mockInvalidateGroupedDealViews).toHaveBeenNthCalledWith(1, 'f1');
+            expect(mockInvalidateGroupedDealViews).toHaveBeenNthCalledWith(2, 'f1');
         });
     });
 
     describe('deleteMission', () => {
         it('should delegate to destroyWithTimeout', async () => {
+            findWithTimeout.mockResolvedValueOnce({ id: 'm1', firm_id: 'f1' });
+            query.mockResolvedValueOnce({ rows: [{ adaptations_count: '0', submissions_count: '0', pipeline_count: '0' }] });
             destroyWithTimeout.mockResolvedValueOnce();
 
             await deleteMission('m1');
 
+            expect(findWithTimeout).toHaveBeenCalledWith('missions', 'm1');
             expect(destroyWithTimeout).toHaveBeenCalledWith('missions', 'm1');
+            expect(mockInvalidateGroupedDealViews).toHaveBeenCalledWith('f1');
+        });
+
+        it('should block delete when linked elements are attached', async () => {
+            findWithTimeout.mockResolvedValueOnce({ id: 'm1', firm_id: 'f1' });
+            query.mockResolvedValueOnce({ rows: [{ adaptations_count: '1', submissions_count: '0', pipeline_count: '2' }] });
+
+            await expect(deleteMission('m1')).rejects.toMatchObject({
+                statusCode: 409,
+                code: 'MISSION_DELETE_BLOCKED',
+                details: {
+                    adaptationsCount: 1,
+                    submissionsCount: 0,
+                    pipelineCount: 2
+                }
+            });
+
+            expect(destroyWithTimeout).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('getMissionAttachmentCounts', () => {
+        it('should return normalized linked counts', async () => {
+            query.mockResolvedValueOnce({ rows: [{ adaptations_count: '2', submissions_count: '3', pipeline_count: '1' }] });
+
+            await expect(getMissionAttachmentCounts('m1')).resolves.toEqual({
+                adaptationsCount: 2,
+                submissionsCount: 3,
+                pipelineCount: 1
+            });
         });
     });
 

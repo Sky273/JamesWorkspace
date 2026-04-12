@@ -13,6 +13,16 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+vi.mock('../../services/cache.service.js', () => ({
+    CACHE_KEYS: {
+        resumeComments: { ALL: 'all' }
+    },
+    resumeCommentsCache: {
+        getOrLoad: vi.fn(async (_key, loader) => loader())
+    },
+    invalidateResumeCommentsCaches: vi.fn(async () => undefined)
+}));
+
 import { query } from '../../config/database.js';
 import {
     initResumeCommentsTable,

@@ -1,6 +1,51 @@
 import { query } from '../../config/database.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { addToHistory } from './history.js';
+import { CACHE_KEYS, candidatePipelineCache, invalidateCandidatePipelineCaches } from '../cache.service.js';
+
+const PIPELINE_AGGREGATE_SCOPE = CACHE_KEYS.candidatePipeline.AGGREGATES || CACHE_KEYS.candidatePipeline.ALL;
+
+function buildOverviewCacheKey(filters = {}) {
+    return JSON.stringify({
+        clientId: filters.clientId || null,
+        missionId: filters.missionId || null,
+        firmId: filters.firmId || null
+    });
+}
+
+function buildPipelineContextScopes({ pipelineId = null, resumeId = null, missionId = null } = {}) {
+    const scopes = new Set([PIPELINE_AGGREGATE_SCOPE]);
+
+    if (pipelineId) {
+        scopes.add(`detail:${pipelineId}`);
+    }
+
+    if (resumeId) {
+        scopes.add(`resume:${resumeId}`);
+    }
+
+    if (missionId) {
+        scopes.add(`mission:${missionId}`);
+    }
+
+    return Array.from(scopes);
+}
+
+export async function getPipelineCacheContext(pipelineId) {
+    if (!pipelineId) {
+        return null;
+    }
+
+    const result = await query(
+        'SELECT id, resume_id, mission_id FROM candidate_pipeline WHERE id = $1',
+        [pipelineId]
+    );
+    return result.rows[0] || null;
+}
+
+export async function invalidateCandidatePipelineContext({ pipelineId = null, resumeId = null, missionId = null } = {}) {
+    await invalidateCandidatePipelineCaches(buildPipelineContextScopes({ pipelineId, resumeId, missionId }));
+}
 
 async function addToPipeline({ resumeId, adaptationId = null, missionId, clientId, stage = 'new', notes, createdBy }) {
     try {
@@ -29,6 +74,11 @@ async function addToPipeline({ resumeId, adaptationId = null, missionId, clientI
         });
 
         safeLog('info', 'Resume added to pipeline', { resumeId, adaptationId, missionId, stage });
+        await invalidateCandidatePipelineContext({
+            pipelineId: pipeline.id,
+            resumeId: pipeline.resume_id,
+            missionId: pipeline.mission_id
+        });
         return pipeline;
     } catch (error) {
         safeLog('error', 'Failed to add resume to pipeline', { error: error.message });
@@ -38,26 +88,30 @@ async function addToPipeline({ resumeId, adaptationId = null, missionId, clientI
 
 async function getPipelineById(pipelineId) {
     try {
-        const result = await query(
-            `
-            SELECT 
-                cp.*,
-                r.name as resume_name,
-                r.improved_text,
-                m.title as mission_title,
-                mc.name as mission_client,
-                c.name as client_name
-            FROM candidate_pipeline cp
-            LEFT JOIN resumes r ON cp.resume_id = r.id
-            LEFT JOIN missions m ON cp.mission_id = m.id
-            LEFT JOIN clients mc ON m.client_id = mc.id
-            LEFT JOIN clients c ON cp.client_id = c.id
-            WHERE cp.id = $1
-        `,
-            [pipelineId]
-        );
+        return candidatePipelineCache.getOrLoad(`detail:${pipelineId}`, async () => {
+            const result = await query(
+                `
+                SELECT 
+                    cp.*,
+                    r.name as resume_name,
+                    r.improved_text,
+                    m.title as mission_title,
+                    mc.name as mission_client,
+                    c.name as client_name
+                FROM candidate_pipeline cp
+                LEFT JOIN resumes r ON cp.resume_id = r.id
+                LEFT JOIN missions m ON cp.mission_id = m.id
+                LEFT JOIN clients mc ON m.client_id = mc.id
+                LEFT JOIN clients c ON cp.client_id = c.id
+                WHERE cp.id = $1
+            `,
+                [pipelineId]
+            );
 
-        return result.rows[0] || null;
+            return result.rows[0] || null;
+        }, {
+            scope: `detail:${pipelineId}`
+        });
     } catch (error) {
         safeLog('error', 'Failed to get pipeline entry', { error: error.message });
         throw error;
@@ -66,7 +120,8 @@ async function getPipelineById(pipelineId) {
 
 async function getPipelineByResumeId(resumeId) {
     try {
-        const result = await query(
+        return candidatePipelineCache.getOrLoad(`resume:${resumeId}`, async () => {
+            const result = await query(
             `
             SELECT 
                 cp.*,
@@ -82,10 +137,13 @@ async function getPipelineByResumeId(resumeId) {
             WHERE cp.resume_id = $1
             ORDER BY cp.updated_at DESC
         `,
-            [resumeId]
-        );
+                [resumeId]
+            );
 
-        return result.rows;
+            return result.rows;
+        }, {
+            scope: `resume:${resumeId}`
+        });
     } catch (error) {
         safeLog('error', 'Failed to get pipeline for resume', { error: error.message });
         throw error;
@@ -94,7 +152,8 @@ async function getPipelineByResumeId(resumeId) {
 
 async function getPipelineByMissionId(missionId) {
     try {
-        const result = await query(
+        return candidatePipelineCache.getOrLoad(`mission:${missionId}`, async () => {
+            const result = await query(
             `
             SELECT 
                 cp.*,
@@ -108,10 +167,13 @@ async function getPipelineByMissionId(missionId) {
             WHERE cp.mission_id = $1
             ORDER BY cp.moved_at DESC
         `,
-            [missionId]
-        );
+                [missionId]
+            );
 
-        return result.rows;
+            return result.rows;
+        }, {
+            scope: `mission:${missionId}`
+        });
     } catch (error) {
         safeLog('error', 'Failed to get pipeline for mission', { error: error.message });
         throw error;
@@ -120,6 +182,8 @@ async function getPipelineByMissionId(missionId) {
 
 async function getPipelineOverview(filters = {}, pipelineStages) {
     try {
+        const cacheKey = buildOverviewCacheKey(filters);
+        return candidatePipelineCache.getOrLoad(`overview:${cacheKey}`, async () => {
         let whereClause = 'WHERE 1=1';
         const params = [];
         let paramIndex = 1;
@@ -173,7 +237,10 @@ async function getPipelineOverview(filters = {}, pipelineStages) {
             };
         }
 
-        return overview;
+            return overview;
+        }, {
+            scope: PIPELINE_AGGREGATE_SCOPE
+        });
     } catch (error) {
         safeLog('error', 'Failed to get pipeline overview', { error: error.message });
         throw error;
@@ -200,7 +267,13 @@ async function moveToStage({ pipelineId, newStage, changedBy, notes }) {
 
         await addToHistory({ pipelineId, fromStage, toStage: newStage, changedBy, notes });
         safeLog('info', 'Pipeline stage updated', { pipelineId, fromStage, toStage: newStage });
-        return result.rows[0];
+        const updatedEntry = result.rows[0];
+        await invalidateCandidatePipelineContext({
+            pipelineId: updatedEntry.id || pipelineId,
+            resumeId: updatedEntry.resume_id,
+            missionId: updatedEntry.mission_id
+        });
+        return updatedEntry;
     } catch (error) {
         safeLog('error', 'Failed to move pipeline stage', { error: error.message });
         throw error;
@@ -219,7 +292,13 @@ async function updatePipelineNotes({ pipelineId, notes }) {
             [notes, pipelineId]
         );
 
-        return result.rows[0];
+        const updatedEntry = result.rows[0];
+        await invalidateCandidatePipelineContext({
+            pipelineId: updatedEntry?.id || pipelineId,
+            resumeId: updatedEntry?.resume_id,
+            missionId: updatedEntry?.mission_id
+        });
+        return updatedEntry;
     } catch (error) {
         safeLog('error', 'Failed to update pipeline notes', { error: error.message });
         throw error;
@@ -228,8 +307,17 @@ async function updatePipelineNotes({ pipelineId, notes }) {
 
 async function removeFromPipeline(pipelineId) {
     try {
-        await query('DELETE FROM candidate_pipeline WHERE id = $1', [pipelineId]);
+        const result = await query(
+            'DELETE FROM candidate_pipeline WHERE id = $1 RETURNING id, resume_id, mission_id',
+            [pipelineId]
+        );
+        const deletedEntry = result.rows[0] || null;
         safeLog('info', 'Removed from pipeline', { pipelineId });
+        await invalidateCandidatePipelineContext({
+            pipelineId,
+            resumeId: deletedEntry?.resume_id,
+            missionId: deletedEntry?.mission_id
+        });
         return true;
     } catch (error) {
         safeLog('error', 'Failed to remove from pipeline', { error: error.message });

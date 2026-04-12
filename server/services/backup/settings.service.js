@@ -7,6 +7,7 @@ import { query } from '../../config/database.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { assertSchemaRequirements } from '../schemaVerification.service.js';
 import { decryptSecret, encryptSecret } from '../../utils/secretCrypto.js';
+import { CACHE_KEYS, backupSettingsCache, invalidateBackupSettingsCaches } from '../cache.service.js';
 
 const BACKUP_SECRET_OPTIONS = {
     envVarNames: ['BACKUP_SECRET_ENCRYPTION_KEY', 'MAIL_TOKEN_ENCRYPTION_KEY'],
@@ -40,15 +41,19 @@ export async function initBackupTables() {
  */
 export async function getBackupSettings() {
     try {
-        const result = await query('SELECT * FROM backup_settings LIMIT 1');
-        if (result.rows.length === 0) {
-            return null;
-        }
-        const settings = result.rows[0];
-        return {
-            ...settings,
-            password: settings.password ? decryptSecret(settings.password, BACKUP_SECRET_OPTIONS) : ''
-        };
+        return backupSettingsCache.getOrLoad(CACHE_KEYS.backupSettings.CURRENT, async () => {
+            const result = await query('SELECT * FROM backup_settings LIMIT 1');
+            if (result.rows.length === 0) {
+                return null;
+            }
+            const settings = result.rows[0];
+            return {
+                ...settings,
+                password: settings.password ? decryptSecret(settings.password, BACKUP_SECRET_OPTIONS) : ''
+            };
+        }, {
+            scope: CACHE_KEYS.backupSettings.CURRENT
+        });
     } catch (error) {
         safeLog('error', 'Failed to get backup settings', { error: error.message });
         throw error;
@@ -111,6 +116,7 @@ export async function saveBackupSettings(settings) {
                 settings.monthly_retention || 12,
                 existingSettings.id
             ]);
+            await invalidateBackupSettingsCaches();
             return result.rows[0];
         }
 
@@ -143,6 +149,7 @@ export async function saveBackupSettings(settings) {
             settings.monthly_time || '04:00',
             settings.monthly_retention || 12
         ]);
+        await invalidateBackupSettingsCaches();
         return result.rows[0];
     } catch (error) {
         safeLog('error', 'Failed to save backup settings', { error: error.message });

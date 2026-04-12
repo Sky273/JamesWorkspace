@@ -38,7 +38,7 @@ export function useMetiersDashboard(isAdmin: boolean) {
     }
   }, []);
 
-  const loadMetiers = useCallback(async () => {
+  const loadMetiers = useCallback(async (options: { forceRefresh?: boolean } = {}) => {
     try {
       setLoading(true);
       setError(null);
@@ -46,6 +46,7 @@ export function useMetiersDashboard(isAdmin: boolean) {
         search: searchQuery || undefined,
         page: currentPage,
         pageSize: METIERS_PAGE_SIZE,
+        forceRefresh: options.forceRefresh,
       });
       setMetiers(response.metiers);
       setTotalCount(response.totalCount);
@@ -108,7 +109,7 @@ export function useMetiersDashboard(isAdmin: boolean) {
   }, []);
 
   const refreshAll = useCallback(() => {
-    void loadMetiers();
+    void loadMetiers({ forceRefresh: true });
     void loadGlobalStats();
   }, [loadGlobalStats, loadMetiers]);
 

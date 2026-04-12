@@ -51,6 +51,7 @@ router.get('/logs', authenticateToken, requireAdmin, asyncHandler(async (req, re
         sortBy = 'created_at',
         sortOrder = 'desc'
     } = req.query;
+    const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
 
     safeLog('info', 'Fetching GDPR audit logs', {
         adminId: req.user?.id,
@@ -79,7 +80,8 @@ router.get('/logs', authenticateToken, requireAdmin, asyncHandler(async (req, re
         page: parsedPage,
         limit: parsedLimit,
         sortBy,
-        sortOrder
+        sortOrder,
+        bypassCache
     });
 
     res.json(result);
@@ -91,6 +93,7 @@ router.get('/logs', authenticateToken, requireAdmin, asyncHandler(async (req, re
  */
 router.get('/stats', authenticateToken, requireAdmin, asyncHandler(async (req, res) => {
     const { firmId, days = 30 } = req.query;
+    const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
 
     safeLog('info', 'Fetching GDPR audit stats', {
         adminId: req.user?.id,
@@ -105,7 +108,7 @@ router.get('/stats', authenticateToken, requireAdmin, asyncHandler(async (req, r
         return res.status(400).json({ error: error.message });
     }
 
-    const stats = await getGdprAuditStats(firmId || null, parsedDays);
+    const stats = await getGdprAuditStats(firmId || null, parsedDays, { bypassCache });
 
     res.json(stats);
 }));
@@ -119,7 +122,8 @@ router.get('/firms', authenticateToken, requireAdmin, asyncHandler(async (req, r
         adminId: req.user?.id
     });
 
-    const firms = await getGdprFirms();
+    const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+    const firms = await getGdprFirms({ bypassCache });
     res.json(firms);
 }));
 

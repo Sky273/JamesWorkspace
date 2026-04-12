@@ -8,6 +8,7 @@ const mockGetAcceptedIndustriesString = vi.fn();
 const mockGetIndustryMappingString = vi.fn();
 const mockUpdateResume = vi.fn();
 const mockPersistResumeSkillEvidence = vi.fn();
+const mockUpdateVersionPostAnalysis = vi.fn();
 
 vi.mock('../../services/openai.service.js', () => ({
     analyzeResume: (...args) => mockAnalyzeResume(...args),
@@ -24,10 +25,6 @@ vi.mock('../../services/industry.service.js', () => ({
     getIndustryMappingString: (...args) => mockGetIndustryMappingString(...args)
 }));
 
-vi.mock('../../services/database.service.js', () => ({
-    query: vi.fn()
-}));
-
 vi.mock('../../routes/resumes/helpers.js', () => ({
     parseScore: vi.fn((value) => {
         if (value === undefined || value === null) return undefined;
@@ -41,6 +38,10 @@ vi.mock('../../services/resumes.service.js', () => ({
 
 vi.mock('../../services/skillEvidence.service.js', () => ({
     persistResumeSkillEvidence: (...args) => mockPersistResumeSkillEvidence(...args)
+}));
+
+vi.mock('../../services/resumeVersions.service.js', () => ({
+    updateVersionPostAnalysis: (...args) => mockUpdateVersionPostAnalysis(...args)
 }));
 
 vi.mock('../../utils/logger.backend.js', () => ({
@@ -83,6 +84,7 @@ describe('resumes improvementHelpers', () => {
             id: 'resume-1',
             file_name: 'cv.pdf'
         });
+        mockUpdateVersionPostAnalysis.mockResolvedValue(undefined);
     });
 
     it('persists improved-phase skill evidence after deferred post analysis', async () => {
@@ -116,5 +118,6 @@ describe('resumes improvementHelpers', () => {
             }),
             phase: 'improved'
         });
+        expect(mockUpdateVersionPostAnalysis).not.toHaveBeenCalled();
     });
 });

@@ -244,6 +244,23 @@ describe('Templates CRUD Routes', () => {
             expect(res.status).toBe(200);
         });
 
+        it('should bypass cache on explicit refresh', async () => {
+            mockListTemplates.mockResolvedValueOnce({
+                templates: [sampleTemplateRow],
+                totalCount: 1,
+                hasMore: false
+            });
+
+            const res = await request(app)
+                .get('/api/templates?refresh=1')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+            expect(mockListTemplates).toHaveBeenCalledWith(
+                expect.objectContaining({ bypassCache: true })
+            );
+        });
+
         it('should support pagination params', async () => {
             mockListTemplates.mockResolvedValueOnce({
                 templates: [],
@@ -818,6 +835,25 @@ describe('Templates CRUD Routes', () => {
                 .set('Authorization', 'Bearer valid-token');
 
             expect(invalidateTemplatesCaches).toHaveBeenCalled();
+        });
+
+        it('should invalidate cache only after successful deletion', async () => {
+            const { invalidateTemplatesCaches } = await import('../../services/cache.service.js');
+            const callOrder = [];
+            mockDeleteTemplate.mockImplementationOnce(async () => {
+                callOrder.push('delete');
+                return true;
+            });
+            vi.mocked(invalidateTemplatesCaches).mockImplementationOnce(async () => {
+                callOrder.push('invalidate');
+            });
+
+            const res = await request(app)
+                .delete('/api/templates/tpl-123')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+            expect(callOrder).toEqual(['delete', 'invalidate']);
         });
     });
 

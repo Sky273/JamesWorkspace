@@ -103,10 +103,10 @@ export async function invalidateResumeViewCaches(firmId = null) {
  * @param {boolean} options.isAdmin
  * @returns {Promise<Object>}
  */
-export async function getResumesGroupedByDeal({ firmId, isAdmin }) {
+export async function getResumesGroupedByDeal({ firmId, isAdmin, bypassCache = false }) {
     const scopeKey = buildGroupedViewScopeKey({ firmId, isAdmin });
 
-    return resumeGroupedViewCache.getOrLoad(scopeKey, async () => {
+    const loadGroupedResumes = async () => {
         const dealsWhereClause = isAdmin ? '' : 'WHERE d.firm_id = $1';
         const dealsParams = isAdmin ? [] : [firmId];
 
@@ -291,7 +291,13 @@ export async function getResumesGroupedByDeal({ firmId, isAdmin }) {
             totalAssigned: deals.reduce((sum, d) => sum + d.resumes.length, 0),
             totalUnassigned: unassignedResult.rows.length
         };
-    }, { scope: scopeKey });
+    };
+
+    if (bypassCache) {
+        return loadGroupedResumes();
+    }
+
+    return resumeGroupedViewCache.getOrLoad(scopeKey, loadGroupedResumes, { scope: scopeKey });
 }
 
 // ============================================

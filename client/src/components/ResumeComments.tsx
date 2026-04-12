@@ -3,7 +3,7 @@
  * Displays and manages comments/notes on a resume
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   ChatBubbleLeftIcon, 
@@ -46,24 +46,34 @@ const ResumeComments = ({ resumeId, className = '' }: ResumeCommentsProps): JSX.
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const commentsRequestIdRef = useRef(0);
 
   const fetchComments = useCallback(async () => {
     if (!resumeId) return;
-    
+    const requestId = ++commentsRequestIdRef.current;
+
     setIsLoading(true);
     setError(null);
     
     try {
       const response = await fetchWithAuth(`/api/resumes/${resumeId}/comments`);
       const data = await response.json();
+      if (requestId !== commentsRequestIdRef.current) {
+        return;
+      }
       if (data.success) {
         setComments(data.comments);
       }
     } catch (err) {
+      if (requestId !== commentsRequestIdRef.current) {
+        return;
+      }
       logger.error('[Comments] Failed to fetch comments:', err);
       setError(t('comments.fetchError', 'Failed to load comments'));
     } finally {
-      setIsLoading(false);
+      if (requestId === commentsRequestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [resumeId, t]);
 
@@ -93,6 +103,7 @@ const ResumeComments = ({ resumeId, className = '' }: ResumeCommentsProps): JSX.
       const data = await response.json();
 
       if (data.success) {
+        commentsRequestIdRef.current += 1;
         setComments(prev => [data.comment, ...prev]);
         setNewComment('');
         setIsPrivate(false);
@@ -122,6 +133,7 @@ const ResumeComments = ({ resumeId, className = '' }: ResumeCommentsProps): JSX.
       const data = await response.json();
 
       if (data.success) {
+        commentsRequestIdRef.current += 1;
         setComments(prev => prev.map(c => 
           c.id === commentId ? data.comment : c
         ));
@@ -148,6 +160,7 @@ const ResumeComments = ({ resumeId, className = '' }: ResumeCommentsProps): JSX.
       const data = await response.json();
 
       if (data.success) {
+        commentsRequestIdRef.current += 1;
         setComments(prev => prev.filter(c => c.id !== commentId));
       }
     } catch (err) {

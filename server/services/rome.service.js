@@ -143,14 +143,17 @@ async function collectITMetiers({ onProgress } = {}) {
 
 async function getStoredMetiers(filters = {}) {
     try {
-        const cached = getCachedMetiers(filters, log);
+        const { bypassCache = false, ...cacheFilters } = filters;
+        const cached = bypassCache ? null : getCachedMetiers(cacheFilters, log);
         if (cached) {
             return cached;
         }
 
-        const allMetiers = await queryStoredMetiers(filters);
-        updateMetiersCache(filters, allMetiers, log);
-        return withPagination(allMetiers, filters);
+        const allMetiers = await queryStoredMetiers(cacheFilters);
+        if (!bypassCache) {
+            updateMetiersCache(cacheFilters, allMetiers, log);
+        }
+        return withPagination(allMetiers, cacheFilters);
     } catch (error) {
         log.error('Failed to get stored métiers', { error: error.message });
         throw error;

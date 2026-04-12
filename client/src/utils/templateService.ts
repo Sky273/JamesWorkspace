@@ -34,7 +34,7 @@ export interface TemplateData {
     tags?: string[];
     popular?: boolean;
     stylesheet?: string;
-    firm_id?: string;
+    firm_id?: string | null;
 }
 
 export interface Pagination {
@@ -49,6 +49,7 @@ export interface GetTemplatesPaginatedParams {
     pageSize?: number;
     search?: string;
     status?: string;
+    forceRefresh?: boolean;
 }
 
 interface SanitizedTemplateData {
@@ -62,7 +63,7 @@ interface SanitizedTemplateData {
     Tags: string[];
     Popular?: boolean;
     Stylesheet?: string;
-    firm_id?: string;
+    firm_id?: string | null;
 }
 
 const validateTemplateData = (data: TemplateData): void => {
@@ -114,14 +115,15 @@ const sanitizeTemplateData = (data: TemplateData): SanitizedTemplateData => {
         sanitized.Stylesheet = data.stylesheet.trim();
     }
 
-    // Include firm_id if provided (empty string means global template)
+    // Empty string from the admin selector means a global template.
+    // The backend validation accepts null, not an empty string.
     if (data.firm_id !== undefined) {
-        sanitized.firm_id = data.firm_id;
+        sanitized.firm_id = data.firm_id === '' ? null : data.firm_id;
     }
 
-    // Remove any remaining undefined or null values, but keep empty string for firm_id
+    // Remove undefined values but keep null for firm_id so global templates pass validation.
     return Object.fromEntries(
-        Object.entries(sanitized).filter(([key, value]) => value != null || key === 'firm_id')
+        Object.entries(sanitized).filter(([, value]) => value !== undefined)
     ) as SanitizedTemplateData;
 };
 
@@ -168,13 +170,14 @@ export const templateService = {
         }
     },
 
-    async getTemplatesPaginated({ page = 1, pageSize = 12, search = '', status = '' }: GetTemplatesPaginatedParams = {}): Promise<{ templates: Template[]; pagination: Pagination }> {
+    async getTemplatesPaginated({ page = 1, pageSize = 12, search = '', status = '', forceRefresh = false }: GetTemplatesPaginatedParams = {}): Promise<{ templates: Template[]; pagination: Pagination }> {
         try {
             const params = new URLSearchParams();
             params.append('page', page.toString());
             params.append('limit', pageSize.toString());
             if (search) params.append('search', search);
             if (status) params.append('status', status);
+            if (forceRefresh) params.append('refresh', '1');
 
             const response = await fetchWithAuth(`/api/templates?${params.toString()}`, createAuthOptions());
             if (!response.ok) {

@@ -48,6 +48,7 @@ function parsePositiveInteger(value, { field, maxValue = null } = {}) {
 router.get('/metiers', authenticateToken, async (req, res) => {
     try {
         const { codeRome, grandDomaine, search, page, pageSize, includeDetails } = req.query;
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
         const parsedPage = parsePositiveInteger(page, { field: 'page' });
         const parsedPageSize = parsePositiveInteger(pageSize, { field: 'pageSize', maxValue: 100 });
         const result = await getStoredMetiers({
@@ -56,7 +57,8 @@ router.get('/metiers', authenticateToken, async (req, res) => {
             search,
             page: parsedPage,
             pageSize: parsedPageSize,
-            includeDetails: includeDetails === 'true' || includeDetails === true
+            includeDetails: includeDetails === 'true' || includeDetails === true,
+            bypassCache
         });
 
         if (Array.isArray(result)) {

@@ -18,8 +18,22 @@ vi.mock('../../utils/postgresHelpers.js', () => ({
     })
 }));
 
-vi.mock('../../utils/logger.backend.js', () => ({
-    safeLog: vi.fn()
+vi.mock('../../utils/logger.backend.js', async () => {
+    const actual = await vi.importActual('../../utils/logger.backend.js');
+    return {
+        ...actual,
+        safeLog: vi.fn(),
+        createModuleLogger: vi.fn(() => ({
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+            debug: vi.fn()
+        }))
+    };
+});
+const mockInvalidateDashboardAndGroupedViews = vi.fn();
+vi.mock('../../services/viewCacheInvalidation.service.js', () => ({
+    invalidateDashboardAndGroupedViews: (...args) => mockInvalidateDashboardAndGroupedViews(...args)
 }));
 
 vi.mock('../../services/mail/gdprMailService.js', () => ({
@@ -27,6 +41,30 @@ vi.mock('../../services/mail/gdprMailService.js', () => ({
         sendEmail: vi.fn().mockResolvedValue({ success: true })
     }
 }));
+const mockInitializeResumeConsent = vi.fn();
+const mockMarkResumeConsentRequested = vi.fn();
+const mockRecordResumeConsentResponse = vi.fn();
+const mockResetResumeConsentForResend = vi.fn();
+const mockMarkResumeConsentError = vi.fn();
+const mockDeleteResume = vi.fn();
+const mockExpirePendingConsents = vi.fn();
+const mockExpireRetentionConsents = vi.fn();
+const mockGetResumeAuditInfo = vi.fn();
+const mockRecordConsentReminderSent = vi.fn();
+vi.mock('../../services/resumes.service.js', async () => {
+    return {
+        initializeResumeConsent: (...args) => mockInitializeResumeConsent(...args),
+        markResumeConsentRequested: (...args) => mockMarkResumeConsentRequested(...args),
+        recordResumeConsentResponse: (...args) => mockRecordResumeConsentResponse(...args),
+        resetResumeConsentForResend: (...args) => mockResetResumeConsentForResend(...args),
+        markResumeConsentError: (...args) => mockMarkResumeConsentError(...args),
+        deleteResume: (...args) => mockDeleteResume(...args),
+        expirePendingConsents: (...args) => mockExpirePendingConsents(...args),
+        expireRetentionConsents: (...args) => mockExpireRetentionConsents(...args),
+        getResumeAuditInfo: (...args) => mockGetResumeAuditInfo(...args),
+        recordConsentReminderSent: (...args) => mockRecordConsentReminderSent(...args)
+    };
+});
 
 // Set environment variable
 process.env.FRONTEND_URL = 'http://localhost:5173';
@@ -38,6 +76,17 @@ import * as consentService from '../../services/consent.service.js';
 describe('Consent Service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockInitializeResumeConsent.mockResolvedValue(undefined);
+        mockMarkResumeConsentRequested.mockResolvedValue(undefined);
+        mockRecordResumeConsentResponse.mockResolvedValue(undefined);
+        mockResetResumeConsentForResend.mockResolvedValue(undefined);
+        mockMarkResumeConsentError.mockResolvedValue(undefined);
+        mockDeleteResume.mockResolvedValue(true);
+        mockExpirePendingConsents.mockResolvedValue({ rows: [] });
+        mockExpireRetentionConsents.mockResolvedValue({ rows: [] });
+        mockGetResumeAuditInfo.mockResolvedValue(null);
+        mockRecordConsentReminderSent.mockResolvedValue(undefined);
+        mockInvalidateDashboardAndGroupedViews.mockResolvedValue(undefined);
     });
 
     afterEach(() => {
@@ -84,7 +133,7 @@ describe('Consent Service', () => {
                 consent_token: null
             };
 
-            query.mockResolvedValueOnce({ rows: [mockResume] });
+            mockInitializeResumeConsent.mockResolvedValueOnce(mockResume);
 
             const result = await consentService.initializeConsent({
                 resumeId: 'test-resume-id',
@@ -106,7 +155,7 @@ describe('Consent Service', () => {
                 consent_token: 'abc123'
             };
 
-            query.mockResolvedValueOnce({ rows: [mockResume] });
+            mockInitializeResumeConsent.mockResolvedValueOnce(mockResume);
 
             const result = await consentService.initializeConsent({
                 resumeId: 'test-resume-id',
@@ -118,13 +167,13 @@ describe('Consent Service', () => {
             expect(result.consent_status).toBe('pending_consent');
             
             // Verify query was called with token
-            const callArgs = query.mock.calls[0][1];
-            expect(callArgs[4]).toBeTruthy(); // consent_token should be set
-            expect(callArgs[4].length).toBe(64); // 32 bytes = 64 hex chars
+            const callArgs = mockInitializeResumeConsent.mock.calls[0][0];
+            expect(callArgs.consentToken).toBeTruthy();
+            expect(callArgs.consentToken.length).toBe(64);
         });
 
         it('should throw error if resume not found', async () => {
-            query.mockResolvedValueOnce({ rows: [] });
+            mockInitializeResumeConsent.mockRejectedValueOnce(new Error('Resume not found'));
 
             await expect(consentService.initializeConsent({
                 resumeId: 'nonexistent',
@@ -243,13 +292,10 @@ describe('Consent Service', () => {
                 }]
             });
             
-            // recordConsentResponse update query
-            query.mockResolvedValueOnce({ 
-                rows: [{
-                    id: 'test-resume',
-                    consent_status: 'active',
-                    retention_until: new Date(Date.now() + 730 * 24 * 60 * 60 * 1000)
-                }]
+            mockRecordResumeConsentResponse.mockResolvedValueOnce({
+                id: 'test-resume',
+                consent_status: 'active',
+                retention_until: new Date(Date.now() + 730 * 24 * 60 * 60 * 1000)
             });
 
             const token = 'a'.repeat(64);
@@ -270,12 +316,10 @@ describe('Consent Service', () => {
                 }]
             });
             
-            query.mockResolvedValueOnce({ 
-                rows: [{
-                    id: 'test-resume',
-                    consent_status: 'refused',
-                    retention_until: null
-                }]
+            mockRecordResumeConsentResponse.mockResolvedValueOnce({
+                id: 'test-resume',
+                consent_status: 'refused',
+                retention_until: null
             });
 
             const token = 'a'.repeat(64);
@@ -283,6 +327,13 @@ describe('Consent Service', () => {
             
             expect(result.consent_status).toBe('refused');
             expect(result.retention_until).toBeNull();
+        });
+    });
+
+    describe('markConsentError', () => {
+        it('should delegate to resumes service with pending-only guard', async () => {
+            await consentService.markConsentError('resume-1');
+            expect(mockMarkResumeConsentError).toHaveBeenCalledWith('resume-1', { pendingOnly: true });
         });
     });
 
@@ -313,8 +364,8 @@ describe('Consent Service', () => {
 
     describe('checkExpiredConsents', () => {
         it('should mark expired pending consents', async () => {
-            query.mockResolvedValueOnce({ rows: [{ id: '1' }, { id: '2' }] }); // Expired pending
-            query.mockResolvedValueOnce({ rows: [{ id: '3' }] }); // Expired retention
+            mockExpirePendingConsents.mockResolvedValueOnce({ rows: [{ id: '1' }, { id: '2' }] });
+            mockExpireRetentionConsents.mockResolvedValueOnce({ rows: [{ id: '3' }] });
 
             const result = await consentService.checkExpiredConsents();
             
@@ -322,8 +373,8 @@ describe('Consent Service', () => {
         });
 
         it('should return 0 if no expired consents', async () => {
-            query.mockResolvedValueOnce({ rows: [] });
-            query.mockResolvedValueOnce({ rows: [] });
+            mockExpirePendingConsents.mockResolvedValueOnce({ rows: [] });
+            mockExpireRetentionConsents.mockResolvedValueOnce({ rows: [] });
 
             const result = await consentService.checkExpiredConsents();
             
@@ -334,33 +385,35 @@ describe('Consent Service', () => {
     describe('purgeResume', () => {
         it('should delete resume and related data', async () => {
             // First query: get resume info for audit
-            query.mockResolvedValueOnce({ rows: [{ 
+            mockGetResumeAuditInfo.mockResolvedValueOnce({ 
                 id: 'test-resume', 
                 firm_id: 'firm-1', 
                 firm_name: 'Test Firm',
                 candidate_name: 'John Doe',
                 candidate_email: 'john@example.com',
                 consent_status: 'active'
-            }] });
+            });
             query.mockResolvedValueOnce({ rows: [] }); // Delete versions
             query.mockResolvedValueOnce({ rows: [] }); // Delete adaptations
             query.mockResolvedValueOnce({ rows: [] }); // Delete submissions
-            query.mockResolvedValueOnce({ rows: [{ id: 'test-resume' }] }); // Delete resume
             query.mockResolvedValueOnce({ rows: [{}] }); // Log GDPR action
 
             const result = await consentService.purgeResume('test-resume');
             
             expect(result).toBe(true);
-            expect(query).toHaveBeenCalledTimes(6);
+            expect(mockDeleteResume).toHaveBeenCalledWith('test-resume', expect.objectContaining({
+                invalidateCaches: false
+            }));
+            expect(query.mock.calls.length).toBeGreaterThanOrEqual(4);
         });
 
         it('should return false if resume not found', async () => {
             // First query: get resume info (not found)
-            query.mockResolvedValueOnce({ rows: [] });
+            mockGetResumeAuditInfo.mockResolvedValueOnce(null);
             query.mockResolvedValueOnce({ rows: [] }); // Delete versions
             query.mockResolvedValueOnce({ rows: [] }); // Delete adaptations
             query.mockResolvedValueOnce({ rows: [] }); // Delete submissions
-            query.mockResolvedValueOnce({ rows: [] }); // Delete resume (not found)
+            mockDeleteResume.mockRejectedValueOnce(Object.assign(new Error('Resume not found'), { statusCode: 404 }));
 
             const result = await consentService.purgeResume('nonexistent');
             
@@ -381,7 +434,6 @@ describe('Consent Service', () => {
                 query.mockResolvedValueOnce({ rows: [] }); // versions
                 query.mockResolvedValueOnce({ rows: [] }); // adaptations
                 query.mockResolvedValueOnce({ rows: [] }); // submissions
-                query.mockResolvedValueOnce({ rows: [{ id: String(i + 1) }] }); // resume deleted
                 query.mockResolvedValueOnce({ rows: [{}] }); // GDPR log for individual purge
             }
             

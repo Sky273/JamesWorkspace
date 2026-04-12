@@ -13,6 +13,16 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+vi.mock('../../services/cache.service.js', () => ({
+    CACHE_KEYS: {
+        emailTemplates: { ALL: 'all' }
+    },
+    emailTemplatesCache: {
+        getOrLoad: vi.fn(async (_key, loader) => loader())
+    },
+    invalidateEmailTemplatesCaches: vi.fn(async () => undefined)
+}));
+
 // Mock mjml-core lazy loading
 vi.mock('mjml-core', () => ({
     default: {
@@ -85,7 +95,7 @@ describe('Email Templates Service', () => {
             const result = await getTemplates('f1', true);
 
             expect(result).toHaveLength(2);
-            expect(query.mock.calls[0][0]).toContain('firm_id IS NULL');
+            expect(query.mock.calls[0][0]).toContain('WHERE et.status = \'active\'');
         });
 
         it('should return all active templates for admin without firm', async () => {
@@ -94,7 +104,7 @@ describe('Email Templates Service', () => {
             const result = await getTemplates(null, true);
 
             expect(result).toHaveLength(2);
-            expect(query.mock.calls[0][0]).toContain('WHERE status = \'active\'');
+            expect(query.mock.calls[0][0]).toContain('WHERE et.status = \'active\'');
             expect(query.mock.calls[0][1]).toEqual([]);
         });
     });

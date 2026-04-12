@@ -149,7 +149,8 @@ function createGetResumeHandler() {
     return async (req, res) => {
         try {
             const { id } = req.params;
-            const resume = await resumesService.getResumeById(id);
+            const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+            const resume = await resumesService.getResumeById(id, { bypassCache });
             if (!resume) {
                 return res.status(404).json({ error: 'Resume not found' });
             }
@@ -182,7 +183,7 @@ function createUpdateResumeHandler() {
     return async (req, res) => {
         try {
             const { id } = req.params;
-            const { hasAccess, error: accessError } = await checkResumeAccess(req, id);
+            const { hasAccess, error: accessError } = await checkResumeAccess(req, id, { bypassCache: true });
             if (!hasAccess) {
                 const statusCode = accessError === 'Resume not found' ? 404 : 403;
                 return res.status(statusCode).json({ error: accessError });
@@ -299,7 +300,7 @@ function createDeleteResumeHandler() {
     return async (req, res) => {
         try {
             const { id } = req.params;
-            const { hasAccess, error: accessError } = await checkResumeAccess(req, id);
+            const { hasAccess, error: accessError } = await checkResumeAccess(req, id, { bypassCache: true });
             if (!hasAccess) {
                 const statusCode = accessError === 'Resume not found' ? 404 : 403;
                 return res.status(statusCode).json({ error: accessError });

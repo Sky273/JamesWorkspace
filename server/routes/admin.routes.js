@@ -294,6 +294,7 @@ router.get('/users', authenticateToken, requireAdmin, validateQuery({
             role,
             status
         } = req.query;
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
         const parsedPage = Number.isInteger(Number.parseInt(page, 10)) ? Number.parseInt(page, 10) : 1;
         const parsedLimitRaw = Number.parseInt(limit, 10);
         const parsedLimit = Number.isInteger(parsedLimitRaw) ? Math.min(parsedLimitRaw, 100) : 100;
@@ -303,7 +304,8 @@ router.get('/users', authenticateToken, requireAdmin, validateQuery({
             role: role || undefined,
             status: status || undefined,
             page: parsedPage,
-            limit: parsedLimit
+            limit: parsedLimit,
+            ...(bypassCache ? { bypassCache: true } : {})
         });
         const users = records.map(record => ({
             id: record.id,

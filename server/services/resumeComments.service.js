@@ -6,6 +6,25 @@
 import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { assertSchemaRequirements } from './schemaVerification.service.js';
+import { CACHE_KEYS, invalidateResumeCommentsCaches, resumeCommentsCache } from './cache.service.js';
+
+function buildResumeCommentScopes({ resumeId = null, commentId = null, includeRecent = false } = {}) {
+    const scopes = new Set();
+
+    if (resumeId) {
+        scopes.add(`resume:${resumeId}`);
+    }
+
+    if (commentId) {
+        scopes.add(`comment:${commentId}`);
+    }
+
+    if (includeRecent) {
+        scopes.add(CACHE_KEYS.resumeComments.RECENT || CACHE_KEYS.resumeComments.ALL);
+    }
+
+    return Array.from(scopes);
+}
 
 /**
  * Verify the resume comments schema is present
@@ -59,6 +78,10 @@ export async function addComment({ resumeId, userId, userName, content, isPrivat
         commentId: result.rows[0].id
     });
 
+    await invalidateResumeCommentsCaches(buildResumeCommentScopes({
+        resumeId,
+        includeRecent: true
+    }));
     return result.rows[0];
 }
 
@@ -73,24 +96,27 @@ export async function getComments(resumeId, currentUserId = null) {
         throw new Error('Resume ID is required');
     }
 
-    // Get all non-private comments + private comments owned by current user
-    const result = await query(`
-        SELECT 
-            id,
-            resume_id,
-            user_id,
-            user_name,
-            content,
-            is_private,
-            created_at,
-            updated_at
-        FROM resume_comments
-        WHERE resume_id = $1
-          AND (is_private = FALSE OR user_id = $2)
-        ORDER BY created_at DESC
-    `, [resumeId, currentUserId]);
+    return resumeCommentsCache.getOrLoad(`comments:${resumeId}:user:${currentUserId || 'anonymous'}`, async () => {
+        const result = await query(`
+            SELECT 
+                id,
+                resume_id,
+                user_id,
+                user_name,
+                content,
+                is_private,
+                created_at,
+                updated_at
+            FROM resume_comments
+            WHERE resume_id = $1
+              AND (is_private = FALSE OR user_id = $2)
+            ORDER BY created_at DESC
+        `, [resumeId, currentUserId]);
 
-    return result.rows;
+        return result.rows;
+    }, {
+        scope: `resume:${resumeId}`
+    });
 }
 
 /**
@@ -103,13 +129,17 @@ export async function getCommentForAccessCheck(commentId) {
         throw new Error('Comment ID is required');
     }
 
-    const result = await query(`
-        SELECT id, resume_id, user_id
-        FROM resume_comments
-        WHERE id = $1
-    `, [commentId]);
+    return resumeCommentsCache.getOrLoad(`access:${commentId}`, async () => {
+        const result = await query(`
+            SELECT id, resume_id, user_id
+            FROM resume_comments
+            WHERE id = $1
+        `, [commentId]);
 
-    return result.rows[0] || null;
+        return result.rows[0] || null;
+    }, {
+        scope: `comment:${commentId}`
+    });
 }
 
 /**
@@ -133,6 +163,11 @@ export async function updateComment(commentId, resumeId, userId, content) {
 
     if (result.rows.length > 0) {
         safeLog('info', 'Comment updated', { commentId, userId });
+        await invalidateResumeCommentsCaches(buildResumeCommentScopes({
+            resumeId,
+            commentId,
+            includeRecent: true
+        }));
         return result.rows[0];
     }
 
@@ -170,6 +205,11 @@ export async function deleteComment(commentId, resumeId, userId, isAdmin = false
 
     if (result.rows.length > 0) {
         safeLog('info', 'Comment deleted', { commentId, userId, isAdmin });
+        await invalidateResumeCommentsCaches(buildResumeCommentScopes({
+            resumeId,
+            commentId,
+            includeRecent: true
+        }));
         return true;
     }
 
@@ -183,14 +223,18 @@ export async function deleteComment(commentId, resumeId, userId, isAdmin = false
  * @returns {Promise<number>} Comment count
  */
 export async function getCommentCount(resumeId, currentUserId = null) {
-    const result = await query(`
-        SELECT COUNT(*) as count
-        FROM resume_comments
-        WHERE resume_id = $1
-          AND (is_private = FALSE OR user_id = $2)
-    `, [resumeId, currentUserId]);
+    return resumeCommentsCache.getOrLoad(`count:${resumeId}:user:${currentUserId || 'anonymous'}`, async () => {
+        const result = await query(`
+            SELECT COUNT(*) as count
+            FROM resume_comments
+            WHERE resume_id = $1
+              AND (is_private = FALSE OR user_id = $2)
+        `, [resumeId, currentUserId]);
 
-    return parseInt(result.rows[0].count, 10);
+        return parseInt(result.rows[0].count, 10);
+    }, {
+        scope: `resume:${resumeId}`
+    });
 }
 
 /**
@@ -200,23 +244,27 @@ export async function getCommentCount(resumeId, currentUserId = null) {
  * @returns {Promise<Array>} Recent comments with resume info
  */
 export async function getRecentComments(userId, limit = 10) {
-    const result = await query(`
-        SELECT 
-            c.id,
-            c.resume_id,
-            c.user_id,
-            c.user_name,
-            c.content,
-            c.is_private,
-            c.created_at,
-            r.candidate_name,
-            r.firm_name
-        FROM resume_comments c
-        JOIN resumes r ON c.resume_id = r.id
-        WHERE c.is_private = FALSE OR c.user_id = $1
-        ORDER BY c.created_at DESC
-        LIMIT $2
-    `, [userId, limit]);
+    return resumeCommentsCache.getOrLoad(`recent:${userId}:limit:${limit}`, async () => {
+        const result = await query(`
+            SELECT 
+                c.id,
+                c.resume_id,
+                c.user_id,
+                c.user_name,
+                c.content,
+                c.is_private,
+                c.created_at,
+                r.candidate_name,
+                r.firm_name
+            FROM resume_comments c
+            JOIN resumes r ON c.resume_id = r.id
+            WHERE c.is_private = FALSE OR c.user_id = $1
+            ORDER BY c.created_at DESC
+            LIMIT $2
+        `, [userId, limit]);
 
-    return result.rows;
+        return result.rows;
+    }, {
+        scope: CACHE_KEYS.resumeComments.RECENT || CACHE_KEYS.resumeComments.ALL
+    });
 }

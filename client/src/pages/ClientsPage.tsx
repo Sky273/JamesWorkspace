@@ -110,6 +110,10 @@ const CRMPage = (): JSX.Element => {
         onClose={() => {
           dashboard.setContactModalOpen(false);
           dashboard.setSelectedContact(null);
+          if (dashboard.returnToDetailAfterContact && dashboard.selectedClient) {
+            dashboard.setDetailModalOpen(true);
+            dashboard.setReturnToDetailAfterContact(false);
+          }
         }}
         onSubmit={dashboard.handleContactSubmit}
         contact={dashboard.selectedContact}
@@ -130,17 +134,23 @@ const CRMPage = (): JSX.Element => {
         onAddContact={() => {
           dashboard.setDetailModalOpen(false);
           dashboard.setSelectedContact(null);
+          dashboard.setReturnToDetailAfterContact(true);
           dashboard.setContactModalOpen(true);
         }}
         onEditContact={(contact: ClientContact) => {
           dashboard.setDetailModalOpen(false);
           dashboard.setSelectedContact(contact);
+          dashboard.setReturnToDetailAfterContact(true);
           dashboard.setContactModalOpen(true);
         }}
         onDeleteContact={(contact: ClientContact) => {
           dashboard.setDeleteTarget({ id: contact.id, name: contact.name, type: 'contact', clientId: dashboard.selectedClient?.id });
           dashboard.setDeleteModalOpen(true);
         }}
+        onRefresh={() => {
+          void dashboard.refreshSelectedClient();
+        }}
+        refreshing={dashboard.detailRefreshing}
         t={t}
       />
 

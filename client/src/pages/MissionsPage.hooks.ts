@@ -9,9 +9,11 @@ import {
   buildMissionFormData,
   buildMissionsSearchParams,
   buildMissionSubmitPayload,
+  canDeleteMission,
   computeMissionStats,
   EMPTY_MISSION_FORM,
   getInitialMissionViewMode,
+  mergePreservedMissionIntoResults,
   type Client,
   type Contact,
   type Deal,
@@ -29,6 +31,12 @@ export type {
   MissionFormData,
   MissionStats,
   MissionViewMode,
+};
+type FetchMissionsOptions = {
+  page?: number;
+  search?: string;
+  forceRefresh?: boolean;
+  preserveMission?: Mission | null;
 };
 
 export function useMissionsDashboard() {
@@ -58,9 +66,15 @@ export function useMissionsDashboard() {
   const [viewMode, setViewMode] = useState<MissionViewMode>(
     getInitialMissionViewMode((location.state as { viewMode?: string } | null)?.viewMode)
   );
+  const [groupedRefreshToken, setGroupedRefreshToken] = useState(0);
   const editorReadyRef = useRef(false);
+  const clientsRequestIdRef = useRef(0);
+  const dealsRequestIdRef = useRef(0);
+  const contactsRequestIdRef = useRef(0);
+  const missionsRequestIdRef = useRef(0);
 
   const fetchClients = useCallback(async () => {
+    const requestId = ++clientsRequestIdRef.current;
     try {
       setLoadingClients(true);
       const response = await authGet('/api/clients?limit=100&status=active');
@@ -69,15 +83,24 @@ export function useMissionsDashboard() {
       }
 
       const data = await response.json();
+      if (requestId !== clientsRequestIdRef.current) {
+        return;
+      }
       setClients(data.data || data || []);
     } catch (error) {
+      if (requestId !== clientsRequestIdRef.current) {
+        return;
+      }
       logger.error('Error fetching clients:', error);
     } finally {
-      setLoadingClients(false);
+      if (requestId === clientsRequestIdRef.current) {
+        setLoadingClients(false);
+      }
     }
   }, [authGet]);
 
   const fetchDeals = useCallback(async () => {
+    const requestId = ++dealsRequestIdRef.current;
     try {
       setLoadingDeals(true);
       const response = await authGet('/api/deals?limit=100');
@@ -86,20 +109,30 @@ export function useMissionsDashboard() {
       }
 
       const data = await response.json();
+      if (requestId !== dealsRequestIdRef.current) {
+        return;
+      }
       setDeals(data.data || []);
     } catch (error) {
+      if (requestId !== dealsRequestIdRef.current) {
+        return;
+      }
       logger.error('Error fetching deals:', error);
     } finally {
-      setLoadingDeals(false);
+      if (requestId === dealsRequestIdRef.current) {
+        setLoadingDeals(false);
+      }
     }
   }, [authGet]);
 
   const fetchContacts = useCallback(async (clientId: string) => {
     if (!clientId) {
+      contactsRequestIdRef.current += 1;
       setContacts([]);
       return;
     }
 
+    const requestId = ++contactsRequestIdRef.current;
     try {
       setLoadingContacts(true);
       const response = await authGet(`/api/clients/${clientId}/contacts`);
@@ -108,11 +141,19 @@ export function useMissionsDashboard() {
       }
 
       const data = await response.json();
+      if (requestId !== contactsRequestIdRef.current) {
+        return;
+      }
       setContacts(data || []);
     } catch (error) {
+      if (requestId !== contactsRequestIdRef.current) {
+        return;
+      }
       logger.error('Error fetching contacts:', error);
     } finally {
-      setLoadingContacts(false);
+      if (requestId === contactsRequestIdRef.current) {
+        setLoadingContacts(false);
+      }
     }
   }, [authGet]);
 
@@ -143,10 +184,16 @@ export function useMissionsDashboard() {
     return () => window.clearTimeout(timer);
   }, [searchTerm]);
 
-  const fetchMissions = useCallback(async () => {
+  const fetchMissions = useCallback(async (options: FetchMissionsOptions = {}) => {
+    const requestId = ++missionsRequestIdRef.current;
+    const effectivePage = options.page ?? currentPage;
+    const effectiveSearch = options.search ?? debouncedSearch;
     try {
       setLoading(true);
-      const params = buildMissionsSearchParams(currentPage, MISSIONS_PAGE_SIZE, debouncedSearch);
+      const params = buildMissionsSearchParams(effectivePage, MISSIONS_PAGE_SIZE, effectiveSearch);
+      if (options.forceRefresh) {
+        params.set('refresh', '1');
+      }
 
       const response = await authGet(`/api/missions?${params.toString()}`);
       if (!response.ok) {
@@ -154,23 +201,32 @@ export function useMissionsDashboard() {
       }
 
       const data = await response.json();
+      if (requestId !== missionsRequestIdRef.current) {
+        return;
+      }
       if (data.data && data.pagination) {
-        setMissions(data.data);
+        setMissions(mergePreservedMissionIntoResults(data.data, options.preserveMission, MISSIONS_PAGE_SIZE));
         setTotalCount(data.pagination.totalCount || data.data.length);
         setHasMore(data.pagination.hasMore || false);
       } else {
-        setMissions(Array.isArray(data) ? data : []);
-        setTotalCount(Array.isArray(data) ? data.length : 0);
+        const nextMissions = Array.isArray(data) ? data : [];
+        setMissions(mergePreservedMissionIntoResults(nextMissions, options.preserveMission, MISSIONS_PAGE_SIZE));
+        setTotalCount(nextMissions.length);
         setHasMore(false);
       }
     } catch (error) {
+      if (requestId !== missionsRequestIdRef.current) {
+        return;
+      }
       const errorMessage = error instanceof Error ? error.message : '';
       if (!errorMessage.includes('Session expired')) {
         logger.error('Error fetching missions:', error);
         toast.error(t('missions.messages.loadError', 'Erreur lors du chargement des missions'));
       }
     } finally {
-      setLoading(false);
+      if (requestId === missionsRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [authGet, currentPage, debouncedSearch, t]);
 
@@ -239,16 +295,38 @@ export function useMissionsDashboard() {
         throw new Error(errorData.error || 'Failed to save mission');
       }
 
+      const result = await response.json().catch(() => null);
+      const missionRecord = result?.data || result;
+      missionsRequestIdRef.current += 1;
+      if (missionRecord?.id) {
+        setMissions((currentMissions) => {
+          const existingMission = currentMissions.some((mission) => mission.id === missionRecord.id);
+          if (existingMission) {
+            return currentMissions.map((mission) => (mission.id === missionRecord.id ? missionRecord : mission));
+          }
+
+          return [missionRecord, ...currentMissions].slice(0, MISSIONS_PAGE_SIZE);
+        });
+        if (!editingMission) {
+          setTotalCount((currentTotal) => currentTotal + 1);
+        }
+      }
+
       toast.success(editingMission ? t('missions.messages.updateSuccess', 'Mission mise a jour') : t('missions.messages.createSuccess', 'Mission creee'));
       setShowModal(false);
       resetForm();
-      await fetchMissions();
+      setGroupedRefreshToken((currentToken) => currentToken + 1);
+      const nextPage = editingMission ? currentPage : 1;
+      if (nextPage !== currentPage) {
+        setCurrentPage(nextPage);
+      }
+      await fetchMissions({ page: nextPage, forceRefresh: true, preserveMission: missionRecord });
     } catch (error) {
       logger.error('Error saving mission:', error);
       const errorMessage = error instanceof Error ? error.message : t('missions.messages.saveError', 'Erreur lors de la sauvegarde');
       toast.error(errorMessage);
     }
-  }, [authPost, authPut, editingMission, fetchMissions, formData, resetForm, t]);
+  }, [authPost, authPut, currentPage, editingMission, fetchMissions, formData, resetForm, t]);
 
   const requestDelete = useCallback((mission: Mission) => {
     setMissionPendingDelete(mission);
@@ -269,13 +347,19 @@ export function useMissionsDashboard() {
 
     try {
       setIsDeletingMission(true);
-      const response = await authDelete(`/api/missions/${missionPendingDelete.id}`);
+      const missionId = missionPendingDelete.id;
+      const response = await authDelete(`/api/missions/${missionId}`);
       if (!response.ok) {
-        throw new Error('Failed to delete mission');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to delete mission');
       }
 
       toast.success(t('missions.messages.deleteSuccess', 'Mission supprimée'));
+      missionsRequestIdRef.current += 1;
+      setMissions((currentMissions) => currentMissions.filter((mission) => mission.id !== missionId));
+      setTotalCount((currentTotal) => Math.max(0, currentTotal - 1));
       setMissionPendingDelete(null);
+      setGroupedRefreshToken((currentToken) => currentToken + 1);
 
       const isLastMissionOnPage = missions.length === 1;
       if (isLastMissionOnPage && currentPage > 1) {
@@ -283,10 +367,13 @@ export function useMissionsDashboard() {
         return;
       }
 
-      await fetchMissions();
+      await fetchMissions({ forceRefresh: true });
     } catch (error) {
       logger.error('Error deleting mission:', error);
-      toast.error(t('missions.messages.deleteError', 'Erreur lors de la suppression'));
+      const errorMessage = error instanceof Error
+        ? error.message
+        : t('missions.messages.deleteError', 'Erreur lors de la suppression');
+      toast.error(errorMessage);
     } finally {
       setIsDeletingMission(false);
     }
@@ -303,6 +390,21 @@ export function useMissionsDashboard() {
 
   const stats = useMemo(() => computeMissionStats(missions, totalCount), [missions, totalCount]);
 
+  const refreshMissions = useCallback(async (): Promise<void> => {
+    const normalizedSearch = searchTerm.trim();
+    const nextPage = normalizedSearch === debouncedSearch ? currentPage : 1;
+
+    missionsRequestIdRef.current += 1;
+    if (normalizedSearch !== debouncedSearch) {
+      setDebouncedSearch(normalizedSearch);
+    }
+    if (nextPage !== currentPage) {
+      setCurrentPage(nextPage);
+    }
+
+    await fetchMissions({ page: nextPage, search: normalizedSearch, forceRefresh: true });
+  }, [currentPage, debouncedSearch, fetchMissions, searchTerm]);
+
   return {
     clients,
     closeModal,
@@ -310,7 +412,7 @@ export function useMissionsDashboard() {
     currentPage,
     deals,
     editingMission,
-    fetchMissions,
+    fetchMissions: refreshMissions,
     formData,
     goToPage,
     cancelDelete,
@@ -326,6 +428,7 @@ export function useMissionsDashboard() {
     missionPendingDelete,
     missions,
     openCreateModal,
+    canDeleteMission,
     requestDelete,
     resetSearch: () => setSearchTerm(''),
     setEditorReady: (isReady: boolean) => {
@@ -341,6 +444,7 @@ export function useMissionsDashboard() {
     totalCount,
     totalPages,
     viewMode,
+    groupedRefreshToken,
   };
 }
 

@@ -174,13 +174,22 @@ const NewTemplatePage = (): JSX.Element => {
       templateData.firm_id = formData.firmId || '';
       
       if (id) {
-        await templateService.updateTemplate(id, templateData);
+        const updatedTemplate = await templateService.updateTemplate(id, templateData);
         toast.success(t('templates.editor.success.update'));
+        navigate('/templates', {
+          state: {
+            updatedTemplate,
+          },
+        });
       } else {
-        await templateService.createTemplate(templateData);
+        const createdTemplate = await templateService.createTemplate(templateData);
         toast.success(t('templates.editor.success.create'));
+        navigate('/templates', {
+          state: {
+            createdTemplate,
+          },
+        });
       }
-      navigate('/templates');
     } catch (error) {
       logger.error('Error saving template:', error);
       toast.error(t(id ? 'templates.editor.error.update' : 'templates.editor.error.create'));

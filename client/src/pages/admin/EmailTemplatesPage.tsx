@@ -3,7 +3,7 @@
  * Manage email templates for CV submissions.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -56,8 +56,10 @@ const EmailTemplatesPage = (): JSX.Element => {
   const [duplicateFirmId, setDuplicateFirmId] = useState('');
   const [duplicateFirms, setDuplicateFirms] = useState<DuplicateFirmOption[]>([]);
   const [duplicating, setDuplicating] = useState(false);
+  const templatesRequestIdRef = useRef(0);
 
   const loadData = useCallback(async () => {
+    const requestId = ++templatesRequestIdRef.current;
     setLoading(true);
     setLoadError(false);
     try {
@@ -65,13 +67,21 @@ const EmailTemplatesPage = (): JSX.Element => {
         emailTemplateService.getTemplates(),
         emailTemplateService.getKeywords(),
       ]);
+      if (requestId !== templatesRequestIdRef.current) {
+        return;
+      }
       setTemplates(templatesData);
       setKeywords(keywordsData);
     } catch {
+      if (requestId !== templatesRequestIdRef.current) {
+        return;
+      }
       setLoadError(true);
       toast.error(t('emailTemplates.errors.loadFailed'));
     } finally {
-      setLoading(false);
+      if (requestId === templatesRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [t]);
 
@@ -176,10 +186,11 @@ const EmailTemplatesPage = (): JSX.Element => {
 
     setDuplicating(true);
     try {
-      await emailTemplateService.duplicateTemplate(duplicateTemplateTarget.id, duplicateFirmId);
+      templatesRequestIdRef.current += 1;
+      const duplicatedTemplate = await emailTemplateService.duplicateTemplate(duplicateTemplateTarget.id, duplicateFirmId);
+      setTemplates((currentTemplates) => [duplicatedTemplate, ...currentTemplates]);
       toast.success(t('emailTemplates.success.duplicated'));
       closeDuplicateModal();
-      await loadData();
     } catch {
       toast.error(t('emailTemplates.errors.duplicateFailed'));
     } finally {
@@ -197,9 +208,11 @@ const EmailTemplatesPage = (): JSX.Element => {
       if (!confirm(confirmMessage)) return;
 
       try {
+        templatesRequestIdRef.current += 1;
         await emailTemplateService.deleteTemplate(template.id);
+        setTemplates((currentTemplates) => currentTemplates.filter((currentTemplate) => currentTemplate.id !== template.id));
         toast.success(t('emailTemplates.success.deleted'));
-        loadData();
+        void loadData();
       } catch {
         toast.error(t('emailTemplates.errors.deleteFailed'));
       }
@@ -224,15 +237,23 @@ const EmailTemplatesPage = (): JSX.Element => {
       };
 
       if (modalMode === 'create') {
-        await emailTemplateService.createTemplate(data);
+        templatesRequestIdRef.current += 1;
+        const createdTemplate = await emailTemplateService.createTemplate(data);
+        setTemplates((currentTemplates) => [createdTemplate, ...currentTemplates]);
         toast.success(t('emailTemplates.success.created'));
       } else if (modalMode === 'edit' && selectedTemplate) {
-        await emailTemplateService.updateTemplate(selectedTemplate.id, data);
+        templatesRequestIdRef.current += 1;
+        const updatedTemplate = await emailTemplateService.updateTemplate(selectedTemplate.id, data);
+        setTemplates((currentTemplates) => currentTemplates.map((currentTemplate) => (
+          currentTemplate.id === selectedTemplate.id ? updatedTemplate : currentTemplate
+        )));
         toast.success(t('emailTemplates.success.updated'));
       }
 
       closeModal();
-      loadData();
+      if (modalMode === 'edit') {
+        void loadData();
+      }
     } catch {
       toast.error(
         modalMode === 'create'

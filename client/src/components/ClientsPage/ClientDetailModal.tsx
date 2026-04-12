@@ -11,6 +11,7 @@ import {
   PencilSquareIcon,
   TrashIcon,
   PlusIcon,
+  ArrowPathIcon,
   EnvelopeIcon,
   PhoneIcon,
   GlobeAltIcon,
@@ -35,6 +36,8 @@ interface ClientDetailModalProps {
   onAddContact: () => void;
   onEditContact: (contact: ClientContact) => void;
   onDeleteContact: (contact: ClientContact) => void;
+  onRefresh: () => void;
+  refreshing?: boolean;
   t: (key: string) => string;
 }
 
@@ -46,6 +49,8 @@ const ClientDetailModal = ({
   onAddContact, 
   onEditContact, 
   onDeleteContact,
+  onRefresh,
+  refreshing = false,
   t 
 }: ClientDetailModalProps): JSX.Element => {
   const [activeTab, setActiveTab] = useState<'contacts' | 'submissions'>('contacts');
@@ -96,6 +101,15 @@ const ClientDetailModal = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={onRefresh}
+              className="btn btn-secondary flex items-center gap-2 px-3 py-2 text-sm"
+              title={t('common.refresh')}
+              aria-label={t('common.refresh')}
+              disabled={refreshing}
+            >
+              <ArrowPathIcon className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
             <button
               onClick={() => {
                 onClose();
@@ -179,13 +193,24 @@ const ClientDetailModal = ({
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                 {t('clients.contactsTitle')}
               </h3>
-              <button
-                onClick={onAddContact}
-                className="btn btn-secondary flex items-center gap-2 px-3 py-2 text-sm"
-              >
-                <PlusIcon className="w-4 h-4" />
-                {t('clients.addContact')}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={onRefresh}
+                  className="btn btn-secondary flex items-center gap-2 px-3 py-2 text-sm"
+                  title={t('common.refresh')}
+                  aria-label={`${t('common.refresh')} ${t('clients.tabs.contacts')}`}
+                  disabled={refreshing}
+                >
+                  <ArrowPathIcon className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                </button>
+                <button
+                  onClick={onAddContact}
+                  className="btn btn-secondary flex items-center gap-2 px-3 py-2 text-sm"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                  {t('clients.addContact')}
+                </button>
+              </div>
             </div>
 
             {client.contacts && client.contacts.length > 0 ? (

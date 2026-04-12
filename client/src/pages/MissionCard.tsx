@@ -35,6 +35,7 @@ export interface MissionItem {
 }
 
 interface MissionCardProps {
+  canDelete?: boolean;
   mission: MissionItem;
   index: number;
   onEdit: (mission: MissionItem) => void;
@@ -47,7 +48,7 @@ const statusClasses: Record<NonNullable<MissionItem['Status']>, string> = {
   Closed: 'bg-[var(--cv-danger-soft)] text-[var(--cv-danger)] ring-1 ring-[color:color-mix(in_srgb,var(--cv-danger)_18%,transparent)]',
 };
 
-export default function MissionCard({ mission, index, onEdit, onDelete }: MissionCardProps) {
+export default function MissionCard({ mission, index, onEdit, onDelete, canDelete = true }: MissionCardProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const status = mission.Status || 'Active';
@@ -159,9 +160,14 @@ export default function MissionCard({ mission, index, onEdit, onDelete }: Missio
             <span className="sm:hidden">{t('common.edit')}</span>
           </button>
           <button
+            disabled={!canDelete}
             onClick={onDelete}
-            title={t('common.delete')}
-            className="cv-ghost-button inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium text-[var(--cv-danger)] transition-colors"
+            title={canDelete ? t('common.delete') : t('missions.messages.deleteBlockedWithAttachments', 'Suppression impossible : des éléments sont attachés à cette mission')}
+            className={`cv-ghost-button inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium transition-colors ${
+              canDelete
+                ? 'text-[var(--cv-danger)]'
+                : 'cursor-not-allowed text-slate-400 opacity-60'
+            }`}
           >
             <TrashIcon className="h-5 w-5" />
             <span className="sm:hidden">{t('common.delete')}</span>

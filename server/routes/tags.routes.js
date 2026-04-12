@@ -81,9 +81,10 @@ router.get('/', authenticateToken, async (req, res) => {
         if (!access) {
             return;
         }
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
 
         const cacheKey = access.isAdmin ? 'admin' : `firm_${access.userFirmId}`;
-        const cachedResult = await getCachedRawTags(cacheKey);
+        const cachedResult = bypassCache ? null : await getCachedRawTags(cacheKey);
         if (cachedResult) {
             return res.json(cachedResult);
         }
@@ -102,6 +103,7 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/cleaned', applyTagsReadHeaders, authenticateToken, async (req, res) => {
     try {
         const scope = req.query.scope === 'grouped-by-deal' ? 'grouped-by-deal' : 'default';
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
         const access = await resolveTagsAccess(req, res, {
             requireFirmForNonAdmin: scope === 'grouped-by-deal'
         });
@@ -115,7 +117,7 @@ router.get('/cleaned', applyTagsReadHeaders, authenticateToken, async (req, res)
             : `firm_${access.userFirmId}_${scope}`;
         
         // Return cached cleaned tags if available and not expired (per-firm cache)
-        const cachedResult = await getCachedCleanedTags(cacheKey);
+        const cachedResult = bypassCache ? null : await getCachedCleanedTags(cacheKey);
         if (cachedResult) {
             return res.json(cachedResult);
         }
@@ -233,9 +235,10 @@ router.get('/esco', authenticateToken, async (req, res) => {
         if (!access) {
             return;
         }
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
 
         // Return cached ESCO tags if available and not expired
-        if (access.isAdmin) {
+        if (access.isAdmin && !bypassCache) {
             const cachedEscoTags = await getCachedEscoTags();
             if (cachedEscoTags) {
                 return res.json(cachedEscoTags);

@@ -17,6 +17,9 @@ export interface GroupedMission {
   contact_email?: string;
   contact_role?: string;
   adaptations_count: number;
+  submissions_count?: number;
+  pipeline_count?: number;
+  has_attached_elements?: boolean;
 }
 
 export interface DealGroup {
@@ -42,4 +45,7 @@ export interface GroupedData {
 
 export interface MissionsDealsGroupedViewProps {
   onAddMission: () => void;
+  onEditMission: (mission: GroupedMission) => void;
+  onDeleteMission: (mission: GroupedMission) => void;
+  refreshToken: number;
 }

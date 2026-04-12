@@ -157,7 +157,7 @@ router.post('/users', authenticateToken, requireUserManager, validateBody(create
 router.post('/users/:id/force-password-reset', authenticateToken, requireUserManager, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
-        const user = await usersService.findUserById(id);
+        const user = await usersService.findUserById(id, { useCache: false });
 
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
@@ -201,7 +201,7 @@ router.put('/users/:id', authenticateToken, requireUserManager, validateParams('
         const { id } = req.params;
         const updateData = {};
 
-        const currentUser = await usersService.findUserById(id);
+        const currentUser = await usersService.findUserById(id, { useCache: false });
         
         if (!currentUser) {
             return res.status(404).json({ error: 'User not found' });
@@ -290,7 +290,7 @@ router.delete('/users/:id', authenticateToken, requireUserManager, validateParam
             return res.status(400).json({ error: 'Cannot delete your own account' });
         }
 
-        const user = await usersService.findUserById(id);
+        const user = await usersService.findUserById(id, { useCache: false });
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }

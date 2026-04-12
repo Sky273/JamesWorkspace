@@ -14,6 +14,7 @@ import { resolveResumeForPage } from './resumeLoader';
 type AnalysisTab = 'overview' | 'skills' | 'original' | 'pipeline';
 type ResumeAnalysisLocationState = {
   from?: string;
+  refreshResumesView?: boolean;
   dealReturnContext?: {
     dealId: string;
     scrollY: number;
@@ -195,7 +196,7 @@ export function useResumeAnalysisPage() {
       return;
     }
 
-    navigate('/resumes', { state: { viewMode: 'byDeal' } });
+    navigate('/resumes', { state: { viewMode: 'byDeal', refreshResumesView: true } });
   }, [dealReturnContext, navigate]);
 
   return {

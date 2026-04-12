@@ -72,7 +72,9 @@ describe('UploadPage', () => {
     });
 
     await waitFor(() => {
-      expect(navigateMock).toHaveBeenCalledWith('/resumes/new-resume/analysis');
+      expect(navigateMock).toHaveBeenCalledWith('/resumes/new-resume/analysis', {
+        state: { refreshResumesView: true },
+      });
     });
   });
 

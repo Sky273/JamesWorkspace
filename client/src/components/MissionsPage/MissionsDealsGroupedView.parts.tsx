@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useMemo, useState } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,10 +11,13 @@ import {
   ChevronRightIcon,
   ClipboardDocumentListIcon,
   DocumentTextIcon,
+  EyeIcon,
   FolderOpenIcon,
   MagnifyingGlassIcon,
+  PencilSquareIcon,
   PlusIcon,
   SparklesIcon,
+  TrashIcon,
   UserIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
@@ -123,7 +126,20 @@ function formatMissionDate(date?: string) {
   }
 }
 
-export function MissionCardInDeal({ mission, index }: { mission: GroupedMission; index: number }) {
+export function MissionCardInDeal({
+  mission,
+  index,
+  canDelete = true,
+  onDelete = () => undefined,
+  onEdit = () => undefined,
+}: {
+  mission: GroupedMission;
+  index: number;
+  canDelete?: boolean;
+  onDelete?: (mission: GroupedMission) => void;
+  onEdit?: (mission: GroupedMission) => void;
+  secondaryActions?: ReactNode;
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const statusColor = MISSION_STATUS_COLORS[mission.status] || MISSION_STATUS_COLORS.active;
@@ -143,7 +159,7 @@ export function MissionCardInDeal({ mission, index }: { mission: GroupedMission;
     >
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--cv-primary)]/25 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+      <div className="flex flex-col gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-3">
             <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,var(--cv-primary-soft),rgba(255,255,255,0.8))] text-[var(--cv-primary)] shadow-sm dark:bg-[linear-gradient(135deg,color-mix(in_srgb,var(--cv-primary)_24%,transparent),rgba(255,255,255,0.04))]">
@@ -186,18 +202,6 @@ export function MissionCardInDeal({ mission, index }: { mission: GroupedMission;
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2 self-start lg:pl-3">
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              navigate(`/missions/${mission.id}`);
-            }}
-            className="inline-flex min-h-10 items-center justify-center rounded-full bg-slate-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-[var(--cv-primary)] dark:bg-white dark:text-slate-950 dark:hover:bg-[var(--cv-primary)] dark:hover:text-white"
-          >
-            {t('missions.view')}
-          </button>
-        </div>
       </div>
 
       {mission.content ? (
@@ -221,18 +225,76 @@ export function MissionCardInDeal({ mission, index }: { mission: GroupedMission;
           ))}
         </div>
       ) : null}
+
+      <div className="mt-5 flex flex-col gap-2 border-t border-slate-200/70 pt-4 dark:border-white/6 sm:flex-row sm:items-center">
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            navigate(`/missions/${mission.id}`);
+          }}
+          className="cv-ghost-button inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition-colors"
+        >
+          <EyeIcon className="h-5 w-5" />
+          {t('missions.view')}
+        </button>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:w-auto">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onEdit(mission);
+            }}
+            title={t('common.edit')}
+            className="cv-ghost-button inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium text-[var(--cv-primary)] transition-colors"
+          >
+            <PencilSquareIcon className="h-5 w-5" />
+            <span className="sm:hidden">{t('common.edit')}</span>
+          </button>
+          <button
+            type="button"
+            disabled={!canDelete}
+            onClick={(event) => {
+              event.stopPropagation();
+              if (canDelete) {
+                onDelete(mission);
+              }
+            }}
+            title={canDelete ? t('common.delete') : t('missions.messages.deleteBlockedWithAttachments', 'Suppression impossible : des éléments sont attachés à cette mission')}
+            className={`cv-ghost-button inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium transition-colors ${
+              canDelete
+                ? 'text-[var(--cv-danger)]'
+                : 'cursor-not-allowed text-slate-400 opacity-60'
+            }`}
+          >
+            <TrashIcon className="h-5 w-5" />
+            <span className="sm:hidden">{t('common.delete')}</span>
+          </button>
+        </div>
+      </div>
     </motion.article>
   );
+}
+
+export function canDeleteGroupedMission(mission: GroupedMission): boolean {
+  return !mission.has_attached_elements
+    && Number(mission.adaptations_count || 0) === 0
+    && Number(mission.submissions_count || 0) === 0
+    && Number(mission.pipeline_count || 0) === 0;
 }
 
 export function DealSection({
   deal,
   isExpanded,
   onToggle,
+  onEditMission,
+  onDeleteMission,
 }: {
   deal: DealGroup;
   isExpanded: boolean;
   onToggle: () => void;
+  onEditMission: (mission: GroupedMission) => void;
+  onDeleteMission: (mission: GroupedMission) => void;
 }) {
   const { t } = useTranslation();
   const [showAll, setShowAll] = useState(false);
@@ -329,7 +391,14 @@ export function DealSection({
               ) : (
                 <div className="space-y-3">
                   {displayedMissions.map((mission, missionIndex) => (
-                    <MissionCardInDeal key={mission.id} mission={mission} index={missionIndex} />
+                    <MissionCardInDeal
+                      key={mission.id}
+                      mission={mission}
+                      index={missionIndex}
+                      canDelete={canDeleteGroupedMission(mission)}
+                      onEdit={onEditMission}
+                      onDelete={onDeleteMission}
+                    />
                   ))}
 
                   {hiddenCount > 0 ? (
@@ -353,6 +422,48 @@ export function DealSection({
         ) : null}
       </AnimatePresence>
     </section>
+  );
+}
+
+export function MissionCardInDealWithActions({
+  mission,
+  index,
+  onEditMission,
+  onDeleteMission,
+}: {
+  mission: GroupedMission;
+  index: number;
+  onEditMission: (mission: GroupedMission) => void;
+  onDeleteMission: (mission: GroupedMission) => void;
+}) {
+  const { t } = useTranslation();
+  const canDelete = canDeleteGroupedMission(mission);
+
+  return (
+    <MissionCardInDeal
+      mission={mission}
+      index={index}
+      secondaryActions={
+        <button
+          type="button"
+          disabled={!canDelete}
+          onClick={(event) => {
+            event.stopPropagation();
+            if (canDelete) {
+              onDeleteMission(mission);
+            }
+          }}
+          title={canDelete ? t('common.delete') : t('missions.messages.deleteBlockedWithAttachments', 'Suppression impossible : des éléments sont attachés à cette mission')}
+          className={`pointer-events-auto inline-flex h-10 w-10 items-center justify-center rounded-full border shadow-sm transition-colors ${
+            canDelete
+              ? 'border-slate-200/80 bg-white/95 text-[var(--cv-danger)] hover:border-[var(--cv-danger)]/25 hover:bg-white dark:border-white/10 dark:bg-[rgba(15,23,42,0.92)]'
+              : 'cursor-not-allowed border-slate-200/80 bg-white/90 text-slate-400 opacity-70 dark:border-white/10 dark:bg-[rgba(15,23,42,0.92)]'
+          }`}
+        >
+          <TrashIcon className="h-4.5 w-4.5" />
+        </button>
+      }
+    />
   );
 }
 

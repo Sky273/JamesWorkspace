@@ -29,14 +29,14 @@ const ALLOWED_COLUMNS = new Set(['name', 'status', 'logo_url']);
  * @param {number} [options.limit=100]
  * @returns {Promise<{firms: Array, hasMore: boolean, totalCount: number|null}>}
  */
-export async function listFirms({ search, page = 1, limit = 100 } = {}) {
+export async function listFirms({ search, page = 1, limit = 100, bypassCache = false } = {}) {
     const cacheKey = JSON.stringify({
         search: search || '',
         page,
         limit
     });
 
-    return firmsCache.getOrLoad(cacheKey, async () => {
+    const loader = async () => {
         const offset = (page - 1) * limit;
         const conditions = [];
         const params = [];
@@ -68,7 +68,13 @@ export async function listFirms({ search, page = 1, limit = 100 } = {}) {
         }
 
         return { firms, hasMore, totalCount };
-    }, {
+    };
+
+    if (bypassCache) {
+        return loader();
+    }
+
+    return firmsCache.getOrLoad(cacheKey, loader, {
         scope: CACHE_KEYS.firms.ALL_FIRMS
     });
 }

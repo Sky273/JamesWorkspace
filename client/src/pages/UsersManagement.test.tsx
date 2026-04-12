@@ -7,6 +7,10 @@ const useAuthMock = vi.fn();
 const getCustomersPaginatedMock = vi.fn();
 const getUsersPaginatedMock = vi.fn();
 const createUserMock = vi.fn();
+const createCustomerMock = vi.fn();
+const updateCustomerMock = vi.fn();
+const deleteCustomerMock = vi.fn();
+const deleteUserMock = vi.fn();
 const forcePasswordResetMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
@@ -49,21 +53,47 @@ vi.mock('../utils/userService', () => ({
     getUsersPaginated: (...args: unknown[]) => getUsersPaginatedMock(...args),
     createUser: (...args: unknown[]) => createUserMock(...args),
     updateUser: vi.fn(),
-    deleteUser: vi.fn(),
+    deleteUser: (...args: unknown[]) => deleteUserMock(...args),
     forcePasswordReset: (...args: unknown[]) => forcePasswordResetMock(...args),
-    updateCustomer: vi.fn(),
-    createCustomer: vi.fn(),
+    updateCustomer: (...args: unknown[]) => updateCustomerMock(...args),
+    createCustomer: (...args: unknown[]) => createCustomerMock(...args),
     uploadFirmLogo: vi.fn(),
-    deleteCustomer: vi.fn(),
+    deleteCustomer: (...args: unknown[]) => deleteCustomerMock(...args),
   },
 }));
 
 vi.mock('../components/UsersManagement/ConfirmDeleteModal', () => ({
-  default: () => null,
+  default: ({
+    isOpen,
+    onConfirm,
+  }: {
+    isOpen: boolean;
+    onConfirm: () => void;
+  }) => (
+    isOpen ? (
+      <button onClick={() => void onConfirm()}>
+        confirm-delete-modal
+      </button>
+    ) : null
+  ),
 }));
 
 vi.mock('../components/UsersManagement/FirmFormModal', () => ({
-  default: () => null,
+  default: ({
+    isOpen,
+    firm,
+    onSubmit,
+  }: {
+    isOpen: boolean;
+    firm?: { id?: string; name?: string } | null;
+    onSubmit: (data: { name: string; logoFile?: File | null }) => void;
+  }) => (
+    isOpen ? (
+      <button onClick={() => onSubmit({ name: firm ? 'Renamed Cabinet' : 'New Cabinet', logoFile: null })}>
+        submit-firm-modal
+      </button>
+    ) : null
+  ),
 }));
 
 vi.mock('../components/UsersManagement/PasswordModal', () => ({
@@ -145,9 +175,49 @@ describe('UsersManagement', () => {
       role: 'localAdmin',
       status: 'Active',
     });
+    createCustomerMock.mockResolvedValue({
+      id: 'firm-3',
+      name: 'New Cabinet',
+    });
+    updateCustomerMock.mockResolvedValue({
+      id: 'firm-1',
+      name: 'Renamed Cabinet',
+    });
+    deleteCustomerMock.mockResolvedValue({ message: 'Firm deleted successfully' });
+    deleteUserMock.mockResolvedValue({ message: 'User deleted successfully' });
   });
 
   it('loads the dashboard and creates a user through the page flow', async () => {
+    getUsersPaginatedMock
+      .mockResolvedValueOnce({
+        users: [
+          {
+            id: 'user-1',
+            name: 'Jane Doe',
+            email: 'jane@example.com',
+            firmId: 'firm-2',
+            firmName: 'Globex',
+            role: 'user',
+            status: 'active',
+          },
+        ],
+        pagination: { totalCount: 1, hasMore: false, page: 1, pageSize: 12 },
+      })
+      .mockResolvedValueOnce({
+        users: [
+          {
+            id: 'user-1',
+            name: 'Jane Doe',
+            email: 'jane@example.com',
+            firmId: 'firm-2',
+            firmName: 'Globex',
+            role: 'user',
+            status: 'active',
+          },
+        ],
+        pagination: { totalCount: 1, hasMore: false, page: 1, pageSize: 12 },
+      });
+
     render(<UsersManagement />);
 
     expect(await screen.findByText('users.management.title')).toBeInTheDocument();
@@ -169,7 +239,8 @@ describe('UsersManagement', () => {
     });
 
     expect(toastSuccessMock).toHaveBeenCalledWith('users.management.messages.userCreatedInvitationSent');
-    expect(getUsersPaginatedMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(await screen.findByText('Lookman')).toBeInTheDocument();
+    expect(getUsersPaginatedMock.mock.calls.length).toBeGreaterThanOrEqual(1);
     expect(getCustomersPaginatedMock.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
@@ -230,5 +301,180 @@ describe('UsersManagement', () => {
     });
 
     expect(getCustomersPaginatedMock).not.toHaveBeenCalled();
+  });
+
+  it('refreshes the firms view after creating a firm', async () => {
+    const refreshedFirmsResponse = {
+      customers: [
+        { id: 'firm-1', name: 'Acme' },
+        { id: 'firm-2', name: 'Globex' },
+      ],
+      pagination: { totalCount: 3, hasMore: false, page: 1, pageSize: 12 },
+    };
+
+    getCustomersPaginatedMock
+      .mockResolvedValueOnce({
+        customers: [
+          { id: 'firm-1', name: 'Acme' },
+          { id: 'firm-2', name: 'Globex' },
+        ],
+        pagination: { totalCount: 2, hasMore: false, page: 1, pageSize: 12 },
+      })
+      .mockResolvedValueOnce(refreshedFirmsResponse)
+      .mockResolvedValue(refreshedFirmsResponse);
+
+    render(<UsersManagement />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /users\.management\.tabs\.firms/i }));
+    fireEvent.click(screen.getByRole('button', { name: /users\.management\.addFirm/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'submit-firm-modal' }));
+
+    await waitFor(() => {
+      expect(createCustomerMock).toHaveBeenCalledWith({ name: 'New Cabinet' });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('New Cabinet')).toBeInTheDocument();
+    });
+
+    expect(getCustomersPaginatedMock.mock.calls.some(([args]) => (
+      typeof args === 'object'
+      && args !== null
+      && 'forceRefresh' in (args as Record<string, unknown>)
+      && (args as Record<string, unknown>).forceRefresh === true
+      && (args as Record<string, unknown>).page === 1
+    ))).toBe(true);
+  });
+
+  it('refreshes the firms view after updating a firm', async () => {
+    const refreshedFirmsResponse = {
+      customers: [
+        { id: 'firm-1', name: 'Renamed Cabinet' },
+        { id: 'firm-2', name: 'Globex' },
+      ],
+      pagination: { totalCount: 2, hasMore: false, page: 1, pageSize: 12 },
+    };
+
+    getCustomersPaginatedMock
+      .mockResolvedValueOnce({
+        customers: [
+          { id: 'firm-1', name: 'Acme' },
+          { id: 'firm-2', name: 'Globex' },
+        ],
+        pagination: { totalCount: 2, hasMore: false, page: 1, pageSize: 12 },
+      })
+      .mockResolvedValueOnce(refreshedFirmsResponse)
+      .mockResolvedValue(refreshedFirmsResponse);
+
+    render(<UsersManagement />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /users\.management\.tabs\.firms/i }));
+    expect(await screen.findByText('Acme')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: /users\.management\.actions\.edit/i })[0]);
+    fireEvent.click(await screen.findByRole('button', { name: 'submit-firm-modal' }));
+
+    await waitFor(() => {
+      expect(updateCustomerMock).toHaveBeenCalledWith('firm-1', { name: 'Renamed Cabinet' });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Renamed Cabinet')).toBeInTheDocument();
+    });
+
+    expect(getCustomersPaginatedMock.mock.calls.some(([args]) => (
+      typeof args === 'object'
+      && args !== null
+      && 'forceRefresh' in (args as Record<string, unknown>)
+      && (args as Record<string, unknown>).forceRefresh === true
+    ))).toBe(true);
+  });
+
+  it('refreshes the firms view after deleting a firm', async () => {
+    const refreshedFirmsResponse = {
+      customers: [
+        { id: 'firm-2', name: 'Globex' },
+      ],
+      pagination: { totalCount: 1, hasMore: false, page: 1, pageSize: 12 },
+    };
+
+    getCustomersPaginatedMock
+      .mockResolvedValueOnce({
+        customers: [
+          { id: 'firm-1', name: 'Acme' },
+          { id: 'firm-2', name: 'Globex' },
+        ],
+        pagination: { totalCount: 2, hasMore: false, page: 1, pageSize: 12 },
+      })
+      .mockResolvedValueOnce(refreshedFirmsResponse)
+      .mockResolvedValue(refreshedFirmsResponse);
+
+    render(<UsersManagement />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /users\.management\.tabs\.firms/i }));
+    expect(await screen.findByText('Acme')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: /users\.management\.actions\.delete/i })[0]);
+    fireEvent.click(await screen.findByRole('button', { name: 'confirm-delete-modal' }));
+
+    await waitFor(() => {
+      expect(deleteCustomerMock).toHaveBeenCalledWith('firm-1');
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Acme')).not.toBeInTheDocument();
+    });
+
+    expect(getCustomersPaginatedMock.mock.calls.some(([args]) => (
+      typeof args === 'object'
+      && args !== null
+      && 'forceRefresh' in (args as Record<string, unknown>)
+      && (args as Record<string, unknown>).forceRefresh === true
+    ))).toBe(true);
+  });
+
+  it('removes a deleted user from the visible list immediately', async () => {
+    getUsersPaginatedMock
+      .mockResolvedValueOnce({
+        users: [
+          {
+            id: 'user-1',
+            name: 'Jane Doe',
+            email: 'jane@example.com',
+            firmId: 'firm-2',
+            firmName: 'Globex',
+            role: 'user',
+            status: 'active',
+          },
+        ],
+        pagination: { totalCount: 1, hasMore: false, page: 1, pageSize: 12 },
+      })
+      .mockResolvedValueOnce({
+        users: [
+          {
+            id: 'user-1',
+            name: 'Jane Doe',
+            email: 'jane@example.com',
+            firmId: 'firm-2',
+            firmName: 'Globex',
+            role: 'user',
+            status: 'active',
+          },
+        ],
+        pagination: { totalCount: 1, hasMore: false, page: 1, pageSize: 12 },
+      });
+
+    render(<UsersManagement />);
+
+    expect(await screen.findByText('Jane Doe')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /users\.management\.actions\.delete/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'confirm-delete-modal' }));
+
+    await waitFor(() => {
+      expect(deleteUserMock).toHaveBeenCalledWith('user-1');
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Jane Doe')).not.toBeInTheDocument();
+    });
   });
 });

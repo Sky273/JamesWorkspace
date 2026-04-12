@@ -11,15 +11,15 @@ export const useFranceMapData = (dataSource: DataSourceType) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (options: { forceRefresh?: boolean } = {}) => {
     setLoading(true);
     setError(null);
 
     try {
       const trendType = dataSource === 'all' ? undefined : dataSource === 'offres' ? 'offre' : dataSource;
       const [trendsResponse, metiersData] = await Promise.all([
-        trendType ? getAllTrends(trendType) : getAllTrends(),
-        getStoredMetiers(),
+        trendType ? getAllTrends(trendType, options.forceRefresh) : getAllTrends(undefined, options.forceRefresh),
+        getStoredMetiers({ forceRefresh: options.forceRefresh }),
       ]);
 
       setTrends(trendsResponse.trends);

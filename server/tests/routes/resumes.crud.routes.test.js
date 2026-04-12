@@ -370,6 +370,25 @@ describe('Resume Routes - GET /api/resumes/:id', () => {
         expect(res.headers['cache-control']).toBe('private, no-cache, max-age=0, must-revalidate');
     });
 
+    it('should bypass cache on detail read when refresh=1', async () => {
+        mockIsUserAdmin.mockReturnValueOnce(true);
+        mockGetResumeById.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            name: 'Fresh Resume',
+            firm_id: 'firm-123'
+        });
+
+        const res = await request(app)
+            .get('/api/resumes/123e4567-e89b-12d3-a456-426614174000?refresh=1')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(mockGetResumeById).toHaveBeenCalledWith(
+            '123e4567-e89b-12d3-a456-426614174000',
+            { bypassCache: true }
+        );
+    });
+
     it('should return 403 for resume from different firm', async () => {
         mockIsUserAdmin.mockReturnValueOnce(false);
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
@@ -535,6 +554,11 @@ describe('Resume Routes - PUT /api/resumes/:id', () => {
         expect(mockUpdateResume).toHaveBeenCalledWith(
             '123e4567-e89b-12d3-a456-426614174000',
             expect.objectContaining({ name: 'Modern Name', title: 'Lead Engineer', status: 'improved' })
+        );
+        expect(mockCheckResumeAccess).toHaveBeenCalledWith(
+            expect.any(Object),
+            '123e4567-e89b-12d3-a456-426614174000',
+            { bypassCache: true }
         );
     });
 
@@ -834,6 +858,11 @@ describe('Resume Routes - DELETE /api/resumes/:id', () => {
         expect(res.status).toBe(200);
         expect(res.body.message).toBe('Resume deleted successfully');
         expect(mockDeleteResume).toHaveBeenCalledWith('123e4567-e89b-12d3-a456-426614174000');
+        expect(mockCheckResumeAccess).toHaveBeenCalledWith(
+            expect.any(Object),
+            '123e4567-e89b-12d3-a456-426614174000',
+            { bypassCache: true }
+        );
     });
 
     it('should return 404 for non-existent resume', async () => {

@@ -109,9 +109,10 @@ export function useMarketTrendsDashboard() {
           regionCode: regionFilter || undefined,
           page: currentPage,
           pageSize: MARKET_TRENDS_PAGE_SIZE,
+          forceRefresh: true,
         }),
-        getTrendsSummary(),
-        getTrendFilters(),
+        getTrendsSummary(true),
+        getTrendFilters(true),
       ]);
       applyTrendsResponse(trendsResponse);
       setSummary(summaryResponse.summary);

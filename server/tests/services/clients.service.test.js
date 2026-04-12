@@ -201,6 +201,17 @@ describe('Clients Service', () => {
             expect(result).toBeNull();
             expect(query).toHaveBeenCalledTimes(1); // no follow-up queries
         });
+
+        it('should bypass cache when requested', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [{ id: '1', name: 'Client A', firm_name: 'Firm' }] })
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [] });
+
+            await getClientById('1', { bypassCache: true });
+
+            expect(mockClientsCache.getOrLoad).not.toHaveBeenCalled();
+        });
     });
 
     describe('validateFirm', () => {
@@ -234,6 +245,9 @@ describe('Clients Service', () => {
 
             expect(result).toEqual(created);
             expect(query.mock.calls[0][0]).toContain('INSERT INTO clients');
+            expect(mockInvalidateClientsCaches).toHaveBeenCalledTimes(1);
+            expect(mockInvalidateDealsCaches).toHaveBeenCalledTimes(1);
+            expect(mockInvalidateMissionsCaches).toHaveBeenCalledTimes(1);
         });
 
         it('should use defaults for optional fields', async () => {
@@ -269,6 +283,18 @@ describe('Clients Service', () => {
 
             expect(result).toEqual(updated);
             expect(query.mock.calls[0][0]).toContain('UPDATE clients');
+            expect(mockInvalidateClientsCaches).toHaveBeenCalledTimes(1);
+            expect(mockInvalidateDealsCaches).toHaveBeenCalledTimes(1);
+            expect(mockInvalidateMissionsCaches).toHaveBeenCalledTimes(1);
+        });
+
+        it('should throw when updating a missing client', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+
+            await expect(updateClient('missing', { name: 'Updated' })).rejects.toMatchObject({
+                message: 'Client not found',
+                statusCode: 404
+            });
         });
     });
 
@@ -284,12 +310,24 @@ describe('Clients Service', () => {
 
     describe('deleteClient', () => {
         it('should delete a client', async () => {
-            query.mockResolvedValueOnce({ rows: [] });
+            query.mockResolvedValueOnce({ rows: [{ id: '1' }] });
 
             await deleteClient('1');
 
             expect(query.mock.calls[0][0]).toContain('DELETE FROM clients');
             expect(query.mock.calls[0][1]).toEqual(['1']);
+            expect(mockInvalidateClientsCaches).toHaveBeenCalledTimes(1);
+            expect(mockInvalidateDealsCaches).toHaveBeenCalledTimes(1);
+            expect(mockInvalidateMissionsCaches).toHaveBeenCalledTimes(1);
+        });
+
+        it('should throw when deleting a missing client', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+
+            await expect(deleteClient('missing')).rejects.toMatchObject({
+                message: 'Client not found',
+                statusCode: 404
+            });
         });
     });
 
@@ -319,6 +357,14 @@ describe('Clients Service', () => {
             expect(result).toEqual(contacts);
             expect(query.mock.calls[0][1]).toEqual(['client-1']);
         });
+
+        it('should bypass cache for contacts when requested', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+
+            await listContacts('client-1', { bypassCache: true });
+
+            expect(mockClientsCache.getOrLoad).not.toHaveBeenCalled();
+        });
     });
 
     describe('createContact', () => {
@@ -330,6 +376,9 @@ describe('Clients Service', () => {
 
             expect(result).toEqual(contact);
             expect(query.mock.calls[0][0]).toContain('INSERT INTO client_contacts');
+            expect(mockInvalidateClientsCaches).toHaveBeenCalledTimes(1);
+            expect(mockInvalidateDealsCaches).toHaveBeenCalledTimes(1);
+            expect(mockInvalidateMissionsCaches).toHaveBeenCalledTimes(1);
         });
 
         it('should unset other primaries when creating a primary contact', async () => {
@@ -352,6 +401,9 @@ describe('Clients Service', () => {
             const result = await updateContact('c1', 'cl1', { name: 'Updated' });
 
             expect(result).toEqual(updated);
+            expect(mockInvalidateClientsCaches).toHaveBeenCalledTimes(1);
+            expect(mockInvalidateDealsCaches).toHaveBeenCalledTimes(1);
+            expect(mockInvalidateMissionsCaches).toHaveBeenCalledTimes(1);
         });
 
         it('should unset other primaries when setting as primary', async () => {
@@ -371,6 +423,7 @@ describe('Clients Service', () => {
             const result = await updateContact('missing', 'cl1', { name: 'X' });
 
             expect(result).toBeNull();
+            expect(mockInvalidateClientsCaches).not.toHaveBeenCalled();
         });
     });
 
@@ -385,11 +438,15 @@ describe('Clients Service', () => {
         it('should return true when contact deleted', async () => {
             query.mockResolvedValueOnce({ rows: [{ id: 'c1' }] });
             expect(await deleteContact('c1', 'cl1')).toBe(true);
+            expect(mockInvalidateClientsCaches).toHaveBeenCalledTimes(1);
+            expect(mockInvalidateDealsCaches).toHaveBeenCalledTimes(1);
+            expect(mockInvalidateMissionsCaches).toHaveBeenCalledTimes(1);
         });
 
         it('should return false when contact not found', async () => {
             query.mockResolvedValueOnce({ rows: [] });
             expect(await deleteContact('missing', 'cl1')).toBe(false);
+            expect(mockInvalidateClientsCaches).not.toHaveBeenCalled();
         });
     });
 });

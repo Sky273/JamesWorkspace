@@ -3,7 +3,7 @@
  * TypeScript version
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
@@ -129,25 +129,35 @@ const TagsManagement = (): JSX.Element => {
   const [activeTab, setActiveTab] = useState<TabType>('raw');
   const [savingCleanedTags, setSavingCleanedTags] = useState<boolean>(false);
   const [convertingToEsco, setConvertingToEsco] = useState<boolean>(false);
+  const tagsRequestIdRef = useRef(0);
 
-  const fetchTags = useCallback(async (): Promise<void> => {
+  const fetchTags = useCallback(async (forceRefresh = false): Promise<void> => {
+    const requestId = ++tagsRequestIdRef.current;
     try {
       setLoading(true);
       setLoadError(false);
       const [rawData, cleanedData, escoData] = await Promise.all([
-        tagService.getAllTags(),
-        tagService.getCleanedTags().catch(() => ({})),
-        tagService.getEscoTags().catch(() => ({ skills: [], industries: [], tools: [], softSkills: [] })),
+        tagService.getAllTags(forceRefresh),
+        tagService.getCleanedTags(forceRefresh).catch(() => ({})),
+        tagService.getEscoTags(forceRefresh).catch(() => ({ skills: [], industries: [], tools: [], softSkills: [] })),
       ]);
+      if (requestId !== tagsRequestIdRef.current) {
+        return;
+      }
       setTags(rawData as unknown as Tags);
       setCleanedTags(cleanedData as unknown as CleanedTags);
       setEscoTags(escoData as unknown as EscoTags);
     } catch (err) {
+      if (requestId !== tagsRequestIdRef.current) {
+        return;
+      }
       setLoadError(true);
       toast.error(t('tags.loadError'));
       logger.error('Error loading tags:', err);
     } finally {
-      setLoading(false);
+      if (requestId === tagsRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [t]);
 
@@ -159,7 +169,8 @@ const TagsManagement = (): JSX.Element => {
     try {
       setSavingCleanedTags(true);
       await tagService.recalculateCleanedTags();
-      const freshCleanedTags = await tagService.getCleanedTags();
+      tagsRequestIdRef.current += 1;
+      const freshCleanedTags = await tagService.getCleanedTags(true);
       setCleanedTags(freshCleanedTags as unknown as CleanedTags);
       toast.success(t('tags.cleanedTagsRecalculated'));
     } catch (err) {
@@ -174,7 +185,8 @@ const TagsManagement = (): JSX.Element => {
     try {
       setConvertingToEsco(true);
       await tagService.recalculateEscoTags('fr');
-      const freshEscoTags = await tagService.getEscoTags();
+      tagsRequestIdRef.current += 1;
+      const freshEscoTags = await tagService.getEscoTags(true);
       setEscoTags(freshEscoTags as unknown as EscoTags);
       toast.success(t('tags.escoTagsRecalculated'));
     } catch (err) {
@@ -195,6 +207,7 @@ const TagsManagement = (): JSX.Element => {
       const fieldName = category + fieldSuffix;
 
       await tagService.renameTag(fieldName, oldName, newName);
+      tagsRequestIdRef.current += 1;
       toast.success(t('tags.renameSuccess', { oldName, newName }));
 
       if (activeTab === 'raw') {
@@ -312,7 +325,7 @@ const TagsManagement = (): JSX.Element => {
               </div>
               <button
                 type="button"
-                onClick={() => { void fetchTags(); }}
+                onClick={() => { void fetchTags(true); }}
                 className="cv-ghost-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-medium"
               >
                 {t('tags.refresh')}
@@ -339,7 +352,7 @@ const TagsManagement = (): JSX.Element => {
             onSearchChange={setSearchTerm}
             onRecalculateCleanedTags={handleRecalculateCleanedTags}
             onRecalculateEscoTags={handleRecalculateEscoTags}
-            onRefresh={() => { void fetchTags(); }}
+            onRefresh={() => { void fetchTags(true); }}
             t={t}
           />
 

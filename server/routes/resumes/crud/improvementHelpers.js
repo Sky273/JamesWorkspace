@@ -2,11 +2,11 @@ import { analyzeResume, cleanupText } from '../../../services/openai.service.js'
 import { getLLMSettings, calculateWeightedGlobalRating } from '../../../services/settings.service.js';
 import { getAcceptedIndustriesString, getIndustryMappingString } from '../../../services/industry.service.js';
 import { DEFAULT_ANALYSIS_PROMPT, ANONYMIZATION_RULES_ANONYMOUS, ANONYMIZATION_RULES_NOMINATIVE } from '../../../config/prompts.backend.js';
-import { query } from '../../../services/database.service.js';
 import { safeLog } from '../../../utils/logger.backend.js';
 import { parseScore } from '../helpers.js';
 import * as resumesService from '../../../services/resumes.service.js';
 import { persistResumeSkillEvidence } from '../../../services/skillEvidence.service.js';
+import { updateVersionPostAnalysis } from '../../../services/resumeVersions.service.js';
 
 function hasSuggestionContent(suggestions) {
     if (!suggestions || typeof suggestions !== 'object') return false;
@@ -76,39 +76,7 @@ function buildImprovedResumeUpdateData(improvedText, analysis) {
 }
 
 async function updateResumeVersionWithPostAnalysis(resumeId, versionNumber, analysis) {
-    const improvedTags = analysis?.tags || {};
-    await query(
-        `UPDATE resume_versions SET
-            improved_global_rating = $1,
-            improved_skills_score = $2,
-            improved_experience_score = $3,
-            improved_education_score = $4,
-            improved_ats_score = $5,
-            improved_executive_summary_score = $6,
-            improved_hobbies_languages_score = $7,
-            improved_skills = $8,
-            improved_industries = $9,
-            improved_tools = $10,
-            improved_soft_skills = $11,
-            improved_key_improvements = $12
-         WHERE resume_id = $13 AND version_number = $14`,
-        [
-            parseScore(analysis?.globalRating || analysis?.['Global Rating']) || 0,
-            parseScore(analysis?.skillsRating || analysis?.['Skills']) || 0,
-            parseScore(analysis?.experiencesRating || analysis?.['Experience']) || 0,
-            parseScore(analysis?.educationRating || analysis?.['Education']) || 0,
-            parseScore(analysis?.atsOptimizationRating || analysis?.['ATS Compatibility']) || 0,
-            parseScore(analysis?.executiveSummaryRating || analysis?.['Executive Summary']) || 0,
-            parseScore(analysis?.hobbiesLanguagesRating || analysis?.['Hobbies Languages']) || 0,
-            JSON.stringify(improvedTags.skills || []),
-            JSON.stringify(improvedTags.industries || []),
-            JSON.stringify(improvedTags.tools || []),
-            JSON.stringify(improvedTags.softSkills || []),
-            JSON.stringify(analysis?.suggestions || {}),
-            resumeId,
-            versionNumber
-        ]
-    );
+    await updateVersionPostAnalysis(resumeId, versionNumber, analysis);
 }
 
 async function persistDeferredPostImprovementAnalysis({ resumeId, improvedText, fileName, userMetadata, currentVersion }) {

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import logger from '../utils/logger.frontend';
@@ -29,9 +29,20 @@ export interface TemplateStats {
 
 export type TemplateSort = 'popular' | 'name';
 export const TEMPLATES_PAGE_SIZE = 12;
+type TemplatesNavigationState = {
+  createdTemplate?: Template;
+  updatedTemplate?: Template;
+} | null;
+type FetchTemplatesOptions = {
+  clearPendingTemplate?: boolean;
+  page?: number;
+  search?: string;
+  forceRefresh?: boolean;
+};
 
 export function useTemplatesDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
 
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -49,11 +60,37 @@ export function useTemplatesDashboard() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [isExtractModalOpen, setIsExtractModalOpen] = useState(false);
+  const templatesRequestIdRef = useRef(0);
+  const pendingTemplateRef = useRef<{ template: Template; mode: 'created' | 'updated' } | null>(null);
 
   useEffect(() => {
     setMounted(true);
     return () => setMounted(false);
   }, []);
+
+  useEffect(() => {
+    const navigationState = location.state as TemplatesNavigationState;
+    const navigationTemplate = navigationState?.createdTemplate || navigationState?.updatedTemplate || null;
+
+    if (!navigationTemplate) {
+      return;
+    }
+
+    pendingTemplateRef.current = {
+      template: navigationTemplate,
+      mode: navigationState?.createdTemplate ? 'created' : 'updated',
+    };
+    templatesRequestIdRef.current += 1;
+    setCurrentPage(1);
+    setTemplates((currentTemplates) => {
+      const filteredTemplates = currentTemplates.filter((template) => template.id !== navigationTemplate.id);
+      return [navigationTemplate, ...filteredTemplates].slice(0, TEMPLATES_PAGE_SIZE);
+    });
+    if (navigationState?.createdTemplate) {
+      setTotalCount((currentTotal) => currentTotal + 1);
+    }
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -64,26 +101,55 @@ export function useTemplatesDashboard() {
     return () => window.clearTimeout(timer);
   }, [searchTerm]);
 
-  const fetchTemplates = useCallback(async () => {
+  const fetchTemplates = useCallback(async (options: FetchTemplatesOptions = {}) => {
+    const requestId = ++templatesRequestIdRef.current;
+    const effectivePage = options.page ?? currentPage;
+    const effectiveSearch = options.search ?? debouncedSearch;
+    if (options.clearPendingTemplate) {
+      pendingTemplateRef.current = null;
+    }
     try {
       setLoading(true);
       setError(null);
       const data = await templateService.getTemplatesPaginated({
-        page: currentPage,
+        page: effectivePage,
         pageSize: TEMPLATES_PAGE_SIZE,
-        search: debouncedSearch,
+        search: effectiveSearch,
+        forceRefresh: options.forceRefresh === true,
       });
 
-      setTemplates(data.templates);
-      setTotalCount(data.pagination.totalCount || data.templates.length);
+      if (requestId !== templatesRequestIdRef.current) {
+        return;
+      }
+      const pendingTemplate = pendingTemplateRef.current;
+      const shouldInjectPendingTemplate = Boolean(pendingTemplate?.template && effectivePage === 1 && !effectiveSearch);
+      const mergedTemplates = shouldInjectPendingTemplate
+        ? [pendingTemplate!.template, ...data.templates.filter((template) => template.id !== pendingTemplate!.template.id)].slice(0, TEMPLATES_PAGE_SIZE)
+        : data.templates;
+
+      setTemplates(mergedTemplates);
+      setTotalCount(shouldInjectPendingTemplate
+        ? Math.max(
+            data.pagination.totalCount || data.templates.length,
+            pendingTemplate?.mode === 'created' ? mergedTemplates.length : data.pagination.totalCount || mergedTemplates.length,
+          )
+        : (data.pagination.totalCount || data.templates.length));
       setHasMore(data.pagination.hasMore || false);
+      if (shouldInjectPendingTemplate) {
+        pendingTemplateRef.current = null;
+      }
     } catch (err) {
+      if (requestId !== templatesRequestIdRef.current) {
+        return;
+      }
       const message = t('templates.status.error');
       setError(message);
       toast.error(message);
       logger.error('Error loading templates:', err);
     } finally {
-      setLoading(false);
+      if (requestId === templatesRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [currentPage, debouncedSearch, t]);
 
@@ -116,6 +182,7 @@ export function useTemplatesDashboard() {
 
     setIsDeleting(true);
     try {
+      templatesRequestIdRef.current += 1;
       await templateService.deleteTemplate(templateToDelete.id);
       setTemplates((previousTemplates) => previousTemplates.filter((template) => template.id !== templateToDelete.id));
       setTotalCount((count) => Math.max(0, count - 1));
@@ -148,11 +215,32 @@ export function useTemplatesDashboard() {
     setSearchTerm('');
   }, []);
 
+  const refreshTemplates = useCallback(async (): Promise<void> => {
+    const normalizedSearch = searchTerm.trim();
+    const nextPage = normalizedSearch === debouncedSearch ? currentPage : 1;
+
+    templatesRequestIdRef.current += 1;
+    if (normalizedSearch !== debouncedSearch) {
+      setDebouncedSearch(normalizedSearch);
+    }
+    if (nextPage !== currentPage) {
+      setCurrentPage(nextPage);
+    }
+
+    await fetchTemplates({
+      clearPendingTemplate: true,
+      page: nextPage,
+      search: normalizedSearch,
+      forceRefresh: true,
+    });
+  }, [currentPage, debouncedSearch, fetchTemplates, searchTerm]);
+
   return {
     closeDeleteConfirmModal,
     currentPage,
     error,
     fetchTemplates,
+    refreshTemplates,
     filteredTemplates,
     goToEditTemplate: (templateId: string) => navigate(`/templates/edit/${templateId}`),
     goToNewTemplate: () => navigate('/templates/new'),

@@ -78,7 +78,7 @@ vi.mock('../page/SearchField', () => ({
   ),
 }));
 
-import DealsTab from './DealsTab';
+import DealsTab, { mergePreservedDealIntoResults } from './DealsTab';
 
 describe('DealsTab', () => {
   beforeEach(() => {
@@ -167,5 +167,41 @@ describe('DealsTab', () => {
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalledWith('crm.deals.messages.errorFetching');
     });
+  });
+});
+
+describe('mergePreservedDealIntoResults', () => {
+  it('keeps a created deal visible when the refreshed page is stale', () => {
+    const result = mergePreservedDealIntoResults(
+      [
+        { id: 'deal-2', title: 'Existing Deal', status: 'open', client_id: 'client-1' },
+      ],
+      { id: 'deal-1', title: 'New Deal', status: 'open', client_id: 'client-1' },
+      {
+        normalizedSearch: '',
+        clientFilter: 'client-1',
+        statusFilter: 'open',
+        pageSize: 12,
+      }
+    );
+
+    expect(result.map((deal) => deal.id)).toEqual(['deal-1', 'deal-2']);
+  });
+
+  it('does not preserve a deal excluded by active filters', () => {
+    const result = mergePreservedDealIntoResults(
+      [
+        { id: 'deal-2', title: 'Existing Deal', status: 'open', client_id: 'client-1' },
+      ],
+      { id: 'deal-1', title: 'Won Deal', status: 'won', client_id: 'client-1' },
+      {
+        normalizedSearch: '',
+        clientFilter: 'client-1',
+        statusFilter: 'open',
+        pageSize: 12,
+      }
+    );
+
+    expect(result.map((deal) => deal.id)).toEqual(['deal-2']);
   });
 });

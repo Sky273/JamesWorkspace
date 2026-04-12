@@ -17,6 +17,7 @@ import {
     missionsCache,
     missionGroupedViewCache
 } from './cache.service.js';
+import { invalidateGroupedDealViews } from './viewCacheInvalidation.service.js';
 
 // ============================================
 // MAPPING HELPERS
@@ -26,6 +27,10 @@ import {
  * Map a raw DB mission row (with joins) to the API response format
  */
 export function mapMissionRecord(record) {
+    const adaptationsCount = Number(record.adaptations_count || 0);
+    const submissionsCount = Number(record.submissions_count || 0);
+    const pipelineCount = Number(record.pipeline_count || 0);
+
     return {
         id: record.id,
         Title: record.title,
@@ -47,7 +52,11 @@ export function mapMissionRecord(record) {
         'Contact Role': record.contact_role,
         'Deal ID': record.deal_id,
         'Deal Title': record.deal_title,
-        'Deal Status': record.deal_status
+        'Deal Status': record.deal_status,
+        'Adaptations Count': adaptationsCount,
+        'Submissions Count': submissionsCount,
+        'Pipeline Count': pipelineCount,
+        'Has Attachments': adaptationsCount > 0 || submissionsCount > 0 || pipelineCount > 0
     };
 }
 
@@ -56,7 +65,10 @@ const MISSION_WITH_JOINS_SELECT = `
     SELECT m.*, 
            c.name as client_name, c.type as client_type,
            cc.name as contact_name, cc.email as contact_email, cc.role as contact_role,
-           d.title as deal_title, d.status as deal_status
+           d.title as deal_title, d.status as deal_status,
+           (SELECT COUNT(*) FROM resume_adaptations ra WHERE ra.mission_id = m.id) as adaptations_count,
+           (SELECT COUNT(*) FROM resume_submissions rs WHERE rs.mission_id = m.id) as submissions_count,
+           (SELECT COUNT(*) FROM candidate_pipeline cp WHERE cp.mission_id = m.id) as pipeline_count
     FROM missions m
     LEFT JOIN clients c ON m.client_id = c.id
     LEFT JOIN client_contacts cc ON m.contact_id = cc.id
@@ -68,11 +80,17 @@ const MISSION_WITH_JOINS_SELECT = `
  * @param {string} id
  * @returns {Promise<Object|null>}
  */
-export async function getMissionWithJoins(id) {
-    return missionsCache.getOrLoad(`detail:${id}`, async () => {
+export async function getMissionWithJoins(id, { bypassCache = false } = {}) {
+    const loadMission = async () => {
         const result = await query(`${MISSION_WITH_JOINS_SELECT} WHERE m.id = $1`, [id]);
         return result.rows.length > 0 ? result.rows[0] : null;
-    }, {
+    };
+
+    if (bypassCache) {
+        return loadMission();
+    }
+
+    return missionsCache.getOrLoad(`detail:${id}`, loadMission, {
         scope: CACHE_KEYS.missions.ALL_MISSIONS
     });
 }
@@ -92,12 +110,12 @@ export async function getMissionWithJoins(id) {
  * @param {string} [options.firmId] - null for admin (no filter)
  * @returns {Promise<{data: Array, pagination: Object}>}
  */
-export async function listMissions({ page = 1, limit = 20, search, status, dealId, firmId }) {
+export async function listMissions({ page = 1, limit = 20, search, status, dealId, firmId, bypassCache = false }) {
     page = Number.isInteger(page) && page > 0 ? page : 1;
     limit = Number.isInteger(limit) ? Math.min(Math.max(limit, 1), 100) : 20;
     const cacheKey = JSON.stringify({ page, limit, search: search || '', status: status || 'all', dealId: dealId || null, firmId: firmId || null });
 
-    return missionsCache.getOrLoad(cacheKey, async () => {
+    const loadMissions = async () => {
         const offset = (page - 1) * limit;
         const conditions = [];
         const params = [];
@@ -156,7 +174,13 @@ export async function listMissions({ page = 1, limit = 20, search, status, dealI
             data: missions,
             pagination: { page, limit, totalCount, totalPages, hasMore }
         };
-    }, {
+    };
+
+    if (bypassCache) {
+        return loadMissions();
+    }
+
+    return missionsCache.getOrLoad(cacheKey, loadMissions, {
         scope: CACHE_KEYS.missions.ALL_MISSIONS
     });
 }
@@ -172,10 +196,10 @@ export async function listMissions({ page = 1, limit = 20, search, status, dealI
  * @param {boolean} options.isAdmin
  * @returns {Promise<Object>}
  */
-export async function getMissionsGroupedByDeal({ firmId, isAdmin }) {
+export async function getMissionsGroupedByDeal({ firmId, isAdmin, bypassCache = false }) {
     const scopeKey = buildGroupedViewScopeKey({ firmId, isAdmin });
 
-    return missionGroupedViewCache.getOrLoad(scopeKey, async () => {
+    const loadGroupedMissions = async () => {
         const dealConditions = [];
         const dealParams = [];
         if (!isAdmin) {
@@ -225,7 +249,7 @@ export async function getMissionsGroupedByDeal({ firmId, isAdmin }) {
             }
         }
 
-        // Query 3: Batch fetch adaptation counts for all missions
+        // Query 3: Batch fetch attachment counts for all missions
         const allMissionIds = [];
         for (const missions of allMissionsMap.values()) {
             for (const mission of missions) {
@@ -234,6 +258,8 @@ export async function getMissionsGroupedByDeal({ firmId, isAdmin }) {
         }
 
         let adaptationsCountMap = new Map();
+        let submissionsCountMap = new Map();
+        let pipelineCountMap = new Map();
         if (allMissionIds.length > 0) {
             const adaptResult = await query(`
                 SELECT mission_id, COUNT(*) as count
@@ -244,6 +270,28 @@ export async function getMissionsGroupedByDeal({ firmId, isAdmin }) {
 
             for (const row of adaptResult.rows) {
                 adaptationsCountMap.set(row.mission_id, parseInt(row.count));
+            }
+
+            const submissionsResult = await query(`
+                SELECT mission_id, COUNT(*) as count
+                FROM resume_submissions
+                WHERE mission_id = ANY($1)
+                GROUP BY mission_id
+            `, [allMissionIds]);
+
+            for (const row of submissionsResult.rows) {
+                submissionsCountMap.set(row.mission_id, parseInt(row.count));
+            }
+
+            const pipelineResult = await query(`
+                SELECT mission_id, COUNT(*) as count
+                FROM candidate_pipeline
+                WHERE mission_id = ANY($1)
+                GROUP BY mission_id
+            `, [allMissionIds]);
+
+            for (const row of pipelineResult.rows) {
+                pipelineCountMap.set(row.mission_id, parseInt(row.count));
             }
         }
 
@@ -265,7 +313,13 @@ export async function getMissionsGroupedByDeal({ firmId, isAdmin }) {
         const deals = dealsResult.rows.map(deal => {
             const missions = (allMissionsMap.get(deal.id) || []).map(mission => ({
                 ...mission,
-                adaptations_count: adaptationsCountMap.get(mission.id) || 0
+                adaptations_count: adaptationsCountMap.get(mission.id) || 0,
+                submissions_count: submissionsCountMap.get(mission.id) || 0,
+                pipeline_count: pipelineCountMap.get(mission.id) || 0,
+                has_attached_elements:
+                    (adaptationsCountMap.get(mission.id) || 0) > 0
+                    || (submissionsCountMap.get(mission.id) || 0) > 0
+                    || (pipelineCountMap.get(mission.id) || 0) > 0
             }));
 
             return {
@@ -301,6 +355,8 @@ export async function getMissionsGroupedByDeal({ firmId, isAdmin }) {
         // Get adaptation counts for unassigned missions
         const unassignedMissionIds = unassignedResult.rows.map(m => m.id);
         let unassignedAdaptMap = new Map();
+        let unassignedSubmissionsMap = new Map();
+        let unassignedPipelineMap = new Map();
         if (unassignedMissionIds.length > 0) {
             const uaResult = await query(`
                 SELECT mission_id, COUNT(*) as count
@@ -311,11 +367,37 @@ export async function getMissionsGroupedByDeal({ firmId, isAdmin }) {
             for (const row of uaResult.rows) {
                 unassignedAdaptMap.set(row.mission_id, parseInt(row.count));
             }
+
+            const usResult = await query(`
+                SELECT mission_id, COUNT(*) as count
+                FROM resume_submissions
+                WHERE mission_id = ANY($1)
+                GROUP BY mission_id
+            `, [unassignedMissionIds]);
+            for (const row of usResult.rows) {
+                unassignedSubmissionsMap.set(row.mission_id, parseInt(row.count));
+            }
+
+            const upResult = await query(`
+                SELECT mission_id, COUNT(*) as count
+                FROM candidate_pipeline
+                WHERE mission_id = ANY($1)
+                GROUP BY mission_id
+            `, [unassignedMissionIds]);
+            for (const row of upResult.rows) {
+                unassignedPipelineMap.set(row.mission_id, parseInt(row.count));
+            }
         }
 
         const unassignedMissions = unassignedResult.rows.map(m => ({
             ...m,
-            adaptations_count: unassignedAdaptMap.get(m.id) || 0
+            adaptations_count: unassignedAdaptMap.get(m.id) || 0,
+            submissions_count: unassignedSubmissionsMap.get(m.id) || 0,
+            pipeline_count: unassignedPipelineMap.get(m.id) || 0,
+            has_attached_elements:
+                (unassignedAdaptMap.get(m.id) || 0) > 0
+                || (unassignedSubmissionsMap.get(m.id) || 0) > 0
+                || (unassignedPipelineMap.get(m.id) || 0) > 0
         }));
 
         return {
@@ -325,7 +407,13 @@ export async function getMissionsGroupedByDeal({ firmId, isAdmin }) {
             totalAssigned: deals.reduce((sum, d) => sum + d.missions_count, 0),
             totalUnassigned: unassignedMissions.length
         };
-    }, { scope: scopeKey });
+    };
+
+    if (bypassCache) {
+        return loadGroupedMissions();
+    }
+
+    return missionGroupedViewCache.getOrLoad(scopeKey, loadGroupedMissions, { scope: scopeKey });
 }
 
 export async function invalidateGroupedMissionsCache(firmId = null) {
@@ -421,6 +509,30 @@ export async function validateMissionAssociations({ clientId, contactId, dealId,
     return { ok: true };
 }
 
+export async function getMissionAttachmentCounts(id) {
+    const result = await query(`
+        SELECT
+            (SELECT COUNT(*) FROM resume_adaptations WHERE mission_id = $1) as adaptations_count,
+            (SELECT COUNT(*) FROM resume_submissions WHERE mission_id = $1) as submissions_count,
+            (SELECT COUNT(*) FROM candidate_pipeline WHERE mission_id = $1) as pipeline_count
+    `, [id]);
+
+    const row = result.rows[0] || {};
+    return {
+        adaptationsCount: Number(row.adaptations_count || 0),
+        submissionsCount: Number(row.submissions_count || 0),
+        pipelineCount: Number(row.pipeline_count || 0)
+    };
+}
+
+function buildMissionDeleteBlockedError(counts) {
+    const error = new Error('Cannot delete mission because linked elements are still attached');
+    error.statusCode = 409;
+    error.code = 'MISSION_DELETE_BLOCKED';
+    error.details = counts;
+    return error;
+}
+
 // ============================================
 // CRUD
 // ============================================
@@ -432,10 +544,11 @@ export async function validateMissionAssociations({ clientId, contactId, dealId,
  */
 export async function createMission(data) {
     const newMission = await createWithTimeout('missions', data);
-    const record = await getMissionWithJoins(newMission.id);
+    const record = await getMissionWithJoins(newMission.id, { bypassCache: true });
     await Promise.all([
         invalidateMissionsCaches(),
-        invalidateDealsCaches()
+        invalidateDealsCaches(),
+        invalidateGroupedDealViews(record?.firm_id || data.firm_id || null)
     ]);
     return record;
 }
@@ -456,11 +569,14 @@ export async function findMission(id) {
  * @returns {Promise<Object>} raw DB record with joins
  */
 export async function updateMission(id, updates) {
+    const previousMission = await findMission(id);
     const updated = await updateWithTimeout('missions', id, updates);
-    const record = await getMissionWithJoins(updated.id);
+    const record = await getMissionWithJoins(updated.id, { bypassCache: true });
     await Promise.all([
         invalidateMissionsCaches(),
-        invalidateDealsCaches()
+        invalidateDealsCaches(),
+        invalidateGroupedDealViews(previousMission?.firm_id || null),
+        invalidateGroupedDealViews(record?.firm_id || updated?.firm_id || updates?.firm_id || null)
     ]);
     return record;
 }
@@ -470,10 +586,17 @@ export async function updateMission(id, updates) {
  * @param {string} id
  */
 export async function deleteMission(id) {
+    const mission = await findMission(id);
+    const attachmentCounts = await getMissionAttachmentCounts(id);
+    if (attachmentCounts.adaptationsCount > 0 || attachmentCounts.submissionsCount > 0 || attachmentCounts.pipelineCount > 0) {
+        throw buildMissionDeleteBlockedError(attachmentCounts);
+    }
+
     await destroyWithTimeout('missions', id);
     await Promise.all([
         invalidateMissionsCaches(),
-        invalidateDealsCaches()
+        invalidateDealsCaches(),
+        invalidateGroupedDealViews(mission?.firm_id || null)
     ]);
 }
 

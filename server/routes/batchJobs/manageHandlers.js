@@ -249,7 +249,8 @@ function parseListJobsPagination(query = {}) {
 
 async function getAuthorizedJobOrRespond(req, res, jobId) {
     const userContext = getUserContext(req);
-    const job = await getJob(jobId);
+    const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+    const job = await getJob(jobId, { bypassCache });
 
     if (!job) {
         res.status(404).json({ error: 'Job non trouvé' });
@@ -278,7 +279,8 @@ export async function listJobs(req, res) {
         const options = {
             limit: pagination.limit,
             offset: pagination.offset,
-            status: status || null
+            status: status || null,
+            bypassCache: req.query.refresh === '1' || req.query.refresh === 'true'
         };
 
         const jobs = userContext.isAdmin

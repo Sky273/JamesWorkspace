@@ -103,12 +103,13 @@ const userService = {
     return this.getAllFirms();
   },
 
-  async getFirmsPaginated({ page = 1, pageSize = 12, search = '' } = {}): Promise<PaginatedFirmsResponse> {
+  async getFirmsPaginated({ page = 1, pageSize = 12, search = '', forceRefresh = false } = {}): Promise<PaginatedFirmsResponse> {
     try {
       const params = new URLSearchParams();
       params.append('page', page.toString());
       params.append('limit', pageSize.toString());
       if (search) params.append('search', search);
+      if (forceRefresh) params.append('refresh', '1');
 
       const response = await fetchWithAuth(`/api/firms?${params.toString()}`, createAuthOptions());
       if (!response.ok) {
@@ -138,7 +139,7 @@ const userService = {
     }
   },
 
-  async getCustomersPaginated(options?: { page?: number; pageSize?: number; search?: string }): Promise<{ customers: Firm[]; pagination: Pagination }> {
+  async getCustomersPaginated(options?: { page?: number; pageSize?: number; search?: string; forceRefresh?: boolean }): Promise<{ customers: Firm[]; pagination: Pagination }> {
     const result = await this.getFirmsPaginated(options);
     return {
       customers: result.firms,
@@ -162,7 +163,7 @@ const userService = {
     }
   },
 
-  async getUsersPaginated({ page = 1, pageSize = 12, search = '', role = '', status = '' } = {}): Promise<PaginatedUsersResponse> {
+  async getUsersPaginated({ page = 1, pageSize = 12, search = '', role = '', status = '', forceRefresh = false } = {}): Promise<PaginatedUsersResponse> {
     try {
       const params = new URLSearchParams();
       params.append('page', page.toString());
@@ -170,6 +171,7 @@ const userService = {
       if (search) params.append('search', search);
       if (role) params.append('role', role);
       if (status) params.append('status', status);
+      if (forceRefresh) params.append('refresh', '1');
 
       const response = await fetchWithAuth(`/api/users?${params.toString()}`, createAuthOptions());
       if (!response.ok) {

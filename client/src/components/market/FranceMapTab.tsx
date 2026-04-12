@@ -194,7 +194,7 @@ export default function FranceMapTab({ className = '' }: { className?: string })
         loading={loading}
         onRefresh={() => {
           setSelectedRegion(null);
-          void reload();
+          void reload({ forceRefresh: true });
         }}
         onSourceChange={setDataSource}
         t={t}

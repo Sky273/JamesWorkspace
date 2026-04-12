@@ -27,6 +27,16 @@ import {
 
 export type { Resume };
 
+const RESUMES_VIEW_REFRESH_STORAGE_KEY = 'resumesViewNeedsRefresh';
+
+function markResumesViewDirty(): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.sessionStorage.setItem(RESUMES_VIEW_REFRESH_STORAGE_KEY, '1');
+}
+
 export interface CandidateInfo {
   profileType: 'employee' | 'external';
   candidateName: string;
@@ -112,6 +122,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
     if (!abortControllerRef.current.signal.aborted) {
       setResumes(prev => prev.map(resume => (resume.id === resumeId ? updatedResume : resume)));
       setCurrentResume(updatedResume);
+      markResumesViewDirty();
     }
 
     return updatedResume;
@@ -298,6 +309,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
 
       setResumes(prev => [newResume, ...prev.filter(resume => resume.id !== newResume.id)]);
       setCurrentResume(newResume);
+      markResumesViewDirty();
 
       return newResume;
     } catch (error) {
@@ -402,6 +414,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         ? applyImprovedContentUpdate(resume, content, newVersion)
         : resume
     )));
+    markResumesViewDirty();
 
     return { success: true, currentVersion: newVersion };
   }, [setResumes]);
@@ -421,6 +434,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
     setResumes(prev => prev.map(resume => (
       resume.id === resumeId ? applyOriginalContentUpdate(resume, content) : resume
     )));
+    markResumesViewDirty();
 
     return { success: true };
   }, [setResumes]);
@@ -440,6 +454,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         if (currentResume?.id === resumeId) {
           setCurrentResume(null);
         }
+        markResumesViewDirty();
       }
     } catch (error) {
       if (!controller.signal.aborted) {

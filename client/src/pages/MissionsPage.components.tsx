@@ -6,6 +6,7 @@ import PageHeader from '../components/page/PageHeader';
 import ViewModeToggle from '../components/page/ViewModeToggle';
 import Pagination from '../components/Pagination';
 import { MissionsDealsGroupedView, SearchAndActions, StatsCards } from '../components/MissionsPage';
+import type { GroupedMission } from '../components/MissionsPage/MissionsDealsGroupedView.types';
 import { SkeletonMissionList } from '../components/ui/Skeleton';
 import MissionCard from './MissionCard';
 import type { Mission, MissionStats, MissionViewMode } from './MissionsPage.hooks';
@@ -40,6 +41,7 @@ export function MissionsViewModeToggle({
 }
 
 export function MissionsListPanel({
+  canDeleteMission,
   currentPage,
   loading,
   missions,
@@ -55,6 +57,7 @@ export function MissionsListPanel({
   totalCount,
   totalPages,
 }: {
+  canDeleteMission: (mission: Mission | null | undefined) => boolean;
   currentPage: number;
   loading: boolean;
   missions: Mission[];
@@ -102,6 +105,7 @@ export function MissionsListPanel({
       />
 
       <MissionsGrid
+        canDeleteMission={canDeleteMission}
         loading={loading}
         missions={missions}
         onAddMission={onAddMission}
@@ -124,6 +128,7 @@ export function MissionsListPanel({
 }
 
 function MissionsGrid({
+  canDeleteMission,
   loading,
   missions,
   onAddMission,
@@ -131,6 +136,7 @@ function MissionsGrid({
   onEdit,
   searchTerm,
 }: {
+  canDeleteMission: (mission: Mission | null | undefined) => boolean;
   loading: boolean;
   missions: Mission[];
   onAddMission: () => void;
@@ -168,6 +174,7 @@ function MissionsGrid({
       {missions.map((mission, index) => (
         <MissionCard
           key={mission.id}
+          canDelete={canDeleteMission(mission)}
           mission={mission}
           index={index}
           onEdit={onEdit}
@@ -180,6 +187,23 @@ function MissionsGrid({
   );
 }
 
-export function MissionsByDealView({ onAddMission }: { onAddMission: () => void }) {
-  return <MissionsDealsGroupedView onAddMission={onAddMission} />;
+export function MissionsByDealView({
+  onAddMission,
+  onEditMission,
+  onDeleteMission,
+  refreshToken,
+}: {
+  onAddMission: () => void;
+  onEditMission: (mission: GroupedMission) => void;
+  onDeleteMission: (mission: GroupedMission) => void;
+  refreshToken: number;
+}) {
+  return (
+    <MissionsDealsGroupedView
+      onAddMission={onAddMission}
+      onEditMission={onEditMission}
+      onDeleteMission={onDeleteMission}
+      refreshToken={refreshToken}
+    />
+  );
 }

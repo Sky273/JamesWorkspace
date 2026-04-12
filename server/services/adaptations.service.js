@@ -113,10 +113,10 @@ export async function listAdaptations({ firmId, resumeId, missionId, status, sea
  * @param {boolean} options.isAdmin
  * @returns {Promise<Object>}
  */
-export async function getAdaptationsGroupedByDeal({ firmId, isAdmin }) {
+export async function getAdaptationsGroupedByDeal({ firmId, isAdmin, bypassCache = false }) {
     const scopeKey = buildGroupedViewScopeKey({ firmId, isAdmin });
 
-    return adaptationGroupedViewCache.getOrLoad(scopeKey, async () => {
+    const loadGroupedAdaptations = async () => {
         const dealsWhereClause = isAdmin ? '' : 'WHERE d.firm_id = $1';
         const dealsParams = isAdmin ? [] : [firmId];
 
@@ -272,7 +272,13 @@ export async function getAdaptationsGroupedByDeal({ firmId, isAdmin }) {
             totalAssigned,
             totalUnassigned
         };
-    }, { scope: scopeKey });
+    };
+
+    if (bypassCache) {
+        return loadGroupedAdaptations();
+    }
+
+    return adaptationGroupedViewCache.getOrLoad(scopeKey, loadGroupedAdaptations, { scope: scopeKey });
 }
 
 export async function invalidateGroupedAdaptationsCache(firmId = null) {

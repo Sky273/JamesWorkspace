@@ -8,7 +8,7 @@
  * - ./consent/scheduler.js      : Automated tasks (expiry, reminders, purge)
  */
 
-import { query } from '../config/database.js';
+import { markResumeConsentError } from './resumes.service.js';
 
 // Operations
 export {
@@ -26,11 +26,7 @@ export {
  * @returns {Promise<void>}
  */
 export async function markConsentError(resumeId) {
-    await query(`
-        UPDATE resumes 
-        SET consent_status = 'error', updated_at = CURRENT_TIMESTAMP
-        WHERE id = $1 AND consent_status = 'pending_consent'
-    `, [resumeId]);
+    await markResumeConsentError(resumeId, { pendingOnly: true });
 }
 
 // Scheduler tasks

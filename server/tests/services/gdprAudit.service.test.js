@@ -20,6 +20,22 @@ vi.mock('../../utils/logger.backend.js', () => ({
     })
 }));
 
+const mockInvalidateGdprAuditCaches = vi.fn(async () => undefined);
+vi.mock('../../services/cache.service.js', () => ({
+    CACHE_KEYS: {
+        gdprAudit: {
+            LOGS: 'logs',
+            STATS: 'stats',
+            FIRMS: 'firms',
+            EXPORTS: 'exports'
+        }
+    },
+    gdprAuditCache: {
+        getOrLoad: vi.fn(async (_key, loader) => loader())
+    },
+    invalidateGdprAuditCaches: (...args) => mockInvalidateGdprAuditCaches(...args)
+}));
+
 import { query } from '../../config/database.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import {
@@ -36,6 +52,7 @@ import {
 describe('gdprAudit.service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockInvalidateGdprAuditCaches.mockResolvedValue(undefined);
     });
 
     describe('GDPR_ACTIONS constants', () => {
@@ -148,6 +165,7 @@ describe('gdprAudit.service', () => {
                     'Test Firm'
                 ])
             );
+            expect(mockInvalidateGdprAuditCaches).toHaveBeenCalledWith('export:jane@example.com');
         });
 
         it('should log action with minimal parameters', async () => {

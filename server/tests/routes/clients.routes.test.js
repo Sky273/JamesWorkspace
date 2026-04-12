@@ -178,6 +178,21 @@ describe('Clients Routes - GET /api/clients', () => {
         expect(mockListClients).toHaveBeenCalledWith(expect.objectContaining({ search: 'acme' }));
     });
 
+    it('should bypass cache when refresh is requested', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockListClients.mockResolvedValueOnce({
+            data: [],
+            pagination: { page: 1, limit: 20, hasMore: false, totalCount: 0, nextPage: null }
+        });
+
+        const res = await request(app)
+            .get('/api/clients?refresh=1')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(mockListClients).toHaveBeenCalledWith(expect.objectContaining({ bypassCache: true }));
+    });
+
     it('should filter by type', async () => {
         mockGetUserFirmId.mockResolvedValueOnce('firm-123');
         mockListClients.mockResolvedValueOnce({
@@ -287,6 +302,22 @@ describe('Clients Routes - GET /api/clients/:id', () => {
         expect(res.status).toBe(200);
         expect(res.body.id).toBe('client-123');
         expect(res.body.contacts).toBeDefined();
+    });
+
+    it('should bypass cache when refresh is requested on detail', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockGetClientById.mockResolvedValueOnce({
+            id: 'client-123', name: 'Acme Corp', type: 'client', firm_id: 'firm-123',
+            contacts: [],
+            recentSubmissions: []
+        });
+
+        const res = await request(app)
+            .get('/api/clients/client-123?refresh=1')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(mockGetClientById).toHaveBeenCalledWith('client-123', { bypassCache: true });
     });
 
     it('should return 403 for client from different firm', async () => {
@@ -550,6 +581,19 @@ describe('Clients Routes - Contacts', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.length).toBe(2);
+        });
+
+        it('should bypass cache when refresh is requested for contacts', async () => {
+            mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+            mockGetClientFirmId.mockResolvedValueOnce({ firm_id: 'firm-123' });
+            mockListContacts.mockResolvedValueOnce([]);
+
+            const res = await request(app)
+                .get('/api/clients/client-123/contacts?refresh=1')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+            expect(mockListContacts).toHaveBeenCalledWith('client-123', { bypassCache: true });
         });
 
         it('should return 404 for non-existent client', async () => {

@@ -62,6 +62,13 @@ function handleMissionNotFound(error, res) {
         return respondForMissingMission('Mission not found', res);
     }
 
+    if (error.statusCode === 409 && error.code === 'MISSION_DELETE_BLOCKED') {
+        return res.status(409).json({
+            error: 'Cannot delete mission because linked adaptations, submissions, or interviews are still attached',
+            details: error.details || null
+        });
+    }
+
     return null;
 }
 
@@ -91,6 +98,7 @@ async function requireMissionAccess(req, res, mission, deniedErrorMessage) {
 router.get('/', authenticateToken, createMissionsRouteHandler('Error fetching missions', 'Failed to fetch missions', async (req, res) => {
         const scope = await getMissionRequestScope(req);
         const { isAdmin } = scope;
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
         const pagination = parsePaginationParams(req.query.page, req.query.limit);
         if (!pagination.ok) {
             return res.status(400).json({ error: pagination.error });
@@ -107,7 +115,7 @@ router.get('/', authenticateToken, createMissionsRouteHandler('Error fetching mi
             }
         }
 
-        const result = await missionsService.listMissions({ ...pagination.value, search, status, dealId, firmId });
+        const result = await missionsService.listMissions({ ...pagination.value, search, status, dealId, firmId, bypassCache });
         return res.json(result);
 }));
 
@@ -118,15 +126,17 @@ router.get('/grouped-by-deal', authenticateToken, createMissionsRouteHandler('Er
             return;
         }
         const { isAdmin, userFirmId } = scope;
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
 
-        const result = await missionsService.getMissionsGroupedByDeal({ firmId: userFirmId, isAdmin });
+        const result = await missionsService.getMissionsGroupedByDeal({ firmId: userFirmId, isAdmin, bypassCache });
         return res.json(result);
 }));
 
 // GET /api/missions/:id - Get mission by ID
 router.get('/:id', authenticateToken, validateParams('id'), createMissionsRouteHandler('Error fetching mission', 'Failed to fetch mission', async (req, res) => {
         const { id } = req.params;
-        const record = await missionsService.getMissionWithJoins(id);
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+        const record = await missionsService.getMissionWithJoins(id, { bypassCache });
 
         if (!record) {
             return respondForMissingMission('Mission not found', res);

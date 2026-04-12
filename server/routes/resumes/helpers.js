@@ -33,9 +33,9 @@ function extractTagEvidence(record, key) {
  * @param {string} resumeId - Resume UUID
  * @returns {Promise<{hasAccess: boolean, resume: Object|null, error: string|null}>}
  */
-export async function checkResumeAccess(req, resumeId) {
+export async function checkResumeAccess(req, resumeId, { bypassCache = false } = {}) {
     try {
-        const resume = await resumesService.getResumeForAccessCheck(resumeId);
+        const resume = await resumesService.getResumeForAccessCheck(resumeId, { bypassCache });
 
         if (!resume) {
             return { hasAccess: false, resume: null, error: 'Resume not found' };

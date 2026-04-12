@@ -4,9 +4,11 @@ import {
   buildMissionFormData,
   buildMissionsSearchParams,
   buildMissionSubmitPayload,
+  canDeleteMission,
   computeMissionStats,
   EMPTY_MISSION_FORM,
   getInitialMissionViewMode,
+  mergePreservedMissionIntoResults,
 } from './MissionsPage.data';
 
 describe('MissionsPage.data', () => {
@@ -67,5 +69,29 @@ describe('MissionsPage.data', () => {
       draft: 1,
       closed: 1,
     });
+  });
+
+  it('computes deletability and preserves created or updated missions in the current page', () => {
+    expect(canDeleteMission({
+      id: 'm1',
+      'Adaptations Count': 0,
+      'Submissions Count': 0,
+      'Pipeline Count': 0,
+      'Has Attachments': false,
+    })).toBe(true);
+
+    expect(canDeleteMission({
+      id: 'm2',
+      'Adaptations Count': 1,
+    })).toBe(false);
+
+    expect(mergePreservedMissionIntoResults(
+      [{ id: 'm1', Title: 'Existing' }],
+      { id: 'm2', Title: 'Created' },
+      12,
+    )).toEqual([
+      { id: 'm2', Title: 'Created' },
+      { id: 'm1', Title: 'Existing' },
+    ]);
   });
 });

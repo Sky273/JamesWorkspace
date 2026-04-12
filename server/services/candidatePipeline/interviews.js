@@ -1,6 +1,19 @@
 import { query } from '../../config/database.js';
 import { safeLog } from '../../utils/logger.backend.js';
-import { getPipelineById, moveToStage } from './pipeline.js';
+import { getPipelineById, getPipelineCacheContext, invalidateCandidatePipelineContext, moveToStage } from './pipeline.js';
+import { CACHE_KEYS, candidatePipelineCache } from '../cache.service.js';
+
+const PIPELINE_AGGREGATE_SCOPE = CACHE_KEYS.candidatePipeline.AGGREGATES || CACHE_KEYS.candidatePipeline.ALL;
+
+function buildInterviewAggregateCacheKey(prefix, filters = {}) {
+    return `${prefix}:${JSON.stringify({
+        userId: filters.userId || null,
+        days: filters.days ?? null,
+        firmId: filters.firmId || null,
+        missionId: filters.missionId || null,
+        clientId: filters.clientId || null
+    })}`;
+}
 
 async function scheduleInterview({
     pipelineId,
@@ -18,6 +31,7 @@ async function scheduleInterview({
     pipelineStages
 }) {
     try {
+        let pipelineContext = null;
         const result = await query(
             `
             INSERT INTO pipeline_interviews (
@@ -37,6 +51,9 @@ async function scheduleInterview({
 
         if (interviewType === 'client') {
             const pipeline = await getPipelineById(pipelineId);
+            pipelineContext = pipeline
+                ? { id: pipeline.id, resume_id: pipeline.resume_id, mission_id: pipeline.mission_id }
+                : null;
             const currentStageOrder = pipelineStages.find((stage) => stage.id === pipeline.stage)?.order || 0;
             const interviewStageOrder = pipelineStages.find((stage) => stage.id === 'interview')?.order || 4;
             if (currentStageOrder < interviewStageOrder) {
@@ -50,6 +67,14 @@ async function scheduleInterview({
         }
 
         safeLog('info', 'Interview scheduled', { pipelineId, interviewType, scheduledAt });
+        if (!pipelineContext) {
+            pipelineContext = await getPipelineCacheContext(pipelineId);
+        }
+        await invalidateCandidatePipelineContext({
+            pipelineId,
+            resumeId: pipelineContext?.resume_id,
+            missionId: pipelineContext?.mission_id
+        });
         return result.rows[0];
     } catch (error) {
         safeLog('error', 'Failed to schedule interview', { error: error.message });
@@ -59,16 +84,20 @@ async function scheduleInterview({
 
 async function getInterviews(pipelineId) {
     try {
-        const result = await query(
+        return candidatePipelineCache.getOrLoad(`interviews:${pipelineId}`, async () => {
+            const result = await query(
             `
             SELECT * FROM pipeline_interviews
             WHERE pipeline_id = $1
             ORDER BY scheduled_at ASC
         `,
-            [pipelineId]
-        );
+                [pipelineId]
+            );
 
-        return result.rows;
+            return result.rows;
+        }, {
+            scope: `detail:${pipelineId}`
+        });
     } catch (error) {
         safeLog('error', 'Failed to get interviews', { error: error.message });
         throw error;
@@ -77,6 +106,7 @@ async function getInterviews(pipelineId) {
 
 async function getUpcomingInterviews(filters = {}) {
     try {
+        const cacheKey = buildInterviewAggregateCacheKey('upcoming', filters);
         let whereClause = 'WHERE pi.scheduled_at >= NOW() AND pi.status = $1';
         const params = ['scheduled'];
         let paramIndex = 2;
@@ -101,7 +131,8 @@ async function getUpcomingInterviews(filters = {}) {
             params.push(filters.firmId);
         }
 
-        const result = await query(
+        return candidatePipelineCache.getOrLoad(cacheKey, async () => {
+            const result = await query(
             `
             SELECT 
                 pi.*,
@@ -118,10 +149,13 @@ async function getUpcomingInterviews(filters = {}) {
             ORDER BY pi.scheduled_at ASC
             LIMIT 50
         `,
-            params
-        );
+                params
+            );
 
-        return result.rows;
+            return result.rows;
+        }, {
+            scope: PIPELINE_AGGREGATE_SCOPE
+        });
     } catch (error) {
         safeLog('error', 'Failed to get upcoming interviews', { error: error.message });
         throw error;
@@ -164,7 +198,16 @@ async function updateInterview(interviewId, updates) {
             params
         );
 
-        return result.rows[0];
+        const updatedInterview = result.rows[0];
+        const pipelineContext = updatedInterview?.pipeline_id
+            ? await getPipelineCacheContext(updatedInterview.pipeline_id)
+            : null;
+        await invalidateCandidatePipelineContext({
+            pipelineId: updatedInterview?.pipeline_id,
+            resumeId: pipelineContext?.resume_id,
+            missionId: pipelineContext?.mission_id
+        });
+        return updatedInterview;
     } catch (error) {
         safeLog('error', 'Failed to update interview', { error: error.message });
         throw error;
@@ -194,6 +237,11 @@ async function completeInterview({ interviewId, outcome, outcomeNotes, changedBy
             });
         }
 
+        await invalidateCandidatePipelineContext({
+            pipelineId: interview.pipeline_id,
+            resumeId: pipeline?.resume_id,
+            missionId: pipeline?.mission_id
+        });
         return interview;
     } catch (error) {
         safeLog('error', 'Failed to complete interview', { error: error.message });
@@ -213,7 +261,16 @@ async function cancelInterview(interviewId) {
             [interviewId]
         );
 
-        return result.rows[0];
+        const cancelledInterview = result.rows[0];
+        const pipelineContext = cancelledInterview?.pipeline_id
+            ? await getPipelineCacheContext(cancelledInterview.pipeline_id)
+            : null;
+        await invalidateCandidatePipelineContext({
+            pipelineId: cancelledInterview?.pipeline_id,
+            resumeId: pipelineContext?.resume_id,
+            missionId: pipelineContext?.mission_id
+        });
+        return cancelledInterview;
     } catch (error) {
         safeLog('error', 'Failed to cancel interview', { error: error.message });
         throw error;
@@ -222,7 +279,17 @@ async function cancelInterview(interviewId) {
 
 async function deleteInterview(interviewId) {
     try {
-        await query('DELETE FROM pipeline_interviews WHERE id = $1', [interviewId]);
+        const deleted = await query(
+            'DELETE FROM pipeline_interviews WHERE id = $1 RETURNING id, pipeline_id',
+            [interviewId]
+        );
+        const pipelineId = deleted.rows[0]?.pipeline_id || null;
+        const pipelineContext = pipelineId ? await getPipelineCacheContext(pipelineId) : null;
+        await invalidateCandidatePipelineContext({
+            pipelineId,
+            resumeId: pipelineContext?.resume_id,
+            missionId: pipelineContext?.mission_id
+        });
         return true;
     } catch (error) {
         safeLog('error', 'Failed to delete interview', { error: error.message });
@@ -232,6 +299,7 @@ async function deleteInterview(interviewId) {
 
 async function getPipelineStats(filters = {}) {
     try {
+        const cacheKey = buildInterviewAggregateCacheKey('stats', filters);
         let whereClause = 'WHERE 1=1';
         const params = [];
         let paramIndex = 1;
@@ -251,7 +319,8 @@ async function getPipelineStats(filters = {}) {
             params.push(filters.firmId);
         }
 
-        const result = await query(
+        return candidatePipelineCache.getOrLoad(cacheKey, async () => {
+            const result = await query(
             `
             SELECT 
                 COUNT(*) as total,
@@ -270,10 +339,13 @@ async function getPipelineStats(filters = {}) {
             FROM candidate_pipeline cp
             ${whereClause}
         `,
-            params
-        );
+                params
+            );
 
-        return result.rows[0];
+            return result.rows[0];
+        }, {
+            scope: PIPELINE_AGGREGATE_SCOPE
+        });
     } catch (error) {
         safeLog('error', 'Failed to get pipeline stats', { error: error.message });
         throw error;

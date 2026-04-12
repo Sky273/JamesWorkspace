@@ -361,8 +361,12 @@ export interface TrendsResponse {
 /**
  * Get stored market trends with server-side filters and pagination
  */
-export async function getTrends(params: TrendsQueryParams = {}): Promise<TrendsResponse> {
-  const query = buildQueryString(params as Record<string, string | number | undefined>);
+export async function getTrends(params: TrendsQueryParams & { forceRefresh?: boolean } = {}): Promise<TrendsResponse> {
+  const { forceRefresh, ...queryParams } = params;
+  const query = buildQueryString({
+    ...(queryParams as Record<string, string | number | undefined>),
+    ...(forceRefresh ? { refresh: 1 } : {}),
+  });
   return getMarketRadarApiJson(`/trends${query}`, TEN_MINUTES);
 }
 
@@ -383,8 +387,11 @@ export interface AllTrendsResponse {
  * Returns all trends grouped by type for efficient map rendering
  * @param type - Optional type filter for specific trend type
  */
-export async function getAllTrends(type?: string): Promise<AllTrendsResponse> {
-  const query = type ? `?type=${encodeURIComponent(type)}` : '';
+export async function getAllTrends(type?: string, forceRefresh = false): Promise<AllTrendsResponse> {
+  const params = new URLSearchParams();
+  if (type) params.set('type', type);
+  if (forceRefresh) params.set('refresh', '1');
+  const query = params.toString() ? `?${params.toString()}` : '';
   return getMarketRadarApiJson(`/trends/all${query}`, TEN_MINUTES);
 }
 
@@ -402,22 +409,24 @@ export async function getTrendMetadata(trendId: string): Promise<{
  * Get available filter options for trends
  * Uses 2 minute timeout for large datasets
  */
-export async function getTrendFilters(): Promise<{
+export async function getTrendFilters(forceRefresh = false): Promise<{
   success: boolean;
   filters: TrendFilters;
 }> {
-  return getMarketRadarApiJson('/trends/filters', TEN_MINUTES);
+  const suffix = forceRefresh ? '?refresh=1' : '';
+  return getMarketRadarApiJson(`/trends/filters${suffix}`, TEN_MINUTES);
 }
 
 /**
  * Get trends summary
  * Uses 2 minute timeout for large datasets
  */
-export async function getTrendsSummary(): Promise<{
+export async function getTrendsSummary(forceRefresh = false): Promise<{
   success: boolean;
   summary: TrendsSummary;
 }> {
-  return getMarketRadarApiJson('/trends/summary', TEN_MINUTES);
+  const suffix = forceRefresh ? '?refresh=1' : '';
+  return getMarketRadarApiJson(`/trends/summary${suffix}`, TEN_MINUTES);
 }
 
 /**

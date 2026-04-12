@@ -107,13 +107,22 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
             res.status(401).json({ error: 'Unauthorized' });
         }
     },
+    requireUserManager: (req, res, next) => {
+        if (req.user?.role === 'admin' || req.user?.role === 'local_admin') {
+            next();
+        } else {
+            res.status(403).json({ error: 'User manager access required' });
+        }
+    },
     requireAdmin: (req, res, next) => {
         if (req.user?.role === 'admin') {
             next();
         } else {
             res.status(403).json({ error: 'Admin access required' });
         }
-    }
+    },
+    isUserAdmin: (req) => req.user?.role === 'admin',
+    isUserLocalAdmin: (req) => req.user?.role === 'local_admin'
 }));
 
 import usersRoutes from '../../routes/auth/users.routes.js';
@@ -321,6 +330,7 @@ describe('Users Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.name).toBe('New Name');
+            expect(mockFindUserById).toHaveBeenCalledWith('u-1', { useCache: false });
         });
 
         it('should normalize updated email, role and status on update', async () => {
@@ -395,6 +405,12 @@ describe('Users Routes', () => {
 
     describe('DELETE /api/auth/users/:id', () => {
         it('should delete a user', async () => {
+            mockFindUserById.mockResolvedValueOnce({
+                id: 'u-1',
+                email: 'user@example.com',
+                role: 'user',
+                firm_id: 'firm-123'
+            });
             mockDeleteUser.mockResolvedValue(['u-1']);
 
             const res = await request(app)
@@ -403,6 +419,7 @@ describe('Users Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.message).toContain('deleted');
+            expect(mockFindUserById).toHaveBeenCalledWith('u-1', { useCache: false });
         });
 
         it('should prevent self-deletion', async () => {
@@ -415,9 +432,7 @@ describe('Users Routes', () => {
         });
 
         it('should return 404 if user not found', async () => {
-            const err = new Error('Record not found');
-            err.statusCode = 404;
-            mockDeleteUser.mockRejectedValue(err);
+            mockFindUserById.mockResolvedValueOnce(null);
 
             const res = await request(app)
                 .delete('/api/auth/users/nonexistent')

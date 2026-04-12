@@ -28,12 +28,12 @@ import {
  * @param {string} [options.firmId] - null for admin (no filter)
  * @returns {Promise<{data: Array, pagination: Object}>}
  */
-export async function listClients({ page = 1, limit = 20, search, type, firmId }) {
+export async function listClients({ page = 1, limit = 20, search, type, firmId, bypassCache = false }) {
     page = Number.isInteger(page) && page > 0 ? page : 1;
     limit = Number.isInteger(limit) ? Math.min(Math.max(limit, 1), 100) : 20;
     const cacheKey = JSON.stringify({ page, limit, search: search || '', type: type || '', firmId: firmId || null });
 
-    return clientsCache.getOrLoad(cacheKey, async () => {
+    const loader = async () => {
         const offset = (page - 1) * limit;
         const conditions = [];
         const params = [];
@@ -97,7 +97,13 @@ export async function listClients({ page = 1, limit = 20, search, type, firmId }
                 nextPage: hasMore ? page + 1 : null
             }
         };
-    }, {
+    };
+
+    if (bypassCache) {
+        return loader();
+    }
+
+    return clientsCache.getOrLoad(cacheKey, loader, {
         scope: CACHE_KEYS.clients.ALL_CLIENTS
     });
 }
@@ -124,8 +130,8 @@ export async function listIndustries() {
  * @param {string} id
  * @returns {Promise<Object|null>}
  */
-export async function getClientById(id) {
-    return clientsCache.getOrLoad(`detail:${id}`, async () => {
+export async function getClientById(id, { bypassCache = false } = {}) {
+    const loader = async () => {
         const clientResult = await query(
             `SELECT c.*, f.name as firm_name
              FROM clients c
@@ -165,7 +171,13 @@ export async function getClientById(id) {
             contacts: contactsResult.rows,
             recentSubmissions: submissionsResult.rows
         };
-    }, {
+    };
+
+    if (bypassCache) {
+        return loader();
+    }
+
+    return clientsCache.getOrLoad(`detail:${id}`, loader, {
         scope: CACHE_KEYS.clients.ALL_CLIENTS
     });
 }
@@ -251,6 +263,11 @@ export async function updateClient(id, { name, type, status, address, website, i
          RETURNING *`,
         [name, type, status, address, website, industry, notes, firmId, id]
     );
+    if (result.rows.length === 0) {
+        const err = new Error('Client not found');
+        err.statusCode = 404;
+        throw err;
+    }
     await Promise.all([
         invalidateClientsCaches(),
         invalidateDealsCaches(),
@@ -277,7 +294,12 @@ export async function countClientSubmissions(clientId) {
  * @param {string} id
  */
 export async function deleteClient(id) {
-    await query('DELETE FROM clients WHERE id = $1', [id]);
+    const result = await query('DELETE FROM clients WHERE id = $1 RETURNING id', [id]);
+    if (result.rows.length === 0) {
+        const err = new Error('Client not found');
+        err.statusCode = 404;
+        throw err;
+    }
     await Promise.all([
         invalidateClientsCaches(),
         invalidateDealsCaches(),
@@ -304,14 +326,20 @@ export async function getClientFirmId(clientId) {
  * @param {string} clientId
  * @returns {Promise<Array>}
  */
-export async function listContacts(clientId) {
-    return clientsCache.getOrLoad(`contacts:${clientId}`, async () => {
+export async function listContacts(clientId, { bypassCache = false } = {}) {
+    const loader = async () => {
         const result = await query(
             `SELECT * FROM client_contacts WHERE client_id = $1 ORDER BY is_primary DESC, name ASC`,
             [clientId]
         );
         return result.rows;
-    }, {
+    };
+
+    if (bypassCache) {
+        return loader();
+    }
+
+    return clientsCache.getOrLoad(`contacts:${clientId}`, loader, {
         scope: CACHE_KEYS.clients.ALL_CLIENTS
     });
 }
@@ -367,12 +395,15 @@ export async function updateContact(contactId, clientId, { name, role, email, ph
          RETURNING *`,
         [name, role, email, phone, is_primary, contactId, clientId]
     );
+    if (result.rows.length === 0) {
+        return null;
+    }
     await Promise.all([
         invalidateClientsCaches(),
         invalidateDealsCaches(),
         invalidateMissionsCaches()
     ]);
-    return result.rows.length > 0 ? result.rows[0] : null;
+    return result.rows[0];
 }
 
 /**
@@ -399,10 +430,13 @@ export async function deleteContact(contactId, clientId) {
         'DELETE FROM client_contacts WHERE id = $1 AND client_id = $2 RETURNING id',
         [contactId, clientId]
     );
+    if (result.rows.length === 0) {
+        return false;
+    }
     await Promise.all([
         invalidateClientsCaches(),
         invalidateDealsCaches(),
         invalidateMissionsCaches()
     ]);
-    return result.rows.length > 0;
+    return true;
 }

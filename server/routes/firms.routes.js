@@ -73,8 +73,9 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
 
         const { page, limit } = pagination;
         const { search } = req.query;
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
 
-        const { firms, hasMore, totalCount } = await firmsService.listFirms({ search, page, limit });
+        const { firms, hasMore, totalCount } = await firmsService.listFirms({ search, page, limit, bypassCache });
 
         return res.json({
             data: firms,

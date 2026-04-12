@@ -32,6 +32,27 @@ vi.mock('../../services/consent/emailTemplates.js', () => ({
     buildConsentRequestEmailHtml: vi.fn(() => '<html>consent</html>')
 }));
 
+const mockInvalidateResumesCaches = vi.fn(async () => undefined);
+const mockInvalidateDashboardAndGroupedViews = vi.fn(async () => undefined);
+vi.mock('../../services/cache.service.js', () => ({
+    invalidateResumesCaches: (...args) => mockInvalidateResumesCaches(...args)
+}));
+vi.mock('../../services/viewCacheInvalidation.service.js', () => ({
+    invalidateDashboardAndGroupedViews: (...args) => mockInvalidateDashboardAndGroupedViews(...args)
+}));
+const mockInitializeResumeConsent = vi.fn();
+const mockMarkResumeConsentRequested = vi.fn();
+const mockRecordResumeConsentResponse = vi.fn();
+const mockResetResumeConsentForResend = vi.fn();
+const mockMarkResumeConsentError = vi.fn();
+vi.mock('../../services/resumes.service.js', () => ({
+    initializeResumeConsent: (...args) => mockInitializeResumeConsent(...args),
+    markResumeConsentRequested: (...args) => mockMarkResumeConsentRequested(...args),
+    recordResumeConsentResponse: (...args) => mockRecordResumeConsentResponse(...args),
+    resetResumeConsentForResend: (...args) => mockResetResumeConsentForResend(...args),
+    markResumeConsentError: (...args) => mockMarkResumeConsentError(...args)
+}));
+
 import { query } from '../../config/database.js';
 import {
     generateToken,
@@ -47,6 +68,13 @@ import {
 describe('Consent Operations', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockInvalidateResumesCaches.mockResolvedValue(undefined);
+        mockInvalidateDashboardAndGroupedViews.mockResolvedValue(undefined);
+        mockInitializeResumeConsent.mockResolvedValue(undefined);
+        mockMarkResumeConsentRequested.mockResolvedValue(undefined);
+        mockRecordResumeConsentResponse.mockResolvedValue(undefined);
+        mockResetResumeConsentForResend.mockResolvedValue(undefined);
+        mockMarkResumeConsentError.mockResolvedValue(undefined);
     });
 
     describe('constants', () => {
@@ -96,8 +124,10 @@ describe('Consent Operations', () => {
 
     describe('initializeConsent', () => {
         it('should initialize employee consent as not_required', async () => {
-            query.mockResolvedValueOnce({
-                rows: [{ id: 'r1', profile_type: 'employee', consent_status: 'not_required' }]
+            mockInitializeResumeConsent.mockResolvedValueOnce({
+                id: 'r1',
+                profile_type: 'employee',
+                consent_status: 'not_required'
             });
 
             const result = await initializeConsent({
@@ -107,12 +137,18 @@ describe('Consent Operations', () => {
             });
 
             expect(result.consent_status).toBe('not_required');
-            expect(query.mock.calls[0][1][3]).toBe('not_required');
+            expect(mockInitializeResumeConsent).toHaveBeenCalledWith(expect.objectContaining({
+                resumeId: 'r1',
+                consentStatus: 'not_required',
+                consentToken: null
+            }));
         });
 
         it('should initialize external consent as pending with token', async () => {
-            query.mockResolvedValueOnce({
-                rows: [{ id: 'r1', profile_type: 'external', consent_status: 'pending_consent' }]
+            mockInitializeResumeConsent.mockResolvedValueOnce({
+                id: 'r1',
+                profile_type: 'external',
+                consent_status: 'pending_consent'
             });
 
             const result = await initializeConsent({
@@ -123,9 +159,13 @@ describe('Consent Operations', () => {
             });
 
             expect(result.consent_status).toBe('pending_consent');
-            // Token param should be a 64-char hex string
-            const tokenParam = query.mock.calls[0][1][4];
+            const tokenParam = mockInitializeResumeConsent.mock.calls[0][0].consentToken;
             expect(tokenParam).toHaveLength(64);
+            expect(mockInitializeResumeConsent).toHaveBeenCalledWith(expect.objectContaining({
+                resumeId: 'r1',
+                candidateEmail: 'jane@test.com',
+                consentStatus: 'pending_consent'
+            }));
         });
 
         it('should throw if resumeId missing', async () => {
@@ -149,7 +189,7 @@ describe('Consent Operations', () => {
         });
 
         it('should throw if resume not found', async () => {
-            query.mockResolvedValueOnce({ rows: [] });
+            mockInitializeResumeConsent.mockRejectedValueOnce(new Error('Resume not found'));
 
             await expect(initializeConsent({
                 resumeId: 'r1', profileType: 'employee', candidateName: 'X'
@@ -228,15 +268,20 @@ describe('Consent Operations', () => {
                     consent_status: 'pending_consent'
                 }]
             });
-            // UPDATE consent
-            query.mockResolvedValueOnce({
-                rows: [{ id: 'r1', consent_status: 'active', retention_until: '2028-01-01' }]
+            mockRecordResumeConsentResponse.mockResolvedValueOnce({
+                id: 'r1',
+                consent_status: 'active',
+                retention_until: '2028-01-01'
             });
 
             const result = await recordConsentResponse(validToken, true);
 
             expect(result.consent_status).toBe('active');
-            expect(query.mock.calls[1][1][0]).toBe('active');
+            expect(mockRecordResumeConsentResponse).toHaveBeenCalledWith(
+                'r1',
+                'active',
+                expect.any(Date)
+            );
         });
 
         it('should refuse consent and clear retention', async () => {
@@ -248,14 +293,16 @@ describe('Consent Operations', () => {
                     consent_status: 'pending_consent'
                 }]
             });
-            query.mockResolvedValueOnce({
-                rows: [{ id: 'r1', consent_status: 'refused' }]
+            mockRecordResumeConsentResponse.mockResolvedValueOnce({
+                id: 'r1',
+                consent_status: 'refused',
+                retention_until: null
             });
 
             const result = await recordConsentResponse(validToken, false);
 
             expect(result.consent_status).toBe('refused');
-            expect(query.mock.calls[1][1][1]).toBeNull(); // retention_until null
+            expect(mockRecordResumeConsentResponse).toHaveBeenCalledWith('r1', 'refused', null);
         });
 
         it('should throw for invalid token', async () => {

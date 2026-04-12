@@ -626,6 +626,32 @@ export const CACHE_KEYS = {
     missions: {
         ALL_MISSIONS: 'all'
     },
+    resumes: {
+        ALL: 'all'
+    },
+    candidatePipeline: {
+        ALL: 'all',
+        AGGREGATES: 'aggregates'
+    },
+    emailTemplates: {
+        ALL: 'all'
+    },
+    resumeComments: {
+        ALL: 'all',
+        RECENT: 'recent'
+    },
+    backupSettings: {
+        CURRENT: 'current'
+    },
+    jobs: {
+        ALL: 'all'
+    },
+    gdprAudit: {
+        LOGS: 'logs',
+        STATS: 'stats',
+        FIRMS: 'firms',
+        EXPORTS: 'exports'
+    },
     tags: {
         RAW: 'raw',
         CLEANED: 'cleaned',
@@ -643,6 +669,13 @@ export const clientsCache = createCacheNamespace('clients', CACHE_TTL.CLIENTS);
 export const dealsCache = createCacheNamespace('deals', CACHE_TTL.DEALS);
 export const usersCache = createCacheNamespace('users', CACHE_TTL.USERS);
 export const missionsCache = createCacheNamespace('missions', CACHE_TTL.MISSIONS);
+export const resumesCache = createCacheNamespace('resumes', CACHE_TTL.RESUMES);
+export const candidatePipelineCache = createCacheNamespace('candidatePipeline', CACHE_TTL.CANDIDATE_PIPELINE);
+export const emailTemplatesCache = createCacheNamespace('emailTemplates', CACHE_TTL.EMAIL_TEMPLATES);
+export const resumeCommentsCache = createCacheNamespace('resumeComments', CACHE_TTL.RESUME_COMMENTS);
+export const backupSettingsCache = createCacheNamespace('backupSettings', CACHE_TTL.BACKUP_SETTINGS);
+export const jobsCache = createCacheNamespace('jobs', CACHE_TTL.JOBS);
+export const gdprAuditCache = createCacheNamespace('gdprAudit', CACHE_TTL.GDPR_AUDIT);
 export const tagsCache = createCacheNamespace('tags', CACHE_TTL.TEMPLATES);
 export const resumeGroupedViewCache = createCacheNamespace('resumeGroupedViews', CACHE_TTL.GROUPED_VIEWS);
 export const missionGroupedViewCache = createCacheNamespace('missionGroupedViews', CACHE_TTL.GROUPED_VIEWS);
@@ -650,6 +683,30 @@ export const adaptationGroupedViewCache = createCacheNamespace('adaptationGroupe
 
 export function buildGroupedViewScopeKey({ firmId = null, isAdmin = false } = {}) {
     return isAdmin ? CACHE_KEYS.groupedViews.ADMIN : `firm:${firmId}`;
+}
+
+function buildInvalidationKeySet(defaultKey, scopeKeys = null) {
+    const keys = new Set([defaultKey]);
+    if (!scopeKeys) {
+        return keys;
+    }
+
+    if (Array.isArray(scopeKeys) || scopeKeys instanceof Set) {
+        for (const scopeKey of scopeKeys) {
+            if (scopeKey) {
+                keys.add(scopeKey);
+            }
+        }
+        return keys;
+    }
+
+    keys.add(scopeKeys);
+    return keys;
+}
+
+async function invalidateNamespaceEntries(cacheNamespace, defaultKey, scopeKeys = null) {
+    const keys = buildInvalidationKeySet(defaultKey, scopeKeys);
+    await Promise.all(Array.from(keys).map((key) => cacheNamespace.invalidate(key)));
 }
 
 async function invalidateGroupedViewNamespace(cacheNamespace, scopeKey = null) {
@@ -693,6 +750,40 @@ export async function invalidateUsersCaches() {
 
 export async function invalidateMissionsCaches() {
     await missionsCache.invalidate(CACHE_KEYS.missions.ALL_MISSIONS);
+}
+
+export async function invalidateResumesCaches(scopeKey = null) {
+    await invalidateNamespaceEntries(resumesCache, CACHE_KEYS.resumes.ALL, scopeKey);
+}
+
+export async function invalidateCandidatePipelineCaches(scopeKey = null) {
+    await invalidateNamespaceEntries(candidatePipelineCache, CACHE_KEYS.candidatePipeline.ALL, scopeKey);
+}
+
+export async function invalidateEmailTemplatesCaches(scopeKey = null) {
+    await invalidateNamespaceEntries(emailTemplatesCache, CACHE_KEYS.emailTemplates.ALL, scopeKey);
+}
+
+export async function invalidateResumeCommentsCaches(scopeKey = null) {
+    await invalidateNamespaceEntries(resumeCommentsCache, CACHE_KEYS.resumeComments.ALL, scopeKey);
+}
+
+export async function invalidateBackupSettingsCaches() {
+    await backupSettingsCache.invalidate(CACHE_KEYS.backupSettings.CURRENT);
+}
+
+export async function invalidateJobsCaches(scopeKey = null) {
+    await invalidateNamespaceEntries(jobsCache, CACHE_KEYS.jobs.ALL, scopeKey);
+}
+
+export async function invalidateGdprAuditCaches(scopeKey = null) {
+    const keys = buildInvalidationKeySet(CACHE_KEYS.gdprAudit.LOGS, [
+        CACHE_KEYS.gdprAudit.STATS,
+        CACHE_KEYS.gdprAudit.FIRMS,
+        CACHE_KEYS.gdprAudit.EXPORTS,
+        scopeKey
+    ]);
+    await Promise.all(Array.from(keys).map((key) => gdprAuditCache.invalidate(key)));
 }
 
 export async function invalidateTagsCaches() {

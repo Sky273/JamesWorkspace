@@ -14,6 +14,17 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+const mockInvalidateJobsCaches = vi.fn(async () => undefined);
+vi.mock('../../services/cache.service.js', () => ({
+    CACHE_KEYS: {
+        jobs: { ALL: 'all' }
+    },
+    jobsCache: {
+        getOrLoad: vi.fn(async (_key, loader) => loader())
+    },
+    invalidateJobsCaches: (...args) => mockInvalidateJobsCaches(...args)
+}));
+
 import { query } from '../../config/database.js';
 import {
     createJob,
@@ -33,6 +44,7 @@ import {
 describe('Batch Jobs - Job CRUD', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockInvalidateJobsCaches.mockResolvedValue(undefined);
     });
 
     describe('createJob', () => {
@@ -45,6 +57,7 @@ describe('Batch Jobs - Job CRUD', () => {
             expect(result).toEqual(job);
             expect(query.mock.calls[0][0]).toContain('INSERT INTO batch_jobs');
             expect(query.mock.calls[0][1]).toContain('import');
+            expect(mockInvalidateJobsCaches).toHaveBeenCalledWith(['detail:j1']);
         });
 
         it('should create a job with custom type and options', async () => {
@@ -149,6 +162,7 @@ describe('Batch Jobs - Job CRUD', () => {
             await updateJobStatus('j1', 'processing');
 
             expect(query.mock.calls[0][0]).toContain('started_at = NOW()');
+            expect(mockInvalidateJobsCaches).toHaveBeenCalledWith('detail:j1');
         });
 
         it('should set completed_at for terminal statuses', async () => {
@@ -190,6 +204,7 @@ describe('Batch Jobs - Job CRUD', () => {
             // Second call: mark pending items as skipped
             expect(query.mock.calls[1][0]).toContain('UPDATE batch_job_items');
             expect(query.mock.calls[1][1]).toContain('skipped');
+            expect(mockInvalidateJobsCaches).toHaveBeenCalledWith('detail:j1');
         });
     });
 
@@ -201,6 +216,7 @@ describe('Batch Jobs - Job CRUD', () => {
 
             expect(query.mock.calls[0][0]).toContain('DELETE FROM batch_jobs');
             expect(query.mock.calls[0][1]).toEqual(['j1']);
+            expect(mockInvalidateJobsCaches).toHaveBeenCalledWith('detail:j1');
         });
     });
 
@@ -289,6 +305,7 @@ describe('Batch Jobs - Job CRUD', () => {
 
             expect(query.mock.calls[0][0]).toContain('export_file_path');
             expect(query.mock.calls[0][1]).toEqual(['/tmp/export.zip', 'export.zip', 'j1']);
+            expect(mockInvalidateJobsCaches).toHaveBeenCalledWith('detail:j1');
         });
 
         it('should throw on error', async () => {

@@ -8,6 +8,7 @@
 
 import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { CACHE_KEYS, emailTemplatesCache, invalidateEmailTemplatesCaches } from './cache.service.js';
 
 // ============================================
 // LAZY LOADING FOR MJML (~10MB with mjml-core)
@@ -132,38 +133,41 @@ export const TEMPLATE_KEYWORDS = {
  * @returns {Promise<Array>}
  */
 export async function getTemplates(firmId, includeSystemTemplates = false) {
-    let sql;
-    let params;
-    
-    if (includeSystemTemplates) {
-        // Super admin: cross-firm view over all active templates
-        sql = `
-            SELECT et.id, et.firm_id, et.name, et.description, et.subject_template,
-                   et.is_system, et.is_default, et.status, et.created_at, et.updated_at,
-                   f.name AS firm_name
-            FROM email_templates et
-            LEFT JOIN firms f ON f.id = et.firm_id
-            WHERE et.status = 'active'
-            ORDER BY et.is_system DESC, et.is_default DESC, et.name ASC
-        `;
-        params = [];
-    } else {
-        // Non-admin: only firm templates (exclude system templates without firm_id)
-        sql = `
-            SELECT et.id, et.firm_id, et.name, et.description, et.subject_template,
-                   et.is_system, et.is_default, et.status, et.created_at, et.updated_at,
-                   f.name AS firm_name
-            FROM email_templates et
-            LEFT JOIN firms f ON f.id = et.firm_id
-            WHERE et.firm_id = $1
-              AND et.status = 'active'
-            ORDER BY et.is_default DESC, et.name ASC
-        `;
-        params = [firmId];
-    }
-    
-    const result = await query(sql, params);
-    return result.rows;
+    const cacheKey = `list:${firmId || 'all'}:system:${includeSystemTemplates ? '1' : '0'}`;
+    return emailTemplatesCache.getOrLoad(cacheKey, async () => {
+        let sql;
+        let params;
+        
+        if (includeSystemTemplates) {
+            sql = `
+                SELECT et.id, et.firm_id, et.name, et.description, et.subject_template,
+                       et.is_system, et.is_default, et.status, et.created_at, et.updated_at,
+                       f.name AS firm_name
+                FROM email_templates et
+                LEFT JOIN firms f ON f.id = et.firm_id
+                WHERE et.status = 'active'
+                ORDER BY et.is_system DESC, et.is_default DESC, et.name ASC
+            `;
+            params = [];
+        } else {
+            sql = `
+                SELECT et.id, et.firm_id, et.name, et.description, et.subject_template,
+                       et.is_system, et.is_default, et.status, et.created_at, et.updated_at,
+                       f.name AS firm_name
+                FROM email_templates et
+                LEFT JOIN firms f ON f.id = et.firm_id
+                WHERE et.firm_id = $1
+                  AND et.status = 'active'
+                ORDER BY et.is_default DESC, et.name ASC
+            `;
+            params = [firmId];
+        }
+        
+        const result = await query(sql, params);
+        return result.rows;
+    }, {
+        scope: CACHE_KEYS.emailTemplates.ALL
+    });
 }
 
 /**
@@ -172,15 +176,19 @@ export async function getTemplates(firmId, includeSystemTemplates = false) {
  * @returns {Promise<Object|null>}
  */
 export async function getTemplate(id) {
-    const result = await query(`
-        SELECT id, firm_id, name, description, subject_template, 
-               mjml_content, html_content, is_system, is_default, 
-               status, created_by, created_at, updated_at
-        FROM email_templates
-        WHERE id = $1
-    `, [id]);
-    
-    return result.rows[0] || null;
+    return emailTemplatesCache.getOrLoad(`detail:${id}`, async () => {
+        const result = await query(`
+            SELECT id, firm_id, name, description, subject_template, 
+                   mjml_content, html_content, is_system, is_default, 
+                   status, created_by, created_at, updated_at
+            FROM email_templates
+            WHERE id = $1
+        `, [id]);
+        
+        return result.rows[0] || null;
+    }, {
+        scope: CACHE_KEYS.emailTemplates.ALL
+    });
 }
 
 async function getTemplateOrThrow(id) {
@@ -197,29 +205,31 @@ async function getTemplateOrThrow(id) {
  * @returns {Promise<Object|null>}
  */
 export async function getDefaultTemplate(firmId) {
-    // First try to get firm's default template
-    let result = await query(`
-        SELECT id, firm_id, name, description, subject_template, 
-               mjml_content, html_content, is_system, is_default, status
-        FROM email_templates
-        WHERE firm_id = $1 AND is_default = true AND status = 'active'
-        LIMIT 1
-    `, [firmId]);
-    
-    if (result.rows.length > 0) {
-        return result.rows[0];
-    }
-    
-    // Fall back to system default
-    result = await query(`
-        SELECT id, firm_id, name, description, subject_template, 
-               mjml_content, html_content, is_system, is_default, status
-        FROM email_templates
-        WHERE is_system = true AND is_default = true AND status = 'active'
-        LIMIT 1
-    `);
-    
-    return result.rows[0] || null;
+    return emailTemplatesCache.getOrLoad(`default:${firmId}`, async () => {
+        let result = await query(`
+            SELECT id, firm_id, name, description, subject_template, 
+                   mjml_content, html_content, is_system, is_default, status
+            FROM email_templates
+            WHERE firm_id = $1 AND is_default = true AND status = 'active'
+            LIMIT 1
+        `, [firmId]);
+        
+        if (result.rows.length > 0) {
+            return result.rows[0];
+        }
+        
+        result = await query(`
+            SELECT id, firm_id, name, description, subject_template, 
+                   mjml_content, html_content, is_system, is_default, status
+            FROM email_templates
+            WHERE is_system = true AND is_default = true AND status = 'active'
+            LIMIT 1
+        `);
+        
+        return result.rows[0] || null;
+    }, {
+        scope: CACHE_KEYS.emailTemplates.ALL
+    });
 }
 
 /**
@@ -252,7 +262,7 @@ export async function createTemplate(firmId, data, userId) {
     `, [firmId, name, description, subjectTemplate, mjmlContent, htmlContent, isDefault || false, userId]);
     
     safeLog('info', 'Email template created', { templateId: result.rows[0].id, firmId, name });
-    
+    await invalidateEmailTemplatesCaches();
     return result.rows[0];
 }
 
@@ -292,7 +302,7 @@ export async function updateTemplate(id, data) {
     `, [name, description, subjectTemplate, mjmlContent, htmlContent, isDefault || false, id]);
     
     safeLog('info', 'Email template updated', { templateId: id });
-    
+    await invalidateEmailTemplatesCaches();
     return result.rows[0];
 }
 
@@ -312,7 +322,7 @@ export async function deleteTemplate(id, { isAdmin = false } = {}) {
     await query(`DELETE FROM email_templates WHERE id = $1`, [id]);
     
     safeLog('info', 'Email template deleted', { templateId: id, wasSystem: existing.is_system });
-    
+    await invalidateEmailTemplatesCaches();
     return true;
 }
 
@@ -342,7 +352,7 @@ export async function duplicateTemplate(id, firmId, userId) {
     ]);
     
     safeLog('info', 'Email template duplicated', { originalId: id, newId: result.rows[0].id, firmId });
-    
+    await invalidateEmailTemplatesCaches();
     return result.rows[0];
 }
 
@@ -513,11 +523,15 @@ export async function previewTemplate(mjmlContent, subjectTemplate, context = nu
  * @returns {Promise<string|null>}
  */
 export async function getUserFirmId(userId) {
-    const result = await query(
-        'SELECT firm_id FROM users WHERE id = $1',
-        [userId]
-    );
-    return result.rows.length > 0 ? result.rows[0].firm_id : null;
+    return emailTemplatesCache.getOrLoad(`user-firm:${userId}`, async () => {
+        const result = await query(
+            'SELECT firm_id FROM users WHERE id = $1',
+            [userId]
+        );
+        return result.rows.length > 0 ? result.rows[0].firm_id : null;
+    }, {
+        scope: CACHE_KEYS.emailTemplates.ALL
+    });
 }
 
 export async function getFirmById(firmId) {

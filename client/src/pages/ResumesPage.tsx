@@ -29,6 +29,7 @@ const ResumesPage = (): JSX.Element => {
     goToBatchUpload,
     goToPage,
     goToUpload,
+    groupedRefreshToken,
     handleDownloadResume,
     handleResumeClick,
     handleTagClick,
@@ -61,7 +62,7 @@ const ResumesPage = (): JSX.Element => {
 
       {viewMode === 'byDeal' ? (
         <Suspense fallback={<div className="cv-panel mt-6 rounded-[2rem] p-8 text-sm text-slate-500 dark:text-[#a3aac4]">Chargement de la vue par affaire...</div>}>
-          <ResumesByDealView allTags={allTags} stats={stats} />
+          <ResumesByDealView allTags={allTags} refreshToken={groupedRefreshToken} stats={stats} />
         </Suspense>
       ) : (
         <ResumesListPanel

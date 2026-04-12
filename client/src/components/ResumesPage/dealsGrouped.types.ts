@@ -78,6 +78,7 @@ export interface TagsByCategory {
 
 export interface DealsGroupedViewProps {
   allTags: TagsByCategory;
+  refreshToken: number;
   stats: {
     total: number;
     improved: number;

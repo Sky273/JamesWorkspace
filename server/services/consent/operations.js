@@ -9,6 +9,13 @@ import { safeLog } from '../../utils/logger.backend.js';
 import { gdprMailService } from '../mail/gdprMailService.js';
 import { logGdprAction, GDPR_ACTIONS } from '../gdprAudit.service.js';
 import { getFrontendUrl, buildConsentRequestEmailHtml } from './emailTemplates.js';
+import {
+    initializeResumeConsent,
+    markResumeConsentError,
+    markResumeConsentRequested,
+    recordResumeConsentResponse,
+    resetResumeConsentForResend
+} from '../resumes.service.js';
 
 // Constants
 export const CONSENT_TOKEN_EXPIRY_DAYS = 14; // 2 weeks
@@ -82,31 +89,15 @@ export async function initializeConsent({
         : null;
 
     // Update resume with consent fields
-    const result = await query(`
-        UPDATE resumes 
-        SET profile_type = $1,
-            candidate_name = $2,
-            candidate_email = $3,
-            consent_status = $4,
-            consent_token = $5,
-            consent_token_expires_at = $6,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = $7
-        RETURNING id, profile_type, candidate_name, candidate_email, consent_status, 
-                  consent_token, consent_token_expires_at, consent_requested_at
-    `, [
+    const result = await initializeResumeConsent({
+        resumeId,
         profileType,
         candidateName,
-        candidateEmail || null,
+        candidateEmail,
         consentStatus,
         consentToken,
-        tokenExpiresAt,
-        resumeId
-    ]);
-
-    if (result.rows.length === 0) {
-        throw new Error('Resume not found');
-    }
+        tokenExpiresAt
+    });
 
     safeLog('info', 'Consent initialized', { 
         resumeId, 
@@ -115,7 +106,7 @@ export async function initializeConsent({
         hasToken: !!consentToken 
     });
 
-    return result.rows[0];
+    return result;
 }
 
 /**
@@ -192,12 +183,7 @@ export async function sendConsentRequest(resumeId) {
     }
 
     // Update consent_requested_at
-    await query(`
-        UPDATE resumes 
-        SET consent_requested_at = CURRENT_TIMESTAMP,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = $1
-    `, [resumeId]);
+    await markResumeConsentRequested(resumeId);
 
     safeLog('info', 'Consent request email sent', { 
         resumeId, 
@@ -244,7 +230,7 @@ export async function validateConsentToken(token) {
     const result = await query(`
         SELECT r.id, r.candidate_name, r.candidate_email, r.consent_status,
                r.consent_token, r.consent_token_expires_at, r.profile_type,
-               r.firm_name, f.logo_url as firm_logo
+               r.firm_id, r.firm_name, f.logo_url as firm_logo
         FROM resumes r
         LEFT JOIN firms f ON r.firm_id = f.id
         WHERE r.consent_token = $1
@@ -315,17 +301,11 @@ export async function recordConsentResponse(token, accepted) {
         ? new Date(Date.now() + RETENTION_PERIOD_DAYS * 24 * 60 * 60 * 1000)
         : null;
 
-    const result = await query(`
-        UPDATE resumes 
-        SET consent_status = $1,
-            consent_responded_at = CURRENT_TIMESTAMP,
-            retention_until = $2,
-            consent_token = NULL,
-            consent_token_expires_at = NULL,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = $3
-        RETURNING id, consent_status, consent_responded_at, retention_until
-    `, [newStatus, retentionUntil, resume.id]);
+    const result = await recordResumeConsentResponse(
+        resume.id,
+        newStatus,
+        retentionUntil
+    );
 
     safeLog('info', 'Consent response recorded', { 
         resumeId: resume.id, 
@@ -356,7 +336,7 @@ export async function recordConsentResponse(token, accepted) {
         safeLog('info', 'Resume marked for purge after consent refusal', { resumeId: resume.id });
     }
 
-    return result.rows[0];
+    return result;
 }
 
 /**
@@ -367,7 +347,7 @@ export async function recordConsentResponse(token, accepted) {
 export async function getConsentStatus(resumeId) {
     const result = await query(`
         SELECT id, profile_type, candidate_name, candidate_email,
-               consent_status, consent_requested_at, consent_responded_at,
+               firm_id, consent_status, consent_requested_at, consent_responded_at,
                retention_until, consent_reminder_count
         FROM resumes
         WHERE id = $1
@@ -405,14 +385,7 @@ export async function resendConsentRequest(resumeId) {
         expiresAt: tokenExpiresAt.toISOString()
     });
 
-    await query(`
-        UPDATE resumes 
-        SET consent_token = $1,
-            consent_token_expires_at = $2,
-            consent_status = 'pending_consent',
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = $3
-    `, [newToken, tokenExpiresAt, resumeId]);
+    await resetResumeConsentForResend(resumeId, newToken, tokenExpiresAt);
 
     // Send the email with error handling
     try {
@@ -425,12 +398,7 @@ export async function resendConsentRequest(resumeId) {
             error: emailError.message
         });
         
-        await query(`
-            UPDATE resumes 
-            SET consent_status = 'error',
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = $1
-        `, [resumeId]);
+        await markResumeConsentError(resumeId);
         
         throw emailError;
     }

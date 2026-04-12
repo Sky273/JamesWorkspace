@@ -13,6 +13,16 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+vi.mock('../../services/cache.service.js', () => ({
+    CACHE_KEYS: {
+        candidatePipeline: { ALL: 'all' }
+    },
+    candidatePipelineCache: {
+        getOrLoad: vi.fn(async (_key, loader) => loader())
+    },
+    invalidateCandidatePipelineCaches: vi.fn(async () => undefined)
+}));
+
 import { query } from '../../config/database.js';
 import {
     PIPELINE_STAGES,
@@ -487,15 +497,17 @@ describe('Candidate Pipeline Service', () => {
         });
 
         it('should NOT auto-move for non-client interview type', async () => {
-            query.mockResolvedValueOnce({ rows: [{ id: 'i1', pipeline_id: 'p1' }] });
+            query
+                .mockResolvedValueOnce({ rows: [{ id: 'i1', pipeline_id: 'p1' }] })
+                .mockResolvedValueOnce({ rows: [{ id: 'p1', resume_id: 'r1', mission_id: 'm1' }] });
 
             await scheduleInterview({
                 pipelineId: 'p1', title: 'Technical Screen', scheduledAt: '2025-06-01',
                 interviewType: 'technical', createdBy: 'u1'
             });
 
-            // Only 1 query (insert), no getPipelineById or moveToStage
-            expect(query).toHaveBeenCalledTimes(1);
+            // Insert + lightweight cache-context lookup, no stage transition
+            expect(query).toHaveBeenCalledTimes(2);
         });
     });
 

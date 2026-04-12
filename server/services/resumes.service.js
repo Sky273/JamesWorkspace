@@ -7,7 +7,7 @@
 import { query } from '../config/database.js';
 import { findWithTimeout, createWithTimeout } from '../utils/postgresHelpers.js';
 import { invalidateDashboardAndGroupedViews } from './viewCacheInvalidation.service.js';
-import { invalidateClientsCaches, invalidateDealsCaches } from './cache.service.js';
+import { CACHE_KEYS, invalidateClientsCaches, invalidateDealsCaches, invalidateResumesCaches, resumesCache } from './cache.service.js';
 
 function resolveExecutor(executor) {
     if (typeof executor === 'function') {
@@ -19,6 +19,15 @@ function resolveExecutor(executor) {
     }
 
     return query;
+}
+
+async function invalidateResumeMutationViews(resumeId, firmId = null) {
+    await Promise.all([
+        invalidateDashboardAndGroupedViews(firmId),
+        invalidateResumesCaches(`detail:${resumeId}`),
+        invalidateClientsCaches(),
+        invalidateDealsCaches()
+    ]);
 }
 
 /**
@@ -70,12 +79,22 @@ export const RESUME_SELECT_COLUMNS = `
  * @param {string} resumeId
  * @returns {Promise<Object|null>}
  */
-export async function getResumeForAccessCheck(resumeId) {
-    const result = await query(
-        'SELECT id, firm_id, name FROM resumes WHERE id = $1',
-        [resumeId]
-    );
-    return result.rows.length > 0 ? result.rows[0] : null;
+export async function getResumeForAccessCheck(resumeId, { bypassCache = false } = {}) {
+    const loadResume = async () => {
+        const result = await query(
+            'SELECT id, firm_id, name FROM resumes WHERE id = $1',
+            [resumeId]
+        );
+        return result.rows.length > 0 ? result.rows[0] : null;
+    };
+
+    if (bypassCache) {
+        return loadResume();
+    }
+
+    return resumesCache.getOrLoad(`access:${resumeId}`, loadResume, {
+        scope: `detail:${resumeId}`
+    });
 }
 
 /**
@@ -83,12 +102,22 @@ export async function getResumeForAccessCheck(resumeId) {
  * @param {string} id
  * @returns {Promise<Object|null>}
  */
-export async function getResumeById(id) {
-    const result = await query(
-        `SELECT ${RESUME_SELECT_COLUMNS} FROM resumes WHERE id = $1`,
-        [id]
-    );
-    return result.rows.length > 0 ? result.rows[0] : null;
+export async function getResumeById(id, { bypassCache = false } = {}) {
+    const loadResume = async () => {
+        const result = await query(
+            `SELECT ${RESUME_SELECT_COLUMNS} FROM resumes WHERE id = $1`,
+            [id]
+        );
+        return result.rows.length > 0 ? result.rows[0] : null;
+    };
+
+    if (bypassCache) {
+        return loadResume();
+    }
+
+    return resumesCache.getOrLoad(`detail:${id}`, loadResume, {
+        scope: `detail:${id}`
+    });
 }
 
 /**
@@ -210,11 +239,7 @@ export async function updateResume(id, updateData) {
         err.statusCode = 404;
         throw err;
     }
-    await Promise.all([
-        invalidateDashboardAndGroupedViews(result.rows[0].firm_id || null),
-        invalidateClientsCaches(),
-        invalidateDealsCaches()
-    ]);
+    await invalidateResumeMutationViews(id, result.rows[0].firm_id || null);
     return result.rows[0];
 }
 
@@ -263,6 +288,7 @@ export async function insertResume(data) {
     if (data.invalidateCaches !== false) {
         await Promise.all([
             invalidateDashboardAndGroupedViews(result.rows[0]?.firm_id || data.firmId || null),
+            invalidateResumesCaches(),
             invalidateClientsCaches(),
             invalidateDealsCaches()
         ]);
@@ -298,6 +324,139 @@ export async function updateConsentStatus(id, consentStatus, { executor } = {}) 
     );
 }
 
+export async function initializeResumeConsent({
+    resumeId,
+    profileType,
+    candidateName,
+    candidateEmail,
+    consentStatus,
+    consentToken,
+    tokenExpiresAt
+}, { executor } = {}) {
+    const run = resolveExecutor(executor);
+    const result = await run(`
+        UPDATE resumes
+        SET profile_type = $1,
+            candidate_name = $2,
+            candidate_email = $3,
+            consent_status = $4,
+            consent_token = $5,
+            consent_token_expires_at = $6,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $7
+        RETURNING id, firm_id, profile_type, candidate_name, candidate_email, consent_status,
+                  consent_token, consent_token_expires_at, consent_requested_at
+    `, [
+        profileType,
+        candidateName,
+        candidateEmail || null,
+        consentStatus,
+        consentToken,
+        tokenExpiresAt,
+        resumeId
+    ]);
+
+    if (result.rows.length === 0) {
+        throw new Error('Resume not found');
+    }
+
+    await invalidateResumeMutationViews(result.rows[0].id, result.rows[0].firm_id || null);
+    return result.rows[0];
+}
+
+export async function markResumeConsentRequested(resumeId, { executor } = {}) {
+    const run = resolveExecutor(executor);
+    const result = await run(`
+        UPDATE resumes
+        SET consent_requested_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING id, firm_id
+    `, [resumeId]);
+
+    if (result.rows.length === 0) {
+        throw new Error('Resume not found');
+    }
+
+    await invalidateResumeMutationViews(result.rows[0].id, result.rows[0].firm_id || null);
+    return result.rows[0];
+}
+
+export async function recordResumeConsentResponse(
+    resumeId,
+    consentStatus,
+    retentionUntil,
+    { executor } = {}
+) {
+    const run = resolveExecutor(executor);
+    const result = await run(`
+        UPDATE resumes
+        SET consent_status = $1,
+            consent_responded_at = CURRENT_TIMESTAMP,
+            retention_until = $2,
+            consent_token = NULL,
+            consent_token_expires_at = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $3
+        RETURNING id, firm_id, consent_status, consent_responded_at, retention_until
+    `, [consentStatus, retentionUntil, resumeId]);
+
+    if (result.rows.length === 0) {
+        throw new Error('Resume not found');
+    }
+
+    await invalidateResumeMutationViews(result.rows[0].id, result.rows[0].firm_id || null);
+    return result.rows[0];
+}
+
+export async function resetResumeConsentForResend(
+    resumeId,
+    consentToken,
+    tokenExpiresAt,
+    { executor } = {}
+) {
+    const run = resolveExecutor(executor);
+    const result = await run(`
+        UPDATE resumes
+        SET consent_token = $1,
+            consent_token_expires_at = $2,
+            consent_status = 'pending_consent',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $3
+        RETURNING id, firm_id
+    `, [consentToken, tokenExpiresAt, resumeId]);
+
+    if (result.rows.length === 0) {
+        throw new Error('Resume not found');
+    }
+
+    await invalidateResumeMutationViews(result.rows[0].id, result.rows[0].firm_id || null);
+    return result.rows[0];
+}
+
+export async function markResumeConsentError(resumeId, { executor, pendingOnly = false } = {}) {
+    const run = resolveExecutor(executor);
+    const params = [resumeId];
+    const pendingClause = pendingOnly ? ' AND consent_status = $2' : '';
+    if (pendingOnly) {
+        params.push('pending_consent');
+    }
+
+    const result = await run(`
+        UPDATE resumes
+        SET consent_status = 'error',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1${pendingClause}
+        RETURNING id, firm_id
+    `, params);
+
+    if (result.rows[0]) {
+        await invalidateResumeMutationViews(result.rows[0].id, result.rows[0].firm_id || null);
+    }
+
+    return result.rows[0] || null;
+}
+
 /**
  * Delete a resume
  * @param {string} id
@@ -313,11 +472,7 @@ export async function deleteResume(id) {
         throw err;
     }
     if (options.invalidateCaches !== false) {
-        await Promise.all([
-            invalidateDashboardAndGroupedViews(result.rows[0].firm_id || null),
-            invalidateClientsCaches(),
-            invalidateDealsCaches()
-        ]);
+        await invalidateResumeMutationViews(id, result.rows[0].firm_id || null);
     }
     return true;
 }
@@ -335,6 +490,7 @@ export async function expirePendingConsents() {
     await Promise.all([...new Set(result.rows.map((row) => row.firm_id).filter(Boolean))]
         .flatMap((firmId) => [
             invalidateDashboardAndGroupedViews(firmId),
+            invalidateResumesCaches(),
             invalidateClientsCaches(),
             invalidateDealsCaches()
         ]));
@@ -354,6 +510,7 @@ export async function expireRetentionConsents() {
     await Promise.all([...new Set(result.rows.map((row) => row.firm_id).filter(Boolean))]
         .flatMap((firmId) => [
             invalidateDashboardAndGroupedViews(firmId),
+            invalidateResumesCaches(),
             invalidateClientsCaches(),
             invalidateDealsCaches()
         ]));
@@ -372,6 +529,7 @@ export async function recordConsentReminderSent(resumeId) {
     if (result.rows[0]?.firm_id) {
         await Promise.all([
             invalidateDashboardAndGroupedViews(result.rows[0].firm_id),
+            invalidateResumesCaches(`detail:${resumeId}`),
             invalidateClientsCaches(),
             invalidateDealsCaches()
         ]);
@@ -380,11 +538,15 @@ export async function recordConsentReminderSent(resumeId) {
 }
 
 export async function getResumeAuditInfo(resumeId) {
-    const result = await query(`
-        SELECT id, firm_id, firm_name, candidate_name, candidate_email, consent_status
-        FROM resumes WHERE id = $1
-    `, [resumeId]);
-    return result.rows[0] || null;
+    return resumesCache.getOrLoad(`audit:${resumeId}`, async () => {
+        const result = await query(`
+            SELECT id, firm_id, firm_name, candidate_name, candidate_email, consent_status
+            FROM resumes WHERE id = $1
+        `, [resumeId]);
+        return result.rows[0] || null;
+    }, {
+        scope: `detail:${resumeId}`
+    });
 }
 
 /**
@@ -414,6 +576,7 @@ export async function createAdaptation(data) {
     const record = await createWithTimeout('resume_adaptations', data);
     await Promise.all([
         invalidateDashboardAndGroupedViews(record.firm_id || data.firm_id || null),
+        invalidateResumesCaches(),
         invalidateClientsCaches(),
         invalidateDealsCaches()
     ]);

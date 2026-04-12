@@ -6,6 +6,7 @@
 import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { assertSchemaRequirements } from './schemaVerification.service.js';
+import { CACHE_KEYS, gdprAuditCache, invalidateGdprAuditCaches } from './cache.service.js';
 
 // GDPR Action Types
 export const GDPR_ACTIONS = {
@@ -175,6 +176,7 @@ export async function logGdprAction({
             isAutomated
         });
 
+        await invalidateGdprAuditCaches(`export:${targetEmail || 'none'}`);
         return result.rows[0];
     } catch (error) {
         safeLog('error', 'Failed to log GDPR action', {
@@ -216,12 +218,28 @@ export async function getGdprAuditLogs({
     page = 1,
     limit = 50,
     sortBy = 'created_at',
-    sortOrder = 'desc'
+    sortOrder = 'desc',
+    bypassCache = false
 } = {}) {
     try {
-        const conditions = [];
-        const params = [];
-        let paramIndex = 1;
+        const cacheKey = JSON.stringify({
+            firmId,
+            action,
+            category,
+            userId,
+            targetEmail,
+            isAutomated,
+            startDate: startDate ? new Date(startDate).toISOString() : null,
+            endDate: endDate ? new Date(endDate).toISOString() : null,
+            page,
+            limit,
+            sortBy,
+            sortOrder
+        });
+        const loadLogs = async () => {
+            const conditions = [];
+            const params = [];
+            let paramIndex = 1;
 
         // Build WHERE conditions
         if (firmId) {
@@ -285,17 +303,26 @@ export async function getGdprAuditLogs({
             LIMIT $${paramIndex++} OFFSET $${paramIndex++}
         `, [...params, limit, offset]);
 
-        return {
-            logs: logsResult.rows,
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages,
-                hasNext: page < totalPages,
-                hasPrev: page > 1
-            }
+            return {
+                logs: logsResult.rows,
+                pagination: {
+                    page,
+                    limit,
+                    total,
+                    totalPages,
+                    hasNext: page < totalPages,
+                    hasPrev: page > 1
+                }
+            };
         };
+
+        if (bypassCache) {
+            return loadLogs();
+        }
+
+        return gdprAuditCache.getOrLoad(`logs:${cacheKey}`, loadLogs, {
+            scope: CACHE_KEYS.gdprAudit.LOGS
+        });
     } catch (error) {
         safeLog('error', 'Failed to get GDPR audit logs', {
             error: error.message
@@ -310,10 +337,11 @@ export async function getGdprAuditLogs({
  * @param {number} [days] - Number of days to look back (default 30)
  * @returns {Promise<Object>} Statistics object
  */
-export async function getGdprAuditStats(firmId = null, days = 30) {
+export async function getGdprAuditStats(firmId = null, days = 30, { bypassCache = false } = {}) {
     try {
-        const firmCondition = firmId ? 'AND firm_id = $2' : '';
-        const params = firmId ? [days, firmId] : [days];
+        const loadStats = async () => {
+            const firmCondition = firmId ? 'AND firm_id = $2' : '';
+            const params = firmId ? [days, firmId] : [days];
 
         // Actions by category
         const categoryStats = await query(`
@@ -358,26 +386,35 @@ export async function getGdprAuditStats(firmId = null, days = 30) {
             WHERE created_at >= NOW() - INTERVAL '1 day' * $1 ${firmCondition}
         `, params);
 
-        return {
-            period: `${days} days`,
-            total: parseInt(totalResult.rows[0].total, 10),
-            byCategory: categoryStats.rows.reduce((acc, row) => {
-                acc[row.category] = parseInt(row.count, 10);
-                return acc;
-            }, {}),
-            byAction: actionStats.rows.map(row => ({
-                action: row.action,
-                count: parseInt(row.count, 10)
-            })),
-            automated: {
-                automated: parseInt(automatedStats.rows.find(r => r.is_automated)?.count || 0, 10),
-                manual: parseInt(automatedStats.rows.find(r => !r.is_automated)?.count || 0, 10)
-            },
-            dailyActivity: dailyStats.rows.map(row => ({
-                date: row.date,
-                count: parseInt(row.count, 10)
-            }))
+            return {
+                period: `${days} days`,
+                total: parseInt(totalResult.rows[0].total, 10),
+                byCategory: categoryStats.rows.reduce((acc, row) => {
+                    acc[row.category] = parseInt(row.count, 10);
+                    return acc;
+                }, {}),
+                byAction: actionStats.rows.map(row => ({
+                    action: row.action,
+                    count: parseInt(row.count, 10)
+                })),
+                automated: {
+                    automated: parseInt(automatedStats.rows.find(r => r.is_automated)?.count || 0, 10),
+                    manual: parseInt(automatedStats.rows.find(r => !r.is_automated)?.count || 0, 10)
+                },
+                dailyActivity: dailyStats.rows.map(row => ({
+                    date: row.date,
+                    count: parseInt(row.count, 10)
+                }))
+            };
         };
+
+        if (bypassCache) {
+            return loadStats();
+        }
+
+        return gdprAuditCache.getOrLoad(`stats:${firmId || 'all'}:${days}`, loadStats, {
+            scope: CACHE_KEYS.gdprAudit.STATS
+        });
     } catch (error) {
         safeLog('error', 'Failed to get GDPR audit stats', {
             error: error.message
@@ -390,16 +427,26 @@ export async function getGdprAuditStats(firmId = null, days = 30) {
  * Get list of firms with GDPR activity
  * @returns {Promise<Array>} List of firms
  */
-export async function getGdprFirms() {
+export async function getGdprFirms({ bypassCache = false } = {}) {
     try {
-        const result = await query(`
+        const loadFirms = async () => {
+            const result = await query(`
             SELECT DISTINCT firm_id, firm_name, COUNT(*) as action_count
             FROM gdpr_audit_log
             WHERE firm_id IS NOT NULL
             GROUP BY firm_id, firm_name
             ORDER BY firm_name
         `);
-        return result.rows;
+            return result.rows;
+        };
+
+        if (bypassCache) {
+            return loadFirms();
+        }
+
+        return gdprAuditCache.getOrLoad('firms', loadFirms, {
+            scope: CACHE_KEYS.gdprAudit.FIRMS
+        });
     } catch (error) {
         safeLog('error', 'Failed to get GDPR firms', {
             error: error.message
@@ -415,7 +462,8 @@ export async function getGdprFirms() {
  */
 export async function exportTargetLogs(targetEmail) {
     try {
-        const result = await query(`
+        return gdprAuditCache.getOrLoad(`export:${targetEmail}`, async () => {
+            const result = await query(`
             SELECT 
                 action, category, firm_name, user_name,
                 target_type, target_name, details,
@@ -425,7 +473,10 @@ export async function exportTargetLogs(targetEmail) {
             ORDER BY created_at DESC
         `, [targetEmail]);
 
-        return result.rows;
+            return result.rows;
+        }, {
+            scope: `export:${targetEmail}`
+        });
     } catch (error) {
         safeLog('error', 'Failed to export target logs', {
             error: error.message,

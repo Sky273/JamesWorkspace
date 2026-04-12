@@ -41,6 +41,9 @@ function parsePositiveInteger(value, { field, maxValue = null } = {}) {
 router.get('/facts/all', authenticateToken, async (req, res) => {
     try {
         const startTime = Date.now();
+        if (req.query.refresh === '1' || req.query.refresh === 'true') {
+            invalidateFactsCache();
+        }
         
         // Keep the "all facts" endpoint bounded to protect server and client memory.
         const result = await getFactsByDateRange(null, null, {
@@ -83,6 +86,9 @@ router.get('/facts/all', authenticateToken, async (req, res) => {
  */
 router.get('/facts/filters', authenticateToken, async (req, res) => {
     try {
+        if (req.query.refresh === '1' || req.query.refresh === 'true') {
+            invalidateFactsCache();
+        }
         const filters = await getFactsFilterOptions();
         safeLog('info', 'Market Radar: Facts filters loaded', { 
             sourcesCount: filters?.sources?.length || 0,
@@ -107,6 +113,9 @@ router.get('/facts/filters', authenticateToken, async (req, res) => {
  */
 router.get('/facts/summary', authenticateToken, async (req, res) => {
     try {
+        if (req.query.refresh === '1' || req.query.refresh === 'true') {
+            invalidateFactsCache();
+        }
         const summary = await getFactsSummary();
         res.json({
             success: true,
@@ -154,6 +163,9 @@ router.post('/facts/cache/refresh', authenticateToken, requireAdmin, async (req,
  */
 router.get('/facts', authenticateToken, async (req, res) => {
     try {
+        if (req.query.refresh === '1' || req.query.refresh === 'true') {
+            invalidateFactsCache();
+        }
         const { startDate, endDate, source, type, region, keyword, romeCode, page, pageSize } = req.query;
         const parsedPage = parsePositiveInteger(page, { field: 'page' });
         const parsedPageSize = parsePositiveInteger(pageSize, { field: 'pageSize', maxValue: 1000 });

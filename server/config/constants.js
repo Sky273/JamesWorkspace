@@ -116,6 +116,13 @@ export const CACHE_TTL = {
     DEALS: 5 * 60 * 1000,
     USERS: 5 * 60 * 1000,
     MISSIONS: 2 * 60 * 1000,
+    RESUMES: 2 * 60 * 1000,
+    CANDIDATE_PIPELINE: 2 * 60 * 1000,
+    EMAIL_TEMPLATES: 10 * 60 * 1000,
+    RESUME_COMMENTS: 2 * 60 * 1000,
+    BACKUP_SETTINGS: 10 * 60 * 1000,
+    JOBS: 30 * 1000,
+    GDPR_AUDIT: 30 * 1000,
     GROUPED_VIEWS: 30 * 1000
 };
 export const CACHE_BACKEND = ['memory', 'redis'].includes((process.env.CACHE_BACKEND || '').toLowerCase())

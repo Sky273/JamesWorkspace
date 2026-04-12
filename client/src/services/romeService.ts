@@ -82,6 +82,7 @@ export interface MetiersQueryParams {
   search?: string;
   page?: number;
   pageSize?: number;
+  forceRefresh?: boolean;
 }
 
 export interface MetiersResponse {
@@ -103,6 +104,7 @@ export async function getStoredMetiers(filters?: {
   codeRome?: string;
   grandDomaine?: string;
   search?: string;
+  forceRefresh?: boolean;
 }): Promise<Metier[]> {
   const TEN_MINUTES = 600000;
   
@@ -110,6 +112,7 @@ export async function getStoredMetiers(filters?: {
   if (filters?.codeRome) params.append('codeRome', filters.codeRome);
   if (filters?.grandDomaine) params.append('grandDomaine', filters.grandDomaine);
   if (filters?.search) params.append('search', filters.search);
+  if (filters?.forceRefresh) params.append('refresh', '1');
 
   const url = `${API_BASE}/metiers${params.toString() ? `?${params.toString()}` : ''}`;
   const response = await fetchWithAuth(url, {}, TEN_MINUTES);
@@ -136,6 +139,7 @@ export async function getStoredMetiersPaginated(filters: MetiersQueryParams): Pr
   if (filters.search) params.append('search', filters.search);
   if (filters.page) params.append('page', filters.page.toString());
   if (filters.pageSize) params.append('pageSize', filters.pageSize.toString());
+  if (filters.forceRefresh) params.append('refresh', '1');
   // Always include details (Enjeux, CompetencesDetaillees, MacroSavoirFaire, Savoirs)
   params.append('includeDetails', 'true');
 

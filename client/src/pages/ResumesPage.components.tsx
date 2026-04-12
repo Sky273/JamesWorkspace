@@ -193,10 +193,12 @@ export function ResumesDeleteModal({
 
 export function ResumesByDealView({
   allTags,
+  refreshToken,
   stats,
 }: {
   allTags: TagsByCategory;
+  refreshToken: number;
   stats: ResumeStats;
 }) {
-  return <DealsGroupedView allTags={allTags} stats={stats} />;
+  return <DealsGroupedView allTags={allTags} refreshToken={refreshToken} stats={stats} />;
 }

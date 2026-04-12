@@ -409,4 +409,30 @@ describe('ResumeAnalysisPage', () => {
     });
   });
 
+  it('returns to the resumes by-deal view with a forced refresh flag', async () => {
+    locationState = {
+      from: 'dealsGroupedView',
+    };
+    resumeContextValue = {
+      ...resumeContextValue,
+      currentResume: {
+        id: 'resume-1',
+        Name: 'Jane Doe',
+        'Original Text': 'Original content',
+      },
+    };
+
+    render(
+      <MemoryRouter>
+        <ResumeAnalysisPage />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'common.back' }));
+
+    expect(navigateMock).toHaveBeenCalledWith('/resumes', {
+      state: { viewMode: 'byDeal', refreshResumesView: true },
+    });
+  });
+
 });

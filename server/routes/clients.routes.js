@@ -72,6 +72,7 @@ router.get('/', authenticateToken, createClientsRouteHandler('Error fetching cli
             return res.status(400).json({ error: pagination.error });
         }
         const { search, type } = req.query;
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
         const { userFirmId, isAdmin, access } = await getClientAccessContext(req);
         if (!access.ok) {
             return res.status(access.status).json({ error: access.error });
@@ -81,7 +82,8 @@ router.get('/', authenticateToken, createClientsRouteHandler('Error fetching cli
             ...pagination.value,
             search,
             type,
-            firmId: isAdmin ? null : userFirmId
+            firmId: isAdmin ? null : userFirmId,
+            bypassCache
         });
 
         return res.json(result);
@@ -102,8 +104,9 @@ router.get('/industries/list', authenticateToken, createClientsRouteHandler('Err
 // GET /api/clients/:id - Get client by ID with contacts
 router.get('/:id', authenticateToken, validateParams('id'), createClientsRouteHandler('Error fetching client', 'Failed to fetch client', async (req, res) => {
         const { id } = req.params;
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
         const accessibleClient = await getAccessibleClientRecord(req, res, id, {
-            fetchClientFn: clientsService.getClientById
+            fetchClientFn: (clientId) => clientsService.getClientById(clientId, { bypassCache })
         });
         if (!accessibleClient) {
             return;
@@ -264,10 +267,11 @@ async function checkClientAccess(req, res, clientId) {
 // GET /api/clients/:clientId/contacts - Get all contacts for a client
 router.get('/:clientId/contacts', authenticateToken, validateParams('clientId'), createClientsRouteHandler('Error fetching contacts', 'Failed to fetch contacts', async (req, res) => {
         const { clientId } = req.params;
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
         const access = await checkClientAccess(req, res, clientId);
         if (!access.ok) return;
 
-        const contacts = await clientsService.listContacts(clientId);
+        const contacts = await clientsService.listContacts(clientId, { bypassCache });
         return res.json(contacts);
 }));
 

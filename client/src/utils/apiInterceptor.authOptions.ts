@@ -11,6 +11,7 @@ interface CsrfDeps {
 export function createAuthOptions(options: FetchOptions = {}): FetchOptions {
   return {
     ...options,
+    cache: options.cache ?? 'no-store',
     headers: {
       ...options.headers,
     },
@@ -33,6 +34,7 @@ export async function createAuthOptionsWithCsrf(
 
   return {
     ...options,
+    cache: options.cache ?? 'no-store',
     headers: {
       ...options.headers,
       ...(requiresCsrf ? { 'x-csrf-token': csrfToken || '' } : {}),

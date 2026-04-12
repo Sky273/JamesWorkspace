@@ -14,6 +14,7 @@ vi.mock('../../utils/postgresHelpers.js', () => ({
     createWithTimeout: vi.fn(),
     updateWithTimeout: vi.fn(),
     destroyWithTimeout: vi.fn(),
+    transaction: vi.fn(async (callback) => callback({ query: (...args) => query(...args) })),
     escapeLike: vi.fn((str) => str.replace(/[%_\\]/g, '\\$&'))
 }));
 
@@ -37,7 +38,7 @@ vi.mock('../../services/cache.service.js', () => ({
 }));
 
 import { query } from '../../config/database.js';
-import { selectWithTimeout, createWithTimeout, updateWithTimeout, destroyWithTimeout } from '../../utils/postgresHelpers.js';
+import { selectWithTimeout, createWithTimeout, updateWithTimeout, destroyWithTimeout, transaction } from '../../utils/postgresHelpers.js';
 import {
     listUsers,
     updateUserProfile,
@@ -197,6 +198,15 @@ describe('Users Service', () => {
             selectWithTimeout.mockResolvedValueOnce([]);
             expect(await findUserById('missing')).toBeNull();
         });
+
+        it('should bypass cache when requested', async () => {
+            selectWithTimeout.mockResolvedValueOnce([{ id: 'u1' }]);
+
+            const result = await findUserById('u1', { useCache: false });
+
+            expect(result).toEqual({ id: 'u1' });
+            expect(mockUsersCache.getOrLoad).not.toHaveBeenCalled();
+        });
     });
 
     describe('updateAdminUser', () => {
@@ -210,13 +220,28 @@ describe('Users Service', () => {
     });
 
     describe('deleteUser', () => {
-        it('should delegate to destroyWithTimeout', async () => {
-            destroyWithTimeout.mockResolvedValueOnce(['u1']);
+        it('should clear blocking references then delete the user in one transaction', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [{ id: 'u1' }] })
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [{ id: 'u1' }] });
 
             const result = await deleteUser('u1');
 
-            expect(destroyWithTimeout).toHaveBeenCalledWith('users', ['u1']);
+            expect(transaction).toHaveBeenCalled();
+            expect(query.mock.calls[0][0]).toContain('SELECT id FROM users WHERE id = $1 FOR UPDATE');
+            expect(query.mock.calls[1][0]).toContain('UPDATE deals SET created_by = NULL');
+            expect(query.mock.calls[2][0]).toContain('UPDATE deal_resumes SET added_by = NULL');
+            expect(query.mock.calls[3][0]).toContain('DELETE FROM users');
             expect(result).toEqual(['u1']);
+        });
+
+        it('should throw 404 if the user does not exist', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [] })
+
+            await expect(deleteUser('missing')).rejects.toMatchObject({ statusCode: 404 });
         });
     });
 

@@ -28,6 +28,9 @@ export async function getAllTrendsForMap(_req, res) {
     try {
         const startTime = Date.now();
         const { type } = _req.query;
+        if (_req.query.refresh === '1' || _req.query.refresh === 'true') {
+            invalidateTrendsCache();
+        }
         const result = await getStoredTrendsLight({ type: type || undefined });
 
         const byType = {};
@@ -54,6 +57,9 @@ export async function getAllTrendsForMap(_req, res) {
 export async function getTrends(req, res) {
     try {
         const { type, codeRome, regionCode, sortField, sortDirection, page, pageSize, itemsPerType } = req.query;
+        if (req.query.refresh === '1' || req.query.refresh === 'true') {
+            invalidateTrendsCache();
+        }
         const parsedItemsPerType = parsePositiveInteger(itemsPerType, { field: 'itemsPerType', maxValue: 50 });
         const parsedPage = parsePositiveInteger(page, { field: 'page', maxValue: 1000 });
         const parsedPageSize = parsePositiveInteger(pageSize, { field: 'pageSize', maxValue: 100 });
@@ -103,6 +109,9 @@ export async function getTrends(req, res) {
 
 export async function getTrendsSummaryHandler(_req, res) {
     try {
+        if (_req.query.refresh === '1' || _req.query.refresh === 'true') {
+            invalidateTrendsCache();
+        }
         const summary = await getTrendsSummary();
         res.json({ success: true, summary });
     } catch {
@@ -132,6 +141,9 @@ export async function getTrendMetadataHandler(req, res) {
 
 export async function getTrendFilters(_req, res) {
     try {
+        if (_req.query.refresh === '1' || _req.query.refresh === 'true') {
+            invalidateTrendsCache();
+        }
         const filters = await getTrendFilterOptions();
         safeLog('info', 'Market Radar: Filters loaded', {
             typesCount: filters.types?.length || 0,
