@@ -10,11 +10,16 @@ import {
   type MetiersStats,
 } from '../../services/romeService';
 import { createLogger } from '../../utils/logger.frontend';
+import {
+  consumeDirtyViewScopesForConsumer,
+  subscribeToViewRefreshForConsumer,
+} from '../../utils/viewRefresh';
 
 const log = createLogger('MetiersTab');
 export const METIERS_PAGE_SIZE = 20;
 
 export function useMetiersDashboard(isAdmin: boolean) {
+  const refreshConsumerId = 'market-metiers-dashboard';
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [metiers, setMetiers] = useState<Metier[]>([]);
@@ -67,6 +72,22 @@ export function useMetiersDashboard(isAdmin: boolean) {
   useEffect(() => {
     void loadMetiers();
   }, [loadMetiers]);
+
+  useEffect(() => {
+    if (!consumeDirtyViewScopesForConsumer(refreshConsumerId, ['rome'])) {
+      return;
+    }
+
+    void loadMetiers({ forceRefresh: true });
+    void loadGlobalStats();
+  }, [loadGlobalStats, loadMetiers]);
+
+  useEffect(() => {
+    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['rome'], () => {
+      void loadMetiers({ forceRefresh: true });
+      void loadGlobalStats();
+    });
+  }, [loadGlobalStats, loadMetiers]);
 
   const handleCollect = useCallback(async () => {
     if (!isAdmin) {

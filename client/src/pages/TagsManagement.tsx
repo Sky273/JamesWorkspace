@@ -11,7 +11,11 @@ import { tagService } from '../utils/tagService';
 import { motion } from 'framer-motion';
 import PageHeader from '../components/page/PageHeader';
 import logger from '../utils/logger.frontend';
-import { consumeDirtyViewScopes, markViewScopesDirty } from '../utils/viewRefresh';
+import {
+  consumeDirtyViewScopesForConsumer,
+  markViewScopesDirty,
+  subscribeToViewRefreshForConsumer,
+} from '../utils/viewRefresh';
 import {
   WrenchScrewdriverIcon,
   BriefcaseIcon,
@@ -116,6 +120,7 @@ function _cleanTagsForCategory(tags: string[], softClean = false): string[] {
 }
 
 const TagsManagement = (): JSX.Element => {
+  const refreshConsumerId = 'tags-management';
   const { t } = useTranslation();
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'admin';
@@ -165,11 +170,17 @@ const TagsManagement = (): JSX.Element => {
   useEffect(() => { void fetchTags(); }, [fetchTags]);
 
   useEffect(() => {
-    if (!consumeDirtyViewScopes(['tags'])) {
+    if (!consumeDirtyViewScopesForConsumer(refreshConsumerId, ['tags'])) {
       return;
     }
 
     void fetchTags(true);
+  }, [fetchTags]);
+
+  useEffect(() => {
+    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['tags'], () => {
+      void fetchTags(true);
+    });
   }, [fetchTags]);
 
   const displayCleanedTags = useMemo(() => cleanedTags, [cleanedTags]);

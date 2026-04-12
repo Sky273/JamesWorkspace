@@ -4,11 +4,17 @@ import { ClockIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterceptor';
 import logger from '../../utils/logger.frontend';
-import { consumeDirtyViewScopes, markViewScopesDirty } from '../../utils/viewRefresh';
+import {
+  consumeDirtyViewScopesForConsumer,
+  markViewScopesDirty,
+  subscribeToViewRefreshForConsumer,
+  type ViewRefreshScope,
+} from '../../utils/viewRefresh';
 import JobsTabHeader from './jobsTab/JobsTabHeader';
 import JobCard from './jobsTab/JobCard';
 import type { Job, TranslateFn } from './jobsTab/types';
 import {
+  getCompletedJobRefreshScopes,
   loadJobProgressSnapshots,
   persistJobProgressSnapshots,
   syncSingleJobProgressSnapshot,
@@ -63,6 +69,7 @@ const JobsTabLoadingSkeleton = (): JSX.Element => (
 );
 
 const JobsTab = (): JSX.Element => {
+  const refreshConsumerId = 'jobs-tab';
   const { t } = useTranslation();
   const tr = useCallback<TranslateFn>((key: string, options?: unknown) => {
     return String(t(key, options as never));
@@ -79,6 +86,7 @@ const JobsTab = (): JSX.Element => {
   const [now, setNow] = useState(() => Date.now());
   const jobsRequestIdRef = useRef(0);
   const jobDetailsRequestIdRef = useRef(0);
+  const jobStatusesRef = useRef<Record<string, Job['status']>>({});
 
   const fetchJobs = useCallback(async (options: { forceRefresh?: boolean } = {}) => {
     const requestId = ++jobsRequestIdRef.current;
@@ -129,12 +137,35 @@ const JobsTab = (): JSX.Element => {
   }, [fetchJobs]);
 
   useEffect(() => {
-    if (!consumeDirtyViewScopes(['jobs'])) {
+    if (!consumeDirtyViewScopesForConsumer(refreshConsumerId, ['jobs'])) {
       return;
     }
 
     void fetchJobs({ forceRefresh: true });
   }, [fetchJobs]);
+
+  useEffect(() => {
+    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['jobs'], () => {
+      void fetchJobs({ forceRefresh: true });
+    });
+  }, [fetchJobs]);
+
+  useEffect(() => {
+    const nextStatuses: Record<string, Job['status']> = {};
+    const dirtyScopes = new Set<ViewRefreshScope>();
+
+    jobs.forEach((job) => {
+      nextStatuses[job.id] = job.status;
+      if (job.status === 'completed' && jobStatusesRef.current[job.id] !== 'completed') {
+        getCompletedJobRefreshScopes(job).forEach((scope) => dirtyScopes.add(scope));
+      }
+    });
+
+    jobStatusesRef.current = nextStatuses;
+    if (dirtyScopes.size > 0) {
+      markViewScopesDirty([...dirtyScopes]);
+    }
+  }, [jobs]);
 
   useEffect(() => {
     if (!autoRefreshEnabled) return;

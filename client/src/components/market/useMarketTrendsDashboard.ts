@@ -14,10 +14,15 @@ import {
   type TrendFilters,
 } from '../../services/marketRadarService';
 import { getStoredMetiers, type Metier } from '../../services/romeService';
+import {
+  consumeDirtyViewScopesForConsumer,
+  subscribeToViewRefreshForConsumer,
+} from '../../utils/viewRefresh';
 
 export const MARKET_TRENDS_PAGE_SIZE = 20;
 
 export function useMarketTrendsDashboard() {
+  const refreshConsumerId = 'market-trends-dashboard';
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [trends, setTrends] = useState<MarketTrend[]>([]);
@@ -134,6 +139,20 @@ export function useMarketTrendsDashboard() {
     }
     void loadTrends();
   }, [filtersLoading, loadTrends]);
+
+  useEffect(() => {
+    if (!consumeDirtyViewScopesForConsumer(refreshConsumerId, ['marketTrends', 'rome'])) {
+      return;
+    }
+
+    void refreshAll();
+  }, [refreshAll]);
+
+  useEffect(() => {
+    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['marketTrends', 'rome'], () => {
+      void refreshAll();
+    });
+  }, [refreshAll]);
 
   useEffect(() => {
     setCurrentPage(1);

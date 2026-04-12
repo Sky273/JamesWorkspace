@@ -3,9 +3,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getAllTrends, getTrendMetadata, type MarketTrend } from '../../services/marketRadarService';
 import { getStoredMetiers, type Metier } from '../../services/romeService';
 import logger from '../../utils/logger.frontend';
+import {
+  consumeDirtyViewScopesForConsumer,
+  subscribeToViewRefreshForConsumer,
+} from '../../utils/viewRefresh';
 import type { DataSourceType } from './franceMap.types';
 
 export const useFranceMapData = (dataSource: DataSourceType) => {
+  const refreshConsumerId = `market-france-map:${dataSource}`;
   const [trends, setTrends] = useState<MarketTrend[]>([]);
   const [metiers, setMetiers] = useState<Metier[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,6 +39,20 @@ export const useFranceMapData = (dataSource: DataSourceType) => {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (!consumeDirtyViewScopesForConsumer(refreshConsumerId, ['marketTrends', 'rome'])) {
+      return;
+    }
+
+    void loadData({ forceRefresh: true });
+  }, [loadData, refreshConsumerId]);
+
+  useEffect(() => {
+    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['marketTrends', 'rome'], () => {
+      void loadData({ forceRefresh: true });
+    });
+  }, [loadData, refreshConsumerId]);
 
   const romeLabelsMap = useMemo(
     () =>

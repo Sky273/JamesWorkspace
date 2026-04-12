@@ -5,7 +5,11 @@ import { useTranslation } from 'react-i18next';
 
 import logger from '../utils/logger.frontend';
 import { templateService } from '../utils/templateService';
-import { consumeDirtyViewScopes, markViewScopesDirty } from '../utils/viewRefresh';
+import {
+  consumeDirtyViewScopesForConsumer,
+  markViewScopesDirty,
+  subscribeToViewRefreshForConsumer,
+} from '../utils/viewRefresh';
 
 export interface Template {
   id: string;
@@ -42,6 +46,7 @@ type FetchTemplatesOptions = {
 };
 
 export function useTemplatesDashboard() {
+  const refreshConsumerId = 'templates-page';
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
@@ -159,11 +164,17 @@ export function useTemplatesDashboard() {
   }, [fetchTemplates]);
 
   useEffect(() => {
-    if (!consumeDirtyViewScopes(['templates'])) {
+    if (!consumeDirtyViewScopesForConsumer(refreshConsumerId, ['templates'])) {
       return;
     }
 
     void fetchTemplates({ clearPendingTemplate: true, forceRefresh: true });
+  }, [fetchTemplates]);
+
+  useEffect(() => {
+    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['templates'], () => {
+      void fetchTemplates({ clearPendingTemplate: true, forceRefresh: true });
+    });
   }, [fetchTemplates]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / TEMPLATES_PAGE_SIZE)) || 1;

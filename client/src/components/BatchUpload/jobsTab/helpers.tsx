@@ -13,6 +13,7 @@ import {
   XCircleIcon,
   ArrowPathIcon,
 } from '@heroicons/react/24/outline';
+import type { ViewRefreshScope } from '../../../utils/viewRefresh';
 import type { Job, JobProgressSnapshot, TranslateFn } from './types';
 
 const JOB_PROGRESS_SNAPSHOTS_STORAGE_KEY = 'resumeconverter.batchJobs.progressSnapshots';
@@ -304,6 +305,24 @@ export function getSummaryText(job: Job): string {
 
 export function getItemRenameText(originalName: string, displayName: string): string {
   return `${originalName} -> ${displayName}`;
+}
+
+export function getCompletedJobRefreshScopes(job: Job): ViewRefreshScope[] {
+  switch (job.job_type) {
+    case 'collect-trends':
+      return ['marketTrends'];
+    case 'collect-facts':
+      return ['marketFacts'];
+    case 'collect-metiers':
+      return ['rome', 'marketTrends'];
+    case 'adapt':
+      return ['adaptations', 'resumes', 'missions'];
+    case 'improve':
+    case 'import':
+      return ['resumes'];
+    default:
+      return [];
+  }
 }
 
 export function getProcessingDetailsText(jobItem: NonNullable<Job['items']>[number]): string | null {

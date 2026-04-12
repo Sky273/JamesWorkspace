@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { getDisplayProgress, syncJobProgressSnapshots } from './helpers';
+import { getCompletedJobRefreshScopes, getDisplayProgress, syncJobProgressSnapshots } from './helpers';
 import type { Job, JobProgressSnapshot } from './types';
 
 const baseJob: Job = {
@@ -52,5 +52,11 @@ describe('batch job progress helpers', () => {
     expect(progress.processedItems).toBe(12);
     expect(progress.progressPercentage).toBe(12);
     expect(progress.estimatedTimeRemaining).toBe('~88min');
+  });
+
+  it('maps completed collection jobs to the matching cached view scopes', () => {
+    expect(getCompletedJobRefreshScopes(baseJob)).toEqual(['marketTrends']);
+    expect(getCompletedJobRefreshScopes({ ...baseJob, job_type: 'collect-metiers' })).toEqual(['rome', 'marketTrends']);
+    expect(getCompletedJobRefreshScopes({ ...baseJob, job_type: 'adapt' })).toEqual(['adaptations', 'resumes', 'missions']);
   });
 });

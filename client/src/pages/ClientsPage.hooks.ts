@@ -5,7 +5,11 @@ import toast from 'react-hot-toast';
 
 import clientService from '../utils/clientService';
 import logger from '../utils/logger.frontend';
-import { consumeDirtyViewScopes, markViewScopesDirty } from '../utils/viewRefresh';
+import {
+  consumeDirtyViewScopesForConsumer,
+  markViewScopesDirty,
+  subscribeToViewRefreshForConsumer,
+} from '../utils/viewRefresh';
 import type { Client, ClientContact } from '../types/entities';
 import {
   buildCrmTabSearchParams,
@@ -55,6 +59,7 @@ export function mergePreservedClientIntoResults({
 }
 
 export function useClientsDashboard() {
+  const refreshConsumerId = 'clients-page';
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [crmTab, setCrmTab] = useState<CRMTab>(getInitialCrmTab(searchParams.get('tab')));
@@ -131,11 +136,17 @@ export function useClientsDashboard() {
   }, [fetchData]);
 
   useEffect(() => {
-    if (!consumeDirtyViewScopes(['clients'])) {
+    if (!consumeDirtyViewScopesForConsumer(refreshConsumerId, ['clients'])) {
       return;
     }
 
     void fetchData({ forceRefresh: true });
+  }, [fetchData]);
+
+  useEffect(() => {
+    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['clients'], () => {
+      void fetchData({ forceRefresh: true });
+    });
   }, [fetchData]);
 
   const stats = useMemo<ClientsStats>(() => computeClientsStats(clients), [clients]);

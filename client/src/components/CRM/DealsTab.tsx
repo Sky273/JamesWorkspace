@@ -15,7 +15,11 @@ import {
 } from '@heroicons/react/24/outline';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterceptor';
 import logger from '../../utils/logger.frontend';
-import { consumeDirtyViewScopes, markViewScopesDirty } from '../../utils/viewRefresh';
+import {
+  consumeDirtyViewScopesForConsumer,
+  markViewScopesDirty,
+  subscribeToViewRefreshForConsumer,
+} from '../../utils/viewRefresh';
 import { Deal, Client, Contact, DealFormData, DealsTabProps, STATUS_CONFIG } from './dealsTab.types';
 import DealCard from './DealCard';
 import DealFormModal from './DealFormModal';
@@ -49,6 +53,7 @@ export function mergePreservedDealIntoResults<T extends { id: string; title?: st
 }
 
 const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
+  const refreshConsumerId = 'deals-tab';
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
@@ -187,11 +192,17 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
   }, [fetchDeals]);
 
   useEffect(() => {
-    if (!consumeDirtyViewScopes(['deals'])) {
+    if (!consumeDirtyViewScopesForConsumer(refreshConsumerId, ['deals'])) {
       return;
     }
 
     void fetchDeals({ forceRefresh: true });
+  }, [fetchDeals]);
+
+  useEffect(() => {
+    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['deals'], () => {
+      void fetchDeals({ forceRefresh: true });
+    });
   }, [fetchDeals]);
 
   // Update URL when client filter changes

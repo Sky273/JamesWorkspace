@@ -15,6 +15,10 @@ import {
 } from '@heroicons/react/24/outline';
 import PageHeader from '../components/page/PageHeader';
 import logger from '../utils/logger.frontend';
+import {
+  consumeDirtyViewScopesForConsumer,
+  subscribeToViewRefreshForConsumer,
+} from '../utils/viewRefresh';
 import type { ActionType, Firm, GdprAuditFilters, GdprAuditLog, Pagination, Stats } from '../components/GdprAudit/types';
 import GdprAuditStatsGrid from '../components/GdprAudit/GdprAuditStatsGrid';
 import GdprAuditFiltersPanel from '../components/GdprAudit/GdprAuditFiltersPanel';
@@ -32,6 +36,7 @@ const DEFAULT_FILTERS: GdprAuditFilters = {
 };
 
 const GdprAuditPage = (): JSX.Element => {
+  const refreshConsumerId = 'gdpr-audit-page';
   const { authGet } = useAuthFetch();
   const { t } = useTranslation();
 
@@ -132,6 +137,24 @@ const GdprAuditPage = (): JSX.Element => {
     void fetchLogs();
     void fetchStats();
   }, [fetchLogs, fetchStats]);
+
+  useEffect(() => {
+    if (!consumeDirtyViewScopesForConsumer(refreshConsumerId, ['gdprAudit', 'firms'])) {
+      return;
+    }
+
+    void fetchLogs(true);
+    void fetchStats(true);
+    void fetchFirms(true);
+  }, [fetchFirms, fetchLogs, fetchStats]);
+
+  useEffect(() => {
+    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['gdprAudit', 'firms'], () => {
+      void fetchLogs(true);
+      void fetchStats(true);
+      void fetchFirms(true);
+    });
+  }, [fetchFirms, fetchLogs, fetchStats]);
 
   const handleFilterChange = (key: keyof GdprAuditFilters, value: string): void => {
     setFilters(prev => ({ ...prev, [key]: value }));

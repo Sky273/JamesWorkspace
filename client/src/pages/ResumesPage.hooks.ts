@@ -7,7 +7,7 @@ import { useAuthFetch } from '../hooks/useAuthFetch';
 import type { Resume } from '../types/entities';
 import { formatDate } from '../utils/dateFormatter';
 import logger from '../utils/logger.frontend';
-import { consumeDirtyViewScopes } from '../utils/viewRefresh';
+import { consumeDirtyViewScopesForConsumer, subscribeToViewRefreshForConsumer } from '../utils/viewRefresh';
 import {
   buildResumesSearchParams,
   computeResumeStats,
@@ -33,6 +33,7 @@ type FetchResumesOptions = {
 };
 
 export function useResumesDashboard() {
+  const refreshConsumerId = 'resumes-page';
   const { user: authUser } = useAuth();
   const { deleteResume, deleting } = useResume();
   const { authGet } = useAuthFetch();
@@ -169,7 +170,7 @@ export function useResumesDashboard() {
     const routeRefreshRequested = Boolean((location.state as { refreshResumesView?: boolean } | null)?.refreshResumesView);
     const storedRefreshRequested = typeof window !== 'undefined'
       && window.sessionStorage.getItem(RESUMES_VIEW_REFRESH_STORAGE_KEY) === '1';
-    const dirtyScopeRefreshRequested = consumeDirtyViewScopes(['resumes']);
+    const dirtyScopeRefreshRequested = consumeDirtyViewScopesForConsumer(refreshConsumerId, ['resumes']);
 
     if (!routeRefreshRequested && !storedRefreshRequested && !dirtyScopeRefreshRequested) {
       return;
@@ -187,6 +188,18 @@ export function useResumesDashboard() {
       fetchGlobalStats({ forceRefresh: true }),
     ]);
   }, [fetchGlobalStats, fetchResumes, location.key, location.state]);
+
+  useEffect(() => {
+    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['resumes'], () => {
+      resumesRequestIdRef.current += 1;
+      statsRequestIdRef.current += 1;
+      setGroupedRefreshToken((previousValue) => previousValue + 1);
+      void Promise.all([
+        fetchResumes({ forceRefresh: true }),
+        fetchGlobalStats({ forceRefresh: true }),
+      ]);
+    });
+  }, [fetchGlobalStats, fetchResumes]);
 
   useEffect(() => {
     if (viewMode !== 'byDeal' && !isFilterExpanded) {

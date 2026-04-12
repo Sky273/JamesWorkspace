@@ -5,7 +5,12 @@ import { useAuth } from '../context/AuthContext';
 
 import userService from '../utils/userService';
 import logger from '../utils/logger.frontend';
-import { consumeDirtyViewScopes, markAllViewScopesDirty, markViewScopesDirty } from '../utils/viewRefresh';
+import {
+  consumeDirtyViewScopesForConsumer,
+  markAllViewScopesDirty,
+  markViewScopesDirty,
+  subscribeToViewRefreshForConsumer,
+} from '../utils/viewRefresh';
 import {
   buildUsersManagementStats,
   createDeleteTarget,
@@ -63,6 +68,7 @@ type FetchUsersOptions = {
   search?: string;
   clearOptimisticState?: boolean;
   forceRefresh?: boolean;
+  preserveUser?: User | null;
 };
 type FetchFirmsOptions = {
   page?: number;
@@ -73,6 +79,7 @@ type FetchFirmsOptions = {
 };
 
 export function useUsersManagementDashboard() {
+  const refreshConsumerId = 'users-management';
   const { t } = useTranslation();
   const { user } = useAuth();
   const tRef = useRef(t);
@@ -80,6 +87,8 @@ export function useUsersManagementDashboard() {
   const firmsRequestIdRef = useRef(0);
   const deletedUserIdsRef = useRef<Set<string>>(new Set());
   const deletedFirmIdsRef = useRef<Set<string>>(new Set());
+  const pendingUserRef = useRef<User | null>(null);
+  const pendingFirmRef = useRef<Firm | null>(null);
   const [firms, setFirms] = useState<Firm[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,6 +135,7 @@ export function useUsersManagementDashboard() {
     const requestId = ++usersRequestIdRef.current;
     const effectivePage = options.page ?? usersPage;
     const effectiveSearch = options.search ?? deferredSearchTerm;
+    const normalizedSearch = effectiveSearch.trim().toLowerCase();
     if (options.clearOptimisticState) {
       deletedUserIdsRef.current.clear();
     }
@@ -144,20 +154,33 @@ export function useUsersManagementDashboard() {
       const filterDeletedUsers = (records: User[]) => records.filter(
         (record) => !deletedUserIdsRef.current.has(record.id),
       );
+      const preservedUser = options.preserveUser ?? pendingUserRef.current;
+      const shouldPreserveUser = preservedUser != null
+        && !deletedUserIdsRef.current.has(preservedUser.id)
+        && (normalizedSearch.length === 0
+          || (preservedUser.name || '').toLowerCase().includes(normalizedSearch)
+          || (preservedUser.email || '').toLowerCase().includes(normalizedSearch))
+        && !userData.users?.some((record) => record.id === preservedUser.id);
 
       if (userData.users) {
         const visibleUsers = filterDeletedUsers(userData.users);
-        setUsers(visibleUsers);
+        const nextUsers = shouldPreserveUser && preservedUser
+          ? [preservedUser, ...visibleUsers].slice(0, USERS_PAGE_SIZE)
+          : visibleUsers;
+        setUsers(nextUsers);
         const reportedTotal = userData.pagination?.totalCount;
         const adjustedTotal = typeof reportedTotal === 'number'
           ? Math.max(0, reportedTotal - [...deletedUserIdsRef.current].filter((id) => userData.users.some((user) => user.id === id)).length)
-          : visibleUsers.length;
+          : nextUsers.length;
         setUsersTotalCount(adjustedTotal);
         setUsersHasMore(userData.pagination?.hasMore || false);
       } else {
         const visibleUsers = filterDeletedUsers(Array.isArray(userData) ? userData : []);
-        setUsers(visibleUsers);
-        setUsersTotalCount(visibleUsers.length);
+        const nextUsers = shouldPreserveUser && preservedUser
+          ? [preservedUser, ...visibleUsers].slice(0, USERS_PAGE_SIZE)
+          : visibleUsers;
+        setUsers(nextUsers);
+        setUsersTotalCount(nextUsers.length);
       }
     } catch (error) {
       if (requestId !== usersRequestIdRef.current) {
@@ -202,7 +225,7 @@ export function useUsersManagementDashboard() {
           return;
         }
         const visibleFirms = customerData.customers.filter((firm) => !deletedFirmIdsRef.current.has(firm.id));
-        const preservedFirm = options.preserveFirm;
+        const preservedFirm = options.preserveFirm ?? pendingFirmRef.current;
         const shouldPreserveFirm = preservedFirm != null
           && !deletedFirmIdsRef.current.has(preservedFirm.id)
           && (normalizedSearch.length === 0 || preservedFirm.name.toLowerCase().includes(normalizedSearch))
@@ -265,8 +288,8 @@ export function useUsersManagementDashboard() {
   }, [activeTab, canManageFirms]);
 
   useEffect(() => {
-    const shouldRefreshUsers = consumeDirtyViewScopes(['users']);
-    const shouldRefreshFirms = canManageFirms && consumeDirtyViewScopes(['firms']);
+    const shouldRefreshUsers = consumeDirtyViewScopesForConsumer(refreshConsumerId, ['users']);
+    const shouldRefreshFirms = canManageFirms && consumeDirtyViewScopesForConsumer(refreshConsumerId, ['firms']);
 
     if (shouldRefreshUsers) {
       void fetchUsers({ forceRefresh: true });
@@ -275,6 +298,23 @@ export function useUsersManagementDashboard() {
     if (shouldRefreshFirms) {
       void fetchFirms({ forceRefresh: true });
     }
+  }, [canManageFirms, fetchFirms, fetchUsers]);
+
+  useEffect(() => {
+    const unsubscribeUsers = subscribeToViewRefreshForConsumer(refreshConsumerId, ['users'], () => {
+      void fetchUsers({ forceRefresh: true });
+    });
+
+    const unsubscribeFirms = canManageFirms
+      ? subscribeToViewRefreshForConsumer(refreshConsumerId, ['firms'], () => {
+          void fetchFirms({ forceRefresh: true });
+        })
+      : () => {};
+
+    return () => {
+      unsubscribeUsers();
+      unsubscribeFirms();
+    };
   }, [canManageFirms, fetchFirms, fetchUsers]);
 
   const usersTotalPages = getTotalPages(usersTotalCount, USERS_PAGE_SIZE);
@@ -304,11 +344,12 @@ export function useUsersManagementDashboard() {
           role: formData.role,
           status: formData.status,
         });
+        pendingUserRef.current = updatedUser;
         usersRequestIdRef.current += 1;
         setUsers((currentUsers) => currentUsers.map((userRecord) => (userRecord.id === selectedUser.id ? updatedUser : userRecord)));
         toast.success(t('users.management.messages.userUpdated'));
         markViewScopesDirty(['users']);
-        await fetchUsers();
+        await fetchUsers({ preserveUser: updatedUser });
       } else {
         const createdUser = await userService.createUser({
           name: formData.name,
@@ -319,6 +360,7 @@ export function useUsersManagementDashboard() {
           role: formData.role,
           status: formData.status,
         });
+        pendingUserRef.current = createdUser;
         usersRequestIdRef.current += 1;
         deletedUserIdsRef.current.delete(createdUser.id);
         setUsers((currentUsers) => [createdUser, ...currentUsers].slice(0, USERS_PAGE_SIZE));
@@ -330,6 +372,7 @@ export function useUsersManagementDashboard() {
             : t('users.management.messages.userCreatedInvitationSent')
         );
         markViewScopesDirty(['users']);
+        await fetchUsers({ page: 1, search: searchTerm.trim(), forceRefresh: true, preserveUser: createdUser });
       }
 
       setUserModalOpen(false);
@@ -350,6 +393,7 @@ export function useUsersManagementDashboard() {
 
     try {
       const deletedUserId = deleteTarget.id;
+      pendingUserRef.current = null;
       deletedUserIdsRef.current.add(deletedUserId);
       setUsers((currentUsers) => currentUsers.filter((currentUser) => currentUser.id !== deletedUserId));
       setUsersTotalCount((currentTotal) => Math.max(0, currentTotal - 1));
@@ -394,6 +438,7 @@ export function useUsersManagementDashboard() {
       const normalizedSearch = searchTerm.trim();
       if (selectedFirm) {
         const updatedFirm = await userService.updateCustomer(selectedFirm.id, { name: formData.name });
+        pendingFirmRef.current = updatedFirm;
         firmsRequestIdRef.current += 1;
         setFirms((currentFirms) => currentFirms.map((firm) => (firm.id === selectedFirm.id ? updatedFirm : firm)));
         firmId = selectedFirm.id;
@@ -401,6 +446,7 @@ export function useUsersManagementDashboard() {
         markAllViewScopesDirty();
       } else {
         const newFirm = await userService.createCustomer({ name: formData.name });
+        pendingFirmRef.current = newFirm;
         firmsRequestIdRef.current += 1;
         deletedFirmIdsRef.current.delete(newFirm.id);
         setFirms((currentFirms) => [newFirm, ...currentFirms].slice(0, USERS_PAGE_SIZE));
@@ -445,6 +491,7 @@ export function useUsersManagementDashboard() {
 
     try {
       const deletedFirmId = deleteTarget.id;
+      pendingFirmRef.current = null;
       const normalizedSearch = searchTerm.trim();
       deletedFirmIdsRef.current.add(deletedFirmId);
       setFirms((currentFirms) => currentFirms.filter((firm) => firm.id !== deletedFirmId));

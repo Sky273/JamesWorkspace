@@ -9,7 +9,11 @@ import { createAuthOptionsWithCsrf, fetchWithCsrfRetry } from '../utils/apiInter
 import logger from '../utils/logger.frontend';
 import resumeAdaptationService from '../utils/resumeAdaptationService';
 import { templateService } from '../utils/templateService';
-import { consumeDirtyViewScopes, markViewScopesDirty } from '../utils/viewRefresh';
+import {
+  consumeDirtyViewScopesForConsumer,
+  markViewScopesDirty,
+  subscribeToViewRefreshForConsumer,
+} from '../utils/viewRefresh';
 import { removeSuggestionMarkers } from '../components/TiptapEditor/suggestionsHtml';
 import {
   applyTemplatePlaceholders,
@@ -81,6 +85,7 @@ type FetchAdaptationsOptions = {
 };
 
 export function useAdaptationsDashboard() {
+  const refreshConsumerId = 'adaptations-page';
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { authGet } = useAuthFetch();
@@ -244,12 +249,19 @@ export function useAdaptationsDashboard() {
   }, [fetchAdaptations]);
 
   useEffect(() => {
-    if (!consumeDirtyViewScopes(['adaptations'])) {
+    if (!consumeDirtyViewScopesForConsumer(refreshConsumerId, ['adaptations'])) {
       return;
     }
 
     setGroupedRefreshToken((currentToken) => currentToken + 1);
     void fetchAdaptations({ forceRefresh: true });
+  }, [fetchAdaptations]);
+
+  useEffect(() => {
+    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['adaptations'], () => {
+      setGroupedRefreshToken((currentToken) => currentToken + 1);
+      void fetchAdaptations({ forceRefresh: true });
+    });
   }, [fetchAdaptations]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / ADAPTATIONS_PAGE_SIZE)) || 1;

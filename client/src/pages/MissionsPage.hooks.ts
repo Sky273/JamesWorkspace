@@ -5,7 +5,11 @@ import { useTranslation } from 'react-i18next';
 
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import logger from '../utils/logger.frontend';
-import { consumeDirtyViewScopes, markViewScopesDirty } from '../utils/viewRefresh';
+import {
+  consumeDirtyViewScopesForConsumer,
+  markViewScopesDirty,
+  subscribeToViewRefreshForConsumer,
+} from '../utils/viewRefresh';
 import {
   buildMissionFormData,
   buildMissionsSearchParams,
@@ -41,6 +45,7 @@ type FetchMissionsOptions = {
 };
 
 export function useMissionsDashboard() {
+  const refreshConsumerId = 'missions-page';
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -236,12 +241,19 @@ export function useMissionsDashboard() {
   }, [fetchMissions]);
 
   useEffect(() => {
-    if (!consumeDirtyViewScopes(['missions'])) {
+    if (!consumeDirtyViewScopesForConsumer(refreshConsumerId, ['missions'])) {
       return;
     }
 
     setGroupedRefreshToken((currentToken) => currentToken + 1);
     void fetchMissions({ forceRefresh: true });
+  }, [fetchMissions]);
+
+  useEffect(() => {
+    return subscribeToViewRefreshForConsumer(refreshConsumerId, ['missions'], () => {
+      setGroupedRefreshToken((currentToken) => currentToken + 1);
+      void fetchMissions({ forceRefresh: true });
+    });
   }, [fetchMissions]);
 
   const resetForm = useCallback(() => {
