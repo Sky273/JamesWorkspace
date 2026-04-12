@@ -5,7 +5,7 @@ import { validateQuery, validators } from '../utils/validation.js';
 import { getSecurityLogs, getSecurityLogsCount } from '../services/security.service.js';
 import { getProxyLogs, getProxyLogsCount, getProxyLogsStats, safeLog } from '../utils/logger.backend.js';
 import { listUsers } from '../services/users.service.js';
-import { getApplicationCacheDiagnosticSummary, getCacheUsageSummary } from './healthRouteHelpers.js';
+import { getApplicationCacheDiagnosticSummary, getApplicationCacheUsageSummary } from './healthRouteHelpers.js';
 
 // Import cache stats functions
 import { getBlacklistStats } from '../services/tokenBlacklist.service.js';
@@ -235,7 +235,10 @@ router.get('/cache-stats', authenticateToken, requireAdmin, async (req, res) => 
             cacheRegistry: cacheRegistryStats,
             caches: detailedCaches
         });
-        const cacheUsageSummary = getCacheUsageSummary(cacheRegistryStats);
+        const cacheUsageSummary = getApplicationCacheUsageSummary({
+            cacheRegistry: cacheRegistryStats,
+            caches: detailedCaches
+        });
         const stats = {
             timestamp: new Date().toISOString(),
             memory: {

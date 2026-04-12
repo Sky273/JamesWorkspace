@@ -616,6 +616,9 @@ export const CACHE_KEYS = {
         RAW: 'raw',
         CLEANED: 'cleaned',
         ESCO: 'esco'
+    },
+    groupedViews: {
+        ADMIN: 'admin'
     }
 };
 
@@ -623,6 +626,22 @@ export const settingsCache = createCacheNamespace('settings', CACHE_TTL.SETTINGS
 export const templatesCache = createCacheNamespace('templates', CACHE_TTL.TEMPLATES);
 export const firmsCache = createCacheNamespace('firms', CACHE_TTL.FIRMS);
 export const tagsCache = createCacheNamespace('tags', CACHE_TTL.TEMPLATES);
+export const resumeGroupedViewCache = createCacheNamespace('resumeGroupedViews', CACHE_TTL.GROUPED_VIEWS);
+export const missionGroupedViewCache = createCacheNamespace('missionGroupedViews', CACHE_TTL.GROUPED_VIEWS);
+export const adaptationGroupedViewCache = createCacheNamespace('adaptationGroupedViews', CACHE_TTL.GROUPED_VIEWS);
+
+export function buildGroupedViewScopeKey({ firmId = null, isAdmin = false } = {}) {
+    return isAdmin ? CACHE_KEYS.groupedViews.ADMIN : `firm:${firmId}`;
+}
+
+async function invalidateGroupedViewNamespace(cacheNamespace, scopeKey = null) {
+    const keys = new Set([CACHE_KEYS.groupedViews.ADMIN]);
+    if (scopeKey) {
+        keys.add(scopeKey);
+    }
+
+    await Promise.all(Array.from(keys).map((key) => cacheNamespace.invalidate(key)));
+}
 
 export async function invalidateSettingsCaches() {
     await Promise.all([
@@ -645,6 +664,18 @@ export async function invalidateTagsCaches() {
         tagsCache.invalidate(CACHE_KEYS.tags.CLEANED),
         tagsCache.invalidate(CACHE_KEYS.tags.ESCO)
     ]);
+}
+
+export async function invalidateResumeGroupedViewCaches(scopeKey = null) {
+    await invalidateGroupedViewNamespace(resumeGroupedViewCache, scopeKey);
+}
+
+export async function invalidateMissionGroupedViewCaches(scopeKey = null) {
+    await invalidateGroupedViewNamespace(missionGroupedViewCache, scopeKey);
+}
+
+export async function invalidateAdaptationGroupedViewCaches(scopeKey = null) {
+    await invalidateGroupedViewNamespace(adaptationGroupedViewCache, scopeKey);
 }
 
 export async function getNamedCacheStats(cacheName) {

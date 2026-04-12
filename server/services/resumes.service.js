@@ -6,6 +6,7 @@
 
 import { query } from '../config/database.js';
 import { findWithTimeout, createWithTimeout } from '../utils/postgresHelpers.js';
+import { invalidateDashboardAndGroupedViews } from './viewCacheInvalidation.service.js';
 
 /**
  * Allowed column names for dynamic UPDATE on the resumes table.
@@ -196,6 +197,7 @@ export async function updateResume(id, updateData) {
         err.statusCode = 404;
         throw err;
     }
+    await invalidateDashboardAndGroupedViews(result.rows[0].firm_id || null);
     return result.rows[0];
 }
 
@@ -239,6 +241,7 @@ export async function insertResume(data) {
         ]
     );
 
+    await invalidateDashboardAndGroupedViews(result.rows[0]?.firm_id || data.firmId || null);
     return result.rows[0];
 }
 
@@ -274,12 +277,13 @@ export async function updateConsentStatus(id, consentStatus) {
  * @returns {Promise<boolean>}
  */
 export async function deleteResume(id) {
-    const result = await query('DELETE FROM resumes WHERE id = $1 RETURNING id', [id]);
+    const result = await query('DELETE FROM resumes WHERE id = $1 RETURNING id, firm_id', [id]);
     if (result.rows.length === 0) {
         const err = new Error('Resume not found');
         err.statusCode = 404;
         throw err;
     }
+    await invalidateDashboardAndGroupedViews(result.rows[0].firm_id || null);
     return true;
 }
 
@@ -307,5 +311,7 @@ export async function findMissionRecord(id) {
  * @returns {Promise<Object>} Created adaptation record
  */
 export async function createAdaptation(data) {
-    return createWithTimeout('resume_adaptations', data);
+    const record = await createWithTimeout('resume_adaptations', data);
+    await invalidateDashboardAndGroupedViews(record.firm_id || data.firm_id || null);
+    return record;
 }

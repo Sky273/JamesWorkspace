@@ -68,6 +68,10 @@ vi.mock('../../services/profileMatching.service.js', () => ({
     clearMissionKeywordsCache: (...args) => mockClearMissionKeywordsCache(...args)
 }));
 
+vi.mock('../../services/viewCacheInvalidation.service.js', () => ({
+    invalidateDashboardAndGroupedViews: vi.fn(async () => undefined)
+}));
+
 // Mock firmHelpers
 const mockGetUserFirmId = vi.fn();
 vi.mock('../../utils/firmHelpers.js', () => ({
@@ -773,6 +777,7 @@ describe('Missions Routes - DELETE /api/missions/:id', () => {
     });
 
     it('should allow admin to delete any mission', async () => {
+        mockFindMission.mockResolvedValueOnce(makeMissionRow({ firm: 'Other Firm', firm_id: 'firm-other' }));
         mockDeleteMission.mockResolvedValueOnce(undefined);
 
         const res = await request(app)
@@ -781,7 +786,7 @@ describe('Missions Routes - DELETE /api/missions/:id', () => {
             .set('x-test-role', 'admin');
 
         expect(res.status).toBe(200);
-        expect(mockFindMission).not.toHaveBeenCalled();
+        expect(mockFindMission).toHaveBeenCalledWith('mission-123');
     });
 });
 

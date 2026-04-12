@@ -111,7 +111,8 @@ export const ALLOWED_ORIGINS = buildAllowedOrigins(process.env);
 export const CACHE_TTL = {
     SETTINGS: 10 * 60 * 1000,
     TEMPLATES: 10 * 60 * 1000,
-    FIRMS: 15 * 60 * 1000
+    FIRMS: 15 * 60 * 1000,
+    GROUPED_VIEWS: 30 * 1000
 };
 export const CACHE_BACKEND = ['memory', 'redis'].includes((process.env.CACHE_BACKEND || '').toLowerCase())
     ? process.env.CACHE_BACKEND.toLowerCase()

@@ -13,6 +13,15 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+vi.mock('../../services/cache.service.js', () => ({
+    buildGroupedViewScopeKey: ({ firmId = null, isAdmin = false } = {}) => (isAdmin ? 'admin' : `firm:${firmId}`),
+    getNamedCacheStats: vi.fn(async () => ({ size: 0 })),
+    invalidateAdaptationGroupedViewCaches: vi.fn(async () => undefined),
+    adaptationGroupedViewCache: {
+        getOrLoad: vi.fn(async (_key, loader) => loader())
+    }
+}));
+
 import { query } from '../../config/database.js';
 import {
     listAdaptations,

@@ -61,6 +61,24 @@ function getCacheStorageBackend(stats = {}) {
     return stats?.storageBackend || stats?.effectiveBackend || stats?.backend || 'unknown';
 }
 
+function getApplicationCacheEntries({ cacheRegistry = {}, caches = {} } = {}) {
+    return [
+        caches?.settings?.cache || cacheRegistry?.settings,
+        cacheRegistry?.templates,
+        cacheRegistry?.firms,
+        caches?.tags || cacheRegistry?.tags,
+        cacheRegistry?.resumeGroupedViews,
+        cacheRegistry?.missionGroupedViews,
+        cacheRegistry?.adaptationGroupedViews,
+        caches?.resumeStats,
+        caches?.marketFacts,
+        caches?.marketTrends,
+        caches?.metiers,
+        caches?.esco,
+        caches?.tokenBlacklist
+    ].filter(Boolean);
+}
+
 function getCacheActivityScore(stats = {}) {
     return (
         Number(stats?.size || 0) +
@@ -77,18 +95,7 @@ function getCacheActivityScore(stats = {}) {
 
 export function getApplicationCacheDiagnosticSummary({ cacheRegistry = {}, caches = {} } = {}) {
     const registryEntries = Object.values(cacheRegistry);
-    const applicationEntries = [
-        caches?.settings?.cache || cacheRegistry?.settings,
-        cacheRegistry?.templates,
-        cacheRegistry?.firms,
-        caches?.tags || cacheRegistry?.tags,
-        caches?.resumeStats,
-        caches?.marketFacts,
-        caches?.marketTrends,
-        caches?.metiers,
-        caches?.esco,
-        caches?.tokenBlacklist
-    ].filter(Boolean);
+    const applicationEntries = getApplicationCacheEntries({ cacheRegistry, caches });
 
     const configuredBackends = [...new Set(
         applicationEntries
@@ -165,6 +172,32 @@ export function getApplicationCacheDiagnosticSummary({ cacheRegistry = {}, cache
         fallbackReason,
         message,
         backendBreakdown
+    };
+}
+
+export function getApplicationCacheUsageSummary({ cacheRegistry = {}, caches = {} } = {}) {
+    const applicationEntries = getApplicationCacheEntries({ cacheRegistry, caches });
+    const summary = applicationEntries.reduce((accumulator, stats) => {
+        accumulator.hits += Number(stats?.hits || 0);
+        accumulator.misses += Number(stats?.misses || 0);
+        accumulator.sets += Number(stats?.sets || 0);
+        accumulator.invalidations += Number(stats?.invalidations || 0);
+        accumulator.size += Number(stats?.size || 0);
+        return accumulator;
+    }, {
+        hits: 0,
+        misses: 0,
+        sets: 0,
+        invalidations: 0,
+        size: 0
+    });
+
+    const totalLookups = summary.hits + summary.misses;
+
+    return {
+        ...summary,
+        totalLookups,
+        hitRate: totalLookups > 0 ? summary.hits / totalLookups : 0
     };
 }
 

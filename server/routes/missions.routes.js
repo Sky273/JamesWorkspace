@@ -10,6 +10,7 @@ import { sanitizeHtmlContent } from '../utils/sanitizer.backend.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
 import * as missionsService from '../services/missions.service.js';
+import { invalidateDashboardAndGroupedViews } from '../services/viewCacheInvalidation.service.js';
 import {
     ensureMissionFirmAccess,
     normalizeMissionPayload,
@@ -209,6 +210,8 @@ router.post('/', authenticateToken, validateBody(createMissionSchema), createMis
             deal_id: dealId
         });
 
+        await invalidateDashboardAndGroupedViews(targetFirmId || null);
+
         res.json(missionsService.mapMissionRecord(record));
 }));
 
@@ -315,6 +318,7 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateM
         }
 
         const record = await missionsService.updateMission(id, updates);
+        await invalidateDashboardAndGroupedViews(targetFirmId || existingMission.firm_id || null);
         return res.json(missionsService.mapMissionRecord(record));
     },
     handleMissionNotFound
@@ -327,9 +331,11 @@ router.delete('/:id', authenticateToken, validateParams('id'), createMissionsRou
     async (req, res) => {
         const { id } = req.params;
         const scope = await getMissionRequestScope(req);
+        let invalidationFirmId = null;
 
         if (!scope.isAdmin) {
             const existingRecord = await missionsService.findMission(id);
+            invalidationFirmId = existingRecord.firm_id || null;
             const access = ensureMissionFirmAccess({
                 isAdmin: scope.isAdmin,
                 userFirmId: scope.userFirmId,
@@ -342,9 +348,13 @@ router.delete('/:id', authenticateToken, validateParams('id'), createMissionsRou
                         : access.error
                 });
             }
+        } else {
+            const existingRecord = await missionsService.findMission(id);
+            invalidationFirmId = existingRecord.firm_id || null;
         }
 
         await missionsService.deleteMission(id);
+        await invalidateDashboardAndGroupedViews(invalidationFirmId || scope.userFirmId || null);
         return res.json({ message: 'Mission deleted successfully' });
     },
     handleMissionNotFound

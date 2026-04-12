@@ -403,13 +403,13 @@ describe('Admin Routes', () => {
                 }
             });
             expect(res.body.cacheSummary).toEqual({
-                hits: 7,
-                misses: 4,
-                sets: 10,
-                invalidations: 2,
-                size: 7,
-                totalLookups: 11,
-                hitRate: 7 / 11
+                hits: 3,
+                misses: 3,
+                sets: 7,
+                invalidations: 1,
+                size: 902,
+                totalLookups: 6,
+                hitRate: 0.5
             });
             expect(res.body.caches.settings.entries).toBe(2);
         });
@@ -442,8 +442,9 @@ describe('Admin Routes', () => {
                     }
                 }
             });
-            expect(res.body.cacheSummary.hits).toBe(7);
-            expect(res.body.cacheSummary.misses).toBe(4);
+            expect(res.body.cacheSummary.hits).toBe(3);
+            expect(res.body.cacheSummary.misses).toBe(3);
+            expect(res.body.cacheSummary.size).toBe(902);
             expect(res.body.caches).toBeDefined();
             expect(res.body.caches.tokenBlacklist).toMatchObject({ size: 5, effectiveBackend: 'memory' });
             expect(res.body.caches.settings).toEqual({

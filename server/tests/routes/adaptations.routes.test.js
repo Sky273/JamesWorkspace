@@ -37,6 +37,10 @@ vi.mock('../../services/adaptations.service.js', () => ({
     deleteAdaptation: (...args) => mockDeleteAdaptation(...args)
 }));
 
+vi.mock('../../services/viewCacheInvalidation.service.js', () => ({
+    invalidateDashboardAndGroupedViews: vi.fn(async () => undefined)
+}));
+
 // Mock firmHelpers
 const mockGetUserFirmId = vi.fn();
 vi.mock('../../utils/firmHelpers.js', () => ({
@@ -570,6 +574,11 @@ describe('Adaptations Routes - DELETE /api/adaptations/:id', () => {
     });
 
     it('should allow admin to delete any adaptation', async () => {
+        mockGetAdaptationById.mockResolvedValueOnce({
+            id: 'adapt-123',
+            firm: 'Other Firm',
+            firm_id: 'firm-other'
+        });
         mockDeleteAdaptation.mockResolvedValueOnce(true);
 
         const res = await request(app)

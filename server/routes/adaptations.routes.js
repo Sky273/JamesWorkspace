@@ -9,6 +9,7 @@ import { validateParams, validateBody, updateAdaptationSchema } from '../utils/v
 import { safeLog } from '../utils/logger.backend.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
 import * as adaptationsService from '../services/adaptations.service.js';
+import { invalidateDashboardAndGroupedViews } from '../services/viewCacheInvalidation.service.js';
 import {
     ensureAdaptationFirmAccess,
     normalizeAdaptationPayload
@@ -189,10 +190,11 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateA
         const { id } = req.params;
         const isAdmin = req.user?.role === 'admin';
         const userFirmId = await getUserFirmId(req);
+        let existingRecord = null;
 
         // Check permissions
         if (!isAdmin) {
-            const existingRecord = await adaptationsService.getAdaptationById(id);
+            existingRecord = await adaptationsService.getAdaptationById(id);
             const access = ensureAdaptationFirmAccess({ isAdmin, userFirmId, record: existingRecord });
             if (!access.ok) {
                 return res.status(access.status).json({
@@ -223,6 +225,7 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateA
         }
 
         const updatedRecord = await adaptationsService.updateAdaptation(id, updates);
+        await invalidateDashboardAndGroupedViews(updatedRecord.firm_id || null);
 
         res.json({
             id: updatedRecord.id,
@@ -259,21 +262,25 @@ router.delete('/:id', authenticateToken, validateParams('id'), async (req, res) 
         const { id } = req.params;
         const isAdmin = req.user?.role === 'admin';
         const userFirmId = await getUserFirmId(req);
+        let existingRecord = null;
 
         // Check permissions
         if (!isAdmin) {
-            const existingRecord = await adaptationsService.getAdaptationById(id);
+            existingRecord = await adaptationsService.getAdaptationById(id);
             const access = ensureAdaptationFirmAccess({ isAdmin, userFirmId, record: existingRecord });
             if (!access.ok) {
                 return res.status(access.status).json({
                     error: access.error === 'Access denied'
-                        ? 'You can only delete adaptations from your firm'
+                    ? 'You can only delete adaptations from your firm'
                         : access.error
                 });
             }
+        } else {
+            existingRecord = await adaptationsService.getAdaptationById(id);
         }
 
         await adaptationsService.deleteAdaptation(id);
+        await invalidateDashboardAndGroupedViews(existingRecord?.firm_id || userFirmId || null);
         res.json({ message: 'Adaptation deleted successfully' });
     } catch (error) {
         safeLog('error', 'Error deleting adaptation', { error: error.message, adaptationId: req.params.id });

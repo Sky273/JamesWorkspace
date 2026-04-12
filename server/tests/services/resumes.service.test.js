@@ -18,6 +18,11 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+const mockInvalidateDashboardAndGroupedViews = vi.fn();
+vi.mock('../../services/viewCacheInvalidation.service.js', () => ({
+    invalidateDashboardAndGroupedViews: (...args) => mockInvalidateDashboardAndGroupedViews(...args)
+}));
+
 import { query } from '../../config/database.js';
 import { findWithTimeout, createWithTimeout } from '../../utils/postgresHelpers.js';
 import {
@@ -40,6 +45,7 @@ import {
 describe('Resumes Service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockInvalidateDashboardAndGroupedViews.mockResolvedValue(undefined);
     });
 
     describe('RESUME_SELECT_COLUMNS', () => {
@@ -181,17 +187,18 @@ describe('Resumes Service', () => {
 
     describe('updateResume', () => {
         it('should update fields and return result', async () => {
-            query.mockResolvedValueOnce({ rows: [{ id: 'r1', name: 'Updated' }] });
+            query.mockResolvedValueOnce({ rows: [{ id: 'r1', name: 'Updated', firm_id: 'f1' }] });
 
             const result = await updateResume('r1', { name: 'Updated', title: 'Dev' });
 
             expect(result.name).toBe('Updated');
             expect(query.mock.calls[0][0]).toContain('UPDATE resumes SET');
             expect(query.mock.calls[0][0]).toContain('updated_at = CURRENT_TIMESTAMP');
+            expect(mockInvalidateDashboardAndGroupedViews).toHaveBeenCalledWith('f1');
         });
 
         it('should skip undefined values', async () => {
-            query.mockResolvedValueOnce({ rows: [{ id: 'r1' }] });
+            query.mockResolvedValueOnce({ rows: [{ id: 'r1', firm_id: 'f1' }] });
 
             await updateResume('r1', { name: 'Valid', title: undefined });
 
@@ -223,8 +230,9 @@ describe('Resumes Service', () => {
 
     describe('deleteResume', () => {
         it('should return true when deleted', async () => {
-            query.mockResolvedValueOnce({ rows: [{ id: 'r1' }] });
+            query.mockResolvedValueOnce({ rows: [{ id: 'r1', firm_id: 'f1' }] });
             expect(await deleteResume('r1')).toBe(true);
+            expect(mockInvalidateDashboardAndGroupedViews).toHaveBeenCalledWith('f1');
         });
 
         it('should throw 404 if not found', async () => {
@@ -241,7 +249,7 @@ describe('Resumes Service', () => {
 
     describe('insertResume', () => {
         it('should insert and return the new resume', async () => {
-            const created = { id: 'r1', name: 'New CV' };
+            const created = { id: 'r1', name: 'New CV', firm_id: 'f1' };
             query.mockResolvedValueOnce({ rows: [created] });
 
             const result = await insertResume({
@@ -255,6 +263,7 @@ describe('Resumes Service', () => {
 
             expect(result).toEqual(created);
             expect(query.mock.calls[0][0]).toContain('INSERT INTO resumes');
+            expect(mockInvalidateDashboardAndGroupedViews).toHaveBeenCalledWith('f1');
         });
     });
 
@@ -307,13 +316,14 @@ describe('Resumes Service', () => {
 
     describe('createAdaptation', () => {
         it('should delegate to createWithTimeout', async () => {
-            createWithTimeout.mockResolvedValueOnce({ id: 'a1' });
+            createWithTimeout.mockResolvedValueOnce({ id: 'a1', firm_id: 'f1' });
 
             const data = { resume_id: 'r1', mission_id: 'm1' };
             const result = await createAdaptation(data);
 
             expect(createWithTimeout).toHaveBeenCalledWith('resume_adaptations', data);
             expect(result.id).toBe('a1');
+            expect(mockInvalidateDashboardAndGroupedViews).toHaveBeenCalledWith('f1');
         });
     });
 });

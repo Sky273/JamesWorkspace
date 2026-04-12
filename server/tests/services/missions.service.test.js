@@ -24,6 +24,15 @@ vi.mock('../../utils/postgresHelpers.js', () => ({
     escapeLike: vi.fn((str) => str.replace(/[%_\\]/g, '\\$&'))
 }));
 
+vi.mock('../../services/cache.service.js', () => ({
+    buildGroupedViewScopeKey: ({ firmId = null, isAdmin = false } = {}) => (isAdmin ? 'admin' : `firm:${firmId}`),
+    getNamedCacheStats: vi.fn(async () => ({ size: 0 })),
+    invalidateMissionGroupedViewCaches: vi.fn(async () => undefined),
+    missionGroupedViewCache: {
+        getOrLoad: vi.fn(async (_key, loader) => loader())
+    }
+}));
+
 // Import after mocks
 import { query } from '../../config/database.js';
 import { selectRawWithTimeout, selectWithTimeout, findWithTimeout, createWithTimeout, updateWithTimeout, destroyWithTimeout } from '../../utils/postgresHelpers.js';

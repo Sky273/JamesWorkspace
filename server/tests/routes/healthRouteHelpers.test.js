@@ -11,6 +11,7 @@ import {
     buildServerCheck,
     getCacheBackendSummary,
     getApplicationCacheDiagnosticSummary,
+    getApplicationCacheUsageSummary,
     getCacheDiagnosticSummary,
     getCacheUsageSummary,
     getConfiguredCheck,
@@ -173,6 +174,15 @@ describe('healthRouteHelpers', () => {
                 memory: { caches: 2, activityScore: 14, size: 14 },
                 redis: { caches: 1, activityScore: 2, size: 1 }
             }
+        });
+        expect(getApplicationCacheUsageSummary({ cacheRegistry: registry, caches })).toEqual({
+            hits: 0,
+            misses: 0,
+            sets: 1,
+            invalidations: 0,
+            size: 15,
+            totalLookups: 0,
+            hitRate: 0
         });
     });
 
