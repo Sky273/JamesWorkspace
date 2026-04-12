@@ -62,6 +62,7 @@ const DEFAULT_ADMIN_EMAIL = (process.env.DEFAULT_ADMIN_EMAIL || 'admin@resumecon
 const [
     { query, testConnection, closePool },
     { safeLog },
+    { cleanupAllCaches },
     { ensureDefaultAdminAccount },
     { initGdprAuditTable },
     { initResumeCommentsTable },
@@ -74,6 +75,7 @@ const [
 ] = await Promise.all([
     import('../config/database.js'),
     import('../utils/logger.backend.js'),
+    import('../services/cache.service.js'),
     import('./ensure-default-admin.js'),
     import('../services/gdprAudit.service.js'),
     import('../services/resumeComments.service.js'),
@@ -470,6 +472,7 @@ if (isDirectRun) {
         });
         process.exitCode = 1;
     } finally {
+        await cleanupAllCaches();
         await closePool();
     }
 }

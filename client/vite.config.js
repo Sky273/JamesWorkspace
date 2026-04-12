@@ -53,6 +53,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '');
   const httpsEnabled = env.VITE_HTTPS_ENABLED === 'true';
   const httpsPort = env.VITE_HTTPS_PORT || '3443';
+  const devServerPort = Number.parseInt(env.VITE_DEV_SERVER_PORT || '5173', 10);
   const disableAssetCompression = env.VITE_DISABLE_ASSET_COMPRESSION === 'true';
 
   console.log(`HTTPS_ENABLED: ${httpsEnabled} (env value: "${env.VITE_HTTPS_ENABLED}")`);
@@ -88,7 +89,7 @@ export default defineConfig(({ mode }) => {
     ],
     server: {
       host: '0.0.0.0',
-      port: httpsEnabled ? 443 : 5173,
+      port: Number.isFinite(devServerPort) ? devServerPort : 5173,
       strictPort: true,
       https: getHttpsConfig({
         certificatesDir: path.resolve(__dirname, '..', 'certificates'),

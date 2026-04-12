@@ -48,6 +48,31 @@ function spawnNpm(args, options = {}) {
     return spawn(NODE_EXECUTABLE, [NPM_CLI_PATH, ...args], options);
 }
 
+function readClientEnv() {
+    const clientEnvPath = path.join(ROOT_DIR, 'client', '.env');
+    const clientEnv = {
+        viteHttpsEnabled: false,
+        viteDevServerPort: 5173
+    };
+
+    if (!fs.existsSync(clientEnvPath)) {
+        return clientEnv;
+    }
+
+    const content = fs.readFileSync(clientEnvPath, 'utf8');
+    clientEnv.viteHttpsEnabled = /^\s*VITE_HTTPS_ENABLED\s*=\s*true\s*$/m.test(content);
+
+    const portMatch = content.match(/^\s*VITE_DEV_SERVER_PORT\s*=\s*(\d+)\s*$/m);
+    if (portMatch) {
+        const parsedPort = Number.parseInt(portMatch[1], 10);
+        if (Number.isInteger(parsedPort) && parsedPort > 0) {
+            clientEnv.viteDevServerPort = parsedPort;
+        }
+    }
+
+    return clientEnv;
+}
+
 // Parse arguments
 const args = process.argv.slice(2);
 const skipDb = args.includes('--skip-db');
@@ -78,9 +103,9 @@ async function stopExistingServers() {
     
     try {
         if (isWindows) {
-            // Kill processes LISTENING on ports 3001, 3002, 3443, 5173, 443 (proxy, pdf, https, vite, vite-https)
+            // Kill processes LISTENING on ports 3001, 3002, 3443, 5173 (proxy, pdf, backend https, vite)
             // Note: We only kill LISTENING processes, not client connections
-            const ports = [3001, 3002, 3443, 5173, 443];
+            const ports = [3001, 3002, 3443, 5173];
             for (const port of ports) {
                 try {
                     // Find processes LISTENING on this specific port (not client connections)
@@ -113,7 +138,7 @@ async function stopExistingServers() {
             }
         } else {
             // Unix: kill processes on ports
-            const ports = [3001, 3002, 3443, 5173, 443];
+            const ports = [3001, 3002, 3443, 5173];
             for (const port of ports) {
                 try {
                     await execAsync(`lsof -ti:${port} | xargs kill -9 2>/dev/null || true`);
@@ -134,7 +159,7 @@ async function stopExistingServers() {
     
     // Verify ports are free
     if (isWindows) {
-        for (const port of [3001, 3002, 5173, 443]) {
+        for (const port of [3001, 3002, 3443, 5173]) {
             try {
                 const { stdout } = await execAsync(`netstat -ano | findstr :${port} | findstr LISTENING`);
                 if (stdout.trim()) {
@@ -316,14 +341,8 @@ async function startServices() {
     
     // Start Vite dev server (only in development)
     if (!isProd) {
-        // Check if HTTPS is enabled in client/.env
-        const clientEnvPath = path.join(ROOT_DIR, 'client', '.env');
-        let viteHttpsEnabled = false;
-        if (fs.existsSync(clientEnvPath)) {
-            const clientEnv = fs.readFileSync(clientEnvPath, 'utf8');
-            viteHttpsEnabled = clientEnv.includes('VITE_HTTPS_ENABLED=true');
-        }
-        const vitePort = viteHttpsEnabled ? 443 : 5173;
+        const { viteHttpsEnabled, viteDevServerPort } = readClientEnv();
+        const vitePort = viteDevServerPort;
         const viteProtocol = viteHttpsEnabled ? 'https' : 'http';
         
         log(`  🚀 Starting Vite dev server (${viteProtocol}://localhost:${vitePort})...`, 'cyan');
@@ -445,13 +464,9 @@ async function startServices() {
 }
 
 function getFrontendUrl() {
-    const clientEnvPath = path.join(ROOT_DIR, 'client', '.env');
-    let viteHttpsEnabled = false;
-    if (fs.existsSync(clientEnvPath)) {
-        const clientEnv = fs.readFileSync(clientEnvPath, 'utf8');
-        viteHttpsEnabled = clientEnv.includes('VITE_HTTPS_ENABLED=true');
-    }
-    return viteHttpsEnabled ? 'https://localhost:443' : 'http://localhost:5173';
+    const { viteHttpsEnabled, viteDevServerPort } = readClientEnv();
+    const protocol = viteHttpsEnabled ? 'https' : 'http';
+    return `${protocol}://localhost:${viteDevServerPort}`;
 }
 
 function showSummary() {

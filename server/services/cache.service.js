@@ -284,6 +284,7 @@ class MemoryCacheNamespace extends VersionedCacheNamespace {
         this.cleanupInterval = setInterval(() => {
             this.cleanup();
         }, DEFAULT_CLEANUP_INTERVAL_MS);
+        this.cleanupInterval.unref?.();
     }
 
     async set(key, value, options = {}) {
