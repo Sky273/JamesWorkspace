@@ -244,6 +244,60 @@ describe('UsersManagement', () => {
     expect(getCustomersPaginatedMock.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
+  it('does not reuse the firms search term when creating a user after switching tabs', async () => {
+    getCustomersPaginatedMock.mockResolvedValue({
+      customers: [
+        { id: 'firm-1', name: 'Acme' },
+        { id: 'firm-2', name: 'Globex' },
+      ],
+      pagination: { totalCount: 2, hasMore: false, page: 1, pageSize: 12 },
+    });
+
+    render(<UsersManagement />);
+
+    expect(await screen.findByText('users.management.title')).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: /users\.management\.tabs\.firms/i }));
+    fireEvent.change(screen.getByPlaceholderText(/users\.management\.searchFirms/i), {
+      target: { value: 'Globex' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /users\.management\.tabs\.users/i }));
+    fireEvent.click(screen.getByRole('button', { name: /users\.management\.addUser/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'submit-user-modal' }));
+
+    await waitFor(() => {
+      expect(createUserMock).toHaveBeenCalledTimes(1);
+    });
+
+    const forceRefreshUserCalls = getUsersPaginatedMock.mock.calls.filter(([args]) => (
+      typeof args === 'object'
+      && args !== null
+      && 'forceRefresh' in (args as Record<string, unknown>)
+      && (args as Record<string, unknown>).forceRefresh === true
+    ));
+
+    expect(forceRefreshUserCalls.some(([args]) => (
+      typeof args === 'object'
+      && args !== null
+      && 'search' in (args as Record<string, unknown>)
+      && (args as Record<string, unknown>).search === ''
+    ))).toBe(true);
+    expect(await screen.findByText('Lookman')).toBeInTheDocument();
+  });
+
+  it('closes the user modal immediately after submit while background refresh continues', async () => {
+    render(<UsersManagement />);
+
+    expect(await screen.findByText('users.management.title')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /users\.management\.addUser/i }));
+    expect(await screen.findByRole('button', { name: 'submit-user-modal' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'submit-user-modal' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'submit-user-modal' })).not.toBeInTheDocument();
+    });
+  });
+
   it('shows a degraded success message when the user is created without invitation email', async () => {
     createUserMock.mockResolvedValueOnce({
       id: 'user-3',
@@ -457,6 +511,56 @@ describe('UsersManagement', () => {
       && 'forceRefresh' in (args as Record<string, unknown>)
       && (args as Record<string, unknown>).forceRefresh === true
     ))).toBe(true);
+  });
+
+  it('does not preserve a stale pending firm after an explicit refresh', async () => {
+    getCustomersPaginatedMock
+      .mockResolvedValueOnce({
+        customers: [
+          { id: 'firm-1', name: 'Acme' },
+          { id: 'firm-2', name: 'Globex' },
+        ],
+        pagination: { totalCount: 2, hasMore: false, page: 1, pageSize: 12 },
+      })
+      .mockResolvedValueOnce({
+        customers: [
+          { id: 'firm-1', name: 'Renamed Cabinet' },
+          { id: 'firm-2', name: 'Globex' },
+        ],
+        pagination: { totalCount: 2, hasMore: false, page: 1, pageSize: 12 },
+      })
+      .mockResolvedValueOnce({
+        customers: [
+          { id: 'firm-2', name: 'Globex' },
+        ],
+        pagination: { totalCount: 1, hasMore: false, page: 1, pageSize: 12 },
+      })
+      .mockResolvedValue({
+        customers: [
+          { id: 'firm-2', name: 'Globex' },
+        ],
+        pagination: { totalCount: 1, hasMore: false, page: 1, pageSize: 12 },
+      });
+
+    render(<UsersManagement />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /users\.management\.tabs\.firms/i }));
+    await waitFor(() => {
+      expect(screen.getByText('Acme')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getAllByRole('button', { name: /users\.management\.actions\.edit/i })[0]);
+    fireEvent.click(await screen.findByRole('button', { name: 'submit-firm-modal' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Renamed Cabinet')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /users\.management\.refresh/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Renamed Cabinet')).not.toBeInTheDocument();
+    });
   });
 
   it('removes a deleted user from the visible list immediately', async () => {

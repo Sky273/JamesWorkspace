@@ -42,6 +42,17 @@ type FetchTemplatesOptions = {
   forceRefresh?: boolean;
 };
 
+function matchesTemplateSearch(template: Template, rawSearch: string): boolean {
+  const normalizedSearch = rawSearch.trim().toLowerCase();
+  if (!normalizedSearch) {
+    return true;
+  }
+
+  return [template.Name, template.Description, template.FirmName]
+    .filter((value): value is string => typeof value === 'string' && value.length > 0)
+    .some((value) => value.toLowerCase().includes(normalizedSearch));
+}
+
 export function useTemplatesDashboard() {
   const refreshConsumerId = 'templates-page';
   const navigate = useNavigate();
@@ -108,9 +119,6 @@ export function useTemplatesDashboard() {
     const requestId = ++templatesRequestIdRef.current;
     const effectivePage = options.page ?? currentPage;
     const effectiveSearch = options.search ?? debouncedSearch;
-    if (options.clearPendingTemplate) {
-      pendingTemplateRef.current = null;
-    }
     try {
       setLoading(true);
       setError(null);
@@ -125,7 +133,16 @@ export function useTemplatesDashboard() {
         return;
       }
       const pendingTemplate = pendingTemplateRef.current;
-      const shouldInjectPendingTemplate = Boolean(pendingTemplate?.template && effectivePage === 1 && !effectiveSearch);
+      const responseIncludesPendingTemplate = Boolean(
+        pendingTemplate?.template
+        && data.templates.some((template) => template.id === pendingTemplate.template.id),
+      );
+      const shouldInjectPendingTemplate = Boolean(
+        pendingTemplate?.template
+        && effectivePage === 1
+        && matchesTemplateSearch(pendingTemplate.template, effectiveSearch)
+        && !responseIncludesPendingTemplate,
+      );
       const mergedTemplates = shouldInjectPendingTemplate
         ? [pendingTemplate!.template, ...data.templates.filter((template) => template.id !== pendingTemplate!.template.id)].slice(0, TEMPLATES_PAGE_SIZE)
         : data.templates;
@@ -138,7 +155,10 @@ export function useTemplatesDashboard() {
           )
         : (data.pagination.totalCount || data.templates.length));
       setHasMore(data.pagination.hasMore || false);
-      if (shouldInjectPendingTemplate) {
+      const shouldClearPendingTemplate = responseIncludesPendingTemplate
+        || (pendingTemplate?.template != null && !matchesTemplateSearch(pendingTemplate.template, effectiveSearch))
+        || options.clearPendingTemplate === true;
+      if (shouldClearPendingTemplate) {
         pendingTemplateRef.current = null;
       }
     } catch (err) {

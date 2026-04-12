@@ -99,4 +99,65 @@ describe('useTemplatesDashboard', () => {
       expect.objectContaining({ forceRefresh: true })
     );
   });
+
+  it('keeps an updated template visible after a refresh with an active search term', async () => {
+    useLocationMock.mockReturnValue({
+      pathname: '/templates',
+      state: {
+        updatedTemplate: {
+          id: 'tpl-updated',
+          Name: 'Updated Template',
+          Status: 'active',
+        },
+      },
+    });
+
+    getTemplatesPaginatedMock
+      .mockResolvedValueOnce({
+        templates: [
+          {
+            id: 'tpl-1',
+            Name: 'Existing Template',
+            Status: 'active',
+          },
+        ],
+        pagination: {
+          totalCount: 1,
+          hasMore: false,
+        },
+      })
+      .mockResolvedValueOnce({
+        templates: [
+          {
+            id: 'tpl-1',
+            Name: 'Existing Template',
+            Status: 'active',
+          },
+        ],
+        pagination: {
+          totalCount: 1,
+          hasMore: false,
+        },
+      });
+
+    const { result } = renderHook(() => useTemplatesDashboard());
+
+    await waitFor(() => {
+      expect(result.current.filteredTemplates[0]?.id).toBe('tpl-updated');
+    });
+
+    result.current.setSearchTerm('Updated');
+
+    await waitFor(() => {
+      expect(getTemplatesPaginatedMock).toHaveBeenCalledWith(
+        expect.objectContaining({ search: 'Updated' }),
+      );
+    });
+
+    await result.current.refreshTemplates();
+
+    await waitFor(() => {
+      expect(result.current.filteredTemplates.some((template) => template.id === 'tpl-updated')).toBe(true);
+    });
+  });
 });

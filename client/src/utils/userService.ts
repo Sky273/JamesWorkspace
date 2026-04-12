@@ -118,7 +118,7 @@ const userService = {
   },
 
   async getAllCustomers(): Promise<Firm[]> {
-    return this.getAllFirms();
+    return userService.getAllFirms();
   },
 
   async getFirmsPaginated({ page = 1, pageSize = 12, search = '', forceRefresh = false } = {}): Promise<PaginatedFirmsResponse> {
@@ -276,7 +276,7 @@ const userService = {
   },
 
   async updateCustomer(customerId: string, customerData: FirmFormData): Promise<Firm> {
-    return this.updateFirm(customerId, customerData);
+    return userService.updateFirm(customerId, customerData);
   },
 
   async createFirm(firmData: FirmFormData): Promise<Firm> {
@@ -294,7 +294,7 @@ const userService = {
   },
 
   async createCustomer(customerData: FirmFormData): Promise<Firm> {
-    return this.createFirm(customerData);
+    return userService.createFirm(customerData);
   },
 
   async deleteFirm(firmId: string): Promise<{ message: string }> {
@@ -312,7 +312,7 @@ const userService = {
   },
 
   async deleteCustomer(customerId: string): Promise<{ message: string }> {
-    return this.deleteFirm(customerId);
+    return userService.deleteFirm(customerId);
   },
 
   async uploadFirmLogo(firmId: string, file: File): Promise<UploadLogoResponse> {

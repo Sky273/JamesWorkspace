@@ -28,6 +28,7 @@ const ServerHealthCards = lazy(() => import('../components/Metrics/ServerHealthC
 const DatabaseMetricsCards = lazy(() => import('../components/Metrics/DatabaseMetricsCards'));
 const OperationsInfraCards = lazy(() => import('../components/Metrics/OperationsInfraCards'));
 const HttpTrafficCards = lazy(() => import('../components/Metrics/HttpTrafficCards'));
+const ViewRefreshDebugCard = lazy(() => import('../components/Metrics/ViewRefreshDebugCard'));
 
 const MetricsPage = (): JSX.Element => {
   const { t } = useTranslation();
@@ -401,6 +402,12 @@ const MetricsPage = (): JSX.Element => {
                   formatBytes={formatBytes}
                   formatNumber={formatNumber}
                 />
+              </Suspense>
+            </DeferredRender>
+
+            <DeferredRender delayMs={600}>
+              <Suspense fallback={null}>
+                <ViewRefreshDebugCard />
               </Suspense>
             </DeferredRender>
 

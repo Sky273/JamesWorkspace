@@ -58,16 +58,19 @@ describe('Users Service', () => {
 
     describe('listUsers', () => {
         it('should return users with hasMore flag', async () => {
+            query.mockResolvedValueOnce({ rows: [{ total: 2 }] });
             selectWithTimeout.mockResolvedValueOnce([{ id: 'u1' }, { id: 'u2' }]);
 
             const result = await listUsers({ page: 1, limit: 100 });
 
             expect(result.users).toHaveLength(2);
             expect(result.hasMore).toBe(false);
+            expect(result.totalCount).toBe(2);
         });
 
         it('should detect hasMore when results exceed limit', async () => {
             const users = Array(101).fill(null).map((_, i) => ({ id: `u${i}` }));
+            query.mockResolvedValueOnce({ rows: [{ total: 101 }] });
             selectWithTimeout.mockResolvedValueOnce(users);
 
             const result = await listUsers({ page: 1, limit: 100 });
@@ -77,6 +80,7 @@ describe('Users Service', () => {
         });
 
         it('should apply search filter', async () => {
+            query.mockResolvedValueOnce({ rows: [{ total: 0 }] });
             selectWithTimeout.mockResolvedValueOnce([]);
 
             await listUsers({ search: 'john' });
@@ -86,6 +90,7 @@ describe('Users Service', () => {
         });
 
         it('should apply role filter', async () => {
+            query.mockResolvedValueOnce({ rows: [{ total: 0 }] });
             selectWithTimeout.mockResolvedValueOnce([]);
 
             await listUsers({ role: 'admin' });
@@ -95,6 +100,7 @@ describe('Users Service', () => {
         });
 
         it('should skip role filter for "all"', async () => {
+            query.mockResolvedValueOnce({ rows: [{ total: 0 }] });
             selectWithTimeout.mockResolvedValueOnce([]);
 
             await listUsers({ role: 'all' });
@@ -104,6 +110,7 @@ describe('Users Service', () => {
         });
 
         it('should apply status filter', async () => {
+            query.mockResolvedValueOnce({ rows: [{ total: 0 }] });
             selectWithTimeout.mockResolvedValueOnce([]);
 
             await listUsers({ status: 'active' });
@@ -113,6 +120,7 @@ describe('Users Service', () => {
         });
 
         it('should clamp invalid pagination inputs', async () => {
+            query.mockResolvedValueOnce({ rows: [{ total: 0 }] });
             selectWithTimeout.mockResolvedValueOnce([]);
 
             await listUsers({ page: -2, limit: 500 });

@@ -196,8 +196,8 @@ router.delete('/:id', authenticateToken, requireAdmin, validateParams('id'), asy
             });
         }
         
-        await invalidateFirmsCaches();
         await firmsService.deleteFirm(id);
+        await invalidateFirmsCaches();
         
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.FIRM_DELETED, {
             ...getRequestMetadata(req),

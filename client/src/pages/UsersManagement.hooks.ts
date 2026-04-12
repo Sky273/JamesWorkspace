@@ -1,4 +1,4 @@
-import { startTransition, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
@@ -62,6 +62,27 @@ export interface UsersManagementStats {
 
 export type UsersManagementTab = 'users' | 'firms';
 export const USERS_PAGE_SIZE = 12;
+
+function matchesUserSearch(user: User, rawSearch: string): boolean {
+  const normalizedSearch = rawSearch.trim().toLowerCase();
+  if (!normalizedSearch) {
+    return true;
+  }
+
+  return [user.name, user.email, user.firmName, user.firm]
+    .filter((value): value is string => typeof value === 'string' && value.length > 0)
+    .some((value) => value.toLowerCase().includes(normalizedSearch));
+}
+
+function matchesFirmSearch(firm: Firm, rawSearch: string): boolean {
+  const normalizedSearch = rawSearch.trim().toLowerCase();
+  if (!normalizedSearch) {
+    return true;
+  }
+
+  return firm.name.toLowerCase().includes(normalizedSearch);
+}
+
 type FetchUsersOptions = {
   page?: number;
   search?: string;
@@ -94,7 +115,10 @@ export function useUsersManagementDashboard() {
   const [usersLoading, setUsersLoading] = useState(true);
   const [firmsLoading, setFirmsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<UsersManagementTab>('users');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [usersSearchTerm, setUsersSearchTerm] = useState('');
+  const [firmsSearchTerm, setFirmsSearchTerm] = useState('');
+  const [debouncedUsersSearchTerm, setDebouncedUsersSearchTerm] = useState('');
+  const [debouncedFirmsSearchTerm, setDebouncedFirmsSearchTerm] = useState('');
   const [usersPage, setUsersPage] = useState(1);
   const [usersTotalCount, setUsersTotalCount] = useState(0);
   const [, setUsersHasMore] = useState(false);
@@ -110,7 +134,6 @@ export function useUsersManagementDashboard() {
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const canManageFirms = user?.role === 'admin';
   const canAssignSuperAdmin = user?.role === 'admin';
-  const deferredSearchTerm = useDeferredValue(searchTerm);
   const currentUserFirmId = user?.firmId || user?.firm_id || '';
   const currentUserFirm = useMemo(
     () => (currentUserFirmId
@@ -126,14 +149,35 @@ export function useUsersManagementDashboard() {
   useEffect(() => {
     startTransition(() => {
       setUsersPage(1);
+    });
+  }, [usersSearchTerm]);
+
+  useEffect(() => {
+    startTransition(() => {
       setFirmsPage(1);
     });
-  }, [searchTerm]);
+  }, [firmsSearchTerm]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedUsersSearchTerm(usersSearchTerm);
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [usersSearchTerm]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedFirmsSearchTerm(firmsSearchTerm);
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [firmsSearchTerm]);
 
   const fetchUsers = useCallback(async (options: FetchUsersOptions = {}) => {
     const requestId = ++usersRequestIdRef.current;
     const effectivePage = options.page ?? usersPage;
-    const effectiveSearch = options.search ?? deferredSearchTerm;
+    const effectiveSearch = options.search ?? debouncedUsersSearchTerm;
     const normalizedSearch = effectiveSearch.trim().toLowerCase();
     if (options.clearOptimisticState) {
       deletedUserIdsRef.current.clear();
@@ -153,13 +197,17 @@ export function useUsersManagementDashboard() {
       const filterDeletedUsers = (records: User[]) => records.filter(
         (record) => !deletedUserIdsRef.current.has(record.id),
       );
-      const preservedUser = options.preserveUser ?? pendingUserRef.current;
+      const preservedUser = options.preserveUser ?? (options.clearOptimisticState ? null : pendingUserRef.current);
+      const responseIncludesPreservedUser = Boolean(
+        preservedUser != null
+        && userData.users?.some((record) => record.id === preservedUser.id),
+      );
       const shouldPreserveUser = preservedUser != null
         && !deletedUserIdsRef.current.has(preservedUser.id)
         && (normalizedSearch.length === 0
           || (preservedUser.name || '').toLowerCase().includes(normalizedSearch)
           || (preservedUser.email || '').toLowerCase().includes(normalizedSearch))
-        && !userData.users?.some((record) => record.id === preservedUser.id);
+        && !responseIncludesPreservedUser;
 
       if (userData.users) {
         const visibleUsers = filterDeletedUsers(userData.users);
@@ -167,6 +215,9 @@ export function useUsersManagementDashboard() {
           ? [preservedUser, ...visibleUsers].slice(0, USERS_PAGE_SIZE)
           : visibleUsers;
         setUsers(nextUsers);
+        pendingUserRef.current = options.clearOptimisticState || responseIncludesPreservedUser
+          ? null
+          : preservedUser;
         const reportedTotal = userData.pagination?.totalCount;
         const adjustedTotal = typeof reportedTotal === 'number'
           ? Math.max(0, reportedTotal - [...deletedUserIdsRef.current].filter((id) => userData.users.some((user) => user.id === id)).length)
@@ -179,6 +230,7 @@ export function useUsersManagementDashboard() {
           ? [preservedUser, ...visibleUsers].slice(0, USERS_PAGE_SIZE)
           : visibleUsers;
         setUsers(nextUsers);
+        pendingUserRef.current = options.clearOptimisticState ? null : preservedUser;
         setUsersTotalCount(nextUsers.length);
       }
     } catch (error) {
@@ -192,12 +244,12 @@ export function useUsersManagementDashboard() {
         setUsersLoading(false);
       }
     }
-  }, [deferredSearchTerm, usersPage]);
+  }, [debouncedUsersSearchTerm, usersPage]);
 
   const fetchFirms = useCallback(async (options: FetchFirmsOptions = {}) => {
     const requestId = ++firmsRequestIdRef.current;
     const effectivePage = options.page ?? firmsPage;
-    const effectiveSearch = options.search ?? deferredSearchTerm;
+    const effectiveSearch = options.search ?? debouncedFirmsSearchTerm;
     const normalizedSearch = effectiveSearch.trim().toLowerCase();
     if (options.clearOptimisticState) {
       deletedFirmIdsRef.current.clear();
@@ -224,15 +276,22 @@ export function useUsersManagementDashboard() {
           return;
         }
         const visibleFirms = customerData.customers.filter((firm) => !deletedFirmIdsRef.current.has(firm.id));
-        const preservedFirm = options.preserveFirm ?? pendingFirmRef.current;
+        const preservedFirm = options.preserveFirm ?? (options.clearOptimisticState ? null : pendingFirmRef.current);
+        const responseIncludesPreservedFirm = Boolean(
+          preservedFirm != null
+          && visibleFirms.some((firm) => firm.id === preservedFirm.id),
+        );
         const shouldPreserveFirm = preservedFirm != null
           && !deletedFirmIdsRef.current.has(preservedFirm.id)
           && (normalizedSearch.length === 0 || preservedFirm.name.toLowerCase().includes(normalizedSearch))
-          && !visibleFirms.some((firm) => firm.id === preservedFirm.id);
+          && !responseIncludesPreservedFirm;
         const nextFirms: Firm[] = shouldPreserveFirm && preservedFirm
           ? [preservedFirm, ...visibleFirms].slice(0, USERS_PAGE_SIZE)
           : visibleFirms;
         setFirms(nextFirms);
+        pendingFirmRef.current = options.clearOptimisticState || responseIncludesPreservedFirm
+          ? null
+          : preservedFirm;
         const reportedTotal = customerData.pagination?.totalCount;
         const adjustedTotal = typeof reportedTotal === 'number'
           ? Math.max(0, reportedTotal - [...deletedFirmIdsRef.current].filter((id) => customerData.customers.some((firm) => firm.id === id)).length)
@@ -251,7 +310,7 @@ export function useUsersManagementDashboard() {
         setFirmsLoading(false);
       }
     }
-  }, [canManageFirms, currentUserFirm, deferredSearchTerm, firmsPage]);
+  }, [canManageFirms, currentUserFirm, debouncedFirmsSearchTerm, firmsPage]);
 
   useEffect(() => {
     void fetchUsers();
@@ -303,8 +362,34 @@ export function useUsersManagementDashboard() {
     },
   });
 
-  const usersTotalPages = getTotalPages(usersTotalCount, USERS_PAGE_SIZE);
-  const firmsTotalPages = getTotalPages(firmsTotalCount, USERS_PAGE_SIZE);
+  const effectiveUsers = useMemo(() => {
+    const pendingUser = pendingUserRef.current;
+    if (!pendingUser || deletedUserIdsRef.current.has(pendingUser.id) || !matchesUserSearch(pendingUser, usersSearchTerm)) {
+      return users;
+    }
+
+    if (users.some((userRecord) => userRecord.id === pendingUser.id)) {
+      return users;
+    }
+
+    return [pendingUser, ...users].slice(0, USERS_PAGE_SIZE);
+  }, [users, usersSearchTerm]);
+  const effectiveFirms = useMemo(() => {
+    const pendingFirm = pendingFirmRef.current;
+    if (!pendingFirm || deletedFirmIdsRef.current.has(pendingFirm.id) || !matchesFirmSearch(pendingFirm, firmsSearchTerm)) {
+      return firms;
+    }
+
+    if (firms.some((firm) => firm.id === pendingFirm.id)) {
+      return firms;
+    }
+
+    return [pendingFirm, ...firms].slice(0, USERS_PAGE_SIZE);
+  }, [firms, firmsSearchTerm]);
+  const effectiveUsersTotalCount = Math.max(usersTotalCount, effectiveUsers.length);
+  const effectiveFirmsTotalCount = Math.max(firmsTotalCount, effectiveFirms.length);
+  const usersTotalPages = getTotalPages(effectiveUsersTotalCount, USERS_PAGE_SIZE);
+  const firmsTotalPages = getTotalPages(effectiveFirmsTotalCount, USERS_PAGE_SIZE);
 
   const goToUsersPage = useCallback((page: number) => {
     if (page >= 1 && page <= usersTotalPages) {
@@ -320,6 +405,8 @@ export function useUsersManagementDashboard() {
 
   const handleUserSubmit = useCallback(async (formData: UserFormData) => {
     try {
+      setUserModalOpen(false);
+      setSelectedUser(null);
       if (selectedUser) {
         const updatedUser = await userService.updateUser(selectedUser.id, {
           name: formData.name,
@@ -358,11 +445,9 @@ export function useUsersManagementDashboard() {
             : t('users.management.messages.userCreatedInvitationSent')
         );
         markUsersViewDirty();
-        await fetchUsers({ page: 1, search: searchTerm.trim(), forceRefresh: true, preserveUser: createdUser });
+        await fetchUsers({ page: 1, search: usersSearchTerm.trim(), forceRefresh: true, preserveUser: createdUser });
       }
 
-      setUserModalOpen(false);
-      setSelectedUser(null);
       if (canManageFirms) {
         void fetchFirms();
       }
@@ -370,7 +455,7 @@ export function useUsersManagementDashboard() {
       logger.error('Error saving user:', error);
       toast.error(selectedUser ? t('users.management.messages.errorUpdatingUser') : t('users.management.messages.errorCreatingUser'));
     }
-  }, [canManageFirms, fetchFirms, fetchUsers, selectedUser, t]);
+  }, [canManageFirms, fetchFirms, fetchUsers, selectedUser, t, usersSearchTerm]);
 
   const handleDeleteUser = useCallback(async () => {
     if (!deleteTarget) {
@@ -419,9 +504,11 @@ export function useUsersManagementDashboard() {
 
   const handleFirmSubmit = useCallback(async (formData: FirmFormData) => {
     try {
+      setFirmModalOpen(false);
+      setSelectedFirm(null);
       let firmId: string | undefined;
       let createdFirm: Firm | null = null;
-      const normalizedSearch = searchTerm.trim();
+      const normalizedSearch = firmsSearchTerm.trim();
       if (selectedFirm) {
         const updatedFirm = await userService.updateCustomer(selectedFirm.id, { name: formData.name });
         pendingFirmRef.current = updatedFirm;
@@ -454,8 +541,6 @@ export function useUsersManagementDashboard() {
         }
       }
 
-      setFirmModalOpen(false);
-      setSelectedFirm(null);
       await fetchFirms({
         page: selectedFirm ? firmsPage : 1,
         search: normalizedSearch,
@@ -468,7 +553,7 @@ export function useUsersManagementDashboard() {
       logger.error('Error saving customer:', error);
       toast.error(selectedFirm ? t('users.management.messages.errorUpdatingFirm') : t('users.management.messages.errorCreatingFirm'));
     }
-  }, [fetchFirms, fetchUsers, firmsPage, searchTerm, selectedFirm, t]);
+  }, [fetchFirms, fetchUsers, firmsPage, firmsSearchTerm, selectedFirm, t]);
 
   const handleDeleteFirm = useCallback(async () => {
     if (!deleteTarget) {
@@ -478,7 +563,7 @@ export function useUsersManagementDashboard() {
     try {
       const deletedFirmId = deleteTarget.id;
       pendingFirmRef.current = null;
-      const normalizedSearch = searchTerm.trim();
+      const normalizedSearch = firmsSearchTerm.trim();
       deletedFirmIdsRef.current.add(deletedFirmId);
       setFirms((currentFirms) => currentFirms.filter((firm) => firm.id !== deletedFirmId));
       setFirmsTotalCount((currentTotal) => Math.max(0, currentTotal - 1));
@@ -499,7 +584,7 @@ export function useUsersManagementDashboard() {
       deletedFirmIdsRef.current.delete(deleteTarget.id);
       void fetchFirms({
         page: firmsPage,
-        search: searchTerm.trim(),
+        search: firmsSearchTerm.trim(),
         clearOptimisticState: false,
         forceRefresh: true,
       });
@@ -510,30 +595,35 @@ export function useUsersManagementDashboard() {
         toast.error(t('users.management.messages.errorDeletingFirm'));
       }
     }
-  }, [deleteTarget, fetchFirms, fetchUsers, firmsPage, searchTerm, t]);
+  }, [deleteTarget, fetchFirms, fetchUsers, firmsPage, firmsSearchTerm, t]);
 
   const stats = useMemo<UsersManagementStats>(
-    () => buildUsersManagementStats(users, usersTotalCount, firmsTotalCount),
-    [firmsTotalCount, users, usersTotalCount],
+    () => buildUsersManagementStats(effectiveUsers, effectiveUsersTotalCount, effectiveFirmsTotalCount),
+    [effectiveFirmsTotalCount, effectiveUsers, effectiveUsersTotalCount],
   );
 
   const refreshData = useCallback(async () => {
-    const normalizedSearch = searchTerm.trim();
-    const nextUsersPage = normalizedSearch === deferredSearchTerm ? usersPage : 1;
-    const nextFirmsPage = normalizedSearch === deferredSearchTerm ? firmsPage : 1;
+    const normalizedUsersSearch = usersSearchTerm.trim();
+    const normalizedFirmsSearch = firmsSearchTerm.trim();
+    const nextUsersPage = normalizedUsersSearch === debouncedUsersSearchTerm ? usersPage : 1;
+    const nextFirmsPage = normalizedFirmsSearch === debouncedFirmsSearchTerm ? firmsPage : 1;
 
     usersRequestIdRef.current += 1;
     firmsRequestIdRef.current += 1;
-    if (normalizedSearch !== deferredSearchTerm) {
+    if (normalizedUsersSearch !== debouncedUsersSearchTerm || normalizedFirmsSearch !== debouncedFirmsSearchTerm) {
       startTransition(() => {
-        setUsersPage(1);
-        setFirmsPage(1);
+        if (normalizedUsersSearch !== debouncedUsersSearchTerm) {
+          setUsersPage(1);
+        }
+        if (normalizedFirmsSearch !== debouncedFirmsSearchTerm) {
+          setFirmsPage(1);
+        }
       });
     }
 
     await fetchUsers({
       page: nextUsersPage,
-      search: normalizedSearch,
+      search: normalizedUsersSearch,
       clearOptimisticState: true,
       forceRefresh: true,
     });
@@ -541,12 +631,29 @@ export function useUsersManagementDashboard() {
     if (canManageFirms && (activeTab === 'firms' || firms.length > 0)) {
       await fetchFirms({
         page: nextFirmsPage,
-        search: normalizedSearch,
+        search: normalizedFirmsSearch,
         clearOptimisticState: true,
         forceRefresh: true,
       });
     }
-  }, [activeTab, canManageFirms, deferredSearchTerm, fetchFirms, fetchUsers, firms.length, firmsPage, searchTerm, usersPage]);
+  }, [activeTab, canManageFirms, debouncedFirmsSearchTerm, debouncedUsersSearchTerm, fetchFirms, fetchUsers, firms.length, firmsPage, firmsSearchTerm, usersPage, usersSearchTerm]);
+
+  const searchTerm = activeTab === 'users' ? usersSearchTerm : firmsSearchTerm;
+  const setSearchTerm = useCallback((value: string) => {
+    if (activeTab === 'users') {
+      setUsersSearchTerm(value);
+      return;
+    }
+    setFirmsSearchTerm(value);
+  }, [activeTab]);
+
+  const resetSearch = useCallback(() => {
+    if (activeTab === 'users') {
+      setUsersSearchTerm('');
+      return;
+    }
+    setFirmsSearchTerm('');
+  }, [activeTab]);
 
   return {
     activeTab,
@@ -571,9 +678,9 @@ export function useUsersManagementDashboard() {
     fetchData: refreshData,
     firmsLoading,
     firmModalOpen,
-    firms,
+    firms: effectiveFirms,
     firmsPage,
-    firmsTotalCount,
+    firmsTotalCount: effectiveFirmsTotalCount,
     firmsTotalPages,
     goToFirmsPage,
     goToUsersPage,
@@ -614,7 +721,7 @@ export function useUsersManagementDashboard() {
       setPasswordModalOpen(true);
     },
     passwordModalOpen,
-    resetSearch: () => setSearchTerm(''),
+    resetSearch,
     searchTerm,
     selectedFirm,
     selectedUser,
@@ -622,9 +729,9 @@ export function useUsersManagementDashboard() {
     setSearchTerm,
     stats,
     userModalOpen,
-    users,
+    users: effectiveUsers,
     usersPage,
-    usersTotalCount,
+    usersTotalCount: effectiveUsersTotalCount,
     usersTotalPages,
   };
 }

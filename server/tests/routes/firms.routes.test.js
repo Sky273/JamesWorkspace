@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
+import * as cacheService from '../../services/cache.service.js';
 
 // Mock constants
 vi.mock('../../config/constants.js', () => ({
@@ -388,6 +389,17 @@ describe('Firms Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.message).toContain('deleted');
+        });
+
+        it('should invalidate firms cache only after the delete succeeds', async () => {
+            const invalidateFirmsCaches = vi.mocked(cacheService.invalidateFirmsCaches);
+            mockGetAssociatedUsersCount.mockResolvedValue(0);
+            mockDeleteFirm.mockResolvedValue(true);
+
+            const res = await request(app).delete('/api/firms/f-1').set(authHeader);
+
+            expect(res.status).toBe(200);
+            expect(mockDeleteFirm.mock.invocationCallOrder[0]).toBeLessThan(invalidateFirmsCaches.mock.invocationCallOrder[0]);
         });
 
         it('should return 400 if firm has associated users', async () => {

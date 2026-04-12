@@ -57,6 +57,12 @@ export async function listUsers({ search, role, status, firmId, page = 1, limit 
 
         const whereClause = conditions.length > 0 ? conditions.join(' AND ') : '';
 
+        const countResult = await query(
+            `SELECT COUNT(*)::int AS total FROM users${whereClause ? ` WHERE ${whereClause}` : ''}`,
+            params
+        );
+        const totalCount = countResult.rows[0]?.total ?? 0;
+
         const users = await selectWithTimeout('users', {
             where: whereClause,
             params: params,
@@ -70,7 +76,7 @@ export async function listUsers({ search, role, status, firmId, page = 1, limit 
             users.pop();
         }
 
-        return { users, hasMore };
+        return { users, hasMore, totalCount };
     };
 
     if (bypassCache) {

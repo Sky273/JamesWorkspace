@@ -45,7 +45,7 @@ router.get('/', authenticateToken, requireUserManager, async (req, res) => {
             return res.status(403).json({ error: 'No firm association' });
         }
 
-        const { users, hasMore } = await usersService.listUsers({
+        const { users, hasMore, totalCount } = await usersService.listUsers({
             search,
             role,
             status,
@@ -79,6 +79,7 @@ router.get('/', authenticateToken, requireUserManager, async (req, res) => {
             pagination: {
                 page: pageResult.value,
                 limit: limitResult.value,
+                totalCount,
                 hasMore,
                 nextPage: hasMore ? pageResult.value + 1 : null
             }

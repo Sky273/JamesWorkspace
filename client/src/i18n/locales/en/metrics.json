@@ -175,6 +175,20 @@
     "avgMs": "Avg.",
     "maxMs": "Max",
     "noData": "No data",
-    "exportSuccess": "Metrics exported successfully"
+    "exportSuccess": "Metrics exported successfully",
+    "viewRefreshDebug": {
+      "badge": "Debug",
+      "title": "View refresh",
+      "description": "Transverse refresh scopes produced and consumed by cached screens.",
+      "refresh": "Reload snapshot",
+      "marks": "Marks",
+      "deliveries": "Deliveries",
+      "consumes": "Consumes",
+      "dirtyScopes": "Dirty scopes",
+      "activeScopes": "Active dirty scopes",
+      "recentEvents": "Recent events",
+      "noDirtyScopes": "No dirty scope is currently pending.",
+      "noEvents": "No recent refresh event recorded."
+    }
   }
 }
