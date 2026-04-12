@@ -153,7 +153,9 @@ describe('Users Routes', () => {
                 email: 'new@example.com',
                 name: 'New User',
                 role: 'user',
-                status: 'active'
+                status: 'active',
+                firm_id: 'f-1',
+                firm_name: 'Acme Corp'
             });
 
             const res = await request(app)
@@ -163,10 +165,38 @@ describe('Users Routes', () => {
 
             expect(res.status).toBe(201);
             expect(res.body.email).toBe('new@example.com');
+            expect(res.body.firmId).toBe('f-1');
+            expect(res.body.firmName).toBe('Acme Corp');
+            expect(res.body.invitationSent).toBe(true);
             expect(mockRequestPasswordReset).toHaveBeenCalledWith('new@example.com', expect.objectContaining({
                 emailType: 'invite',
                 markUserAsMustChangePassword: true
             }));
+        });
+
+        it('should create the user even if the invitation email fails', async () => {
+            mockFindUserByEmail.mockResolvedValueOnce(null);
+            mockFindFirmById.mockResolvedValueOnce({ id: 'f-1', name: 'Acme Corp' });
+            mockCreateAdminUser.mockResolvedValue({
+                id: 'u-new',
+                email: 'new@example.com',
+                name: 'New User',
+                role: 'user',
+                status: 'active',
+                firm_id: 'f-1',
+                firm_name: 'Acme Corp'
+            });
+            mockRequestPasswordReset.mockRejectedValueOnce(new Error('SMTP down'));
+
+            const res = await request(app)
+                .post('/api/auth/users')
+                .set(authHeader)
+                .send({ email: 'new@example.com', name: 'New User', firmId: 'f-1' });
+
+            expect(res.status).toBe(201);
+            expect(res.body.id).toBe('u-new');
+            expect(res.body.invitationSent).toBe(false);
+            expect(mockCreateAdminUser).toHaveBeenCalledTimes(1);
         });
 
         it('should return 409 if user already exists', async () => {
@@ -320,7 +350,7 @@ describe('Users Routes', () => {
             });
             mockFindFirmById.mockResolvedValueOnce({ id: 'f-1', name: 'Acme Corp' });
             mockUpdateAdminUser.mockResolvedValue({
-                id: 'u-1', email: 'old@example.com', name: 'New Name', role: 'user', status: 'active'
+                id: 'u-1', email: 'old@example.com', name: 'New Name', role: 'user', status: 'active', firm_id: 'f-1', firm_name: 'Acme Corp'
             });
 
             const res = await request(app)
@@ -330,6 +360,8 @@ describe('Users Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.name).toBe('New Name');
+            expect(res.body.firmId).toBe('f-1');
+            expect(res.body.firmName).toBe('Acme Corp');
             expect(mockFindUserById).toHaveBeenCalledWith('u-1', { useCache: false });
         });
 

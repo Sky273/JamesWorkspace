@@ -186,8 +186,8 @@ function AdaptationsGrid({
   );
 }
 
-export function AdaptationsByDealView() {
-  return <AdaptationsDealsGroupedView />;
+export function AdaptationsByDealView({ refreshToken }: { refreshToken: number }) {
+  return <AdaptationsDealsGroupedView refreshToken={refreshToken} />;
 }
 
 export function AdaptationsExportDialog({

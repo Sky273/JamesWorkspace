@@ -85,6 +85,7 @@
         "confirmDeleteUser": "Etes-vous sur de vouloir supprimer cet utilisateur ? Cette action est irreversible.",
         "userCreated": "Utilisateur cree avec succes",
         "userCreatedInvitationSent": "Utilisateur cree avec succes. Une invitation a ete envoyee par email.",
+        "userCreatedInvitationPending": "Utilisateur cree avec succes. L'invitation email n'a pas pu etre envoyee automatiquement.",
         "userUpdated": "Utilisateur mis a jour avec succes",
         "userDeleted": "Utilisateur supprime avec succes",
         "firmCreated": "Cabinet cree avec succes",

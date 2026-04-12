@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 
 import clientService from '../utils/clientService';
 import logger from '../utils/logger.frontend';
+import { consumeDirtyViewScopes, markViewScopesDirty } from '../utils/viewRefresh';
 import type { Client, ClientContact } from '../types/entities';
 import {
   buildCrmTabSearchParams,
@@ -129,6 +130,14 @@ export function useClientsDashboard() {
     void fetchData();
   }, [fetchData]);
 
+  useEffect(() => {
+    if (!consumeDirtyViewScopes(['clients'])) {
+      return;
+    }
+
+    void fetchData({ forceRefresh: true });
+  }, [fetchData]);
+
   const stats = useMemo<ClientsStats>(() => computeClientsStats(clients), [clients]);
 
   const totalPages = Math.ceil(totalCount / CLIENTS_PAGE_SIZE);
@@ -153,6 +162,7 @@ export function useClientsDashboard() {
           )));
           setSelectedClient(updatedClient);
           toast.success(t('clients.messages.clientUpdated'));
+          markViewScopesDirty(['clients', 'deals', 'missions']);
           await fetchData({
             page,
             search: searchTerm.trim(),
@@ -166,6 +176,7 @@ export function useClientsDashboard() {
           setTotalCount((currentTotal) => currentTotal + 1);
           setPage(1);
           toast.success(t('clients.messages.clientCreated'));
+          markViewScopesDirty(['clients', 'deals', 'missions']);
           await fetchData({
             page: 1,
             search: searchTerm.trim(),
@@ -197,6 +208,7 @@ export function useClientsDashboard() {
             )),
           } : currentClient);
           toast.success(t('clients.messages.contactUpdated'));
+          markViewScopesDirty(['clients', 'deals', 'missions']);
         } else {
           const createdContact = await clientService.createContact(selectedClient.id, formData);
           setSelectedClient((currentClient) => currentClient ? {
@@ -204,6 +216,7 @@ export function useClientsDashboard() {
             contacts: [createdContact, ...(currentClient.contacts || [])],
           } : currentClient);
           toast.success(t('clients.messages.contactCreated'));
+          markViewScopesDirty(['clients', 'deals', 'missions']);
         }
         setContactModalOpen(false);
         setSelectedContact(null);
@@ -235,6 +248,7 @@ export function useClientsDashboard() {
         setClients((currentClients) => currentClients.filter((client) => client.id !== deleteTarget.id));
         setTotalCount((currentTotal) => Math.max(0, currentTotal - 1));
         toast.success(t('clients.messages.clientDeleted'));
+        markViewScopesDirty(['clients', 'deals', 'missions']);
       } else if (deleteTarget.type === 'contact' && deleteTarget.clientId) {
         await clientService.deleteContact(deleteTarget.clientId, deleteTarget.id);
         setSelectedClient((currentClient) => currentClient ? {
@@ -244,6 +258,7 @@ export function useClientsDashboard() {
         const refreshedClient = await clientService.getClient(deleteTarget.clientId, { forceRefresh: true });
         setSelectedClient(refreshedClient);
         toast.success(t('clients.messages.contactDeleted'));
+        markViewScopesDirty(['clients', 'deals', 'missions']);
       }
       setDeleteModalOpen(false);
       setDeleteTarget(null);

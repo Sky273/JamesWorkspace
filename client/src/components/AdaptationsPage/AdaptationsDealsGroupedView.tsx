@@ -19,7 +19,7 @@ import { SkeletonAdaptationList } from '../ui/Skeleton';
 import { DealSection, GroupedSearchHeader, MissionSection } from './AdaptationsDealsGroupedView.parts';
 import type { GroupedData, GroupedMission } from './AdaptationsDealsGroupedView.types';
 
-const AdaptationsDealsGroupedView = (): JSX.Element => {
+const AdaptationsDealsGroupedView = ({ refreshToken = 0 }: { refreshToken?: number }): JSX.Element => {
   const { t } = useTranslation();
   const { authGet } = useAuthFetch();
   const tf = (key: string, options?: unknown): string => String(t(key, options as never));
@@ -91,6 +91,14 @@ const AdaptationsDealsGroupedView = (): JSX.Element => {
   useEffect(() => {
     fetchGroupedData();
   }, [fetchGroupedData]);
+
+  useEffect(() => {
+    if (refreshToken <= 0) {
+      return;
+    }
+
+    void fetchGroupedData({ forceRefresh: true });
+  }, [fetchGroupedData, refreshToken]);
 
   const toggleDeal = (dealId: string) => {
     setExpandedDeals(prev => ({ ...prev, [dealId]: !prev[dealId] }));

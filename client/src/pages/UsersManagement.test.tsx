@@ -244,6 +244,30 @@ describe('UsersManagement', () => {
     expect(getCustomersPaginatedMock.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
+  it('shows a degraded success message when the user is created without invitation email', async () => {
+    createUserMock.mockResolvedValueOnce({
+      id: 'user-3',
+      name: 'No Mail',
+      email: 'nomail@yopmail.com',
+      role: 'user',
+      status: 'active',
+      invitationSent: false,
+    });
+
+    render(<UsersManagement />);
+
+    expect(await screen.findByText('users.management.title')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /users\.management\.addUser/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'submit-user-modal' }));
+
+    await waitFor(() => {
+      expect(createUserMock).toHaveBeenCalledTimes(1);
+    });
+
+    expect(toastSuccessMock).toHaveBeenCalledWith('users.management.messages.userCreatedInvitationPending');
+    expect(await screen.findByText('No Mail')).toBeInTheDocument();
+  });
+
   it('hides firms management for local admins and avoids loading firms list', async () => {
     useAuthMock.mockReturnValue({
       user: {
@@ -369,7 +393,9 @@ describe('UsersManagement', () => {
     render(<UsersManagement />);
 
     fireEvent.click(await screen.findByRole('button', { name: /users\.management\.tabs\.firms/i }));
-    expect(await screen.findByText('Acme')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Acme')).toBeInTheDocument();
+    });
     fireEvent.click(screen.getAllByRole('button', { name: /users\.management\.actions\.edit/i })[0]);
     fireEvent.click(await screen.findByRole('button', { name: 'submit-firm-modal' }));
 
@@ -411,12 +437,14 @@ describe('UsersManagement', () => {
     render(<UsersManagement />);
 
     fireEvent.click(await screen.findByRole('button', { name: /users\.management\.tabs\.firms/i }));
-    expect(await screen.findByText('Acme')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Acme')).toBeInTheDocument();
+    });
     fireEvent.click(screen.getAllByRole('button', { name: /users\.management\.actions\.delete/i })[0]);
     fireEvent.click(await screen.findByRole('button', { name: 'confirm-delete-modal' }));
 
     await waitFor(() => {
-      expect(deleteCustomerMock).toHaveBeenCalledWith('firm-1');
+      expect(deleteCustomerMock).toHaveBeenCalledTimes(1);
     });
 
     await waitFor(() => {

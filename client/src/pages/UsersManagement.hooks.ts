@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 
 import userService from '../utils/userService';
 import logger from '../utils/logger.frontend';
+import { consumeDirtyViewScopes, markAllViewScopesDirty, markViewScopesDirty } from '../utils/viewRefresh';
 import {
   buildUsersManagementStats,
   createDeleteTarget,
@@ -263,6 +264,19 @@ export function useUsersManagementDashboard() {
     }
   }, [activeTab, canManageFirms]);
 
+  useEffect(() => {
+    const shouldRefreshUsers = consumeDirtyViewScopes(['users']);
+    const shouldRefreshFirms = canManageFirms && consumeDirtyViewScopes(['firms']);
+
+    if (shouldRefreshUsers) {
+      void fetchUsers({ forceRefresh: true });
+    }
+
+    if (shouldRefreshFirms) {
+      void fetchFirms({ forceRefresh: true });
+    }
+  }, [canManageFirms, fetchFirms, fetchUsers]);
+
   const usersTotalPages = getTotalPages(usersTotalCount, USERS_PAGE_SIZE);
   const firmsTotalPages = getTotalPages(firmsTotalCount, USERS_PAGE_SIZE);
 
@@ -293,6 +307,7 @@ export function useUsersManagementDashboard() {
         usersRequestIdRef.current += 1;
         setUsers((currentUsers) => currentUsers.map((userRecord) => (userRecord.id === selectedUser.id ? updatedUser : userRecord)));
         toast.success(t('users.management.messages.userUpdated'));
+        markViewScopesDirty(['users']);
         await fetchUsers();
       } else {
         const createdUser = await userService.createUser({
@@ -309,7 +324,12 @@ export function useUsersManagementDashboard() {
         setUsers((currentUsers) => [createdUser, ...currentUsers].slice(0, USERS_PAGE_SIZE));
         setUsersTotalCount((currentTotal) => currentTotal + 1);
         setUsersPage(1);
-        toast.success(t('users.management.messages.userCreatedInvitationSent'));
+        toast.success(
+          createdUser.invitationSent === false
+            ? t('users.management.messages.userCreatedInvitationPending')
+            : t('users.management.messages.userCreatedInvitationSent')
+        );
+        markViewScopesDirty(['users']);
       }
 
       setUserModalOpen(false);
@@ -336,6 +356,7 @@ export function useUsersManagementDashboard() {
 
       await userService.deleteUser(deletedUserId);
       toast.success(t('users.management.messages.userDeleted'));
+      markViewScopesDirty(['users']);
       setDeleteModalOpen(false);
       setDeleteTarget(null);
       await fetchUsers();
@@ -377,6 +398,7 @@ export function useUsersManagementDashboard() {
         setFirms((currentFirms) => currentFirms.map((firm) => (firm.id === selectedFirm.id ? updatedFirm : firm)));
         firmId = selectedFirm.id;
         toast.success(t('users.management.messages.firmUpdated'));
+        markAllViewScopesDirty();
       } else {
         const newFirm = await userService.createCustomer({ name: formData.name });
         firmsRequestIdRef.current += 1;
@@ -387,6 +409,7 @@ export function useUsersManagementDashboard() {
         firmId = newFirm?.id;
         createdFirm = newFirm;
         toast.success(t('users.management.messages.firmCreated'));
+        markAllViewScopesDirty();
       }
 
       if (firmId && formData.logoFile) {
@@ -429,6 +452,7 @@ export function useUsersManagementDashboard() {
 
       await userService.deleteCustomer(deletedFirmId);
       toast.success(t('users.management.messages.firmDeleted'));
+      markAllViewScopesDirty();
       setDeleteModalOpen(false);
       setDeleteTarget(null);
       await fetchFirms({

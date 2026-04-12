@@ -12,6 +12,7 @@ import { showCaughtError, getUserFriendlyMessage } from '../components/errorToas
 import { normalizeResume, normalizeResumeList } from '../utils/resumeNormalization';
 import { createAndTrackJob } from '../utils/longRunningOperation';
 import { deriveResumeImprovementProcessingStep, waitForResumeImprovementJobCompletion } from '../utils/resumeImprovementJob';
+import { markViewScopesDirty } from '../utils/viewRefresh';
 
 import { Resume } from '../types/entities';
 import {
@@ -27,14 +28,8 @@ import {
 
 export type { Resume };
 
-const RESUMES_VIEW_REFRESH_STORAGE_KEY = 'resumesViewNeedsRefresh';
-
 function markResumesViewDirty(): void {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  window.sessionStorage.setItem(RESUMES_VIEW_REFRESH_STORAGE_KEY, '1');
+  markViewScopesDirty(['resumes']);
 }
 
 export interface CandidateInfo {
@@ -383,6 +378,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
 
       setResumes(prev => prev.map(resume => (resume.id === resumeId ? improvedResume : resume)));
       setCurrentResume(improvedResume);
+      markResumesViewDirty();
       return improvedResume;
     } catch (error) {
       logger.error('Error improving resume:', error);

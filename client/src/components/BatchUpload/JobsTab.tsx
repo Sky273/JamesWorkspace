@@ -4,6 +4,7 @@ import { ClockIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterceptor';
 import logger from '../../utils/logger.frontend';
+import { consumeDirtyViewScopes, markViewScopesDirty } from '../../utils/viewRefresh';
 import JobsTabHeader from './jobsTab/JobsTabHeader';
 import JobCard from './jobsTab/JobCard';
 import type { Job, TranslateFn } from './jobsTab/types';
@@ -128,6 +129,14 @@ const JobsTab = (): JSX.Element => {
   }, [fetchJobs]);
 
   useEffect(() => {
+    if (!consumeDirtyViewScopes(['jobs'])) {
+      return;
+    }
+
+    void fetchJobs({ forceRefresh: true });
+  }, [fetchJobs]);
+
+  useEffect(() => {
     if (!autoRefreshEnabled) return;
 
     const hasActiveJobs = jobs.some(j => j.status === 'pending' || j.status === 'processing');
@@ -188,6 +197,7 @@ const JobsTab = (): JSX.Element => {
             ? { ...job, status: 'cancelled' }
             : job
         )));
+        markViewScopesDirty(['jobs']);
         void fetchJobs();
         return;
       }
@@ -214,6 +224,7 @@ const JobsTab = (): JSX.Element => {
           delete next[jobId];
           return next;
         });
+        markViewScopesDirty(['jobs']);
         return;
       }
 
@@ -280,6 +291,7 @@ const JobsTab = (): JSX.Element => {
         if (expandedJobId) {
           void fetchJobDetails(expandedJobId);
         }
+        markViewScopesDirty(['jobs']);
         return;
       }
 

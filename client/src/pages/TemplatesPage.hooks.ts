@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import logger from '../utils/logger.frontend';
 import { templateService } from '../utils/templateService';
+import { consumeDirtyViewScopes, markViewScopesDirty } from '../utils/viewRefresh';
 
 export interface Template {
   id: string;
@@ -157,6 +158,14 @@ export function useTemplatesDashboard() {
     void fetchTemplates();
   }, [fetchTemplates]);
 
+  useEffect(() => {
+    if (!consumeDirtyViewScopes(['templates'])) {
+      return;
+    }
+
+    void fetchTemplates({ clearPendingTemplate: true, forceRefresh: true });
+  }, [fetchTemplates]);
+
   const totalPages = Math.max(1, Math.ceil(totalCount / TEMPLATES_PAGE_SIZE)) || 1;
 
   const goToPage = useCallback((page: number) => {
@@ -187,6 +196,8 @@ export function useTemplatesDashboard() {
       setTemplates((previousTemplates) => previousTemplates.filter((template) => template.id !== templateToDelete.id));
       setTotalCount((count) => Math.max(0, count - 1));
       toast.success(t('templates.status.deleteSuccess'));
+      markViewScopesDirty(['templates']);
+      await fetchTemplates({ clearPendingTemplate: true, forceRefresh: true });
     } catch (err) {
       logger.error('Error deleting template:', err);
       toast.error(t('templates.status.deleteError'));

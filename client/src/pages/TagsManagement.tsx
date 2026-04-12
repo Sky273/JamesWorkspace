@@ -11,6 +11,7 @@ import { tagService } from '../utils/tagService';
 import { motion } from 'framer-motion';
 import PageHeader from '../components/page/PageHeader';
 import logger from '../utils/logger.frontend';
+import { consumeDirtyViewScopes, markViewScopesDirty } from '../utils/viewRefresh';
 import {
   WrenchScrewdriverIcon,
   BriefcaseIcon,
@@ -163,6 +164,14 @@ const TagsManagement = (): JSX.Element => {
 
   useEffect(() => { void fetchTags(); }, [fetchTags]);
 
+  useEffect(() => {
+    if (!consumeDirtyViewScopes(['tags'])) {
+      return;
+    }
+
+    void fetchTags(true);
+  }, [fetchTags]);
+
   const displayCleanedTags = useMemo(() => cleanedTags, [cleanedTags]);
 
   const handleRecalculateCleanedTags = async (): Promise<void> => {
@@ -172,6 +181,7 @@ const TagsManagement = (): JSX.Element => {
       tagsRequestIdRef.current += 1;
       const freshCleanedTags = await tagService.getCleanedTags(true);
       setCleanedTags(freshCleanedTags as unknown as CleanedTags);
+      markViewScopesDirty(['tags']);
       toast.success(t('tags.cleanedTagsRecalculated'));
     } catch (err) {
       toast.error(t('tags.cleanedTagsRecalculateError'));
@@ -188,6 +198,7 @@ const TagsManagement = (): JSX.Element => {
       tagsRequestIdRef.current += 1;
       const freshEscoTags = await tagService.getEscoTags(true);
       setEscoTags(freshEscoTags as unknown as EscoTags);
+      markViewScopesDirty(['tags']);
       toast.success(t('tags.escoTagsRecalculated'));
     } catch (err) {
       toast.error(t('tags.escoTagsRecalculateError'));
@@ -208,6 +219,7 @@ const TagsManagement = (): JSX.Element => {
 
       await tagService.renameTag(fieldName, oldName, newName);
       tagsRequestIdRef.current += 1;
+      markViewScopesDirty(['tags']);
       toast.success(t('tags.renameSuccess', { oldName, newName }));
 
       if (activeTab === 'raw') {

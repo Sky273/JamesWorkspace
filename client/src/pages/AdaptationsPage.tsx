@@ -42,6 +42,7 @@ const AdaptationsPage = (): JSX.Element => {
     totalCount,
     totalPages,
     viewMode,
+    groupedRefreshToken,
   } = useAdaptationsDashboard();
 
   return (
@@ -55,7 +56,7 @@ const AdaptationsPage = (): JSX.Element => {
       <AdaptationsViewModeToggle value={viewMode} onChange={setViewMode} />
 
       {viewMode === 'byDeal' ? (
-        <AdaptationsByDealView />
+        <AdaptationsByDealView refreshToken={groupedRefreshToken} />
       ) : (
         <AdaptationsListPanel
           adaptations={adaptations}

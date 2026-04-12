@@ -32,6 +32,7 @@ interface User {
   firm?: string;
   firmName?: string;
   firm_name?: string;
+  invitationSent?: boolean;
 }
 
 interface Pagination {
@@ -80,6 +81,23 @@ interface UploadLogoResponse {
 // ============================================
 
 const userService = {
+  normalizeUser(user: Partial<User> | null | undefined): User {
+    return {
+      id: user?.id || '',
+      name: user?.name || '',
+      email: user?.email || '',
+      jobTitle: user?.jobTitle || user?.job_title,
+      job_title: user?.job_title || user?.jobTitle,
+      phone: user?.phone,
+      role: user?.role,
+      status: user?.status,
+      firmId: user?.firmId,
+      firm: user?.firm,
+      firmName: user?.firmName || user?.firm_name || user?.firm,
+      firm_name: user?.firm_name || user?.firmName || user?.firm,
+      invitationSent: user?.invitationSent
+    };
+  },
   // ============================================
   // FIRMS (formerly Customers)
   // ============================================
@@ -154,7 +172,7 @@ const userService = {
         throw new Error('Failed to fetch users');
       }
       const data = await response.json();
-      const users = data.data || data;
+      const users = (data.data || data).map((user: User) => userService.normalizeUser(user));
       logger.log('Fetched users:', users);
       return users;
     } catch (error) {
@@ -181,13 +199,13 @@ const userService = {
       
       if (data.data && data.pagination) {
         return {
-          users: data.data,
+          users: data.data.map((user: User) => userService.normalizeUser(user)),
           pagination: data.pagination
         };
       }
       
       return {
-        users: Array.isArray(data) ? data : [],
+        users: Array.isArray(data) ? data.map((user: User) => userService.normalizeUser(user)) : [],
         pagination: {
           page: 1,
           pageSize: Array.isArray(data) ? data.length : 0,
@@ -208,7 +226,7 @@ const userService = {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to create user');
       }
-      return await response.json();
+      return userService.normalizeUser(await response.json());
     } catch (error) {
       logger.error('Error creating user:', error);
       throw error;
@@ -222,7 +240,7 @@ const userService = {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to update user');
       }
-      return await response.json();
+      return userService.normalizeUser(await response.json());
     } catch (error) {
       logger.error('Error updating user:', error);
       throw error;

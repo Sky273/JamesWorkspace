@@ -7,6 +7,7 @@ import { useAuthFetch } from '../hooks/useAuthFetch';
 import type { Resume } from '../types/entities';
 import { formatDate } from '../utils/dateFormatter';
 import logger from '../utils/logger.frontend';
+import { consumeDirtyViewScopes } from '../utils/viewRefresh';
 import {
   buildResumesSearchParams,
   computeResumeStats,
@@ -168,8 +169,9 @@ export function useResumesDashboard() {
     const routeRefreshRequested = Boolean((location.state as { refreshResumesView?: boolean } | null)?.refreshResumesView);
     const storedRefreshRequested = typeof window !== 'undefined'
       && window.sessionStorage.getItem(RESUMES_VIEW_REFRESH_STORAGE_KEY) === '1';
+    const dirtyScopeRefreshRequested = consumeDirtyViewScopes(['resumes']);
 
-    if (!routeRefreshRequested && !storedRefreshRequested) {
+    if (!routeRefreshRequested && !storedRefreshRequested && !dirtyScopeRefreshRequested) {
       return;
     }
 

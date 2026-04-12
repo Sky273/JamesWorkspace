@@ -15,6 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterceptor';
 import logger from '../../utils/logger.frontend';
+import { consumeDirtyViewScopes, markViewScopesDirty } from '../../utils/viewRefresh';
 import { Deal, Client, Contact, DealFormData, DealsTabProps, STATUS_CONFIG } from './dealsTab.types';
 import DealCard from './DealCard';
 import DealFormModal from './DealFormModal';
@@ -185,6 +186,14 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
     fetchDeals();
   }, [fetchDeals]);
 
+  useEffect(() => {
+    if (!consumeDirtyViewScopes(['deals'])) {
+      return;
+    }
+
+    void fetchDeals({ forceRefresh: true });
+  }, [fetchDeals]);
+
   // Update URL when client filter changes
   useEffect(() => {
     const newParams = new URLSearchParams(searchParams);
@@ -256,6 +265,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
           : t('crm.deals.created'),
           { id: toastId }
         );
+        markViewScopesDirty(['deals', 'missions', 'resumes', 'adaptations']);
         setFormModalOpen(false);
         setSelectedDeal(null);
         resetForm();
@@ -299,6 +309,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
         setDeals((currentDeals) => currentDeals.filter((deal) => deal.id !== selectedDeal.id));
         setTotalCount((currentTotal) => Math.max(0, currentTotal - 1));
         toast.success(t('crm.deals.deleted'));
+        markViewScopesDirty(['deals', 'missions', 'resumes', 'adaptations']);
         setDeleteModalOpen(false);
         setSelectedDeal(null);
         void fetchDeals({

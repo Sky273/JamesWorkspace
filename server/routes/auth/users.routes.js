@@ -123,11 +123,22 @@ router.post('/users', authenticateToken, requireUserManager, validateBody(create
         }
 
         const newUser = await usersService.createAdminUser(userData);
-        await requestPasswordReset(normalizedEmail, {
-            emailType: PASSWORD_RESET_EMAIL_TYPES.INVITE,
-            markUserAsMustChangePassword: true,
-            skipRateLimit: true
-        });
+        let invitationSent = false;
+
+        try {
+            await requestPasswordReset(normalizedEmail, {
+                emailType: PASSWORD_RESET_EMAIL_TYPES.INVITE,
+                markUserAsMustChangePassword: true,
+                skipRateLimit: true
+            });
+            invitationSent = true;
+        } catch (inviteError) {
+            safeLog('warn', 'User created but invitation email failed', {
+                userId: newUser.id,
+                email: newUser.email,
+                error: inviteError.message
+            });
+        }
 
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.USER_CREATED, {
             ...metadata,
@@ -137,16 +148,23 @@ router.post('/users', authenticateToken, requireUserManager, validateBody(create
             createdBy: req.user.id,
             statusCode: 201,
             action: 'USER_CREATED_BY_ADMIN',
-            message: 'New user created by admin'
+            invitationSent,
+            message: invitationSent
+                ? 'New user created by admin'
+                : 'New user created by admin but invitation email failed'
         });
 
         res.status(201).json({
             id: newUser.id,
             email: newUser.email,
-            name: newUser.name,
-            role: newUser.role,
-            status: newUser.status,
-            invitationSent: true
+            name: newUser.name || userData.name,
+            role: newUser.role || userData.role,
+            status: newUser.status || userData.status,
+            jobTitle: newUser.job_title || newUser.jobTitle || userData.job_title || null,
+            phone: newUser.phone || userData.phone || null,
+            firmId: newUser.firm_id || newUser.firmId || foundFirm.id,
+            firmName: newUser.firm_name || newUser.firmName || foundFirm.name,
+            invitationSent
         });
     } catch (error) {
         safeLog('error', 'Create user error', { error: error.message });
@@ -270,7 +288,11 @@ router.put('/users/:id', authenticateToken, requireUserManager, validateParams('
             email: updatedUser.email,
             name: updatedUser.name,
             role: updatedUser.role,
-            status: updatedUser.status
+            status: updatedUser.status,
+            jobTitle: updatedUser.job_title || updatedUser.jobTitle || null,
+            phone: updatedUser.phone || null,
+            firmId: updatedUser.firm_id || updatedUser.firmId || foundFirm.id,
+            firmName: updatedUser.firm_name || updatedUser.firmName || foundFirm.name
         });
     } catch (error) {
         if (error.statusCode === 404) {

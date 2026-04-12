@@ -9,6 +9,7 @@ import { createAuthOptionsWithCsrf, fetchWithCsrfRetry } from '../utils/apiInter
 import logger from '../utils/logger.frontend';
 import resumeAdaptationService from '../utils/resumeAdaptationService';
 import { templateService } from '../utils/templateService';
+import { consumeDirtyViewScopes, markViewScopesDirty } from '../utils/viewRefresh';
 import { removeSuggestionMarkers } from '../components/TiptapEditor/suggestionsHtml';
 import {
   applyTemplatePlaceholders,
@@ -102,6 +103,7 @@ export function useAdaptationsDashboard() {
   const [exportLoading, setExportLoading] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [adaptationToExport, setAdaptationToExport] = useState<Adaptation | null>(null);
+  const [groupedRefreshToken, setGroupedRefreshToken] = useState(0);
   const adaptationsRequestIdRef = useRef(0);
   const referenceDataRequestIdRef = useRef(0);
   const templatesRequestIdRef = useRef(0);
@@ -241,6 +243,15 @@ export function useAdaptationsDashboard() {
     void fetchAdaptations();
   }, [fetchAdaptations]);
 
+  useEffect(() => {
+    if (!consumeDirtyViewScopes(['adaptations'])) {
+      return;
+    }
+
+    setGroupedRefreshToken((currentToken) => currentToken + 1);
+    void fetchAdaptations({ forceRefresh: true });
+  }, [fetchAdaptations]);
+
   const totalPages = Math.max(1, Math.ceil(totalCount / ADAPTATIONS_PAGE_SIZE)) || 1;
 
   const goToPage = useCallback((page: number) => {
@@ -260,7 +271,10 @@ export function useAdaptationsDashboard() {
       await resumeAdaptationService.deleteAdaptation(adaptationId);
       setAdaptations((currentAdaptations) => currentAdaptations.filter((adaptation) => adaptation.id !== adaptationId));
       setTotalCount((count) => Math.max(0, count - 1));
+      setGroupedRefreshToken((currentToken) => currentToken + 1);
+      markViewScopesDirty(['adaptations', 'resumes', 'missions']);
       toast.success(t('adaptations.messages.deleteSuccess', 'Adaptation supprimee'));
+      await fetchAdaptations({ forceRefresh: true });
     } catch (error) {
       logger.error('Error deleting adaptation:', error);
       toast.error(t('adaptations.messages.deleteError'));
@@ -456,5 +470,6 @@ export function useAdaptationsDashboard() {
     totalCount,
     totalPages,
     viewMode,
+    groupedRefreshToken,
   };
 }
