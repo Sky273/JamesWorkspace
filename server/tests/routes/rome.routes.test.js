@@ -158,6 +158,17 @@ describe('Rome Routes', () => {
             expect(res.status).toBe(500);
             expect(res.body.success).toBe(false);
         });
+
+        it('should bypass cache when refresh=1 is provided', async () => {
+            mockGetStoredMetiers.mockResolvedValueOnce([]);
+
+            const res = await request(app)
+                .get('/api/rome/metiers?refresh=1')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(mockGetStoredMetiers).toHaveBeenCalledWith(expect.objectContaining({ bypassCache: true }));
+        });
     });
 
     describe('GET /metiers/stats', () => {

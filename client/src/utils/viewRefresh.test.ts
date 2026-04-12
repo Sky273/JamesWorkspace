@@ -4,13 +4,16 @@ import {
   VIEW_REFRESH_EVENT_NAME,
   VIEW_REFRESH_STORAGE_KEY,
   consumeDirtyViewScopesForConsumer,
+  getViewRefreshSnapshot,
   markViewScopesDirty,
+  resetViewRefreshDebugStateForTests,
   subscribeToViewRefreshForConsumer,
 } from './viewRefresh';
 
 describe('viewRefresh', () => {
   beforeEach(() => {
     window.sessionStorage.clear();
+    resetViewRefreshDebugStateForTests();
   });
 
   it('tracks dirty scopes independently per consumer', () => {
@@ -50,5 +53,26 @@ describe('viewRefresh', () => {
     expect(consumeDirtyViewScopesForConsumer('gdpr-screen', ['gdprAudit'])).toBe(true);
     expect(consumeDirtyViewScopesForConsumer('users-screen', ['users'])).toBe(false);
     expect(consumeDirtyViewScopesForConsumer('gdpr-screen', ['gdprAudit'])).toBe(false);
+  });
+
+  it('keeps an observable debug snapshot of marks, deliveries and consumptions', () => {
+    const unsubscribe = subscribeToViewRefreshForConsumer('screen-a', ['users'], () => {});
+
+    markViewScopesDirty(['users']);
+    expect(consumeDirtyViewScopesForConsumer('screen-b', ['users'])).toBe(true);
+
+    const snapshot = getViewRefreshSnapshot();
+
+    expect(snapshot.counters.marks).toBe(1);
+    expect(snapshot.counters.deliveries).toBe(1);
+    expect(snapshot.counters.consumes).toBe(1);
+    expect(snapshot.scopeCounters.marks.users).toBe(1);
+    expect(snapshot.scopeCounters.deliveries.users).toBe(1);
+    expect(snapshot.scopeCounters.consumes.users).toBe(1);
+    expect(snapshot.scopeCounters.marks.gdprAudit).toBe(1);
+    expect(snapshot.recentEvents.map((event) => event.type)).toEqual(['consume', 'deliver', 'mark']);
+    expect(snapshot.dirtyScopes.users).toBe(1);
+
+    unsubscribe();
   });
 });

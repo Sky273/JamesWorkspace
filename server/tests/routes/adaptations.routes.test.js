@@ -259,6 +259,20 @@ describe('Adaptations Routes - GET /api/adaptations', () => {
         expect(res.body.pagination.limit).toBeLessThanOrEqual(100);
     });
 
+    it('should bypass cache on list read when refresh=1 is provided', async () => {
+        mockListAdaptations.mockResolvedValueOnce({
+            records: [],
+            totalCount: 0
+        });
+
+        const res = await request(app)
+            .get('/api/adaptations?refresh=1')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(mockListAdaptations).toHaveBeenCalledWith(expect.objectContaining({ bypassCache: true }));
+    });
+
     it('should allow admin to see all adaptations', async () => {
         mockListAdaptations.mockResolvedValueOnce({
             records: [{ id: 'adapt-1', firm: 'Other Firm' }],
@@ -286,6 +300,50 @@ describe('Adaptations Routes - GET /api/adaptations', () => {
             .set('x-test-no-firm', 'true');
 
         expect(res.status).toBe(403);
+    });
+});
+
+describe('Adaptations Routes - GET /api/adaptations/grouped-by-deal', () => {
+    let app;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockGetUserFirmId.mockResolvedValue('firm-123');
+        app = createTestApp();
+    });
+
+    it('should return grouped adaptations', async () => {
+        mockGetAdaptationsGroupedByDeal.mockResolvedValueOnce({
+            deals: [],
+            unassigned: [],
+            totalDeals: 0,
+            totalAssigned: 0,
+            totalUnassigned: 0
+        });
+
+        const res = await request(app)
+            .get('/api/adaptations/grouped-by-deal')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(mockGetAdaptationsGroupedByDeal).toHaveBeenCalledWith(expect.objectContaining({ bypassCache: false }));
+    });
+
+    it('should bypass cache on grouped view when refresh=1 is provided', async () => {
+        mockGetAdaptationsGroupedByDeal.mockResolvedValueOnce({
+            deals: [],
+            unassigned: [],
+            totalDeals: 0,
+            totalAssigned: 0,
+            totalUnassigned: 0
+        });
+
+        const res = await request(app)
+            .get('/api/adaptations/grouped-by-deal?refresh=1')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(mockGetAdaptationsGroupedByDeal).toHaveBeenCalledWith(expect.objectContaining({ bypassCache: true }));
     });
 });
 

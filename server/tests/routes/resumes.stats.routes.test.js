@@ -137,6 +137,23 @@ describe('Resume Stats Routes', () => {
 
             expect(res.status).toBe(500);
         });
+
+        it('should bypass cache on grouped view when refresh=1 is provided', async () => {
+            mockGetResumesGroupedByDeal.mockResolvedValueOnce({
+                deals: [],
+                unassigned: [],
+                totalDeals: 0,
+                totalAssigned: 0,
+                totalUnassigned: 0
+            });
+
+            const res = await request(app)
+                .get('/api/resumes/grouped-by-deal?refresh=1')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(mockGetResumesGroupedByDeal).toHaveBeenCalledWith(expect.objectContaining({ bypassCache: true }));
+        });
     });
 
     describe('GET /stats', () => {
@@ -196,6 +213,30 @@ describe('Resume Stats Routes', () => {
             expect(mockGetResumeStats).not.toHaveBeenCalled();
             expect(mockGetMissionStats).not.toHaveBeenCalled();
             expect(mockGetAdaptationStats).not.toHaveBeenCalled();
+        });
+
+        it('should bypass stats cache when refresh=1 is provided', async () => {
+            mockGetCachedStats.mockReturnValueOnce({ resumes: { total: 999 } });
+            mockGetResumeStats.mockResolvedValueOnce({
+                total: '10',
+                analyzed: '5',
+                improved: '2',
+                today: '1',
+                this_week: '2',
+                this_month: '3',
+                avg_original_score: '50',
+                avg_improved_score: '70'
+            });
+            mockGetMissionStats.mockResolvedValueOnce({ total: '2', active: '1' });
+            mockGetAdaptationStats.mockResolvedValueOnce({ total: '4' });
+
+            const res = await request(app)
+                .get('/api/resumes/stats?refresh=1')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(mockGetCachedStats).not.toHaveBeenCalled();
+            expect(mockGetResumeStats).toHaveBeenCalled();
         });
     });
 });

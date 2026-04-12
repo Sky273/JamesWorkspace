@@ -214,6 +214,20 @@ describe('Market Radar - Trends Routes', () => {
             expect(res.status).toBe(500);
             expect(res.body.error).toContain('Failed');
         });
+
+        it('should invalidate trends cache on all-trends read when refresh=1 is provided', async () => {
+            mockGetStoredTrendsLight.mockResolvedValueOnce({
+                trends: [],
+                totalCount: 0
+            });
+
+            const res = await request(app)
+                .get('/api/market-radar/trends/all?refresh=1')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(mockInvalidateTrendsCache).toHaveBeenCalled();
+        });
     });
 
     // ==========================================
@@ -283,6 +297,21 @@ describe('Market Radar - Trends Routes', () => {
 
             expect(res.status).toBe(500);
         });
+
+        it('should invalidate trends cache on grouped read when refresh=1 is provided', async () => {
+            mockGetStoredTrendsGroupedByType.mockResolvedValueOnce({
+                groupedTrends: {},
+                countsByType: {},
+                totalCount: 0
+            });
+
+            const res = await request(app)
+                .get('/api/market-radar/trends?refresh=1')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(mockInvalidateTrendsCache).toHaveBeenCalled();
+        });
     });
 
     // ==========================================
@@ -312,6 +341,20 @@ describe('Market Radar - Trends Routes', () => {
                 .set(AUTH);
 
             expect(res.status).toBe(500);
+        });
+
+        it('should invalidate trends cache on summary read when refresh=1 is provided', async () => {
+            mockGetTrendsSummary.mockResolvedValueOnce({
+                totalRecords: 1,
+                byType: {}
+            });
+
+            const res = await request(app)
+                .get('/api/market-radar/trends/summary?refresh=1')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(mockInvalidateTrendsCache).toHaveBeenCalled();
         });
     });
 
@@ -385,6 +428,21 @@ describe('Market Radar - Trends Routes', () => {
                 .set(AUTH);
 
             expect(res.status).toBe(500);
+        });
+
+        it('should invalidate trends cache on filters read when refresh=1 is provided', async () => {
+            mockGetTrendFilterOptions.mockResolvedValueOnce({
+                types: [],
+                regions: [],
+                romeCodes: []
+            });
+
+            const res = await request(app)
+                .get('/api/market-radar/trends/filters?refresh=1')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(mockInvalidateTrendsCache).toHaveBeenCalled();
         });
     });
 

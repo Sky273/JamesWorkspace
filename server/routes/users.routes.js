@@ -4,6 +4,7 @@ import { validateBody, validateParams, updateUserProfileSchema } from '../utils/
 import { safeLog } from '../utils/logger.backend.js';
 import * as usersService from '../services/users.service.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
+import { shouldBypassCache } from '../utils/requestCacheControl.js';
 
 const router = express.Router();
 
@@ -31,7 +32,7 @@ router.get('/', authenticateToken, requireUserManager, async (req, res) => {
         const pageResult = pageInput === undefined ? { ok: true, value: 1 } : parsePositiveInteger(pageInput, 1);
         const limitResult = limitInput === undefined ? { ok: true, value: 100 } : parsePositiveInteger(limitInput, 100, 100);
         const { search, role, status } = req.query;
-        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+        const bypassCache = shouldBypassCache(req);
 
         if (!pageResult.ok || !limitResult.ok) {
             return res.status(400).json({ error: 'Invalid pagination parameters' });

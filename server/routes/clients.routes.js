@@ -5,6 +5,7 @@ import { validateBody, validateParams, createClientSchema, updateClientSchema, c
 import { safeLog } from '../utils/logger.backend.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
 import * as clientsService from '../services/clients.service.js';
+import { shouldBypassCache } from '../utils/requestCacheControl.js';
 import {
     ensureFirmScopedAccess,
     normalizeClientPayload,
@@ -72,7 +73,7 @@ router.get('/', authenticateToken, createClientsRouteHandler('Error fetching cli
             return res.status(400).json({ error: pagination.error });
         }
         const { search, type } = req.query;
-        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+        const bypassCache = shouldBypassCache(req);
         const { userFirmId, isAdmin, access } = await getClientAccessContext(req);
         if (!access.ok) {
             return res.status(access.status).json({ error: access.error });
@@ -104,7 +105,7 @@ router.get('/industries/list', authenticateToken, createClientsRouteHandler('Err
 // GET /api/clients/:id - Get client by ID with contacts
 router.get('/:id', authenticateToken, validateParams('id'), createClientsRouteHandler('Error fetching client', 'Failed to fetch client', async (req, res) => {
         const { id } = req.params;
-        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+        const bypassCache = shouldBypassCache(req);
         const accessibleClient = await getAccessibleClientRecord(req, res, id, {
             fetchClientFn: (clientId) => clientsService.getClientById(clientId, { bypassCache })
         });
@@ -267,7 +268,7 @@ async function checkClientAccess(req, res, clientId) {
 // GET /api/clients/:clientId/contacts - Get all contacts for a client
 router.get('/:clientId/contacts', authenticateToken, validateParams('clientId'), createClientsRouteHandler('Error fetching contacts', 'Failed to fetch contacts', async (req, res) => {
         const { clientId } = req.params;
-        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+        const bypassCache = shouldBypassCache(req);
         const access = await checkClientAccess(req, res, clientId);
         if (!access.ok) return;
 

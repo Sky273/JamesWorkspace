@@ -10,6 +10,7 @@ import {
     getTrendsAuditReport
 } from '../../services/marketTrends.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
+import { shouldBypassCache } from '../../utils/requestCacheControl.js';
 
 function parsePositiveInteger(value, { field, maxValue = null } = {}) {
     if (value === undefined) {
@@ -28,7 +29,7 @@ export async function getAllTrendsForMap(_req, res) {
     try {
         const startTime = Date.now();
         const { type } = _req.query;
-        if (_req.query.refresh === '1' || _req.query.refresh === 'true') {
+    if (shouldBypassCache(_req)) {
             invalidateTrendsCache();
         }
         const result = await getStoredTrendsLight({ type: type || undefined });
@@ -57,7 +58,7 @@ export async function getAllTrendsForMap(_req, res) {
 export async function getTrends(req, res) {
     try {
         const { type, codeRome, regionCode, sortField, sortDirection, page, pageSize, itemsPerType } = req.query;
-        if (req.query.refresh === '1' || req.query.refresh === 'true') {
+    if (shouldBypassCache(req)) {
             invalidateTrendsCache();
         }
         const parsedItemsPerType = parsePositiveInteger(itemsPerType, { field: 'itemsPerType', maxValue: 50 });
@@ -109,7 +110,7 @@ export async function getTrends(req, res) {
 
 export async function getTrendsSummaryHandler(_req, res) {
     try {
-        if (_req.query.refresh === '1' || _req.query.refresh === 'true') {
+    if (shouldBypassCache(_req)) {
             invalidateTrendsCache();
         }
         const summary = await getTrendsSummary();
@@ -141,7 +142,7 @@ export async function getTrendMetadataHandler(req, res) {
 
 export async function getTrendFilters(_req, res) {
     try {
-        if (_req.query.refresh === '1' || _req.query.refresh === 'true') {
+    if (shouldBypassCache(_req)) {
             invalidateTrendsCache();
         }
         const filters = await getTrendFilterOptions();

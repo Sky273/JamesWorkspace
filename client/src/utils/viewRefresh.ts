@@ -25,6 +25,44 @@ export type ViewRefreshScope = typeof VIEW_REFRESH_SCOPES[number];
 type ViewRefreshVersionMap = Partial<Record<ViewRefreshScope, number>>;
 type ViewRefreshEventDetail = { scopes: ViewRefreshScope[]; versions: ViewRefreshVersionMap };
 const viewRefreshDebugEnabled = import.meta.env.VITE_DEBUG_VIEW_REFRESH === '1';
+const VIEW_REFRESH_EVENT_HISTORY_LIMIT = 25;
+
+type ViewRefreshDebugEvent = {
+  type: 'mark' | 'consume' | 'deliver';
+  consumerId?: string;
+  scopes: ViewRefreshScope[];
+  at: string;
+};
+
+type ViewRefreshDebugSnapshot = {
+  dirtyScopes: ViewRefreshVersionMap;
+  counters: {
+    marks: number;
+    consumes: number;
+    deliveries: number;
+  };
+  scopeCounters: {
+    marks: ViewRefreshVersionMap;
+    consumes: ViewRefreshVersionMap;
+    deliveries: ViewRefreshVersionMap;
+  };
+  recentEvents: ViewRefreshDebugEvent[];
+};
+
+const viewRefreshDebugState: ViewRefreshDebugSnapshot = {
+  dirtyScopes: {},
+  counters: {
+    marks: 0,
+    consumes: 0,
+    deliveries: 0,
+  },
+  scopeCounters: {
+    marks: {},
+    consumes: {},
+    deliveries: {},
+  },
+  recentEvents: [],
+};
 
 const VIEW_REFRESH_DERIVED_SCOPES: Partial<Record<ViewRefreshScope, ViewRefreshScope[]>> = {
   users: ['gdprAudit'],
@@ -140,6 +178,80 @@ function debugViewRefresh(message: string, data?: unknown): void {
   logger.debug(`[ViewRefresh] ${message}`, data);
 }
 
+function incrementScopeCounters(
+  target: ViewRefreshVersionMap,
+  scopes: ViewRefreshScope[],
+): void {
+  scopes.forEach((scope) => {
+    target[scope] = (target[scope] || 0) + 1;
+  });
+}
+
+function recordViewRefreshEvent(
+  type: ViewRefreshDebugEvent['type'],
+  scopes: ViewRefreshScope[],
+  consumerId?: string,
+): void {
+  viewRefreshDebugState.recentEvents.unshift({
+    type,
+    scopes,
+    consumerId,
+    at: new Date().toISOString(),
+  });
+  viewRefreshDebugState.recentEvents = viewRefreshDebugState.recentEvents.slice(0, VIEW_REFRESH_EVENT_HISTORY_LIMIT);
+}
+
+function syncDirtyScopesSnapshot(dirtyScopes: ViewRefreshVersionMap): void {
+  viewRefreshDebugState.dirtyScopes = { ...dirtyScopes };
+}
+
+function exposeViewRefreshDebugApi(): void {
+  if (typeof window === 'undefined' || !viewRefreshDebugEnabled) {
+    return;
+  }
+
+  const debugWindow = window as Window & {
+    __APP_VIEW_REFRESH__?: {
+      getSnapshot: typeof getViewRefreshSnapshot;
+    };
+  };
+
+  debugWindow.__APP_VIEW_REFRESH__ = {
+    getSnapshot: getViewRefreshSnapshot,
+  };
+}
+
+export function getViewRefreshSnapshot(): ViewRefreshDebugSnapshot {
+  return {
+    dirtyScopes: { ...viewRefreshDebugState.dirtyScopes },
+    counters: { ...viewRefreshDebugState.counters },
+    scopeCounters: {
+      marks: { ...viewRefreshDebugState.scopeCounters.marks },
+      consumes: { ...viewRefreshDebugState.scopeCounters.consumes },
+      deliveries: { ...viewRefreshDebugState.scopeCounters.deliveries },
+    },
+    recentEvents: viewRefreshDebugState.recentEvents.map((event) => ({
+      ...event,
+      scopes: [...event.scopes],
+    })),
+  };
+}
+
+export function resetViewRefreshDebugStateForTests(): void {
+  viewRefreshDebugState.dirtyScopes = {};
+  viewRefreshDebugState.counters = {
+    marks: 0,
+    consumes: 0,
+    deliveries: 0,
+  };
+  viewRefreshDebugState.scopeCounters = {
+    marks: {},
+    consumes: {},
+    deliveries: {},
+  };
+  viewRefreshDebugState.recentEvents = [];
+}
+
 export function markViewScopesDirty(scopes: ViewRefreshScope[]): void {
   if (typeof window === 'undefined' || scopes.length === 0) {
     return;
@@ -170,6 +282,10 @@ export function markViewScopesDirty(scopes: ViewRefreshScope[]): void {
   });
 
   writeDirtyScopes(dirtyScopes);
+  viewRefreshDebugState.counters.marks += 1;
+  incrementScopeCounters(viewRefreshDebugState.scopeCounters.marks, [...expandedScopes]);
+  syncDirtyScopesSnapshot(dirtyScopes);
+  recordViewRefreshEvent('mark', [...expandedScopes]);
   debugViewRefresh('Marked dirty scopes', {
     scopes: [...expandedScopes],
     versions: changedVersions,
@@ -224,6 +340,10 @@ export function consumeDirtyViewScopesForConsumer(
   }
 
   acknowledgeDirtyScopesForConsumer(consumerId, scopes, dirtyScopes);
+  viewRefreshDebugState.counters.consumes += 1;
+  incrementScopeCounters(viewRefreshDebugState.scopeCounters.consumes, scopes);
+  syncDirtyScopesSnapshot(dirtyScopes);
+  recordViewRefreshEvent('consume', scopes, consumerId);
   debugViewRefresh('Consumed dirty scopes for consumer', { consumerId, scopes });
   return true;
 }
@@ -249,6 +369,10 @@ export function subscribeToViewRefreshForConsumer(
       return;
     }
     acknowledgeDirtyScopesForConsumer(consumerId, matchingScopes, detail?.versions);
+    viewRefreshDebugState.counters.deliveries += 1;
+    incrementScopeCounters(viewRefreshDebugState.scopeCounters.deliveries, matchingScopes);
+    syncDirtyScopesSnapshot(readDirtyScopes());
+    recordViewRefreshEvent('deliver', matchingScopes, consumerId);
     debugViewRefresh('Delivered runtime refresh event', { consumerId, scopes: matchingScopes });
     callback(matchingScopes);
   };
@@ -265,3 +389,5 @@ export function subscribeToViewRefresh(
 ): () => void {
   return subscribeToViewRefreshForConsumer(`__legacy__:${scopes.join(',')}`, scopes, callback);
 }
+
+exposeViewRefreshDebugApi();

@@ -11,6 +11,7 @@ import { safeLog } from '../utils/logger.backend.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
 import * as missionsService from '../services/missions.service.js';
 import { invalidateDashboardAndGroupedViews } from '../services/viewCacheInvalidation.service.js';
+import { shouldBypassCache } from '../utils/requestCacheControl.js';
 import {
     ensureMissionFirmAccess,
     normalizeMissionPayload,
@@ -98,7 +99,7 @@ async function requireMissionAccess(req, res, mission, deniedErrorMessage) {
 router.get('/', authenticateToken, createMissionsRouteHandler('Error fetching missions', 'Failed to fetch missions', async (req, res) => {
         const scope = await getMissionRequestScope(req);
         const { isAdmin } = scope;
-        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+        const bypassCache = shouldBypassCache(req);
         const pagination = parsePaginationParams(req.query.page, req.query.limit);
         if (!pagination.ok) {
             return res.status(400).json({ error: pagination.error });
@@ -126,7 +127,7 @@ router.get('/grouped-by-deal', authenticateToken, createMissionsRouteHandler('Er
             return;
         }
         const { isAdmin, userFirmId } = scope;
-        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+        const bypassCache = shouldBypassCache(req);
 
         const result = await missionsService.getMissionsGroupedByDeal({ firmId: userFirmId, isAdmin, bypassCache });
         return res.json(result);
@@ -135,7 +136,7 @@ router.get('/grouped-by-deal', authenticateToken, createMissionsRouteHandler('Er
 // GET /api/missions/:id - Get mission by ID
 router.get('/:id', authenticateToken, validateParams('id'), createMissionsRouteHandler('Error fetching mission', 'Failed to fetch mission', async (req, res) => {
         const { id } = req.params;
-        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+        const bypassCache = shouldBypassCache(req);
         const record = await missionsService.getMissionWithJoins(id, { bypassCache });
 
         if (!record) {

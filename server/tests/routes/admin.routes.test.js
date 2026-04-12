@@ -555,5 +555,18 @@ describe('Admin Routes', () => {
                 limit: 100
             });
         });
+
+        it('should bypass cache on refresh=1', async () => {
+            mockListUsers.mockResolvedValueOnce({ users: [], hasMore: false });
+
+            const res = await request(app)
+                .get('/api/admin/users?refresh=1')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(mockListUsers).toHaveBeenCalledWith(expect.objectContaining({
+                bypassCache: true
+            }));
+        });
     });
 });

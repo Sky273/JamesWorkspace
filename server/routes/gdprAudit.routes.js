@@ -16,6 +16,7 @@ import {
     GDPR_CATEGORIES
 } from '../services/gdprAudit.service.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { shouldBypassCache } from '../utils/requestCacheControl.js';
 
 const router = express.Router();
 
@@ -51,7 +52,7 @@ router.get('/logs', authenticateToken, requireAdmin, asyncHandler(async (req, re
         sortBy = 'created_at',
         sortOrder = 'desc'
     } = req.query;
-    const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+    const bypassCache = shouldBypassCache(req);
 
     safeLog('info', 'Fetching GDPR audit logs', {
         adminId: req.user?.id,
@@ -93,7 +94,7 @@ router.get('/logs', authenticateToken, requireAdmin, asyncHandler(async (req, re
  */
 router.get('/stats', authenticateToken, requireAdmin, asyncHandler(async (req, res) => {
     const { firmId, days = 30 } = req.query;
-    const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+    const bypassCache = shouldBypassCache(req);
 
     safeLog('info', 'Fetching GDPR audit stats', {
         adminId: req.user?.id,
@@ -122,7 +123,7 @@ router.get('/firms', authenticateToken, requireAdmin, asyncHandler(async (req, r
         adminId: req.user?.id
     });
 
-    const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+    const bypassCache = shouldBypassCache(req);
     const firms = await getGdprFirms({ bypassCache });
     res.json(firms);
 }));

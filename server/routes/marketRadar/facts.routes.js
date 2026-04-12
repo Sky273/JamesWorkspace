@@ -16,6 +16,7 @@ import {
     getFactsFilterOptions,
     getFactsSummary
 } from '../../services/marketFacts.service.js';
+import { shouldBypassCache } from '../../utils/requestCacheControl.js';
 
 const router = express.Router();
 const MAX_ALL_FACTS_RESPONSE = 2000;
@@ -41,7 +42,7 @@ function parsePositiveInteger(value, { field, maxValue = null } = {}) {
 router.get('/facts/all', authenticateToken, async (req, res) => {
     try {
         const startTime = Date.now();
-        if (req.query.refresh === '1' || req.query.refresh === 'true') {
+        if (shouldBypassCache(req)) {
             invalidateFactsCache();
         }
         
@@ -86,7 +87,7 @@ router.get('/facts/all', authenticateToken, async (req, res) => {
  */
 router.get('/facts/filters', authenticateToken, async (req, res) => {
     try {
-        if (req.query.refresh === '1' || req.query.refresh === 'true') {
+        if (shouldBypassCache(req)) {
             invalidateFactsCache();
         }
         const filters = await getFactsFilterOptions();
@@ -113,7 +114,7 @@ router.get('/facts/filters', authenticateToken, async (req, res) => {
  */
 router.get('/facts/summary', authenticateToken, async (req, res) => {
     try {
-        if (req.query.refresh === '1' || req.query.refresh === 'true') {
+        if (shouldBypassCache(req)) {
             invalidateFactsCache();
         }
         const summary = await getFactsSummary();
@@ -163,7 +164,7 @@ router.post('/facts/cache/refresh', authenticateToken, requireAdmin, async (req,
  */
 router.get('/facts', authenticateToken, async (req, res) => {
     try {
-        if (req.query.refresh === '1' || req.query.refresh === 'true') {
+        if (shouldBypassCache(req)) {
             invalidateFactsCache();
         }
         const { startDate, endDate, source, type, region, keyword, romeCode, page, pageSize } = req.query;

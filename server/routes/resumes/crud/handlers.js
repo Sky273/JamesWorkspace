@@ -14,6 +14,7 @@ import {
 } from './improvementHelpers.js';
 import { setSafeFileResponseHeaders } from '../../../utils/fileResponseSecurity.js';
 import { persistResumeSkillEvidence } from '../../../services/skillEvidence.service.js';
+import { shouldBypassCache } from '../../../utils/requestCacheControl.js';
 import {
     buildDeferredPostAnalysisDecision,
     buildResumeUpdateData,
@@ -149,7 +150,7 @@ function createGetResumeHandler() {
     return async (req, res) => {
         try {
             const { id } = req.params;
-            const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+    const bypassCache = shouldBypassCache(req);
             const resume = await resumesService.getResumeById(id, { bypassCache });
             if (!resume) {
                 return res.status(404).json({ error: 'Resume not found' });

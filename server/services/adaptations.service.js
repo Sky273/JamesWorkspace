@@ -43,9 +43,10 @@ const ALLOWED_COLUMNS = new Set([
  * @param {string} [options.search]
  * @param {number} [options.page=1]
  * @param {number} [options.limit=20]
+ * @param {boolean} [options.bypassCache=false]
  * @returns {Promise<{records: Array, totalCount: number}>}
  */
-export async function listAdaptations({ firmId, resumeId, missionId, status, search, page = 1, limit = 20 }) {
+export async function listAdaptations({ firmId, resumeId, missionId, status, search, page = 1, limit = 20, bypassCache: _bypassCache = false }) {
     const normalizedPage = Math.max(1, page);
     const normalizedLimit = Math.max(1, Math.min(limit, 100));
     const conditions = [];

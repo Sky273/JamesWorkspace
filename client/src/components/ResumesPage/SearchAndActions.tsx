@@ -71,6 +71,7 @@ const SearchAndActions = ({
             onClick={onRefresh}
             className="cv-ghost-button inline-flex min-h-12 min-w-12 items-center justify-center rounded-[1.1rem] p-3 transition-colors"
             title={t('resumes.refresh')}
+            aria-label={t('resumes.refresh')}
           >
             <ArrowPathIcon className="w-5 h-5" />
           </button>

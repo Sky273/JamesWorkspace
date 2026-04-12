@@ -8,6 +8,7 @@ import { authenticateToken } from '../../middleware/auth.middleware.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { getUserFirmId } from '../../utils/firmHelpers.js';
 import * as resumeStatsService from '../../services/resumeStats.service.js';
+import { shouldBypassCache } from '../../utils/requestCacheControl.js';
 
 const router = express.Router();
 const applyResumeStatsReadHeaders = (_req, res, next) => {
@@ -29,7 +30,7 @@ router.get('/grouped-by-deal', applyResumeStatsReadHeaders, authenticateToken, a
     try {
         const isAdmin = req.user?.role === 'admin';
         const userFirmId = await getUserFirmId(req);
-        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+    const bypassCache = shouldBypassCache(req);
         
         if (!userFirmId && !isAdmin) {
             return res.status(403).json({ error: 'No firm association' });
@@ -49,7 +50,7 @@ router.get('/stats', applyResumeStatsReadHeaders, authenticateToken, async (req,
     try {
         const isAdmin = req.user?.role === 'admin';
         const userFirmId = isAdmin ? null : await getUserFirmId(req);
-        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+    const bypassCache = shouldBypassCache(req);
 
         if (!isAdmin && !userFirmId) {
             return res.status(403).json({ error: 'No firm association' });

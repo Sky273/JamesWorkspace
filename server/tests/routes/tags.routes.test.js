@@ -170,6 +170,21 @@ describe('Tags Routes', () => {
 
             expect(res.status).toBe(403);
         });
+
+        it('should bypass raw tags cache when refresh=1 is provided', async () => {
+            mockSelectRawWithTimeout.mockResolvedValueOnce([{
+                skills: ['JavaScript'],
+                industries: [],
+                tools: [],
+                soft_skills: []
+            }]);
+
+            const res = await request(app).get('/api/tags?refresh=1').set(authHeader);
+
+            expect(res.status).toBe(200);
+            expect(mockGetCachedRawTags).not.toHaveBeenCalled();
+            expect(mockSetCachedRawTags).toHaveBeenCalled();
+        });
     });
 
     describe('GET /api/tags/cleaned', () => {
@@ -196,6 +211,22 @@ describe('Tags Routes', () => {
             const res = await request(app).get('/api/tags/cleaned').set(authHeader);
             expect(res.status).toBe(500);
         });
+
+        it('should bypass cleaned tags cache when refresh=1 is provided', async () => {
+            mockGetUserFirmId.mockResolvedValue('firm-123');
+            mockSelectRawWithTimeout.mockResolvedValueOnce([{
+                skills: ['JavaScript'],
+                industries: [],
+                tools: [],
+                soft_skills: []
+            }]);
+
+            const res = await request(app).get('/api/tags/cleaned?refresh=1').set(authHeader);
+
+            expect(res.status).toBe(200);
+            expect(mockGetCachedCleanedTags).not.toHaveBeenCalled();
+            expect(mockSetCachedCleanedTags).toHaveBeenCalled();
+        });
     });
 
     describe('GET /api/tags/esco', () => {
@@ -219,6 +250,21 @@ describe('Tags Routes', () => {
 
             const res = await request(app).get('/api/tags/esco').set(authHeader);
             expect(res.status).toBe(500);
+        });
+
+        it('should bypass ESCO tags cache when refresh=1 is provided', async () => {
+            mockSelectRawWithTimeout.mockResolvedValueOnce([{
+                skills: [],
+                industries: [],
+                tools: [],
+                soft_skills: []
+            }]);
+
+            const res = await request(app).get('/api/tags/esco?refresh=1').set(authHeader);
+
+            expect(res.status).toBe(200);
+            expect(mockGetCachedEscoTags).not.toHaveBeenCalled();
+            expect(mockSetCachedEscoTags).toHaveBeenCalled();
         });
     });
 

@@ -10,6 +10,7 @@ import { safeLog } from '../utils/logger.backend.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
 import * as adaptationsService from '../services/adaptations.service.js';
 import { invalidateDashboardAndGroupedViews } from '../services/viewCacheInvalidation.service.js';
+import { shouldBypassCache } from '../utils/requestCacheControl.js';
 import {
     ensureAdaptationFirmAccess,
     normalizeAdaptationPayload
@@ -39,6 +40,7 @@ router.get('/', authenticateToken, async (req, res) => {
         const { resumeId, missionId, status, search } = req.query;
         const isAdmin = req.user?.role === 'admin';
         const userFirmId = await getUserFirmId(req);
+        const bypassCache = shouldBypassCache(req);
         const access = ensureAdaptationFirmAccess({ isAdmin, userFirmId });
         if (!access.ok) {
             return res.status(access.status).json({ error: access.error });
@@ -60,7 +62,8 @@ router.get('/', authenticateToken, async (req, res) => {
             status,
             search,
             page: pageResult.value,
-            limit: limitResult.value
+            limit: limitResult.value,
+            bypassCache
         });
 
         const adaptations = records.map(record => ({
@@ -109,7 +112,7 @@ router.get('/grouped-by-deal', authenticateToken, async (req, res) => {
     try {
         const isAdmin = req.user?.role === 'admin';
         const userFirmId = await getUserFirmId(req);
-        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+        const bypassCache = shouldBypassCache(req);
 
         if (!userFirmId && !isAdmin) {
             return res.status(403).json({ error: 'No firm association' });

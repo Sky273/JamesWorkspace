@@ -145,6 +145,20 @@ describe('Market Radar - Facts Routes', () => {
             expect(res.status).toBe(500);
             expect(res.body.error).toContain('Failed');
         });
+
+        it('should invalidate facts cache when refresh=1 is provided', async () => {
+            mockGetFactsByDateRange.mockResolvedValueOnce({
+                facts: [sampleFact],
+                pagination: { totalCount: 1 }
+            });
+
+            const res = await request(app)
+                .get('/api/market-radar/facts/all?refresh=1')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(mockInvalidateFactsCache).toHaveBeenCalled();
+        });
     });
 
     // ==========================================
@@ -177,6 +191,21 @@ describe('Market Radar - Facts Routes', () => {
 
             expect(res.status).toBe(500);
         });
+
+        it('should invalidate facts cache on filters read when refresh=1 is provided', async () => {
+            mockGetFactsFilterOptions.mockResolvedValueOnce({
+                sources: [],
+                types: [],
+                regions: []
+            });
+
+            const res = await request(app)
+                .get('/api/market-radar/facts/filters?refresh=1')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(mockInvalidateFactsCache).toHaveBeenCalled();
+        });
     });
 
     // ==========================================
@@ -206,6 +235,20 @@ describe('Market Radar - Facts Routes', () => {
                 .set(AUTH);
 
             expect(res.status).toBe(500);
+        });
+
+        it('should invalidate facts cache on summary read when refresh=1 is provided', async () => {
+            mockGetFactsSummary.mockResolvedValueOnce({
+                totalFacts: 1,
+                bySource: {}
+            });
+
+            const res = await request(app)
+                .get('/api/market-radar/facts/summary?refresh=1')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(mockInvalidateFactsCache).toHaveBeenCalled();
         });
     });
 

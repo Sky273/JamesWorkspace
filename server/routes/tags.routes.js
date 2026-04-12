@@ -10,6 +10,7 @@ import { safeLog } from '../utils/logger.backend.js';
 import { aggregateRawTags, aggregateCleanedTags, aggregateEscoTags, fetchResumeBatch, updateResumeTags, renameTag } from '../services/tags.service.js';
 import { processCleanedTagsToEsco } from '../services/escoService.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
+import { shouldBypassCache } from '../utils/requestCacheControl.js';
 import {
     destroyTagsCache,
     getCachedRawTags,
@@ -81,7 +82,7 @@ router.get('/', authenticateToken, async (req, res) => {
         if (!access) {
             return;
         }
-        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+        const bypassCache = shouldBypassCache(req);
 
         const cacheKey = access.isAdmin ? 'admin' : `firm_${access.userFirmId}`;
         const cachedResult = bypassCache ? null : await getCachedRawTags(cacheKey);
@@ -103,7 +104,7 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/cleaned', applyTagsReadHeaders, authenticateToken, async (req, res) => {
     try {
         const scope = req.query.scope === 'grouped-by-deal' ? 'grouped-by-deal' : 'default';
-        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+        const bypassCache = shouldBypassCache(req);
         const access = await resolveTagsAccess(req, res, {
             requireFirmForNonAdmin: scope === 'grouped-by-deal'
         });
@@ -235,7 +236,7 @@ router.get('/esco', authenticateToken, async (req, res) => {
         if (!access) {
             return;
         }
-        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+        const bypassCache = shouldBypassCache(req);
 
         // Return cached ESCO tags if available and not expired
         if (access.isAdmin && !bypassCache) {

@@ -9,6 +9,7 @@ import * as firmsService from '../services/firms.service.js';
 import { applySafeBinaryHeaders, setSafeFileResponseHeaders } from '../utils/fileResponseSecurity.js';
 import { resolveUploadMimeType } from '../utils/uploadFileTypes.js';
 import { isValidFileSignature } from '../utils/fileSignature.js';
+import { shouldBypassCache } from '../utils/requestCacheControl.js';
 
 const LOGO_ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 const DEFAULT_PAGE = 1;
@@ -73,7 +74,7 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
 
         const { page, limit } = pagination;
         const { search } = req.query;
-        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+        const bypassCache = shouldBypassCache(req);
 
         const { firms, hasMore, totalCount } = await firmsService.listFirms({ search, page, limit, bypassCache });
 
@@ -99,7 +100,7 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
 router.get('/:id', authenticateToken, requireAdmin, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
-        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+        const bypassCache = shouldBypassCache(req);
         const firm = await firmsService.getFirmById(id, { bypassCache });
         res.json(firm);
     } catch (error) {

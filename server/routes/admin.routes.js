@@ -6,6 +6,7 @@ import { getSecurityLogs, getSecurityLogsCount } from '../services/security.serv
 import { getProxyLogs, getProxyLogsCount, getProxyLogsStats, safeLog } from '../utils/logger.backend.js';
 import { listUsers } from '../services/users.service.js';
 import { getApplicationCacheDiagnosticSummary, getApplicationCacheUsageSummary } from './healthRouteHelpers.js';
+import { shouldBypassCache } from '../utils/requestCacheControl.js';
 
 // Import cache stats functions
 import { getBlacklistStats } from '../services/tokenBlacklist.service.js';
@@ -294,7 +295,7 @@ router.get('/users', authenticateToken, requireAdmin, validateQuery({
             role,
             status
         } = req.query;
-        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+  const bypassCache = shouldBypassCache(req);
         const parsedPage = Number.isInteger(Number.parseInt(page, 10)) ? Number.parseInt(page, 10) : 1;
         const parsedLimitRaw = Number.parseInt(limit, 10);
         const parsedLimit = Number.isInteger(parsedLimitRaw) ? Math.min(parsedLimitRaw, 100) : 100;

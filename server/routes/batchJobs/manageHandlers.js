@@ -20,6 +20,7 @@ import { safeLog } from '../../utils/logger.backend.js';
 import { setSafeFileResponseHeaders } from '../../utils/fileResponseSecurity.js';
 import { ensureOwnerAccess, getUserContext } from './helpers.js';
 import { isManagedBatchExportPath } from '../../services/batchJobs/maintenance.js';
+import { shouldBypassCache } from '../../utils/requestCacheControl.js';
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
@@ -249,7 +250,7 @@ function parseListJobsPagination(query = {}) {
 
 async function getAuthorizedJobOrRespond(req, res, jobId) {
     const userContext = getUserContext(req);
-    const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+    const bypassCache = shouldBypassCache(req);
     const job = await getJob(jobId, { bypassCache });
 
     if (!job) {
@@ -280,7 +281,7 @@ export async function listJobs(req, res) {
             limit: pagination.limit,
             offset: pagination.offset,
             status: status || null,
-            bypassCache: req.query.refresh === '1' || req.query.refresh === 'true'
+      bypassCache: shouldBypassCache(req)
         };
 
         const jobs = userContext.isAdmin

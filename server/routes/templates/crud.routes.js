@@ -12,6 +12,7 @@ import { safeLog } from '../../utils/logger.backend.js';
 import { mapTemplateToFrontend, mapTemplateFromFrontend } from '../../utils/mappers.js';
 import { getUserFirmId } from '../../utils/firmHelpers.js';
 import * as templatesService from '../../services/templates.service.js';
+import { shouldBypassCache } from '../../utils/requestCacheControl.js';
 
 const router = express.Router();
 
@@ -43,7 +44,7 @@ router.get('/', authenticateToken, async (req, res) => {
         const page = Number.isNaN(parsedPage) ? 1 : parsedPage;
         const limit = Number.isNaN(parsedLimit) ? 100 : parsedLimit;
         const { search, status } = req.query;
-        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+    const bypassCache = shouldBypassCache(req);
         const isAdmin = isUserAdmin(req);
         const userFirmId = await getUserFirmId(req);
 

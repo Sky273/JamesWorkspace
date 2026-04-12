@@ -119,7 +119,14 @@ export function ClientsToolbar({
           <button onClick={() => onSetActiveTab('prospect')} className={`app-tab-button ${activeTab === 'prospect' ? 'app-tab-button-active' : ''}`}><BriefcaseIcon className="w-5 h-5" />{t('clients.tabs.prospects')}</button>
         </div>
         <div className="flex gap-2">
-          <button onClick={onRefresh} className="app-button-secondary rounded-2xl p-2.5" title={t('common.refresh')}><ArrowPathIcon className="w-5 h-5" /></button>
+          <button
+            onClick={onRefresh}
+            className="app-button-secondary rounded-2xl p-2.5"
+            title={t('common.refresh')}
+            aria-label={t('common.refresh')}
+          >
+            <ArrowPathIcon className="w-5 h-5" />
+          </button>
           <button onClick={onCreateClient} className="app-button-primary flex items-center gap-2 rounded-2xl px-4 py-2.5"><PlusIcon className="w-5 h-5" />{t('clients.addClient')}</button>
         </div>
       </div>

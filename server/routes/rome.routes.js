@@ -7,6 +7,7 @@ import express from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { sanitizeErrorMessage } from '../utils/errors.js';
+import { shouldBypassCache } from '../utils/requestCacheControl.js';
 import { createJob, updateJobStatus, updateCollectionJobProgress, JOB_STATUS } from '../services/batchJobs.service.js';
 import {
     getMetiers,
@@ -48,7 +49,7 @@ function parsePositiveInteger(value, { field, maxValue = null } = {}) {
 router.get('/metiers', authenticateToken, async (req, res) => {
     try {
         const { codeRome, grandDomaine, search, page, pageSize, includeDetails } = req.query;
-        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+        const bypassCache = shouldBypassCache(req);
         const parsedPage = parsePositiveInteger(page, { field: 'page' });
         const parsedPageSize = parsePositiveInteger(pageSize, { field: 'pageSize', maxValue: 100 });
         const result = await getStoredMetiers({

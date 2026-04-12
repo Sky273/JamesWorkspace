@@ -240,7 +240,14 @@ export function TemplatesToolbar({
             </select>
             <ChevronDownIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
           </div>
-          <button onClick={() => void onRefresh()} className="app-button-secondary rounded-2xl p-2.5" title={t('templates.refresh')}><ArrowPathIcon className="w-5 h-5" /></button>
+          <button
+            onClick={() => void onRefresh()}
+            className="app-button-secondary rounded-2xl p-2.5"
+            title={t('templates.refresh')}
+            aria-label={t('templates.refresh')}
+          >
+            <ArrowPathIcon className="w-5 h-5" />
+          </button>
           {searchTerm ? (
             <button onClick={onResetSearch} className="app-button-secondary inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm font-medium" title={t('common.resetFilters')}><XMarkIcon className="w-4 h-4" /><span className="hidden sm:inline">{t('common.resetFilters')}</span></button>
           ) : null}
