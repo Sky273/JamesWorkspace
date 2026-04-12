@@ -10,7 +10,7 @@ import { createAuthOptionsWithCsrf, fetchWithCsrfRetry } from '../utils/apiInter
 import logger from '../utils/logger.frontend';
 import resumeAdaptationService from '../utils/resumeAdaptationService';
 import { templateService } from '../utils/templateService';
-import { markViewScopesDirty } from '../utils/viewRefresh';
+import { markAdaptationsViewDirty } from '../utils/viewRefreshScopes';
 import { removeSuggestionMarkers } from '../components/TiptapEditor/suggestionsHtml';
 import {
   applyTemplatePlaceholders,
@@ -274,7 +274,7 @@ export function useAdaptationsDashboard() {
       setAdaptations((currentAdaptations) => currentAdaptations.filter((adaptation) => adaptation.id !== adaptationId));
       setTotalCount((count) => Math.max(0, count - 1));
       setGroupedRefreshToken((currentToken) => currentToken + 1);
-      markViewScopesDirty(['adaptations', 'resumes', 'missions']);
+      markAdaptationsViewDirty();
       toast.success(t('adaptations.messages.deleteSuccess', 'Adaptation supprimee'));
       await fetchAdaptations({ forceRefresh: true });
     } catch (error) {

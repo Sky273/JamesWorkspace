@@ -4,6 +4,7 @@ import request from 'supertest';
 
 const mockListUsers = vi.fn();
 const mockUpdateUserProfile = vi.fn();
+const mockGetUserFirmId = vi.fn();
 
 vi.mock('../../services/users.service.js', () => ({
     listUsers: (...args) => mockListUsers(...args),
@@ -12,6 +13,10 @@ vi.mock('../../services/users.service.js', () => ({
 
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
+}));
+
+vi.mock('../../utils/firmHelpers.js', () => ({
+    getUserFirmId: (...args) => mockGetUserFirmId(...args)
 }));
 
 vi.mock('../../utils/validation.js', () => ({
@@ -32,12 +37,19 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
         };
         next();
     },
+    requireUserManager: (req, res, next) => {
+        if (req.user?.role === 'admin' || req.user?.role === 'local_admin') {
+            return next();
+        }
+        return res.status(403).json({ error: 'User manager access required' });
+    },
     requireAdmin: (req, res, next) => {
         if (req.user?.role === 'admin') {
             return next();
         }
         return res.status(403).json({ error: 'Admin access required' });
-    }
+    },
+    isUserAdmin: (req) => req.user?.role === 'admin'
 }));
 
 import usersRoutes from '../../routes/users.routes.js';
@@ -66,6 +78,19 @@ describe('Users Profile Routes', () => {
         expect(res.status).toBe(400);
         expect(res.body.error).toBe('Invalid pagination parameters');
         expect(mockListUsers).not.toHaveBeenCalled();
+    });
+
+    it('should bypass cache on admin list when refresh=1', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockListUsers.mockResolvedValueOnce({ users: [], hasMore: false });
+
+        const res = await request(app)
+            .get('/api/users?refresh=1')
+            .set('Authorization', 'Bearer valid-token')
+            .set('x-test-role', 'admin');
+
+        expect(res.status).toBe(200);
+        expect(mockListUsers).toHaveBeenCalledWith(expect.objectContaining({ bypassCache: true }));
     });
 
     it('should allow self profile update with basic fields only', async () => {

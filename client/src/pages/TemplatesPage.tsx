@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import userService from '../utils/userService';
 import { templateService } from '../utils/templateService';
-import { markViewScopesDirty } from '../utils/viewRefresh';
+import { markTemplatesViewDirty } from '../utils/viewRefreshScopes';
 
 import {
   TemplatesDeleteModal,
@@ -94,7 +94,7 @@ const TemplatesPage = (): JSX.Element => {
     setDuplicateSubmitting(true);
     try {
       await templateService.duplicateTemplate(duplicateTarget.id, duplicateFirmId);
-      markViewScopesDirty(['templates']);
+      markTemplatesViewDirty();
       toast.success(t('templates.duplicate.success'));
       closeDuplicateModal();
       await fetchTemplates({ forceRefresh: true, clearPendingTemplate: true });

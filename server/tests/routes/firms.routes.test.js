@@ -156,6 +156,21 @@ describe('Firms Routes', () => {
             );
         });
 
+        it('should bypass cache when refresh=1 is provided', async () => {
+            mockListFirms.mockResolvedValue({
+                firms: [],
+                hasMore: false,
+                totalCount: 0
+            });
+
+            const res = await request(app).get('/api/firms?refresh=1').set(authHeader);
+
+            expect(res.status).toBe(200);
+            expect(mockListFirms).toHaveBeenCalledWith(
+                expect.objectContaining({ bypassCache: true })
+            );
+        });
+
         it('should handle hasMore flag', async () => {
             const firms = Array.from({ length: 100 }, (_, i) => ({ id: `f-${i}`, name: `Firm ${i}` }));
             mockListFirms.mockResolvedValue({
@@ -228,6 +243,15 @@ describe('Firms Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.name).toBe('Acme');
+        });
+
+        it('should bypass cache on detail read when refresh=1', async () => {
+            mockGetFirmById.mockResolvedValue({ id: 'f-1', name: 'Acme', status: 'active' });
+
+            const res = await request(app).get('/api/firms/f-1?refresh=1').set(authHeader);
+
+            expect(res.status).toBe(200);
+            expect(mockGetFirmById).toHaveBeenCalledWith('f-1', { bypassCache: true });
         });
 
         it('should return 404 if not found', async () => {

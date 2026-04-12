@@ -277,6 +277,14 @@ describe('Deals Service', () => {
             query.mockResolvedValueOnce({ rows: [] });
             expect(await getDealById('missing')).toBeNull();
         });
+
+        it('should bypass cache when requested', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'd1' }] });
+
+            await getDealById('d1', { bypassCache: true });
+
+            expect(mockDealsCache.getOrLoad).not.toHaveBeenCalled();
+        });
     });
 
     // ============================================
@@ -459,6 +467,14 @@ describe('Deals Service', () => {
 
             expect(result).toHaveLength(1);
             expect(query.mock.calls[0][1]).toEqual(['r1', 'f1']);
+        });
+
+        it('should bypass cache when requested', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+
+            await getDealsForResume('r1', 'f1', { bypassCache: true });
+
+            expect(mockDealsCache.getOrLoad).not.toHaveBeenCalled();
         });
     });
 

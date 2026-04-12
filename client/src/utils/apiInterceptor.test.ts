@@ -84,7 +84,7 @@ describe('apiInterceptor', () => {
 
   it('creates auth options with credentials included', () => {
     const options = createAuthOptions({ method: 'GET', headers: { A: '1' } });
-    expect(options).toEqual({ method: 'GET', headers: { A: '1' }, credentials: 'include' });
+    expect(options).toEqual({ method: 'GET', headers: { A: '1' }, credentials: 'include', cache: 'no-store' });
   });
 
   it('creates auth options with csrf token', async () => {
@@ -95,6 +95,7 @@ describe('apiInterceptor', () => {
       method: 'POST',
       headers: { A: '1', 'x-csrf-token': 'csrf-token' },
       credentials: 'include',
+      cache: 'no-store',
     });
   });
 
@@ -106,6 +107,7 @@ describe('apiInterceptor', () => {
       method: 'GET',
       headers: { A: '1' },
       credentials: 'include',
+      cache: 'no-store',
     });
   });
 

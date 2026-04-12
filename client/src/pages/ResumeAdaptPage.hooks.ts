@@ -6,7 +6,7 @@ import resumeAdaptationService from '../utils/resumeAdaptationService';
 import type { MatchAnalysis } from '../utils/resumeAdaptationService';
 import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
-import { markViewScopesDirty } from '../utils/viewRefresh';
+import { markAdaptationsViewDirty } from '../utils/viewRefreshScopes';
 
 interface Resume {
   id: string;
@@ -151,7 +151,7 @@ export function useResumeAdaptPage() {
         setMatchAnalysis(result.matchAnalysis);
       }
       setAdaptation(result);
-      markViewScopesDirty(['adaptations', 'resumes', 'missions']);
+      markAdaptationsViewDirty();
       setStep('show-result');
       toast.success(t('adaptation.generationComplete'));
     } catch (err) {

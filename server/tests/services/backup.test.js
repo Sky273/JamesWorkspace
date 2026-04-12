@@ -14,6 +14,19 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+vi.mock('../../services/cache.service.js', () => ({
+    CACHE_KEYS: {
+        backupSettings: {
+            CURRENT: 'backupSettings:current'
+        }
+    },
+    backupSettingsCache: {
+        getOrLoad: vi.fn(async (_key, loader) => await loader()),
+        get: vi.fn(async () => null)
+    },
+    invalidateBackupSettingsCaches: vi.fn(async () => {})
+}));
+
 import { query } from '../../config/database.js';
 
 // ============================================

@@ -358,6 +358,19 @@ describe('Deals Routes - GET /api/deals/stats', () => {
         expect(res.body.total).toBe(10);
         expect(res.body.byStatus).toBeDefined();
     });
+
+    it('should bypass cache for stats when refresh=1 is provided', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockIsUserAdmin.mockReturnValue(false);
+        mockGetDealStats.mockResolvedValueOnce({ total: 0, byStatus: {}, byPriority: {} });
+
+        const res = await request(app)
+            .get('/api/deals/stats?refresh=1')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(mockGetDealStats).toHaveBeenCalledWith('firm-123', { bypassCache: true });
+    });
 });
 
 describe('Deals Routes - GET /api/deals/:id', () => {
@@ -458,6 +471,25 @@ describe('Deals Routes - GET /api/deals/:id', () => {
 
         expect(res.status).toBe(200);
         expect(res.body.id).toBe('deal-123');
+    });
+
+    it('should bypass cache on detail read when refresh=1 is provided', async () => {
+        mockGetDealFirmId.mockResolvedValueOnce('firm-123');
+        mockIsUserAdmin.mockReturnValue(false);
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockGetDealById.mockResolvedValueOnce({
+            id: 'deal-123',
+            title: 'Important Deal',
+            status: 'open',
+            firm_id: 'firm-123'
+        });
+
+        const res = await request(app)
+            .get('/api/deals/deal-123?refresh=1')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(mockGetDealById).toHaveBeenCalledWith('deal-123', { bypassCache: true });
     });
 
     it('should allow admin to access any deal', async () => {
@@ -932,6 +964,52 @@ describe('Deals Routes - Deal-Resume Associations', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.length).toBe(2);
+        });
+
+        it('should bypass cache for resumes when refresh=1 is provided', async () => {
+            mockGetDealFirmId.mockResolvedValueOnce('firm-123');
+            mockIsUserAdmin.mockReturnValue(false);
+            mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+            mockGetResumesForDeal.mockResolvedValueOnce([]);
+
+            const res = await request(app)
+                .get('/api/deals/deal-123/resumes?refresh=1')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+            expect(mockGetResumesForDeal).toHaveBeenCalledWith('deal-123', { bypassCache: true });
+        });
+    });
+
+    describe('GET /api/deals/:id/missions', () => {
+        it('should bypass cache for missions when refresh=1 is provided', async () => {
+            mockGetDealFirmId.mockResolvedValueOnce('firm-123');
+            mockIsUserAdmin.mockReturnValue(false);
+            mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+            mockGetMissionsForDeal.mockResolvedValueOnce([]);
+
+            const res = await request(app)
+                .get('/api/deals/deal-123/missions?refresh=1')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+            expect(mockGetMissionsForDeal).toHaveBeenCalledWith('deal-123', { bypassCache: true });
+        });
+    });
+
+    describe('GET /api/deals/by-resume/:resumeId', () => {
+        it('should bypass cache for deals-by-resume when refresh=1 is provided', async () => {
+            mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+            mockIsUserAdmin.mockReturnValue(false);
+            mockGetResumeFirmId.mockResolvedValueOnce('firm-123');
+            mockGetDealsForResume.mockResolvedValueOnce([]);
+
+            const res = await request(app)
+                .get('/api/deals/by-resume/resume-123?refresh=1')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+            expect(mockGetDealsForResume).toHaveBeenCalledWith('resume-123', 'firm-123', { bypassCache: true });
         });
     });
 });

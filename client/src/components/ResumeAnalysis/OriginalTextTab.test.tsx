@@ -40,7 +40,7 @@ vi.mock('../../utils/logger.frontend', () => ({
   },
 }));
 
-vi.mock('../TiptapEditor', () => {
+vi.mock('../TiptapEditor/DeferredTiptapEditor', () => {
   const DeferredTiptapEditor = React.forwardRef(({
     content,
     onChange,
@@ -80,11 +80,18 @@ vi.mock('../TiptapEditor', () => {
   DeferredTiptapEditor.displayName = 'DeferredTiptapEditorMock';
 
   return {
-    DeferredTiptapEditor,
-    parseSuggestions: () => [],
-    removeSuggestionMarkers: (value: string) => value.replace(/\[\[suggestion\]\]/g, ''),
+    __esModule: true,
+    default: DeferredTiptapEditor,
   };
 });
+
+vi.mock('../TiptapEditor/suggestions.shared', () => ({
+  parseSuggestions: () => [],
+}));
+
+vi.mock('../TiptapEditor/suggestionsHtml', () => ({
+  removeSuggestionMarkers: (value: string) => value.replace(/\[\[suggestion\]\]/g, ''),
+}));
 
 import OriginalTextTab from './OriginalTextTab';
 
@@ -148,7 +155,7 @@ describe('OriginalTextTab', () => {
       />
     );
 
-    fireEvent.change(screen.getByPlaceholderText(/Exemple : Reformuler le résumé/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Exemple : Reformuler/i), {
       target: { value: 'Rewrite this CV' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Appliquer' }));

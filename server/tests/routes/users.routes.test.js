@@ -125,6 +125,10 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
     isUserLocalAdmin: (req) => req.user?.role === 'local_admin'
 }));
 
+vi.mock('../../utils/firmHelpers.js', () => ({
+    getUserFirmIdFromUser: (user) => user?.firm_id || user?.firmId || null
+}));
+
 import usersRoutes from '../../routes/auth/users.routes.js';
 
 function createTestApp() {

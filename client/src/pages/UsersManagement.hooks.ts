@@ -7,9 +7,9 @@ import { useScopedViewRefresh } from '../hooks/useScopedViewRefresh';
 import userService from '../utils/userService';
 import logger from '../utils/logger.frontend';
 import {
-  markAllViewScopesDirty,
-  markViewScopesDirty,
-} from '../utils/viewRefresh';
+  markFirmViewsDirty,
+  markUsersViewDirty,
+} from '../utils/viewRefreshScopes';
 import {
   buildUsersManagementStats,
   createDeleteTarget,
@@ -334,7 +334,7 @@ export function useUsersManagementDashboard() {
         usersRequestIdRef.current += 1;
         setUsers((currentUsers) => currentUsers.map((userRecord) => (userRecord.id === selectedUser.id ? updatedUser : userRecord)));
         toast.success(t('users.management.messages.userUpdated'));
-        markViewScopesDirty(['users']);
+        markUsersViewDirty();
         await fetchUsers({ preserveUser: updatedUser });
       } else {
         const createdUser = await userService.createUser({
@@ -357,7 +357,7 @@ export function useUsersManagementDashboard() {
             ? t('users.management.messages.userCreatedInvitationPending')
             : t('users.management.messages.userCreatedInvitationSent')
         );
-        markViewScopesDirty(['users']);
+        markUsersViewDirty();
         await fetchUsers({ page: 1, search: searchTerm.trim(), forceRefresh: true, preserveUser: createdUser });
       }
 
@@ -386,7 +386,7 @@ export function useUsersManagementDashboard() {
 
       await userService.deleteUser(deletedUserId);
       toast.success(t('users.management.messages.userDeleted'));
-      markViewScopesDirty(['users']);
+      markUsersViewDirty();
       setDeleteModalOpen(false);
       setDeleteTarget(null);
       await fetchUsers();
@@ -429,7 +429,7 @@ export function useUsersManagementDashboard() {
         setFirms((currentFirms) => currentFirms.map((firm) => (firm.id === selectedFirm.id ? updatedFirm : firm)));
         firmId = selectedFirm.id;
         toast.success(t('users.management.messages.firmUpdated'));
-        markAllViewScopesDirty();
+        markFirmViewsDirty();
       } else {
         const newFirm = await userService.createCustomer({ name: formData.name });
         pendingFirmRef.current = newFirm;
@@ -441,7 +441,7 @@ export function useUsersManagementDashboard() {
         firmId = newFirm?.id;
         createdFirm = newFirm;
         toast.success(t('users.management.messages.firmCreated'));
-        markAllViewScopesDirty();
+        markFirmViewsDirty();
       }
 
       if (firmId && formData.logoFile) {
@@ -485,7 +485,7 @@ export function useUsersManagementDashboard() {
 
       await userService.deleteCustomer(deletedFirmId);
       toast.success(t('users.management.messages.firmDeleted'));
-      markAllViewScopesDirty();
+      markFirmViewsDirty();
       setDeleteModalOpen(false);
       setDeleteTarget(null);
       await fetchFirms({

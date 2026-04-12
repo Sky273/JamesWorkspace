@@ -9,6 +9,7 @@ import {
   markViewScopesDirty,
   type ViewRefreshScope,
 } from '../../utils/viewRefresh';
+import { markJobsViewDirty } from '../../utils/viewRefreshScopes';
 import JobsTabHeader from './jobsTab/JobsTabHeader';
 import JobCard from './jobsTab/JobCard';
 import type { Job, TranslateFn } from './jobsTab/types';
@@ -221,7 +222,7 @@ const JobsTab = (): JSX.Element => {
             ? { ...job, status: 'cancelled' }
             : job
         )));
-        markViewScopesDirty(['jobs']);
+      markJobsViewDirty();
         void fetchJobs();
         return;
       }
@@ -248,7 +249,7 @@ const JobsTab = (): JSX.Element => {
           delete next[jobId];
           return next;
         });
-        markViewScopesDirty(['jobs']);
+      markJobsViewDirty();
         return;
       }
 
@@ -315,7 +316,7 @@ const JobsTab = (): JSX.Element => {
         if (expandedJobId) {
           void fetchJobDetails(expandedJobId);
         }
-        markViewScopesDirty(['jobs']);
+      markJobsViewDirty();
         return;
       }
 

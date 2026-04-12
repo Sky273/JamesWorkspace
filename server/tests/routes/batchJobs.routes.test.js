@@ -249,6 +249,44 @@ vi.mock('../../middleware/rateLimit.middleware.js', () => ({
 vi.mock('../../utils/validation.js', () => ({
     validateBody: () => (req, res, next) => next(),
     validateParams: () => (req, res, next) => next(),
+    normalizeRequestBodyAliases: (payload = {}) => {
+        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+            return payload;
+        }
+
+        const normalized = { ...payload };
+        if (normalized.firm_id !== undefined && normalized.firmId === undefined) {
+            normalized.firmId = normalized.firm_id;
+        }
+        if (normalized.resume_ids !== undefined && normalized.resumeIds === undefined) {
+            normalized.resumeIds = normalized.resume_ids;
+        }
+        if (normalized.mission_id !== undefined && normalized.missionId === undefined) {
+            normalized.missionId = normalized.mission_id;
+        }
+        if (normalized.deal_id !== undefined && normalized.dealId === undefined) {
+            normalized.dealId = normalized.deal_id;
+        }
+        if (normalized.template_id !== undefined && normalized.templateId === undefined) {
+            normalized.templateId = normalized.template_id;
+        }
+        if (normalized.export_format !== undefined && normalized.exportFormat === undefined) {
+            normalized.exportFormat = normalized.export_format;
+        }
+        if (normalized.export_formats !== undefined && normalized.exportFormats === undefined) {
+            normalized.exportFormats = normalized.export_formats;
+        }
+        if (normalized.profile_type !== undefined && normalized.profileType === undefined) {
+            normalized.profileType = normalized.profile_type;
+        }
+        if (normalized.candidate_name !== undefined && normalized.candidateName === undefined) {
+            normalized.candidateName = normalized.candidate_name;
+        }
+        if (normalized.candidate_email !== undefined && normalized.candidateEmail === undefined) {
+            normalized.candidateEmail = normalized.candidate_email;
+        }
+        return normalized;
+    },
     batchImproveSchema: {},
     batchAdaptSchema: {},
     batchMatchSchema: {},
@@ -397,6 +435,19 @@ describe('Batch Jobs Routes - GET /api/batch-jobs', () => {
         expect(mockGetJobsByFirm).not.toHaveBeenCalled();
     });
 
+    it('should bypass cache on jobs list when refresh=1 is provided', async () => {
+        mockGetJobsByFirm.mockResolvedValueOnce([]);
+
+        const res = await request(app)
+            .get('/api/batch-jobs?refresh=1')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(mockGetJobsByFirm).toHaveBeenCalledWith('firm-123', expect.objectContaining({
+            bypassCache: true
+        }));
+    });
+
     it('should clear stale export metadata when the artifact is missing', async () => {
         mockGetJobsByFirm.mockResolvedValueOnce([
             {
@@ -527,6 +578,23 @@ describe('Batch Jobs Routes - GET /api/batch-jobs/:id', () => {
         expect(res.body.items).toBeDefined();
         expect(res.body).not.toHaveProperty('export_file_path');
         expect(res.headers['cache-control']).toBe('private, no-cache, max-age=0, must-revalidate');
+    });
+
+    it('should bypass cache on job detail when refresh=1 is provided', async () => {
+        mockGetJob.mockResolvedValueOnce({
+            id: 'job-123',
+            name: 'Test Batch',
+            status: 'completed',
+            firm_id: 'firm-123'
+        });
+        mockGetJobItems.mockResolvedValueOnce([]);
+
+        const res = await request(app)
+            .get('/api/batch-jobs/job-123?refresh=1')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(mockGetJob).toHaveBeenCalledWith('job-123', { bypassCache: true });
     });
 
     it('should return 403 for job from different firm', async () => {

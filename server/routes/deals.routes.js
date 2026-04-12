@@ -127,7 +127,8 @@ router.get('/resume-statuses', authenticateToken, (req, res) => {
 router.get('/:id', authenticateToken, validateParams('id'), createDealsRouteHandler('Error fetching deal', 'Failed to fetch deal', async (req, res) => {
     const { id } = req.params;
     await withDealAccess(req, res, id, dealAccessDeps, async () => {
-        const deal = await getDealById(id);
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+        const deal = await getDealById(id, { bypassCache });
         return res.json(deal);
     });
 }));
@@ -298,6 +299,7 @@ router.delete('/:id/resumes/:resumeId', authenticateToken, validateParams('id', 
 router.get('/by-resume/:resumeId', authenticateToken, validateParams('resumeId'), createDealsRouteHandler('Error fetching deals for resume', 'Failed to fetch deals for resume', async (req, res) => {
     const { resumeId } = req.params;
     await withFirmScopedAccess(req, res, firmScopedAccessDeps, async (scopedAccess) => {
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
         const resumeFirmId = scopedAccess.isAdmin
             ? await getResumeFirmId(resumeId)
             : (await requireResumeFirmAccess(
@@ -313,7 +315,7 @@ router.get('/by-resume/:resumeId', authenticateToken, validateParams('resumeId')
         }
 
         const firmId = scopedAccess.isAdmin ? resumeFirmId : scopedAccess.userFirmId;
-        const deals = await getDealsForResume(resumeId, firmId);
+        const deals = await getDealsForResume(resumeId, firmId, { bypassCache });
         return res.json({ data: deals });
     });
 }));

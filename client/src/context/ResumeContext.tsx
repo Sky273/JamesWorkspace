@@ -12,7 +12,7 @@ import { showCaughtError, getUserFriendlyMessage } from '../components/errorToas
 import { normalizeResume, normalizeResumeList } from '../utils/resumeNormalization';
 import { createAndTrackJob } from '../utils/longRunningOperation';
 import { deriveResumeImprovementProcessingStep, waitForResumeImprovementJobCompletion } from '../utils/resumeImprovementJob';
-import { markViewScopesDirty } from '../utils/viewRefresh';
+import { markResumesViewDirty as markResumeViewsDirty } from '../utils/viewRefreshScopes';
 
 import { Resume } from '../types/entities';
 import {
@@ -27,10 +27,6 @@ import {
 } from './ResumeContext.utils';
 
 export type { Resume };
-
-function markResumesViewDirty(): void {
-  markViewScopesDirty(['resumes']);
-}
 
 export interface CandidateInfo {
   profileType: 'employee' | 'external';
@@ -117,7 +113,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
     if (!abortControllerRef.current.signal.aborted) {
       setResumes(prev => prev.map(resume => (resume.id === resumeId ? updatedResume : resume)));
       setCurrentResume(updatedResume);
-      markResumesViewDirty();
+      markResumeViewsDirty();
     }
 
     return updatedResume;
@@ -304,7 +300,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
 
       setResumes(prev => [newResume, ...prev.filter(resume => resume.id !== newResume.id)]);
       setCurrentResume(newResume);
-      markResumesViewDirty();
+      markResumeViewsDirty();
 
       return newResume;
     } catch (error) {
@@ -378,7 +374,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
 
       setResumes(prev => prev.map(resume => (resume.id === resumeId ? improvedResume : resume)));
       setCurrentResume(improvedResume);
-      markResumesViewDirty();
+      markResumeViewsDirty();
       return improvedResume;
     } catch (error) {
       logger.error('Error improving resume:', error);
@@ -410,7 +406,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         ? applyImprovedContentUpdate(resume, content, newVersion)
         : resume
     )));
-    markResumesViewDirty();
+    markResumeViewsDirty();
 
     return { success: true, currentVersion: newVersion };
   }, [setResumes]);
@@ -430,7 +426,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
     setResumes(prev => prev.map(resume => (
       resume.id === resumeId ? applyOriginalContentUpdate(resume, content) : resume
     )));
-    markResumesViewDirty();
+    markResumeViewsDirty();
 
     return { success: true };
   }, [setResumes]);
@@ -450,7 +446,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
         if (currentResume?.id === resumeId) {
           setCurrentResume(null);
         }
-        markResumesViewDirty();
+        markResumeViewsDirty();
       }
     } catch (error) {
       if (!controller.signal.aborted) {

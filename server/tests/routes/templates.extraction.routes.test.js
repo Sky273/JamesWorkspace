@@ -133,6 +133,10 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
     requireAdmin: (req, res, next) => {
         if (req.user?.role === 'admin') next();
         else res.status(403).json({ error: 'Admin access required' });
+    },
+    requireUserManager: (req, res, next) => {
+        if (req.user?.role === 'admin' || req.user?.role === 'manager') next();
+        else res.status(403).json({ error: 'Manager access required' });
     }
 }));
 

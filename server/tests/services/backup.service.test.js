@@ -19,6 +19,19 @@ vi.mock('../../utils/secretCrypto.js', () => ({
     decryptSecret: vi.fn((value) => value?.startsWith('enc:v1:test:') ? value.slice('enc:v1:test:'.length) : value)
 }));
 
+vi.mock('../../services/cache.service.js', () => ({
+    CACHE_KEYS: {
+        backupSettings: {
+            CURRENT: 'backupSettings:current'
+        }
+    },
+    backupSettingsCache: {
+        getOrLoad: vi.fn(async (_key, loader) => await loader()),
+        get: vi.fn(async () => null)
+    },
+    invalidateBackupSettingsCaches: vi.fn(async () => {})
+}));
+
 // Mock fs
 vi.mock('fs', () => ({
     default: {

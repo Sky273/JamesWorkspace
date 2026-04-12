@@ -1,3 +1,5 @@
+import logger from './logger.frontend';
+
 export const VIEW_REFRESH_STORAGE_KEY = 'appDirtyViewScopes';
 export const VIEW_REFRESH_EVENT_NAME = 'app:view-refresh';
 export const VIEW_REFRESH_CONSUMER_STORAGE_PREFIX = 'appDirtyViewScopesSeen:';
@@ -22,6 +24,7 @@ export const VIEW_REFRESH_SCOPES = [
 export type ViewRefreshScope = typeof VIEW_REFRESH_SCOPES[number];
 type ViewRefreshVersionMap = Partial<Record<ViewRefreshScope, number>>;
 type ViewRefreshEventDetail = { scopes: ViewRefreshScope[]; versions: ViewRefreshVersionMap };
+const viewRefreshDebugEnabled = import.meta.env.VITE_DEBUG_VIEW_REFRESH === '1';
 
 const VIEW_REFRESH_DERIVED_SCOPES: Partial<Record<ViewRefreshScope, ViewRefreshScope[]>> = {
   users: ['gdprAudit'],
@@ -129,6 +132,14 @@ function writeSeenScopes(consumerId: string, scopes: ViewRefreshVersionMap): voi
   window.sessionStorage.setItem(getConsumerStorageKey(consumerId), JSON.stringify(scopes));
 }
 
+function debugViewRefresh(message: string, data?: unknown): void {
+  if (!viewRefreshDebugEnabled) {
+    return;
+  }
+
+  logger.debug(`[ViewRefresh] ${message}`, data);
+}
+
 export function markViewScopesDirty(scopes: ViewRefreshScope[]): void {
   if (typeof window === 'undefined' || scopes.length === 0) {
     return;
@@ -159,6 +170,10 @@ export function markViewScopesDirty(scopes: ViewRefreshScope[]): void {
   });
 
   writeDirtyScopes(dirtyScopes);
+  debugViewRefresh('Marked dirty scopes', {
+    scopes: [...expandedScopes],
+    versions: changedVersions,
+  });
   window.dispatchEvent(new CustomEvent<ViewRefreshEventDetail>(VIEW_REFRESH_EVENT_NAME, {
     detail: { scopes: [...expandedScopes], versions: changedVersions },
   }));
@@ -209,6 +224,7 @@ export function consumeDirtyViewScopesForConsumer(
   }
 
   acknowledgeDirtyScopesForConsumer(consumerId, scopes, dirtyScopes);
+  debugViewRefresh('Consumed dirty scopes for consumer', { consumerId, scopes });
   return true;
 }
 
@@ -233,6 +249,7 @@ export function subscribeToViewRefreshForConsumer(
       return;
     }
     acknowledgeDirtyScopesForConsumer(consumerId, matchingScopes, detail?.versions);
+    debugViewRefresh('Delivered runtime refresh event', { consumerId, scopes: matchingScopes });
     callback(matchingScopes);
   };
 

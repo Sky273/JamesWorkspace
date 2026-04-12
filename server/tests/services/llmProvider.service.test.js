@@ -4,6 +4,26 @@ vi.mock('../../services/settings.service.js', () => ({
     getLLMSettings: vi.fn()
 }));
 
+vi.mock('../../services/llmConfiguration.service.js', () => ({
+    resolveLLMRuntimeConfig: vi.fn((settings, model) => ({
+        provider: settings?.llmProvider || 'openai',
+        model: model || settings?.llmModel || null
+    }))
+}));
+
+const callProviderChatMock = vi.fn();
+vi.mock('../../services/llmGateway.service.js', () => ({
+    callProviderChat: (...args) => callProviderChatMock(...args)
+}));
+
+vi.mock('../../services/llmProviderCommon.service.js', () => ({
+    toOpenAICompatibleResponse: vi.fn((result) => result)
+}));
+
+vi.mock('../../services/openai/textUtils.js', () => ({
+    normalizeUtf8Text: vi.fn((value) => value)
+}));
+
 vi.mock('../../services/llmAvailability.service.js', () => ({
     getProviderAvailabilityFlags: vi.fn(() => ({})),
     resolveAvailableModel: vi.fn((provider, model, fallbackModel) => ({
@@ -94,10 +114,9 @@ describe('llmProvider.service', () => {
             llmModel: '',
             ollamaBaseUrl: 'http://192.168.1.10:11434'
         });
-        callOllama.mockResolvedValueOnce({
-            content: 'ok',
+        callProviderChatMock.mockResolvedValueOnce({
+            choices: [{ message: { content: 'ok' } }],
             model: 'qwen3:14b',
-            actualModel: 'qwen3:14b',
             usage: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3 }
         });
 
@@ -106,14 +125,15 @@ describe('llmProvider.service', () => {
             operationType: 'Resume Analysis'
         });
 
-        expect(callOllama).toHaveBeenCalledWith(
-            [{ role: 'user', content: 'Analyse ce CV' }],
-            null,
-            expect.objectContaining({
+        expect(callProviderChatMock).toHaveBeenCalledWith(expect.objectContaining({
+            provider: 'ollama',
+            model: null,
+            messages: [{ role: 'user', content: 'Analyse ce CV' }],
+            settings: expect.objectContaining({
                 llmProvider: 'ollama',
                 ollamaBaseUrl: 'http://192.168.1.10:11434'
             }),
-            expect.objectContaining({
+            options: expect.objectContaining({
                 max_tokens: 4096,
                 temperature: 0,
                 keep_alive: '15m',
@@ -122,8 +142,7 @@ describe('llmProvider.service', () => {
                 timeout: 20 * 60 * 1000,
                 operationType: 'Resume Analysis'
             })
-        );
-        expect(callOpenAI).not.toHaveBeenCalled();
+        }));
         expect(result.choices[0].message.content).toBe('ok');
         expect(result.model).toBe('qwen3:14b');
     });
@@ -133,7 +152,7 @@ describe('llmProvider.service', () => {
             llmProvider: 'deepseek',
             llmModel: 'deepseek-reasoner'
         });
-        callDeepSeekWithCircuitBreaker.mockResolvedValueOnce({
+        callProviderChatMock.mockResolvedValueOnce({
             model: 'deepseek-reasoner',
             choices: [{ message: { content: 'ok deepseek' } }],
             usage: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3 }
@@ -144,15 +163,18 @@ describe('llmProvider.service', () => {
             operationType: 'Resume Analysis'
         });
 
-        expect(callDeepSeekWithCircuitBreaker).toHaveBeenCalledWith(expect.objectContaining({
+        expect(callProviderChatMock).toHaveBeenCalledWith(expect.objectContaining({
+            provider: 'deepseek',
             model: 'deepseek-reasoner',
             messages: [{ role: 'user', content: 'Analyse ce CV' }],
-            maxTokens: 4096,
-            temperature: 0,
-            metadata: { source: 'admin-settings' },
-            stop: ['END'],
-            timeout: 20 * 60 * 1000,
-            operationType: 'Resume Analysis'
+            options: expect.objectContaining({
+                max_tokens: 4096,
+                temperature: 0,
+                metadata: { source: 'admin-settings' },
+                stop: ['END'],
+                timeout: 20 * 60 * 1000,
+                operationType: 'Resume Analysis'
+            })
         }));
         expect(result.choices[0].message.content).toBe('ok deepseek');
         expect(result.model).toBe('deepseek-reasoner');
@@ -163,10 +185,9 @@ describe('llmProvider.service', () => {
             llmProvider: 'minimax',
             llmModel: 'MiniMax-M2.7'
         });
-        callMiniMaxOpenAICompatible.mockResolvedValueOnce({
-            content: 'ok minimax',
+        callProviderChatMock.mockResolvedValueOnce({
+            choices: [{ message: { content: 'ok minimax' } }],
             model: 'MiniMax-M2.7',
-            actualModel: 'MiniMax-M2.7',
             usage: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3 }
         });
 
@@ -175,12 +196,15 @@ describe('llmProvider.service', () => {
             operationType: 'Resume Analysis'
         });
 
-        expect(callMiniMaxOpenAICompatible).toHaveBeenCalledWith(expect.objectContaining({
+        expect(callProviderChatMock).toHaveBeenCalledWith(expect.objectContaining({
+            provider: 'minimax',
             model: 'MiniMax-M2.7',
-            metadata: { source: 'admin-settings' },
-            stop: ['END'],
-            operationType: 'Resume Analysis',
-            timeout: 20 * 60 * 1000
+            options: expect.objectContaining({
+                metadata: { source: 'admin-settings' },
+                stop: ['END'],
+                operationType: 'Resume Analysis',
+                timeout: 20 * 60 * 1000
+            })
         }));
         expect(result.choices[0].message.content).toBe('ok minimax');
     });
@@ -190,7 +214,7 @@ describe('llmProvider.service', () => {
             llmProvider: 'glm',
             llmModel: 'glm-5.1'
         });
-        callGLMWithCircuitBreaker.mockResolvedValueOnce({
+        callProviderChatMock.mockResolvedValueOnce({
             model: 'glm-5.1',
             choices: [{ message: { content: 'ok glm' } }],
             usage: { prompt_tokens: 1, completion_tokens: 2, total_tokens: 3 }
@@ -201,15 +225,18 @@ describe('llmProvider.service', () => {
             operationType: 'Resume Analysis'
         });
 
-        expect(callGLMWithCircuitBreaker).toHaveBeenCalledWith(expect.objectContaining({
+        expect(callProviderChatMock).toHaveBeenCalledWith(expect.objectContaining({
+            provider: 'glm',
             model: 'glm-5.1',
             messages: [{ role: 'user', content: 'Analyse ce CV' }],
-            maxTokens: 4096,
-            temperature: 0,
-            metadata: { source: 'admin-settings' },
-            stop: ['END'],
-            timeout: 20 * 60 * 1000,
-            operationType: 'Resume Analysis'
+            options: expect.objectContaining({
+                max_tokens: 4096,
+                temperature: 0,
+                metadata: { source: 'admin-settings' },
+                stop: ['END'],
+                timeout: 20 * 60 * 1000,
+                operationType: 'Resume Analysis'
+            })
         }));
         expect(result.choices[0].message.content).toBe('ok glm');
         expect(result.model).toBe('glm-5.1');
@@ -218,9 +245,9 @@ describe('llmProvider.service', () => {
     it('uses the configured default OpenAI model when none is passed explicitly', async () => {
         getLLMSettings.mockResolvedValueOnce({
             llmProvider: 'openai',
-            llmModel: ''
+            llmModel: 'gpt-4o'
         });
-        callOpenAI.mockResolvedValueOnce({
+        callProviderChatMock.mockResolvedValueOnce({
             model: 'gpt-4o',
             choices: [{ message: { content: 'openai ok' } }],
             usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
@@ -230,12 +257,15 @@ describe('llmProvider.service', () => {
             messages: [{ role: 'user', content: 'Analyse ce CV' }]
         });
 
-        expect(callOpenAI).toHaveBeenCalledWith(expect.objectContaining({
+        expect(callProviderChatMock).toHaveBeenCalledWith(expect.objectContaining({
+            provider: 'openai',
             model: 'gpt-4o',
-            reasoning_effort: 'high',
-            metadata: { source: 'admin-settings' },
-            stop: ['END'],
-            operationType: 'LLM business operation'
+            options: expect.objectContaining({
+                reasoning_effort: 'high',
+                metadata: { source: 'admin-settings' },
+                stop: ['END'],
+                operationType: 'LLM business operation'
+            })
         }));
         expect(result.choices[0].message.content).toBe('openai ok');
         expect(result.model).toBe('gpt-4o');

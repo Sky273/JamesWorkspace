@@ -11,7 +11,7 @@ import type { TemplateData } from '../utils/templateService';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import logger from '../utils/logger.frontend';
-import { markViewScopesDirty } from '../utils/viewRefresh';
+import { markTemplatesViewDirty } from '../utils/viewRefreshScopes';
 import AdminFirmSelector from '../components/AdminFirmSelector';
 import {
   normalizeTemplateFragment,
@@ -176,7 +176,7 @@ const NewTemplatePage = (): JSX.Element => {
       
       if (id) {
         const updatedTemplate = await templateService.updateTemplate(id, templateData);
-        markViewScopesDirty(['templates']);
+      markTemplatesViewDirty();
         toast.success(t('templates.editor.success.update'));
         navigate('/templates', {
           state: {
@@ -185,7 +185,7 @@ const NewTemplatePage = (): JSX.Element => {
         });
       } else {
         const createdTemplate = await templateService.createTemplate(templateData);
-        markViewScopesDirty(['templates']);
+      markTemplatesViewDirty();
         toast.success(t('templates.editor.success.create'));
         navigate('/templates', {
           state: {

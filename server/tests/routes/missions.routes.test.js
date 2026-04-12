@@ -314,6 +314,42 @@ describe('Missions Routes - GET /api/missions', () => {
         expect(mockGetUserFirmId).not.toHaveBeenCalled();
         expect(mockListMissions).toHaveBeenCalledWith(expect.objectContaining({ firmId: null }));
     });
+
+    it('should bypass cache on list read when refresh=1 is provided', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockListMissions.mockResolvedValueOnce({
+            data: [],
+            pagination: { page: 1, limit: 20, totalCount: 0, totalPages: 0, hasMore: false }
+        });
+
+        const res = await request(app)
+            .get('/api/missions?refresh=1')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(mockListMissions).toHaveBeenCalledWith(expect.objectContaining({ bypassCache: true }));
+    });
+});
+
+describe('Missions Routes - GET /api/missions/grouped-by-deal', () => {
+    let app;
+
+    beforeEach(() => {
+        vi.resetAllMocks();
+        app = createTestApp();
+    });
+
+    it('should bypass cache on grouped view when refresh=1 is provided', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockGetMissionsGroupedByDeal.mockResolvedValueOnce([]);
+
+        const res = await request(app)
+            .get('/api/missions/grouped-by-deal?refresh=1')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(mockGetMissionsGroupedByDeal).toHaveBeenCalledWith(expect.objectContaining({ bypassCache: true }));
+    });
 });
 
 // ============================================
@@ -414,6 +450,18 @@ describe('Missions Routes - GET /api/missions/:id', () => {
         expect(res.body['Client Name']).toBe('Acme Corp');
         expect(res.body['Deal Title']).toBe('Big Deal');
         expect(res.body['Contact Name']).toBe('John Doe');
+    });
+
+    it('should bypass cache on detail read when refresh=1 is provided', async () => {
+        mockGetMissionWithJoins.mockResolvedValueOnce(makeMissionRow());
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+
+        const res = await request(app)
+            .get('/api/missions/mission-123?refresh=1')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(mockGetMissionWithJoins).toHaveBeenCalledWith('mission-123', { bypassCache: true });
     });
 });
 

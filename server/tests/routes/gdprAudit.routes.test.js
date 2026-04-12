@@ -158,6 +158,19 @@ describe('GDPR Audit Routes', () => {
             }));
         });
 
+        it('should bypass cache on logs read when refresh=1 is provided', async () => {
+            mockGetGdprAuditLogs.mockResolvedValueOnce({ logs: [], total: 0 });
+
+            const res = await request(app)
+                .get('/api/gdpr-audit/logs?refresh=1')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(mockGetGdprAuditLogs).toHaveBeenCalledWith(expect.objectContaining({
+                bypassCache: true
+            }));
+        });
+
         it('should return 500 on error', async () => {
             mockGetGdprAuditLogs.mockRejectedValueOnce(new Error('DB error'));
 
@@ -209,7 +222,7 @@ describe('GDPR Audit Routes', () => {
                 .get('/api/gdpr-audit/stats?firmId=f-1&days=90')
                 .set(AUTH);
 
-            expect(mockGetGdprAuditStats).toHaveBeenCalledWith('f-1', 90);
+            expect(mockGetGdprAuditStats).toHaveBeenCalledWith('f-1', 90, { bypassCache: false });
         });
 
         it('should default to 30 days', async () => {
@@ -219,7 +232,18 @@ describe('GDPR Audit Routes', () => {
                 .get('/api/gdpr-audit/stats')
                 .set(AUTH);
 
-            expect(mockGetGdprAuditStats).toHaveBeenCalledWith(null, 30);
+            expect(mockGetGdprAuditStats).toHaveBeenCalledWith(null, 30, { bypassCache: false });
+        });
+
+        it('should bypass cache on stats read when refresh=1 is provided', async () => {
+            mockGetGdprAuditStats.mockResolvedValueOnce({});
+
+            const res = await request(app)
+                .get('/api/gdpr-audit/stats?refresh=1')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(mockGetGdprAuditStats).toHaveBeenCalledWith(null, 30, { bypassCache: true });
         });
 
         it('should return 500 on error', async () => {
@@ -255,6 +279,17 @@ describe('GDPR Audit Routes', () => {
             expect(res.status).toBe(200);
             expect(res.body).toHaveLength(1);
             expect(res.body[0].name).toBe('Firm A');
+        });
+
+        it('should bypass cache on firms read when refresh=1 is provided', async () => {
+            mockGetGdprFirms.mockResolvedValueOnce([]);
+
+            const res = await request(app)
+                .get('/api/gdpr-audit/firms?refresh=1')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(mockGetGdprFirms).toHaveBeenCalledWith({ bypassCache: true });
         });
 
         it('should return 500 on error', async () => {

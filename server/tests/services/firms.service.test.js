@@ -98,6 +98,16 @@ describe('Firms Service', () => {
             expect(query).toHaveBeenCalledTimes(1);
             expect(result.totalCount).toBeNull();
         });
+
+        it('should bypass cache when requested', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [{ count: '0' }] });
+
+            await listFirms({ bypassCache: true });
+
+            expect(mockFirmsCache.getOrLoad).not.toHaveBeenCalled();
+        });
     });
 
     describe('getFirmById', () => {
@@ -114,6 +124,14 @@ describe('Firms Service', () => {
             } catch (err) {
                 expect(err.statusCode).toBe(404);
             }
+        });
+
+        it('should bypass cache when requested', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'f1', name: 'Acme' }] });
+
+            await getFirmById('f1', { bypassCache: true });
+
+            expect(mockFirmsCache.getOrLoad).not.toHaveBeenCalled();
         });
     });
 

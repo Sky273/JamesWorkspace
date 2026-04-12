@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterceptor';
 import toast from 'react-hot-toast';
 import logger from '../../utils/logger.frontend';
-import { markViewScopesDirty } from '../../utils/viewRefresh';
+import { markResumeDealRelationsDirty } from '../../utils/viewRefreshScopes';
 import type { DealGroup, GroupedData } from './dealsGrouped.types';
 
 interface UseDealDragDropOptions {
@@ -124,7 +124,7 @@ export function useDealDragDrop({ data, fetchGroupedData }: UseDealDragDropOptio
           : t('resumes.groupedView.added', 'CV ajouté à « {{deal}} »').replace('{{deal}}', targetDeal?.title || ''),
         { id: toastId }
       );
-      markViewScopesDirty(['deals', 'resumes']);
+      markResumeDealRelationsDirty();
 
       // Refresh data
       await fetchGroupedData();

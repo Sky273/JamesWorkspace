@@ -85,8 +85,8 @@ export async function listFirms({ search, page = 1, limit = 100, bypassCache = f
  * @returns {Promise<Object>}
  * @throws {Object} error with statusCode 404
  */
-export async function getFirmById(id) {
-    return firmsCache.getOrLoad(`detail:${id}`, async () => {
+export async function getFirmById(id, { bypassCache = false } = {}) {
+    const loader = async () => {
         const result = await query('SELECT * FROM firms WHERE id = $1', [id]);
         if (result.rows.length === 0) {
             const err = new Error('Firm not found');
@@ -94,7 +94,13 @@ export async function getFirmById(id) {
             throw err;
         }
         return result.rows[0];
-    }, {
+    };
+
+    if (bypassCache) {
+        return loader();
+    }
+
+    return firmsCache.getOrLoad(`detail:${id}`, loader, {
         scope: CACHE_KEYS.firms.ALL_FIRMS
     });
 }

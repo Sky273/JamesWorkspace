@@ -12,7 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterceptor';
 import logger from '../../utils/logger.frontend';
-import { markViewScopesDirty } from '../../utils/viewRefresh';
+import { markResumeDealRelationsDirty } from '../../utils/viewRefreshScopes';
 import toast from 'react-hot-toast';
 import { STATUS_COLORS, STATUS_LABELS } from './dealsGrouped.types';
 
@@ -100,7 +100,7 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
 
       if (response.ok) {
         toast.success(t('crm.deals.modal.cvAdded'));
-        markViewScopesDirty(['deals', 'resumes']);
+      markResumeDealRelationsDirty();
         await fetchData();
         setShowAddSection(false);
         setSearchTerm('');
@@ -125,7 +125,7 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
 
       if (response.ok) {
         toast.success(t('crm.deals.modal.cvRemoved'));
-        markViewScopesDirty(['deals', 'resumes']);
+      markResumeDealRelationsDirty();
         setResumeDeals((prev) => prev.filter((rd) => rd.deal_id !== dealId));
         onSuccess?.();
       } else {

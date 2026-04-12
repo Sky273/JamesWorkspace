@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useScopedViewRefresh } from '../hooks/useScopedViewRefresh';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import logger from '../utils/logger.frontend';
-import { markViewScopesDirty } from '../utils/viewRefresh';
+import { markMissionsViewDirty } from '../utils/viewRefreshScopes';
 import {
   buildMissionFormData,
   buildMissionsSearchParams,
@@ -325,7 +325,7 @@ export function useMissionsDashboard() {
       }
 
       toast.success(editingMission ? t('missions.messages.updateSuccess', 'Mission mise a jour') : t('missions.messages.createSuccess', 'Mission creee'));
-      markViewScopesDirty(['missions', 'resumes', 'adaptations']);
+      markMissionsViewDirty();
       setShowModal(false);
       resetForm();
       setGroupedRefreshToken((currentToken) => currentToken + 1);
@@ -368,7 +368,7 @@ export function useMissionsDashboard() {
       }
 
       toast.success(t('missions.messages.deleteSuccess', 'Mission supprimée'));
-      markViewScopesDirty(['missions', 'resumes', 'adaptations']);
+      markMissionsViewDirty();
       missionsRequestIdRef.current += 1;
       setMissions((currentMissions) => currentMissions.filter((mission) => mission.id !== missionId));
       setTotalCount((currentTotal) => Math.max(0, currentTotal - 1));

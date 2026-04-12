@@ -99,7 +99,8 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
 router.get('/:id', authenticateToken, requireAdmin, validateParams('id'), async (req, res) => {
     try {
         const { id } = req.params;
-        const firm = await firmsService.getFirmById(id);
+        const bypassCache = req.query.refresh === '1' || req.query.refresh === 'true';
+        const firm = await firmsService.getFirmById(id, { bypassCache });
         res.json(firm);
     } catch (error) {
         if (error.statusCode === 404) {

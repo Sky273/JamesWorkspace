@@ -98,6 +98,31 @@ vi.mock('../components/TiptapEditor', async () => {
   };
 });
 
+vi.mock('./resumeDocumentPayload', async () => {
+  const actual = await vi.importActual<typeof import('./resumeDocumentPayload')>('./resumeDocumentPayload');
+  return {
+    ...actual,
+    buildExportPayload: (resume: Record<string, unknown>, template: Record<string, unknown>, format: string) => {
+      const cleanedContent = removeSuggestionMarkersMock(
+        String(resume['Improved Text'] || resume['Original Text'] || '')
+      );
+
+      return {
+        htmlContent: String(template.TemplateContent || '')
+          .replace('-name-', String(resume['Name'] || ''))
+          .replace('-title-', String(resume['Title'] || ''))
+          .replace('-content-', cleanedContent),
+        filename: `${String(resume['Name'] || 'Candidat').replace(/\s+/g, '_')}.${format}`,
+        stylesheet: template.Stylesheet || '',
+        headerContent: String(template.HeaderContent || '').replace('-name-', String(resume['Name'] || '')),
+        footerContent: String(template.FooterContent || '').replace('-title-', String(resume['Title'] || '')),
+        footerHeight: template.FooterHeight || 0,
+        format,
+      };
+    },
+  };
+});
+
 vi.mock('../components/ui/Skeleton', () => ({
   SkeletonCard: () => <div data-testid="skeleton" />,
 }));
