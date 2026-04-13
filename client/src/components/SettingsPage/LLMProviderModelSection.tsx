@@ -31,6 +31,7 @@ interface LLMProviderModelSectionProps {
   }>;
   onProviderChange: (event: ChangeEvent<HTMLSelectElement>) => void;
   onModelChange: (event: ChangeEvent<HTMLSelectElement>) => void;
+  onModelTextChange?: (event: ChangeEvent<HTMLInputElement>) => void;
   onOllamaUrlChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onTestConnection: () => void | Promise<void>;
   testingConnection?: boolean;
@@ -51,6 +52,7 @@ export default function LLMProviderModelSection({
   ollamaModelCapabilities,
   onProviderChange,
   onModelChange,
+  onModelTextChange,
   onOllamaUrlChange,
   onTestConnection,
   testingConnection = false,
@@ -97,7 +99,7 @@ export default function LLMProviderModelSection({
         </select>
       </div>
 
-      {provider !== 'ollama' && (
+      {provider !== 'ollama' && provider !== 'huggingface' && (
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             {t('settings.llm.model')}
@@ -111,6 +113,32 @@ export default function LLMProviderModelSection({
               <option key={model.value} value={model.value}>{model.label}</option>
             ))}
           </select>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            {t('settings.currentModel')} : <span className="font-semibold">{currentModelLabel}</span>
+          </p>
+        </div>
+      )}
+
+      {provider === 'huggingface' && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {t('settings.llm.model')}
+          </label>
+          <input
+            list="huggingface-model-suggestions"
+            value={modelValue}
+            onChange={onModelTextChange}
+            className="w-full px-4 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
+            placeholder="MiniMaxAI/MiniMax-M2.7"
+          />
+          <datalist id="huggingface-model-suggestions">
+            {modelOptions.map((model) => (
+              <option key={model.value} value={model.value}>{model.label}</option>
+            ))}
+          </datalist>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            Renseignez un modele Hugging Face compatible OpenAI router. La valeur par defaut est <span className="font-semibold">MiniMaxAI/MiniMax-M2.7</span>.
+          </p>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
             {t('settings.currentModel')} : <span className="font-semibold">{currentModelLabel}</span>
           </p>

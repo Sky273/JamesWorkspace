@@ -31,7 +31,7 @@ const PROVIDER_MODEL_CATALOG = Object.freeze({
         { value: 'claude-3-5-haiku-20241022', label: 'claude-3-5-haiku-20241022' }
     ],
     huggingface: [
-        { value: 'MiniMaxAI/MiniMax-M2.7', label: 'MiniMax M2.7 via Hugging Face (MiniMaxAI/MiniMax-M2.7)' }
+        { value: 'MiniMaxAI/MiniMax-M2.7', label: 'Default: MiniMax M2.7 via Hugging Face (MiniMaxAI/MiniMax-M2.7)' }
     ],
     gemma: [
         { value: 'gemma-4-31b-it', label: 'Gemma 4 31B Instruct (gemma-4-31b-it)' },

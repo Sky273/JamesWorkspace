@@ -197,12 +197,40 @@ describe('LLMTab', () => {
         onInputChange={vi.fn()}
         onTestConnection={vi.fn()}
         t={(key) => key}
-        llmModelCatalog={{ huggingface: [{ value: 'MiniMaxAI/MiniMax-M2.7', label: 'MiniMax M2.7 via Hugging Face (MiniMaxAI/MiniMax-M2.7)' }] }}
+        llmModelCatalog={{ huggingface: [{ value: 'MiniMaxAI/MiniMax-M2.7', label: 'Default: MiniMax M2.7 via Hugging Face (MiniMaxAI/MiniMax-M2.7)' }] }}
       />
     );
 
     expect(screen.getByDisplayValue('Hugging Face')).toBeInTheDocument();
     expect(screen.getByText('Select a hosted Hugging Face model exposed through the Hugging Face OpenAI-compatible router.')).toBeInTheDocument();
+  });
+
+  it('allows entering a custom Hugging Face model id while keeping MiniMax M2.7 as default guidance', () => {
+    const onInputChange = vi.fn();
+
+    render(
+      <LLMTab
+        formData={{
+          llmProvider: 'huggingface',
+          llmModel: 'MiniMaxAI/MiniMax-M2.7',
+          llmModelParametersJson: '{}',
+          cvMode: 'nominative',
+          webglEnabled: 'on',
+          ollamaBaseUrl: '',
+        }}
+        onInputChange={onInputChange}
+        onTestConnection={vi.fn()}
+        t={(key) => key}
+        llmModelCatalog={{ huggingface: [{ value: 'MiniMaxAI/MiniMax-M2.7', label: 'Default: MiniMax M2.7 via Hugging Face (MiniMaxAI/MiniMax-M2.7)' }] }}
+      />
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('MiniMaxAI/MiniMax-M2.7'), {
+      target: { value: 'meta-llama/Llama-3.3-70B-Instruct' }
+    });
+
+    expect(onInputChange).toHaveBeenCalledWith('llmModel', 'meta-llama/Llama-3.3-70B-Instruct');
+    expect(screen.getByText(/La valeur par defaut est/)).toBeInTheDocument();
   });
 
   it('renders the test model action', () => {

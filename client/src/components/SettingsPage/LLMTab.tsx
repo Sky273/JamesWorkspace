@@ -70,6 +70,10 @@ const LLMTab = ({
     onInputChange('llmModel', event.target.value);
   };
 
+  const handleModelTextChange = (event: ChangeEvent<HTMLInputElement>): void => {
+    onInputChange('llmModel', event.target.value);
+  };
+
   const handleCvModeChange = (event: ChangeEvent<HTMLSelectElement>): void => {
     onInputChange('cvMode', event.target.value);
   };
@@ -170,6 +174,7 @@ const LLMTab = ({
         ollamaBaseUrl={formData.ollamaBaseUrl}
         onProviderChange={handleProviderChange}
         onModelChange={handleModelChange}
+        onModelTextChange={handleModelTextChange}
         onOllamaUrlChange={handleTextChange('ollamaBaseUrl')}
         onTestConnection={onTestConnection}
         testingConnection={testingConnection}

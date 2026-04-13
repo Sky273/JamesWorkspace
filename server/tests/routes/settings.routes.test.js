@@ -647,6 +647,28 @@ describe('Settings Routes', () => {
             }));
             expect(validatePersistedLlmSettings).not.toHaveBeenCalled();
         });
+
+        it('persists a custom Hugging Face model instead of forcing the default model', async () => {
+            mockUpsertSettings.mockResolvedValue({
+                id: 'set-1',
+                llm_provider: 'huggingface',
+                llm_model: 'meta-llama/Llama-3.3-70B-Instruct'
+            });
+
+            const res = await request(app)
+                .put('/api/settings/set-1')
+                .set(authHeader)
+                .send({
+                    llmProvider: 'huggingface',
+                    llmModel: 'meta-llama/Llama-3.3-70B-Instruct'
+                });
+
+            expect(res.status).toBe(200);
+            expect(mockUpsertSettings).toHaveBeenCalledWith('set-1', expect.objectContaining({
+                llmProvider: 'huggingface',
+                llmModel: 'meta-llama/Llama-3.3-70B-Instruct'
+            }));
+        });
     });
 
     describe('POST /api/settings/test-llm', () => {
