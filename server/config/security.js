@@ -17,6 +17,7 @@ const cspScriptSources = [
     "https://unpkg.com",                      // Swagger UI scripts
     "https://basemaps.cartocdn.com",          // MapLibre GL scripts from style
     "https://*.basemaps.cartocdn.com",        // MapLibre GL scripts from tiles
+    "https://challenges.cloudflare.com",      // Cloudflare Turnstile
     // Cloudflare injects inline scripts (Rocket Loader, Email Obfuscation, etc.)
     // These hashes allow the specific Cloudflare-injected scripts without 'unsafe-inline'.
     // Warning: Cloudflare can change these at any time. If new CSP violations appear for
@@ -82,7 +83,8 @@ export function configureHelmet(app) {
                     "https://fonts.googleapis.com",
                     "https://unpkg.com",  // Swagger UI styles
                     "https://basemaps.cartocdn.com", // MapLibre GL styles
-                    "https://*.basemaps.cartocdn.com" // MapLibre GL styles from subdomains
+                    "https://*.basemaps.cartocdn.com", // MapLibre GL styles from subdomains
+                    "https://challenges.cloudflare.com" // Cloudflare Turnstile
                 ],
                 // CSP Level 3: granular style directives replace broad 'unsafe-inline' in styleSrc
                 styleSrcElem: [
@@ -91,7 +93,8 @@ export function configureHelmet(app) {
                     "https://fonts.googleapis.com",
                     "https://unpkg.com",
                     "https://basemaps.cartocdn.com",
-                    "https://*.basemaps.cartocdn.com"
+                    "https://*.basemaps.cartocdn.com",
+                    "https://challenges.cloudflare.com"
                 ],
                 styleSrcAttr: [
                     "'unsafe-inline'" // Required: Tiptap/ProseMirror sets inline style attributes
@@ -116,6 +119,7 @@ export function configureHelmet(app) {
                     "blob:", // Required for MapLibre GL
                     "https://api.openai.com",
                     "https://api.anthropic.com",
+                    "https://challenges.cloudflare.com", // Cloudflare Turnstile verification assets
                     "https://basemaps.cartocdn.com",     // MapLibre GL - base domain
                     "https://*.basemaps.cartocdn.com",   // MapLibre GL - all subdomains (tiles, etc.)
                     ...(isProduction ? [] : ["http://localhost:*", "ws://localhost:*"])
@@ -126,8 +130,8 @@ export function configureHelmet(app) {
                     "https://basemaps.cartocdn.com",     // MapLibre GL workers
                     "https://*.basemaps.cartocdn.com"    // MapLibre GL workers from subdomains
                 ],
-                childSrc: ["'self'", "blob:"], // For iframes and workers
-                frameSrc: ["'self'"],
+                childSrc: ["'self'", "blob:", "https://challenges.cloudflare.com"], // For iframes and workers
+                frameSrc: ["'self'", "https://challenges.cloudflare.com"],
                 frameAncestors: ["'self'"], // Prevent clickjacking
                 objectSrc: ["'none'"],      // Block plugins (Flash, Java, etc.)
                 mediaSrc: ["'self'"],       // Audio/video sources
