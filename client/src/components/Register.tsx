@@ -73,12 +73,12 @@ const Register = (): JSX.Element => {
     setLoading(true);
 
     try {
-      await register({
+      const registrationResult = await register({
         name: formData.name,
         email: formData.email.toLowerCase(),
         password: formData.password
       });
-      navigate('/signin?success=registered_pending');
+      navigate(`/signin?success=${registrationResult.registrationStatus === 'active' ? 'registered_active_test' : 'registered_pending'}`);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : t('errors.serverError');
       setError(errorMessage);

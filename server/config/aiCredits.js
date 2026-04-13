@@ -1,4 +1,5 @@
 export const DEFAULT_FIRM_CREDITS = 1000;
+export const DEFAULT_ALLOW_USER_REGISTRATION_WITHOUT_APPROVAL = false;
 
 export const AI_CREDIT_ACTION_SETTINGS = Object.freeze([
     {

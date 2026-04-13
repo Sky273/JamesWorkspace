@@ -113,6 +113,7 @@ describe('Settings Service', () => {
                 ats_weight: 15,
                 hobbies_languages_weight: 10,
                 profile_matching_local_skill_weight: 9,
+                allow_user_registration_without_approval: true,
                 firm_initial_credits: 1500,
                 ai_credit_resume_analysis: 30
             };
@@ -125,6 +126,7 @@ describe('Settings Service', () => {
             expect(result.preAnalysisEnabled).toBe(true);
             expect(result['Pre Analysis Prompt']).toBe('Pre analyze this CV');
             expect(result['Profile Matching Local Skill Weight']).toBe(9);
+            expect(result.allowUserRegistrationWithoutApproval).toBe(true);
             expect(result.firmInitialCredits).toBe(1500);
             expect(result.aiCreditResumeAnalysis).toBe(30);
             expect(result.promptVersionState['Analysis Prompt']).toEqual(expect.objectContaining({

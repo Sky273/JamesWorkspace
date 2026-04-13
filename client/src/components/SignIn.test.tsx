@@ -165,6 +165,16 @@ describe('SignIn', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/signin', { replace: true });
   });
 
+  it('shows active test registration success toast from query params', async () => {
+    mockSearchParams = new URLSearchParams('success=registered_active_test');
+    renderSignIn();
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalled();
+    });
+    expect(mockNavigate).toHaveBeenCalledWith('/signin', { replace: true });
+  });
+
   it('shows Google auth error from query params', async () => {
     mockSearchParams = new URLSearchParams('error=no_account&email=test@example.com');
     renderSignIn();

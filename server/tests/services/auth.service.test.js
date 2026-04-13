@@ -6,7 +6,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../config/database.js', () => ({
-    query: vi.fn()
+    query: vi.fn(),
+    getClient: vi.fn()
 }));
 
 vi.mock('../../utils/postgresHelpers.js', () => ({
@@ -15,24 +16,37 @@ vi.mock('../../utils/postgresHelpers.js', () => ({
     createWithTimeout: vi.fn()
 }));
 
-import { query } from '../../config/database.js';
+vi.mock('../../services/settings.service.js', () => ({
+    getLLMSettings: vi.fn()
+}));
+
+vi.mock('../../utils/logger.backend.js', () => ({
+    safeLog: vi.fn()
+}));
+
+import { getClient, query } from '../../config/database.js';
 import { selectRawWithTimeout, selectWithTimeout, createWithTimeout } from '../../utils/postgresHelpers.js';
+import { getLLMSettings } from '../../services/settings.service.js';
 import {
     findUserWithFirmByEmail,
     findUserWithFirmById,
     updateLastLogin,
     findExistingUserByEmail,
     createUser,
-    registerGoogleUser
+    registerGoogleUser,
+    registerSelfServiceUser
 } from '../../services/auth.service.js';
 
 describe('Auth Service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         query.mockReset();
+        getClient.mockReset();
         selectRawWithTimeout.mockReset();
         selectWithTimeout.mockReset();
         createWithTimeout.mockReset();
+        getLLMSettings.mockReset();
+        getLLMSettings.mockResolvedValue({});
     });
 
     describe('findUserWithFirmByEmail', () => {
@@ -165,6 +179,63 @@ describe('Auth Service', () => {
 
             expect(result.status).toBe('pending');
             expect(query.mock.calls[2][1]).toContain('firm-default');
+        });
+    });
+
+    describe('registerSelfServiceUser', () => {
+        it('should keep the pending workflow when auto-approval is disabled', async () => {
+            getLLMSettings.mockResolvedValueOnce({
+                allowUserRegistrationWithoutApproval: false
+            });
+            query.mockResolvedValueOnce({ rows: [] });
+            query.mockResolvedValueOnce({ rows: [{ id: 'firm-default', name: 'Public Registration' }] });
+            createWithTimeout.mockResolvedValueOnce([{ id: 'u1', email: 'new@test.com', status: 'pending' }]);
+
+            const result = await registerSelfServiceUser({
+                email: 'new@test.com',
+                password: 'hash',
+                name: 'New User'
+            });
+
+            expect(result.autoApproved).toBe(false);
+            expect(result.user.status).toBe('pending');
+            expect(createWithTimeout).toHaveBeenCalledWith('users', [{
+                fields: expect.objectContaining({
+                    email: 'new@test.com',
+                    password: 'hash',
+                    status: 'pending',
+                    firm_name: 'Public Registration'
+                })
+            }]);
+        });
+
+        it('should create an active user in a dedicated test firm when auto-approval is enabled', async () => {
+            const mockClient = {
+                query: vi.fn(),
+                release: vi.fn()
+            };
+            getLLMSettings.mockResolvedValueOnce({
+                allowUserRegistrationWithoutApproval: true,
+                firmInitialCredits: 1800
+            });
+            getClient.mockResolvedValueOnce(mockClient);
+            mockClient.query
+                .mockResolvedValueOnce(undefined)
+                .mockResolvedValueOnce({ rows: [{ id: 'firm-test-1', name: 'Cabinet test' }] })
+                .mockResolvedValueOnce({ rows: [{ id: 'u-auto', email: 'active@test.com', status: 'active', firm_name: 'Cabinet test' }] })
+                .mockResolvedValueOnce(undefined);
+
+            const result = await registerSelfServiceUser({
+                email: 'active@test.com',
+                password: 'hash',
+                name: 'Active User'
+            });
+
+            expect(result.autoApproved).toBe(true);
+            expect(result.user.status).toBe('active');
+            expect(mockClient.query).toHaveBeenNthCalledWith(2, expect.stringContaining('INSERT INTO firms'), ['Cabinet test', 1800]);
+            expect(mockClient.query).toHaveBeenNthCalledWith(3, expect.stringContaining('INSERT INTO users'), ['active@test.com', 'hash', 'Active User', null, null, 'firm-test-1', 'Cabinet test']);
+            expect(mockClient.release).toHaveBeenCalled();
         });
     });
 });

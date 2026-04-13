@@ -371,6 +371,7 @@ export const updateSettingsSchema = z.object({
   'Profile Matching Local Title Exact Weight': z.coerce.number().min(0).max(100).optional(),
   'Profile Matching Local Title Token Weight': z.coerce.number().min(0).max(100).optional(),
   'Profile Matching Local Coverage Multiplier': z.coerce.number().min(0).max(100).optional(),
+  allowUserRegistrationWithoutApproval: z.boolean().optional(),
   firmInitialCredits: z.coerce.number().int().min(0).max(1000000).optional(),
   aiCreditChatbotMessage: z.coerce.number().int().min(0).max(1000000).optional(),
   aiCreditResumeAiModify: z.coerce.number().int().min(0).max(1000000).optional(),

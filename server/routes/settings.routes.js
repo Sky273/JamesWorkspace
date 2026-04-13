@@ -30,7 +30,10 @@ import {
     PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT,
     PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER
 } from '../config/constants.js';
-import { buildAiCreditSettingsDefaults } from '../config/aiCredits.js';
+import {
+    buildAiCreditSettingsDefaults,
+    DEFAULT_ALLOW_USER_REGISTRATION_WITHOUT_APPROVAL
+} from '../config/aiCredits.js';
 import {
     decorateSettingsResponse,
     mergeCanonicalLlmSettings,
@@ -81,6 +84,7 @@ function buildDefaultSettingsPayload() {
         'Profile Matching Local Title Exact Weight': PROFILE_MATCHING_LOCAL_TITLE_EXACT_WEIGHT,
         'Profile Matching Local Title Token Weight': PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT,
         'Profile Matching Local Coverage Multiplier': PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER,
+        allowUserRegistrationWithoutApproval: DEFAULT_ALLOW_USER_REGISTRATION_WITHOUT_APPROVAL,
         firmInitialCredits: aiCreditDefaults.firmInitialCredits,
         aiCreditChatbotMessage: aiCreditDefaults.aiCreditChatbotMessage,
         aiCreditResumeAiModify: aiCreditDefaults.aiCreditResumeAiModify,

@@ -97,6 +97,7 @@ export interface Settings {
   'Profile Matching Local Title Exact Weight'?: number;
   'Profile Matching Local Title Token Weight'?: number;
   'Profile Matching Local Coverage Multiplier'?: number;
+  allowUserRegistrationWithoutApproval?: boolean;
   firmInitialCredits?: number;
   aiCreditChatbotMessage?: number;
   aiCreditResumeAiModify?: number;
@@ -153,6 +154,7 @@ export interface SettingsFormData {
   'Profile Matching Local Title Exact Weight': number;
   'Profile Matching Local Title Token Weight': number;
   'Profile Matching Local Coverage Multiplier': number;
+  allowUserRegistrationWithoutApproval: boolean;
   firmInitialCredits: number;
   aiCreditChatbotMessage: number;
   aiCreditResumeAiModify: number;
@@ -227,6 +229,7 @@ export const defaultFormData: SettingsFormData = {
   'Profile Matching Local Title Exact Weight': 5,
   'Profile Matching Local Title Token Weight': 2,
   'Profile Matching Local Coverage Multiplier': 3,
+  allowUserRegistrationWithoutApproval: false,
   firmInitialCredits: 1000,
   aiCreditChatbotMessage: 1,
   aiCreditResumeAiModify: 5,
@@ -292,6 +295,7 @@ export const toFormData = (settings?: Settings | null): SettingsFormData => ({
   'Profile Matching Local Title Exact Weight': settings?.['Profile Matching Local Title Exact Weight'] || 5,
   'Profile Matching Local Title Token Weight': settings?.['Profile Matching Local Title Token Weight'] || 2,
   'Profile Matching Local Coverage Multiplier': settings?.['Profile Matching Local Coverage Multiplier'] || 3,
+  allowUserRegistrationWithoutApproval: settings?.allowUserRegistrationWithoutApproval ?? false,
   firmInitialCredits: settings?.firmInitialCredits ?? 1000,
   aiCreditChatbotMessage: settings?.aiCreditChatbotMessage ?? 1,
   aiCreditResumeAiModify: settings?.aiCreditResumeAiModify ?? 5,
@@ -338,6 +342,7 @@ export const createSavePayload = (
     'Profile Matching Local Title Exact Weight': Number(formData['Profile Matching Local Title Exact Weight']),
     'Profile Matching Local Title Token Weight': Number(formData['Profile Matching Local Title Token Weight']),
     'Profile Matching Local Coverage Multiplier': Number(formData['Profile Matching Local Coverage Multiplier']),
+    allowUserRegistrationWithoutApproval: Boolean(formData.allowUserRegistrationWithoutApproval),
     firmInitialCredits: Number(formData.firmInitialCredits),
     aiCreditChatbotMessage: Number(formData.aiCreditChatbotMessage),
     aiCreditResumeAiModify: Number(formData.aiCreditResumeAiModify),

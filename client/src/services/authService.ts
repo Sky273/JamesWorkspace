@@ -50,6 +50,8 @@ export interface RegisterData {
 export interface RegisterResponse {
   success: boolean;
   message: string;
+  registrationStatus?: 'active' | 'pending';
+  autoApproved?: boolean;
 }
 
 export interface SignInResponse {
@@ -190,7 +192,9 @@ export const authService = {
 
       return {
         success: true,
-        message: data.message || 'Registration successful. Please wait for admin approval to access your account.'
+        message: data.message || 'Registration successful. Please wait for admin approval to access your account.',
+        registrationStatus: data.registrationStatus,
+        autoApproved: data.autoApproved === true
       };
     } catch (error) {
       if (error instanceof AuthenticationError) throw error;

@@ -234,6 +234,7 @@ vi.mock('../../utils/mappers.js', () => ({
         'Profile Matching Local Title Exact Weight': settings.profile_matching_local_title_exact_weight ?? settings['Profile Matching Local Title Exact Weight'] ?? 5,
         'Profile Matching Local Title Token Weight': settings.profile_matching_local_title_token_weight ?? settings['Profile Matching Local Title Token Weight'] ?? 2,
         'Profile Matching Local Coverage Multiplier': settings.profile_matching_local_coverage_multiplier ?? settings['Profile Matching Local Coverage Multiplier'] ?? 3,
+        allowUserRegistrationWithoutApproval: settings.allow_user_registration_without_approval ?? settings.allowUserRegistrationWithoutApproval ?? false,
         firmInitialCredits: settings.firm_initial_credits ?? settings.firmInitialCredits ?? 1000,
         aiCreditChatbotMessage: settings.ai_credit_chatbot_message ?? settings.aiCreditChatbotMessage ?? 1,
         aiCreditResumeAiModify: settings.ai_credit_resume_ai_modify ?? settings.aiCreditResumeAiModify ?? 5,
@@ -382,6 +383,7 @@ describe('Settings Routes', () => {
             expect(res.body['Analysis Prompt']).toBe('default-analysis');
             expect(res.body['Profile Matching Local Skill Weight']).toBe(6);
             expect(res.body.firmInitialCredits).toBe(1000);
+            expect(res.body.allowUserRegistrationWithoutApproval).toBe(false);
             expect(res.body.aiCreditResumeAnalysis).toBe(25);
             expect(res.body.aiCreditResumeImprovement).toBe(75);
             expect(res.body.aiCreditResumeAdaptation).toBe(50);
@@ -553,12 +555,13 @@ describe('Settings Routes', () => {
             const res = await request(app)
                 .put('/api/settings/set-1')
                 .set(authHeader)
-                .send({ llmModel: 'gpt-4-turbo', cvMode: 'anonymous', firmInitialCredits: 1500, aiCreditResumeAnalysis: 30 });
+                .send({ llmModel: 'gpt-4-turbo', cvMode: 'anonymous', allowUserRegistrationWithoutApproval: true, firmInitialCredits: 1500, aiCreditResumeAnalysis: 30 });
 
             expect(res.status).toBe(200);
             expect(res.body.llmModel).toBe('gpt-4-turbo');
             expect(res.body.cvMode).toBe('anonymous');
             expect(mockUpsertSettings).toHaveBeenCalledWith('set-1', expect.objectContaining({
+                allowUserRegistrationWithoutApproval: true,
                 firmInitialCredits: 1500,
                 aiCreditResumeAnalysis: 30,
                 promptVersionState: expect.objectContaining({

@@ -82,6 +82,13 @@ const LLMTab = ({
     onInputChange('webglEnabled', formData.webglEnabled === 'on' ? 'off' : 'on');
   };
 
+  const handleRegistrationApprovalToggle = (): void => {
+    onInputChange(
+      'allowUserRegistrationWithoutApproval',
+      formData.allowUserRegistrationWithoutApproval !== true
+    );
+  };
+
   const handleTextChange = (field: string) => (event: ChangeEvent<HTMLInputElement>): void => {
     onInputChange(field, event.target.value);
   };
@@ -215,6 +222,46 @@ const LLMTab = ({
         t={t}
         fallbackText={getFallbackText}
       />
+
+      <section className="rounded-3xl border border-white/10 bg-slate-950/10 p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-white">
+              {getFallbackText(
+                'settings.llm.allowUserRegistrationWithoutApprovalLabel',
+                "Autoriser l'enregistrement des utilisateurs sans validation préalable"
+              )}
+            </h3>
+            <p className="max-w-3xl text-sm text-slate-300">
+              {getFallbackText(
+                'settings.llm.allowUserRegistrationWithoutApprovalDescription',
+                "Quand cette option est active, chaque nouvel utilisateur inscrit obtient directement un cabinet de test dédié, un compte actif et un email de confirmation."
+              )}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={formData.allowUserRegistrationWithoutApproval === true}
+            aria-label={getFallbackText(
+              'settings.llm.allowUserRegistrationWithoutApprovalLabel',
+              "Autoriser l'enregistrement des utilisateurs sans validation préalable"
+            )}
+            onClick={handleRegistrationApprovalToggle}
+            className={`relative inline-flex h-7 w-14 shrink-0 items-center rounded-full border transition-colors ${
+              formData.allowUserRegistrationWithoutApproval === true
+                ? 'border-primary-400 bg-primary-500/40'
+                : 'border-white/10 bg-slate-900/80'
+            }`}
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                formData.allowUserRegistrationWithoutApproval === true ? 'translate-x-8' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+      </section>
     </div>
   );
 };

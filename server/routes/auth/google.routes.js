@@ -12,6 +12,7 @@ import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '..
 import { safeLog } from '../../utils/logger.backend.js';
 import * as googleAuthService from '../../services/googleAuth.service.js';
 import * as authService from '../../services/auth.service.js';
+import { sendRegistrationConfirmationEmail } from '../../services/registrationEmail.service.js';
 import {
     setAuthOauthState,
     hasAuthOauthState,
@@ -161,22 +162,44 @@ router.get('/google/callback', async (req, res) => {
         
         if (!user) {
             if (stateData.action === 'register') {
-                const createdUser = await authService.registerGoogleUser({
+                const registrationResult = await authService.registerSelfServiceUser({
                     email: googleUser.email,
                     name: googleUser.name,
                     googleId: googleUser.googleId,
                     googleEmail: googleUser.email
                 });
+                const createdUser = registrationResult.user;
+
+                if (registrationResult.autoApproved) {
+                    try {
+                        await sendRegistrationConfirmationEmail({
+                            to: googleUser.email,
+                            name: googleUser.name
+                        });
+                    } catch (emailError) {
+                        safeLog('warn', 'Google registration confirmation email failed after auto-approval', {
+                            email: googleUser.email,
+                            userId: createdUser.id,
+                            error: emailError.message
+                        });
+                    }
+                }
 
                 securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.USER_CREATED, {
                     ...metadata,
                     email: googleUser.email,
                     userId: createdUser.id,
                     action: 'GOOGLE_REGISTER_SUCCESS',
-                    message: 'Google self-registration completed with default firm assignment',
-                    metadata: { googleId: googleUser.googleId, status: createdUser.status }
+                    message: registrationResult.autoApproved
+                        ? 'Google self-registration completed with immediate activation and dedicated test firm'
+                        : 'Google self-registration completed with default firm assignment',
+                    metadata: {
+                        googleId: googleUser.googleId,
+                        status: createdUser.status,
+                        autoApproved: registrationResult.autoApproved
+                    }
                 });
-                return res.redirect('/signin?success=registered_pending');
+                return res.redirect(`/signin?success=${registrationResult.autoApproved ? 'registered_active_test' : 'registered_pending'}`);
             } else {
                 securityLog(LOG_LEVELS.WARNING, SECURITY_EVENTS.AUTH_FAILURE, {
                     ...metadata,

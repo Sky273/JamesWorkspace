@@ -4,10 +4,14 @@
  * Extracted from auth/signin.routes.js and auth/google.routes.js
  */
 
-import { query } from '../config/database.js';
+import { getClient, query } from '../config/database.js';
 import { createWithTimeout, selectRawWithTimeout, selectWithTimeout } from '../utils/postgresHelpers.js';
+import { safeLog } from '../utils/logger.backend.js';
+import { getLLMSettings } from './settings.service.js';
+import { getInitialFirmCredits } from '../config/aiCredits.js';
 
 const DEFAULT_SELF_SERVICE_FIRM_NAME = 'Public Registration';
+const AUTO_APPROVED_SELF_SERVICE_FIRM_NAME = 'Cabinet test';
 
 /**
  * Find user with firm logo by email (case-insensitive)
@@ -93,6 +97,53 @@ export async function createUser(userData) {
     return records[0];
 }
 
+export async function registerSelfServiceUser({ email, password = '', name, googleId = null, googleEmail = null }) {
+    const registrationSettings = await resolveSelfServiceRegistrationSettings();
+
+    if (registrationSettings.allowWithoutApproval) {
+        const user = await createAutoApprovedSelfServiceUser({
+            email,
+            password,
+            name,
+            googleId,
+            googleEmail,
+            settings: registrationSettings.settings
+        });
+
+        return {
+            user,
+            autoApproved: true
+        };
+    }
+
+    if (googleId) {
+        const user = await registerGoogleUser({
+            email,
+            name,
+            googleId,
+            googleEmail
+        });
+
+        return {
+            user,
+            autoApproved: false
+        };
+    }
+
+    const user = await createUser({
+        email,
+        password,
+        name,
+        role: 'user',
+        status: 'pending'
+    });
+
+    return {
+        user,
+        autoApproved: false
+    };
+}
+
 /**
  * Register a new user via Google OAuth
  * @param {Object} data - { email, name, googleId, googleEmail }
@@ -111,6 +162,59 @@ export async function registerGoogleUser({ email, name, googleId, googleEmail, f
         [email, '', name, 'user', 'pending', googleId, googleEmail, firmAssignment.firm_id, firmAssignment.firm_name]
     );
     return result.rows[0];
+}
+
+async function resolveSelfServiceRegistrationSettings() {
+    try {
+        const settings = await getLLMSettings();
+        return {
+            settings,
+            allowWithoutApproval: settings?.allowUserRegistrationWithoutApproval === true
+        };
+    } catch (error) {
+        safeLog('warn', 'Self-service registration settings unavailable, using approval workflow', {
+            error: error.message
+        });
+        return {
+            settings: null,
+            allowWithoutApproval: false
+        };
+    }
+}
+
+async function createAutoApprovedSelfServiceUser({ email, password, name, googleId, googleEmail, settings }) {
+    const client = await getClient();
+
+    try {
+        await client.query('BEGIN');
+
+        const credits = getInitialFirmCredits(settings);
+        const firmResult = await client.query(
+            `INSERT INTO firms (name, status, credits)
+             VALUES ($1, 'active', $2)
+             RETURNING id, name`,
+            [AUTO_APPROVED_SELF_SERVICE_FIRM_NAME, credits]
+        );
+
+        const firm = firmResult.rows[0];
+        const userResult = await client.query(
+            `INSERT INTO users (
+                email, password, name, role, status, google_id, google_email, google_linked_at, firm_id, firm_name
+             ) VALUES (
+                $1, $2, $3, 'user', 'active', $4, $5, CASE WHEN $4 IS NOT NULL THEN CURRENT_TIMESTAMP ELSE NULL END, $6, $7
+             )
+             RETURNING *`,
+            [email, password, name, googleId, googleEmail, firm.id, firm.name]
+        );
+
+        await client.query('COMMIT');
+        return userResult.rows[0];
+    } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+    } finally {
+        client.release();
+    }
 }
 
 async function resolveFirmAssignment(userData) {

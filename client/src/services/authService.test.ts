@@ -124,6 +124,21 @@ describe('authService', () => {
             expect(result.message).toContain('Registration successful');
         });
 
+        it('should preserve the registration mode returned by the backend', async () => {
+            mockFetchWithAuth.mockResolvedValueOnce(
+                mockResponse(true, { message: 'Registration successful', registrationStatus: 'active', autoApproved: true })
+            );
+
+            const result = await authService.register({
+                email: 'new@test.com',
+                password: 'password123',
+                name: 'New User',
+            });
+
+            expect(result.registrationStatus).toBe('active');
+            expect(result.autoApproved).toBe(true);
+        });
+
         it('should throw on registration failure', async () => {
             mockFetchWithAuth.mockResolvedValueOnce(
                 mockResponse(false, { error: 'Email already exists' })

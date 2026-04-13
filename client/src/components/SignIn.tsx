@@ -48,6 +48,17 @@ const SignIn = (): JSX.Element => {
       navigate('/signin', { replace: true });
     }
 
+    if (success === 'registered_active_test') {
+      const registeredActiveTestMessage = t('auth.signIn.registeredActiveTest');
+      toast.success(
+        registeredActiveTestMessage === 'auth.signIn.registeredActiveTest'
+          ? "Inscription réussie ! Votre compte de test est actif et vous pouvez vous connecter immédiatement."
+          : registeredActiveTestMessage,
+        { duration: 6000, icon: 'OK' }
+      );
+      navigate('/signin', { replace: true });
+    }
+
     if (googleError === 'no_account' && googleEmail) {
       setError(t('auth.signIn.googleNoAccount', { email: googleEmail }));
       navigate('/signin', { replace: true });

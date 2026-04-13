@@ -253,4 +253,30 @@ describe('LLMTab', () => {
 
     expect(screen.getByRole('button', { name: 'Tester le modele' })).toBeInTheDocument();
   });
+
+  it('exposes the self-service registration approval toggle', () => {
+    const onInputChange = vi.fn();
+
+    render(
+      <LLMTab
+        formData={{
+          llmProvider: 'openai',
+          llmModel: 'gpt-4o',
+          llmModelParametersJson: '{}',
+          cvMode: 'nominative',
+          webglEnabled: 'on',
+          allowUserRegistrationWithoutApproval: false,
+          ollamaBaseUrl: '',
+        }}
+        onInputChange={onInputChange}
+        onTestConnection={vi.fn()}
+        t={(key) => key}
+        llmModelCatalog={{ openai: [{ value: 'gpt-4o', label: 'gpt-4o' }] }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('switch', { name: "Autoriser l'enregistrement des utilisateurs sans validation préalable" }));
+
+    expect(onInputChange).toHaveBeenCalledWith('allowUserRegistrationWithoutApproval', true);
+  });
 });

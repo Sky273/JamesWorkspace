@@ -56,12 +56,17 @@ vi.mock('../../utils/logger.backend.js', () => ({
 
 // Mock auth service
 const mockUpdateLastLogin = vi.fn();
-const mockRegisterGoogleUser = vi.fn();
+const mockRegisterSelfServiceUser = vi.fn();
 const mockFindUserWithFirmById = vi.fn();
 vi.mock('../../services/auth.service.js', () => ({
     updateLastLogin: (...args) => mockUpdateLastLogin(...args),
-    registerGoogleUser: (...args) => mockRegisterGoogleUser(...args),
+    registerSelfServiceUser: (...args) => mockRegisterSelfServiceUser(...args),
     findUserWithFirmById: (...args) => mockFindUserWithFirmById(...args)
+}));
+
+const mockSendRegistrationConfirmationEmail = vi.fn();
+vi.mock('../../services/registrationEmail.service.js', () => ({
+    sendRegistrationConfirmationEmail: (...args) => mockSendRegistrationConfirmationEmail(...args)
 }));
 
 // Mock auth config
@@ -186,9 +191,12 @@ describe('Google OAuth Routes', () => {
             });
             mockFindUserByGoogleId.mockResolvedValueOnce(null);
             mockFindUserByEmail.mockResolvedValueOnce(null);
-            mockRegisterGoogleUser.mockResolvedValueOnce({
-                id: 'u-new',
-                status: 'pending'
+            mockRegisterSelfServiceUser.mockResolvedValueOnce({
+                autoApproved: false,
+                user: {
+                    id: 'u-new',
+                    status: 'pending'
+                }
             });
 
             const res = await request(app)
@@ -196,11 +204,44 @@ describe('Google OAuth Routes', () => {
 
             expect(res.status).toBe(302);
             expect(res.headers.location).toContain('/signin?success=registered_pending');
-            expect(mockRegisterGoogleUser).toHaveBeenCalledWith({
+            expect(mockRegisterSelfServiceUser).toHaveBeenCalledWith({
                 email: 'newuser@test.com',
                 name: 'New User',
                 googleId: 'g-123',
                 googleEmail: 'newuser@test.com'
+            });
+            expect(mockSendRegistrationConfirmationEmail).not.toHaveBeenCalled();
+        });
+
+        it('should auto-approve a Google self-registration when enabled', async () => {
+            mockGetAuthUrl.mockResolvedValueOnce('https://accounts.google.com/o/oauth2/auth?...');
+            await request(app).get('/api/auth/google?action=register');
+
+            const state = mockGetAuthUrl.mock.calls[0][0];
+
+            mockExchangeCodeForUserInfo.mockResolvedValueOnce({
+                googleId: 'g-789',
+                email: 'activegoogle@test.com',
+                name: 'Google Active User'
+            });
+            mockFindUserByGoogleId.mockResolvedValueOnce(null);
+            mockFindUserByEmail.mockResolvedValueOnce(null);
+            mockRegisterSelfServiceUser.mockResolvedValueOnce({
+                autoApproved: true,
+                user: {
+                    id: 'u-new-active',
+                    status: 'active'
+                }
+            });
+
+            const res = await request(app)
+                .get(`/api/auth/google/callback?code=abc&state=${state}`);
+
+            expect(res.status).toBe(302);
+            expect(res.headers.location).toContain('/signin?success=registered_active_test');
+            expect(mockSendRegistrationConfirmationEmail).toHaveBeenCalledWith({
+                to: 'activegoogle@test.com',
+                name: 'Google Active User'
             });
         });
 

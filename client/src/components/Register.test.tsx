@@ -108,7 +108,7 @@ describe('Register', () => {
   });
 
   it('submits normalized email and navigates to signin on success', async () => {
-    mockRegister.mockResolvedValue({ success: true });
+    mockRegister.mockResolvedValue({ success: true, registrationStatus: 'pending' });
     renderRegister();
 
     fireEvent.change(screen.getByPlaceholderText('auth.register.namePlaceholder'), { target: { value: 'John Doe', name: 'name' } });
@@ -125,6 +125,21 @@ describe('Register', () => {
       });
     });
     expect(mockNavigate).toHaveBeenCalledWith('/signin?success=registered_pending');
+  });
+
+  it('navigates to the active test sign-in flow when registration is auto-approved', async () => {
+    mockRegister.mockResolvedValue({ success: true, registrationStatus: 'active' });
+    renderRegister();
+
+    fireEvent.change(screen.getByPlaceholderText('auth.register.namePlaceholder'), { target: { value: 'John Doe', name: 'name' } });
+    fireEvent.change(screen.getByPlaceholderText('auth.register.emailPlaceholder'), { target: { value: 'John@Example.COM', name: 'email' } });
+    fireEvent.change(screen.getByPlaceholderText('auth.register.passwordPlaceholder'), { target: { value: 'password123', name: 'password' } });
+    fireEvent.change(screen.getByPlaceholderText('auth.register.confirmPasswordPlaceholder'), { target: { value: 'password123', name: 'confirmPassword' } });
+    fireEvent.click(screen.getByRole('button', { name: 'auth.register.registerButton' }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/signin?success=registered_active_test');
+    });
   });
 
   it('shows backend error when register fails', async () => {

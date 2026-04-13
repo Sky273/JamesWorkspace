@@ -5,6 +5,7 @@ export interface FormData {
   llmModelParametersJson?: string;
   cvMode?: 'nominative' | 'anonymous';
   webglEnabled?: 'on' | 'off';
+  allowUserRegistrationWithoutApproval?: boolean;
 }
 
 export interface LLMAvailability {
@@ -48,7 +49,7 @@ export interface OllamaCapabilitySummary {
 
 export interface LLMTabProps {
   formData: FormData;
-  onInputChange: (key: string, value: string | number) => void;
+  onInputChange: (key: string, value: string | number | boolean) => void;
   onTestConnection: () => Promise<void>;
   testingConnection?: boolean;
   t: (key: string) => string;

@@ -38,13 +38,18 @@ const mockFindUserWithFirmByEmail = vi.fn();
 const mockFindUserWithFirmById = vi.fn();
 const mockUpdateLastLogin = vi.fn();
 const mockFindExistingUserByEmail = vi.fn();
-const mockCreateUser = vi.fn();
+const mockRegisterSelfServiceUser = vi.fn();
 vi.mock('../../services/auth.service.js', () => ({
     findUserWithFirmByEmail: (...args) => mockFindUserWithFirmByEmail(...args),
     findUserWithFirmById: (...args) => mockFindUserWithFirmById(...args),
     updateLastLogin: (...args) => mockUpdateLastLogin(...args),
     findExistingUserByEmail: (...args) => mockFindExistingUserByEmail(...args),
-    createUser: (...args) => mockCreateUser(...args)
+    registerSelfServiceUser: (...args) => mockRegisterSelfServiceUser(...args)
+}));
+
+const mockSendRegistrationConfirmationEmail = vi.fn();
+vi.mock('../../services/registrationEmail.service.js', () => ({
+    sendRegistrationConfirmationEmail: (...args) => mockSendRegistrationConfirmationEmail(...args)
 }));
 
 // Mock bcrypt
@@ -321,12 +326,15 @@ describe('Auth Routes - POST /api/auth/register', () => {
     it('should create a pending user on self-service registration', async () => {
         mockFindExistingUserByEmail.mockResolvedValueOnce(null);
         mockBcryptHash.mockResolvedValueOnce('hashed-password');
-        mockCreateUser.mockResolvedValueOnce({
-            id: 'user-123',
-            email: 'newuser@example.com',
-            role: 'user',
-            status: 'pending',
-            firm_name: 'Public Registration'
+        mockRegisterSelfServiceUser.mockResolvedValueOnce({
+            autoApproved: false,
+            user: {
+                id: 'user-123',
+                email: 'newuser@example.com',
+                role: 'user',
+                status: 'pending',
+                firm_name: 'Public Registration'
+            }
         });
 
         const res = await request(app)
@@ -341,12 +349,47 @@ describe('Auth Routes - POST /api/auth/register', () => {
         expect(res.body.message).toContain('Registration successful');
         expect(mockFindExistingUserByEmail).toHaveBeenCalledWith('newuser@example.com');
         expect(mockBcryptHash).toHaveBeenCalledWith('password123', 10);
-        expect(mockCreateUser).toHaveBeenCalledWith({
+        expect(mockRegisterSelfServiceUser).toHaveBeenCalledWith({
             email: 'newuser@example.com',
             password: 'hashed-password',
-            name: 'New User',
-            role: 'user',
-            status: 'pending'
+            name: 'New User'
+        });
+        expect(mockSendRegistrationConfirmationEmail).not.toHaveBeenCalled();
+    });
+
+    it('should auto-approve self-service registration when enabled', async () => {
+        mockFindExistingUserByEmail.mockResolvedValueOnce(null);
+        mockBcryptHash.mockResolvedValueOnce('hashed-password');
+        mockRegisterSelfServiceUser.mockResolvedValueOnce({
+            autoApproved: true,
+            user: {
+                id: 'user-456',
+                email: 'activeuser@example.com',
+                role: 'user',
+                status: 'active',
+                firm_name: 'Cabinet test'
+            }
+        });
+
+        const res = await request(app)
+            .post('/api/auth/register')
+            .send({
+                email: 'activeuser@example.com',
+                password: 'password123',
+                name: 'Active User'
+            });
+
+        expect(res.status).toBe(201);
+        expect(res.body.registrationStatus).toBe('active');
+        expect(res.body.autoApproved).toBe(true);
+        expect(mockRegisterSelfServiceUser).toHaveBeenCalledWith({
+            email: 'activeuser@example.com',
+            password: 'hashed-password',
+            name: 'Active User'
+        });
+        expect(mockSendRegistrationConfirmationEmail).toHaveBeenCalledWith({
+            to: 'activeuser@example.com',
+            name: 'Active User'
         });
     });
 
@@ -363,7 +406,7 @@ describe('Auth Routes - POST /api/auth/register', () => {
 
         expect(res.status).toBe(409);
         expect(res.body.error).toContain('already exists');
-        expect(mockCreateUser).not.toHaveBeenCalled();
+        expect(mockRegisterSelfServiceUser).not.toHaveBeenCalled();
     });
 
     it('should reject weak password', async () => {

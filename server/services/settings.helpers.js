@@ -8,7 +8,10 @@ import {
     PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT,
     PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER
 } from '../config/constants.js';
-import { buildAiCreditSettingsDefaults } from '../config/aiCredits.js';
+import {
+    buildAiCreditSettingsDefaults,
+    DEFAULT_ALLOW_USER_REGISTRATION_WITHOUT_APPROVAL
+} from '../config/aiCredits.js';
 import { resolveAvailableModel, getProviderAvailabilityFlags } from './llmAvailability.service.js';
 import { getProviderDefaultModel } from './llmConfiguration.service.js';
 import { buildLlmAdminMetadataWithOptions, sanitizeLlmModelParameters } from './llmAdminParameters.service.js';
@@ -62,6 +65,7 @@ export function buildMappedLlmSettings(dbSettings) {
         'Profile Matching Local Title Exact Weight': dbSettings.profile_matching_local_title_exact_weight ?? PROFILE_MATCHING_LOCAL_TITLE_EXACT_WEIGHT,
         'Profile Matching Local Title Token Weight': dbSettings.profile_matching_local_title_token_weight ?? PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT,
         'Profile Matching Local Coverage Multiplier': dbSettings.profile_matching_local_coverage_multiplier ?? PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER,
+        allowUserRegistrationWithoutApproval: dbSettings.allow_user_registration_without_approval ?? DEFAULT_ALLOW_USER_REGISTRATION_WITHOUT_APPROVAL,
         firmInitialCredits: dbSettings.firm_initial_credits ?? creditDefaults.firmInitialCredits,
         aiCreditChatbotMessage: dbSettings.ai_credit_chatbot_message ?? creditDefaults.aiCreditChatbotMessage,
         aiCreditResumeAiModify: dbSettings.ai_credit_resume_ai_modify ?? creditDefaults.aiCreditResumeAiModify,

@@ -12,6 +12,7 @@ import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '..
 import { safeLog } from '../../utils/logger.backend.js';
 import { is2FAEnabled, verifyTotpCode } from '../../services/totp.service.js';
 import * as authService from '../../services/auth.service.js';
+import { sendRegistrationConfirmationEmail } from '../../services/registrationEmail.service.js';
 import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, CLEAR_ACCESS_TOKEN, CLEAR_REFRESH_TOKEN } from './config.js';
 
 const router = express.Router();
@@ -260,13 +261,27 @@ router.post('/register', authLimiter, validateBody(registerSchema), async (req, 
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const createdUser = await authService.createUser({
+        const registrationResult = await authService.registerSelfServiceUser({
             email: normalizedEmail,
             password: hashedPassword,
-            name,
-            role: 'user',
-            status: 'pending'
+            name
         });
+        const createdUser = registrationResult.user;
+
+        if (registrationResult.autoApproved) {
+            try {
+                await sendRegistrationConfirmationEmail({
+                    to: normalizedEmail,
+                    name
+                });
+            } catch (emailError) {
+                safeLog('warn', 'Registration confirmation email failed after auto-approval', {
+                    email: normalizedEmail,
+                    userId: createdUser.id,
+                    error: emailError.message
+                });
+            }
+        }
 
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.USER_CREATED, {
             ...metadata,
@@ -276,12 +291,21 @@ router.post('/register', authLimiter, validateBody(registerSchema), async (req, 
             role: createdUser.role,
             statusCode: 201,
             action: 'REGISTER_SUCCESS',
-            message: 'User self-registered with default firm assignment',
-            metadata: { status: createdUser.status }
+            message: registrationResult.autoApproved
+                ? 'User self-registered with immediate activation and dedicated test firm'
+                : 'User self-registered with default firm assignment',
+            metadata: {
+                status: createdUser.status,
+                autoApproved: registrationResult.autoApproved
+            }
         });
 
         res.status(201).json({
-            message: 'Registration successful. Please wait for admin approval to access your account.'
+            message: registrationResult.autoApproved
+                ? 'Registration successful. Your test account is active and ready to use.'
+                : 'Registration successful. Please wait for admin approval to access your account.',
+            registrationStatus: registrationResult.autoApproved ? 'active' : 'pending',
+            autoApproved: registrationResult.autoApproved
         });
     } catch (error) {
         safeLog('error', 'Registration error', { error: error.message });

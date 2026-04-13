@@ -10,7 +10,10 @@ import {
     DEFAULT_ADAPTATION_PROMPT,
     DEFAULT_PRE_ANALYSIS_PROMPT
 } from '../config/prompts.backend.js';
-import { buildAiCreditSettingsDefaults } from '../config/aiCredits.js';
+import {
+    buildAiCreditSettingsDefaults,
+    DEFAULT_ALLOW_USER_REGISTRATION_WITHOUT_APPROVAL
+} from '../config/aiCredits.js';
 
 /**
  * Map a PostgreSQL llm_settings row to frontend format
@@ -50,6 +53,7 @@ export function mapSettingsToFrontend(row) {
         'Profile Matching Local Title Exact Weight': row.profile_matching_local_title_exact_weight || 5,
         'Profile Matching Local Title Token Weight': row.profile_matching_local_title_token_weight || 2,
         'Profile Matching Local Coverage Multiplier': row.profile_matching_local_coverage_multiplier || 3,
+        allowUserRegistrationWithoutApproval: row.allow_user_registration_without_approval ?? DEFAULT_ALLOW_USER_REGISTRATION_WITHOUT_APPROVAL,
         firmInitialCredits: row.firm_initial_credits ?? creditDefaults.firmInitialCredits,
         aiCreditChatbotMessage: row.ai_credit_chatbot_message ?? creditDefaults.aiCreditChatbotMessage,
         aiCreditResumeAiModify: row.ai_credit_resume_ai_modify ?? creditDefaults.aiCreditResumeAiModify,
@@ -178,6 +182,7 @@ export function mapSettingsFromFrontend(data) {
         profile_matching_local_title_exact_weight: data['Profile Matching Local Title Exact Weight'],
         profile_matching_local_title_token_weight: data['Profile Matching Local Title Token Weight'],
         profile_matching_local_coverage_multiplier: data['Profile Matching Local Coverage Multiplier'],
+        allow_user_registration_without_approval: data.allowUserRegistrationWithoutApproval,
         firm_initial_credits: data.firmInitialCredits,
         ai_credit_chatbot_message: data.aiCreditChatbotMessage,
         ai_credit_resume_ai_modify: data.aiCreditResumeAiModify,
