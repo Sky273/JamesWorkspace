@@ -2,7 +2,7 @@
  * FranceMapCanvas - isolated MapLibre rendering for the France map tab
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Marker, Popup, type NavigationControl, type Map as MaplibreMap } from 'maplibre-gl';
 
 import {
@@ -102,6 +102,7 @@ export default function FranceMapCanvas({
   const popupRef = useRef<Popup | null>(null);
   const navControlRef = useRef<NavigationControl | null>(null);
   const appliedStyleRef = useRef<string | null>(null);
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     selectedRegionCodeRef.current = selectedRegion?.code ?? null;
@@ -174,6 +175,7 @@ export default function FranceMapCanvas({
       appliedStyleRef.current = initialStyle;
       mapRef.current = map;
       mountedMap = map;
+      setMapReady(true);
     };
 
     void initializeMap();
@@ -192,12 +194,13 @@ export default function FranceMapCanvas({
       if (mapRef.current === mountedMap) {
         mapRef.current = null;
       }
+      setMapReady(false);
     };
   }, [isDarkMode, mapRef, onMapLoad]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) {
+    if (!map || !mapReady) {
       return;
     }
 
@@ -297,6 +300,7 @@ export default function FranceMapCanvas({
     getBubbleSize,
     getRegionColor,
     getValueLabel,
+    mapReady,
     mapRef,
     multiTypeRegionData,
     onDataSourceChange,
@@ -314,7 +318,7 @@ export default function FranceMapCanvas({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) {
+    if (!map || !mapReady) {
       return;
     }
 
@@ -348,7 +352,7 @@ export default function FranceMapCanvas({
       .setLngLat(hoveredData.coords)
       .setDOMContent(container)
       .addTo(map);
-  }, [currentRegionData, formatValue, getValueLabel, hoveredRegion, mapRef, selectedRegion]);
+  }, [currentRegionData, formatValue, getValueLabel, hoveredRegion, mapReady, mapRef, selectedRegion]);
 
   return <div ref={containerRef} style={{ width: '100%', height: '500px' }} />;
 }
