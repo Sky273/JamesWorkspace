@@ -103,8 +103,18 @@ vi.mock('../../services/resumeVersions.service.js', () => ({
 }));
 
 const mockPersistResumeSkillEvidence = vi.fn();
+const mockPersistDeferredPostImprovementAnalysis = vi.fn();
 vi.mock('../../services/skillEvidence.service.js', () => ({
     persistResumeSkillEvidence: (...args) => mockPersistResumeSkillEvidence(...args)
+}));
+
+vi.mock('../../routes/resumes/crud/improvementHelpers.js', () => ({
+    persistDeferredPostImprovementAnalysis: (...args) => mockPersistDeferredPostImprovementAnalysis(...args),
+    hasSuggestionContent: vi.fn((payload) => Boolean(payload && Object.keys(payload).length > 0)),
+    parseSuggestionsPayload: vi.fn((value) => {
+        if (!value) return null;
+        return typeof value === 'string' ? JSON.parse(value) : value;
+    })
 }));
 
 // Mock validation middleware
@@ -504,6 +514,14 @@ describe('Resume Routes - PUT /api/resumes/:id', () => {
         vi.clearAllMocks();
         app = createTestApp();
         mockCheckResumeAccess.mockResolvedValue({ hasAccess: true, error: null });
+        mockPersistDeferredPostImprovementAnalysis.mockResolvedValue({
+            updatedResume: {
+                id: '123e4567-e89b-12d3-a456-426614174000',
+                name: 'Updated Name',
+                title: 'Senior Dev',
+                status: 'improved'
+            }
+        });
     });
 
     it('should return 401 without authentication', async () => {
@@ -732,6 +750,36 @@ describe('Resume Routes - PUT /api/resumes/:id', () => {
             .send({ Name: 'Test' });
 
         expect(res.status).toBe(404);
+    });
+
+    it('should return 402 when deferred AI post-analysis cannot reserve credits', async () => {
+        mockUpdateResume.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            file_name: 'resume.pdf',
+            current_version: 3,
+            status: 'improved'
+        });
+        const insufficientCreditsError = new Error('Insufficient firm credits');
+        insufficientCreditsError.code = 'INSUFFICIENT_CREDITS';
+        insufficientCreditsError.details = {
+            firmId: 'firm-123',
+            available: 10,
+            required: 75,
+            actionType: 'resume.improvement'
+        };
+        mockPersistDeferredPostImprovementAnalysis.mockRejectedValueOnce(insufficientCreditsError);
+
+        const res = await request(app)
+            .put('/api/resumes/123e4567-e89b-12d3-a456-426614174000')
+            .set('Authorization', 'Bearer valid-token')
+            .send({
+                improvedText: 'New improved text',
+                status: 'Improved',
+                lastImproved: '2026-04-13T10:00:00.000Z'
+            });
+
+        expect(res.status).toBe(402);
+        expect(res.body.error).toBe('Insufficient credits for this AI action');
     });
 
     it('should map camelCase text and tag fields', async () => {

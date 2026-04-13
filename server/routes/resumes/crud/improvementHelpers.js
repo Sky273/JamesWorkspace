@@ -7,6 +7,7 @@ import { parseScore } from '../helpers.js';
 import * as resumesService from '../../../services/resumes.service.js';
 import { persistResumeSkillEvidence } from '../../../services/skillEvidence.service.js';
 import { updateVersionPostAnalysis } from '../../../services/resumeVersions.service.js';
+import { runAiActionWithCredits } from '../../../services/aiCredits.service.js';
 
 function hasSuggestionContent(suggestions) {
     if (!suggestions || typeof suggestions !== 'object') return false;
@@ -93,14 +94,23 @@ async function persistDeferredPostImprovementAnalysis({ resumeId, improvedText, 
     anonymizationRules = anonymizationRules.replace(/{FILENAME}/g, fileName || 'Non disponible');
     analysisPrompt = analysisPrompt.replace('{ANONYMIZATION_RULES}', anonymizationRules);
 
-    let improvedAnalysis = await analyzeResume(
+    let improvedAnalysis = await runAiActionWithCredits({
+        firmId: userMetadata?.firmId || null,
+        userId: userMetadata?.userId || null,
+        actionType: 'resume.improvement',
+        metadata: {
+            ...(userMetadata || {}),
+            resumeId
+        }
+    }, (actionConfig = {}) => analyzeResume(
         cleanupText(improvedText),
         model,
         analysisPrompt,
         userMetadata,
         true,
-        fileName || null
-    );
+        fileName || null,
+        { maxTokens: actionConfig.maxTokens }
+    ));
     improvedAnalysis = await calculateWeightedGlobalRating(improvedAnalysis, settings);
 
     const updatedResume = await resumesService.updateResume(resumeId, buildImprovedResumeUpdateData(improvedText, improvedAnalysis));

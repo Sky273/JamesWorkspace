@@ -9,6 +9,7 @@ const mockGetIndustryMappingString = vi.fn();
 const mockUpdateResume = vi.fn();
 const mockPersistResumeSkillEvidence = vi.fn();
 const mockUpdateVersionPostAnalysis = vi.fn();
+const mockRunAiActionWithCredits = vi.fn(async (_options, action) => action({ maxTokens: 1234 }));
 
 vi.mock('../../services/openai.service.js', () => ({
     analyzeResume: (...args) => mockAnalyzeResume(...args),
@@ -42,6 +43,10 @@ vi.mock('../../services/skillEvidence.service.js', () => ({
 
 vi.mock('../../services/resumeVersions.service.js', () => ({
     updateVersionPostAnalysis: (...args) => mockUpdateVersionPostAnalysis(...args)
+}));
+
+vi.mock('../../services/aiCredits.service.js', () => ({
+    runAiActionWithCredits: (...args) => mockRunAiActionWithCredits(...args)
 }));
 
 vi.mock('../../utils/logger.backend.js', () => ({
@@ -92,10 +97,27 @@ describe('resumes improvementHelpers', () => {
             resumeId: 'resume-1',
             improvedText: 'Improved CV text',
             fileName: 'cv.pdf',
-            userMetadata: { userId: 'user-1' },
+            userMetadata: { userId: 'user-1', firmId: 'firm-1' },
             currentVersion: null
         });
 
+        expect(mockRunAiActionWithCredits).toHaveBeenCalledWith(
+            expect.objectContaining({
+                firmId: 'firm-1',
+                userId: 'user-1',
+                actionType: 'resume.improvement'
+            }),
+            expect.any(Function)
+        );
+        expect(mockAnalyzeResume).toHaveBeenCalledWith(
+            'Improved CV text',
+            'gpt-5.4',
+            expect.any(String),
+            { userId: 'user-1', firmId: 'firm-1' },
+            true,
+            'cv.pdf',
+            { maxTokens: 1234 }
+        );
         expect(mockUpdateResume).toHaveBeenCalledWith(
             'resume-1',
             expect.objectContaining({

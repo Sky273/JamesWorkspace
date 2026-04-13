@@ -291,6 +291,12 @@ function createUpdateResumeHandler() {
             if (error.statusCode === 404) {
                 return res.status(404).json({ error: 'Resume not found' });
             }
+            if (error.code === 'INSUFFICIENT_CREDITS') {
+                return res.status(402).json({
+                    error: 'Insufficient credits for this AI action',
+                    details: error.details
+                });
+            }
             safeLog('error', 'Error updating resume', { error: error.message, resumeId: req.params.id });
             return res.status(500).json({ error: 'Failed to update resume' });
         }
