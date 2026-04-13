@@ -68,7 +68,8 @@ function getClientIP(req) {
 
 /**
  * Rate limiter per authenticated user
- * Administrators get 3x the limit
+ * Authenticated users get a 5x uplift over the route baseline.
+ * Admin-equivalent roles keep their 3x advantage on top of that uplift.
  */
 export function userRateLimit(maxRequests = RATE_LIMIT.USER.max, windowMs = RATE_LIMIT.USER.windowMs) {
     return (req, res, next) => {
@@ -81,8 +82,15 @@ export function userRateLimit(maxRequests = RATE_LIMIT.USER.max, windowMs = RATE
         }
 
         const userId = req.user.id;
-        const isAdmin = req.user.role === 'admin';
-        const effectiveLimit = isAdmin ? maxRequests * 3 : maxRequests;
+        const role = req.user.role;
+        const isAdminEquivalent = [
+            'admin',
+            'localAdmin',
+            'local_admin',
+            'superadmin',
+            'super_admin'
+        ].includes(role);
+        const effectiveLimit = maxRequests * 5 * (isAdminEquivalent ? 3 : 1);
         const now = Date.now();
         
         let userLimit = userRateLimitStore.get(userId);
@@ -117,8 +125,8 @@ export function userRateLimit(maxRequests = RATE_LIMIT.USER.max, windowMs = RATE
             safeLog('warn', 'User rate limit exceeded', {
                 userId,
                 email: req.user.email,
-                role: req.user.role,
-                isAdmin,
+                role,
+                isAdminEquivalent,
                 path: req.path
             });
             

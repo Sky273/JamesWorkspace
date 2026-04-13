@@ -104,26 +104,48 @@ describe('Rate Limit Middleware', () => {
             mw(req, res, next);
 
             expect(next).toHaveBeenCalled();
-            expect(res.setHeader).toHaveBeenCalledWith('X-RateLimit-Limit', 100);
+            expect(res.setHeader).toHaveBeenCalledWith('X-RateLimit-Limit', 500);
         });
 
-        it('should give admins 3x the limit', () => {
+        it('should give authenticated users a 5x uplift', () => {
+            const mw = userRateLimit(10, 60000);
+            const { req, res, next } = mockReqRes({ role: 'user' });
+
+            mw(req, res, next);
+
+            expect(next).toHaveBeenCalled();
+            expect(res.setHeader).toHaveBeenCalledWith('X-RateLimit-Limit', 50);
+        });
+
+        it('should give admins 15x the baseline limit', () => {
             const mw = userRateLimit(10, 60000);
             const { req, res, next } = mockReqRes({ role: 'admin' });
 
             mw(req, res, next);
 
-            expect(res.setHeader).toHaveBeenCalledWith('X-RateLimit-Limit', 30);
+            expect(res.setHeader).toHaveBeenCalledWith('X-RateLimit-Limit', 150);
+        });
+
+        it('should give local admins and superadmins the same elevated limit', () => {
+            const mw = userRateLimit(10, 60000);
+            const localAdmin = mockReqRes({ role: 'localAdmin' });
+            const superAdmin = mockReqRes({ role: 'superadmin' });
+
+            mw(localAdmin.req, localAdmin.res, localAdmin.next);
+            mw(superAdmin.req, superAdmin.res, superAdmin.next);
+
+            expect(localAdmin.res.setHeader).toHaveBeenCalledWith('X-RateLimit-Limit', 150);
+            expect(superAdmin.res.setHeader).toHaveBeenCalledWith('X-RateLimit-Limit', 150);
         });
 
         it('should block requests over limit', () => {
             const mw = userRateLimit(2, 60000);
 
-            for (let i = 0; i < 3; i++) {
+            for (let i = 0; i < 11; i++) {
                 const { req, res, next } = mockReqRes();
                 mw(req, res, next);
 
-                if (i < 2) {
+                if (i < 10) {
                     expect(next).toHaveBeenCalledTimes(1);
                     expect(res.status).not.toHaveBeenCalled();
                 } else {
