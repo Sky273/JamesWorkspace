@@ -115,7 +115,7 @@ Hors Docker, `npm run migrate` applique automatiquement `docker/schema.sql` si l
 - **Anthropic** : activez le provider avec `ANTHROPIC_API_KEY`. `ANTHROPIC_MODEL` permet de fixer un modèle par défaut côté serveur, par exemple `claude-sonnet-4-20250514` ou `claude-3-5-sonnet-20241022`.
 - **DeepSeek** : activez le provider avec `DEEPSEEK_API_KEY`. `DEEPSEEK_BASE_URL` est optionnelle si vous utilisez l'endpoint officiel. L'intégration appelle actuellement DeepSeek-V3.2 via les identifiants `deepseek-chat` et `deepseek-reasoner`.
 - **Hugging Face** : activez le provider avec `HUGGINGFACE_API_KEY`. `HUGGINGFACE_BASE_URL` est optionnelle et pointe par défaut vers `https://router.huggingface.co/v1`.
-- **Modèle Hugging Face pris en charge** : `MiniMaxAI/MiniMax-M2.7`, avec l'alias accepté `minimax-m2.7:cloud`.
+- **Modèle Hugging Face** : l'interface propose `MiniMaxAI/MiniMax-M2.7` comme valeur par défaut, mais vous pouvez enregistrer n'importe quel identifiant de modèle Hugging Face compatible. L'alias `minimax-m2.7:cloud` est normalisé vers `MiniMaxAI/MiniMax-M2.7`.
 - **MiniMax** : activez le provider avec `MINIMAX_API_KEY`. Les URLs `MINIMAX_OPENAI_BASE_URL` et `MINIMAX_ANTHROPIC_BASE_URL` sont optionnelles. Les modèles exposés dans l'application incluent `MiniMax-M2.7`, `MiniMax-M2.7-highspeed`, `MiniMax-M2.5`, `MiniMax-M2.5-highspeed`, `MiniMax-M2.1`, `MiniMax-M2.1-highspeed`, `MiniMax-M2`, et `M2-her`.
 - **Ollama** : seule une instance **distante** est supportée. Configurez son URL via `OLLAMA_BASE_URL`.
 - Si vous choisissez Ollama dans l'application, configurez aussi l'URL, le `keep alive` et le contexte (`num_ctx`) dans les paramètres LLM de l'interface.

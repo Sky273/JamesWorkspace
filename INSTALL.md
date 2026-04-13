@@ -677,7 +677,7 @@ Notes :
 
 - **MiniMax** : le provider `minimax` utilise `MINIMAX_API_KEY`. Les URLs `MINIMAX_OPENAI_BASE_URL` et `MINIMAX_ANTHROPIC_BASE_URL` sont optionnelles.
 - **Hugging Face** : le provider `huggingface` utilise `HUGGINGFACE_API_KEY`. `HUGGINGFACE_BASE_URL` est optionnelle et pointe par défaut vers `https://router.huggingface.co/v1`.
-- **Modèle Hugging Face pris en charge** : `MiniMaxAI/MiniMax-M2.7`, avec l'alias accepté `minimax-m2.7:cloud`.
+- **Modèle Hugging Face** : l'interface propose `MiniMaxAI/MiniMax-M2.7` comme valeur par défaut, mais vous pouvez enregistrer n'importe quel identifiant de modèle Hugging Face compatible. L'alias `minimax-m2.7:cloud` est normalisé vers `MiniMaxAI/MiniMax-M2.7`.
 - **Gemma Cloud** : le provider `gemma` utilise `GEMINI_API_KEY`. `GEMINI_OPENAI_BASE_URL` est optionnelle et pointe par défaut vers l'endpoint OpenAI-compatible Google AI Studio.
 - **Ollama** : seule une instance **distante** est supportée. ResumeConverter n'embarque plus de runtime Ollama dans le conteneur.
 - Si vous utilisez Ollama, configurez l'URL distante dans `OLLAMA_BASE_URL` et aussi dans les paramètres de l'application (`ollamaBaseUrl`).

@@ -38,7 +38,7 @@ Application professionnelle de gestion et d'analyse de CVs avec intelligence art
 - **Métiers ROME** : Référentiel complet avec recherche et navigation
 
 ### Chatbot IA
-- **Hugging Face** : Support du provider `huggingface` via le routeur OpenAI-compatible Hugging Face, avec `MiniMaxAI/MiniMax-M2.7` comme modele initial et l'alias `minimax-m2.7:cloud`.
+- **Hugging Face** : Support du provider `huggingface` via le routeur OpenAI-compatible Hugging Face, avec `MiniMaxAI/MiniMax-M2.7` comme modele par defaut, un identifiant de modele librement configurable dans les parametres, et l'alias `minimax-m2.7:cloud`.
 - **Multi-modèles** : Support OpenAI (GPT-5.4 / GPT-5.4-pro / GPT-5.2 / GPT-5.1 / GPT-5 / GPT-4.1 / GPT-4o), Anthropic (Claude Opus 4.x / Sonnet 4 / Claude 3.7 / Claude 3.5), DeepSeek (DeepSeek-V3.2 via `deepseek-chat` et `deepseek-reasoner`), Gemma Cloud via Gemini, GLM (`glm-5.1`, `glm-5`), MiniMax et Ollama distant
 - **Contexte CV** : Réponses personnalisées basées sur le profil
 
@@ -186,8 +186,9 @@ Application professionnelle de gestion et d'analyse de CVs avec intelligence art
   - `HUGGINGFACE_API_KEY`
   - `HUGGINGFACE_BASE_URL` (optionnelle, valeur par defaut `https://router.huggingface.co/v1`)
 - Provider : `huggingface`
-- Modele initial supporte : `MiniMaxAI/MiniMax-M2.7`
-- Alias accepte : `minimax-m2.7:cloud`
+- Modele par defaut : `MiniMaxAI/MiniMax-M2.7`
+- Le modele Hugging Face reste configurable librement dans les parametres LLM
+- Alias accepte pour ce modele par defaut : `minimax-m2.7:cloud`
 
 ### Cabinets (Firms)
 - `GET /api/firms` - Liste des cabinets

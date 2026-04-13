@@ -14,6 +14,7 @@ const MINIMAX_PROVIDER_MIGRATION = 'add_minimax_provider.sql';
 const DEEPSEEK_PROVIDER_MIGRATION = 'add_deepseek_provider.sql';
 const HUGGINGFACE_PROVIDER_MIGRATION = 'add_huggingface_provider.sql';
 const FIX_LLM_PROVIDER_CONSTRAINT_MIGRATION = 'fix_llm_provider_constraint_supported_providers.sql';
+const WEBGL_ENABLED_MIGRATION = 'add_webgl_enabled.sql';
 
 async function pathExists(targetPath) {
     try {
@@ -234,6 +235,23 @@ async function tableExists(tableName) {
     return result.rows[0]?.exists === true;
 }
 
+async function columnExists(tableName, columnName) {
+    const result = await query(
+        `
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = $1
+                  AND column_name = $2
+            ) AS exists
+        `,
+        [tableName, columnName]
+    );
+
+    return result.rows[0]?.exists === true;
+}
+
 async function getLlmProviderConstraintDefinition() {
     const result = await query(
         `
@@ -290,6 +308,15 @@ async function unmarkMigrationApplied(migrationName) {
 async function reconcileCriticalMigrations(appliedMigrations) {
     if (!await tableExists('llm_settings')) {
         return appliedMigrations;
+    }
+
+    const webglEnabledColumnOk = await columnExists('llm_settings', 'webgl_enabled');
+    if (appliedMigrations.has(WEBGL_ENABLED_MIGRATION) && !webglEnabledColumnOk) {
+        safeLog('warn', 'WebGL settings migration was marked applied but schema is still outdated; forcing reapply', {
+            migrationName: WEBGL_ENABLED_MIGRATION
+        });
+        await unmarkMigrationApplied(WEBGL_ENABLED_MIGRATION);
+        appliedMigrations.delete(WEBGL_ENABLED_MIGRATION);
     }
 
     const definition = await getLlmProviderConstraintDefinition();

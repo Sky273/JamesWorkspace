@@ -52,7 +52,8 @@ This audit covers the providers and model families exposed by the application an
 ### Hugging Face
 
 - The app uses the Hugging Face OpenAI-compatible router endpoint.
-- The initial catalog entry is `MiniMaxAI/MiniMax-M2.7`.
+- `MiniMaxAI/MiniMax-M2.7` is the default model presented by the app.
+- The Hugging Face model remains configurable in the admin settings and is not restricted to that default value.
 - The alias `minimax-m2.7:cloud` is normalized to `MiniMaxAI/MiniMax-M2.7`.
 - The current app profile keeps the standard OpenAI-compatible surface but disables `response_format` and drops `presence_penalty`, `frequency_penalty`, `logit_bias`, and `n` for this model family.
 
@@ -63,7 +64,7 @@ To enable the Hugging Face provider in the application settings:
 - set `HUGGINGFACE_API_KEY`
 - optionally override `HUGGINGFACE_BASE_URL`
 - choose provider `huggingface` in the admin LLM settings
-- use model `MiniMaxAI/MiniMax-M2.7`
+- choose any compatible Hugging Face model ID; the default value is `MiniMaxAI/MiniMax-M2.7`
 
 Current defaults:
 

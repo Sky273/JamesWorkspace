@@ -716,6 +716,37 @@ describe('Settings Routes', () => {
             expect(res.status).toBe(400);
             expect(res.body.error).toContain('LLM test failed');
         });
+
+        it('tests a custom Hugging Face model without forcing the default model', async () => {
+            testLlmSettingsConnection.mockResolvedValueOnce({
+                provider: 'huggingface',
+                model: 'meta-llama/Llama-3.3-70B-Instruct',
+                contentPreview: 'OK'
+            });
+
+            const res = await request(app)
+                .post('/api/settings/test-llm')
+                .set(authHeader)
+                .send({
+                    llmProvider: 'huggingface',
+                    llmModel: 'meta-llama/Llama-3.3-70B-Instruct'
+                });
+
+            expect(res.status).toBe(200);
+            expect(testLlmSettingsConnection).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    llmProvider: 'huggingface',
+                    llmModel: 'meta-llama/Llama-3.3-70B-Instruct'
+                }),
+                expect.objectContaining({ id: 'user-123' })
+            );
+            expect(res.body).toEqual({
+                success: true,
+                provider: 'huggingface',
+                model: 'meta-llama/Llama-3.3-70B-Instruct',
+                contentPreview: 'OK'
+            });
+        });
     });
 
     describe('POST /api/settings', () => {
