@@ -221,7 +221,9 @@ describe('Auth Service', () => {
             getClient.mockResolvedValueOnce(mockClient);
             mockClient.query
                 .mockResolvedValueOnce(undefined)
+                .mockResolvedValueOnce(undefined)
                 .mockResolvedValueOnce({ rows: [{ id: 'firm-test-1', name: 'Cabinet test' }] })
+                .mockResolvedValueOnce(undefined)
                 .mockResolvedValueOnce({ rows: [{ id: 'u-auto', email: 'active@test.com', status: 'active', firm_name: 'Cabinet test' }] })
                 .mockResolvedValueOnce(undefined);
 
@@ -233,8 +235,54 @@ describe('Auth Service', () => {
 
             expect(result.autoApproved).toBe(true);
             expect(result.user.status).toBe('active');
-            expect(mockClient.query).toHaveBeenNthCalledWith(2, expect.stringContaining('INSERT INTO firms'), ['Cabinet test', 1800]);
-            expect(mockClient.query).toHaveBeenNthCalledWith(3, expect.stringContaining('INSERT INTO users'), ['active@test.com', 'hash', 'Active User', null, null, 'firm-test-1', 'Cabinet test']);
+            expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO firms'), ['Cabinet test', 1800]);
+            expect(mockClient.query).toHaveBeenCalledWith(
+                expect.stringContaining('INSERT INTO users'),
+                ['active@test.com', 'hash', 'Active User', null, null, null, 'firm-test-1', 'Cabinet test']
+            );
+            expect(mockClient.release).toHaveBeenCalled();
+        });
+
+        it('should retry with a suffixed dedicated test firm name when Cabinet test already exists', async () => {
+            const duplicateFirmError = new Error('duplicate key value violates unique constraint "firms_name_key"');
+            duplicateFirmError.code = '23505';
+
+            const mockClient = {
+                query: vi.fn(),
+                release: vi.fn()
+            };
+
+            getLLMSettings.mockResolvedValueOnce({
+                allowUserRegistrationWithoutApproval: true,
+                firmInitialCredits: 1000
+            });
+            getClient.mockResolvedValueOnce(mockClient);
+            mockClient.query
+                .mockResolvedValueOnce(undefined)
+                .mockResolvedValueOnce(undefined)
+                .mockRejectedValueOnce(duplicateFirmError)
+                .mockResolvedValueOnce(undefined)
+                .mockResolvedValueOnce(undefined)
+                .mockResolvedValueOnce({ rows: [{ id: 'firm-test-2', name: 'Cabinet test 2' }] })
+                .mockResolvedValueOnce(undefined)
+                .mockResolvedValueOnce({ rows: [{ id: 'u-auto-2', email: 'retry@test.com', status: 'active', firm_name: 'Cabinet test 2' }] })
+                .mockResolvedValueOnce(undefined);
+
+            const result = await registerSelfServiceUser({
+                email: 'retry@test.com',
+                password: 'hash',
+                name: 'Retry User'
+            });
+
+            expect(result.autoApproved).toBe(true);
+            expect(result.user.firm_name).toBe('Cabinet test 2');
+            expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('ROLLBACK TO SAVEPOINT auto_approved_firm_name_0'));
+            expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO firms'), ['Cabinet test', 1000]);
+            expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO firms'), ['Cabinet test 2', 1000]);
+            expect(mockClient.query).toHaveBeenCalledWith(
+                expect.stringContaining('INSERT INTO users'),
+                ['retry@test.com', 'hash', 'Retry User', null, null, null, 'firm-test-2', 'Cabinet test 2']
+            );
             expect(mockClient.release).toHaveBeenCalled();
         });
     });

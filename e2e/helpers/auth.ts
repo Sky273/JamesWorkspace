@@ -101,6 +101,112 @@ function createPool(): pg.Pool {
   });
 }
 
+export async function setSelfServiceRegistrationAutoApproval(enabled: boolean): Promise<void> {
+  const pool = createPool();
+
+  try {
+    await pool.query(
+      `
+        UPDATE llm_settings
+        SET
+          allow_user_registration_without_approval = $1,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE settings_key = 'default'
+      `,
+      [enabled]
+    );
+  } finally {
+    await pool.end();
+  }
+}
+
+export async function findUserByEmailForE2E(email: string): Promise<{
+  id: string;
+  email: string;
+  status: string;
+  firm_id: string | null;
+  firm_name: string | null;
+} | null> {
+  const pool = createPool();
+
+  try {
+    const result = await pool.query(
+      `
+        SELECT id, email, status, firm_id, firm_name
+        FROM users
+        WHERE email = $1
+        LIMIT 1
+      `,
+      [email.toLowerCase()]
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+      return {
+      id: result.rows[0].id as string,
+      email: result.rows[0].email as string,
+      status: result.rows[0].status as string,
+      firm_id: (result.rows[0].firm_id as string | null) || null,
+      firm_name: (result.rows[0].firm_name as string | null) || null,
+    };
+  } finally {
+    await pool.end();
+  }
+}
+
+export async function deleteUserByEmailForE2E(email: string): Promise<void> {
+  const pool = createPool();
+
+  try {
+    await pool.query('DELETE FROM users WHERE email = $1', [email.toLowerCase()]);
+  } finally {
+    await pool.end();
+  }
+}
+
+export async function deleteUserAndOrphanFirmByEmailForE2E(email: string): Promise<void> {
+  const pool = createPool();
+
+  try {
+    const userResult = await pool.query(
+      `
+        SELECT id, firm_id, firm_name
+        FROM users
+        WHERE email = $1
+        LIMIT 1
+      `,
+      [email.toLowerCase()]
+    );
+
+    if (userResult.rows.length === 0) {
+      return;
+    }
+
+    const user = userResult.rows[0];
+    const firmId = (user.firm_id as string | null) || null;
+    const firmName = (user.firm_name as string | null) || null;
+
+    await pool.query('DELETE FROM users WHERE id = $1', [user.id as string]);
+
+    if (!firmId || !firmName || !/^Cabinet test(?: \d+)?$/.test(firmName)) {
+      return;
+    }
+
+    const remainingUsers = await pool.query(
+      'SELECT COUNT(*)::int AS count FROM users WHERE firm_id = $1',
+      [firmId]
+    );
+
+    if ((remainingUsers.rows[0]?.count as number) === 0) {
+      await pool.query('DELETE FROM firms WHERE id = $1', [firmId]);
+    }
+  } finally {
+    await pool.end();
+  }
+}
+
 async function ensureActivePlaywrightUser(): Promise<void> {
   if (!bootstrapPromise) {
     bootstrapPromise = (async () => {

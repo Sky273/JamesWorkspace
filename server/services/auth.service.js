@@ -12,6 +12,7 @@ import { getInitialFirmCredits } from '../config/aiCredits.js';
 
 const DEFAULT_SELF_SERVICE_FIRM_NAME = 'Public Registration';
 const AUTO_APPROVED_SELF_SERVICE_FIRM_NAME = 'Cabinet test';
+const MAX_AUTO_APPROVED_FIRM_NAME_ATTEMPTS = 100;
 
 /**
  * Find user with firm logo by email (case-insensitive)
@@ -189,32 +190,64 @@ async function createAutoApprovedSelfServiceUser({ email, password, name, google
         await client.query('BEGIN');
 
         const credits = getInitialFirmCredits(settings);
-        const firmResult = await client.query(
-            `INSERT INTO firms (name, status, credits)
-             VALUES ($1, 'active', $2)
-             RETURNING id, name`,
-            [AUTO_APPROVED_SELF_SERVICE_FIRM_NAME, credits]
-        );
-
-        const firm = firmResult.rows[0];
+        const firm = await createDedicatedAutoApprovedFirm(client, credits);
         const userResult = await client.query(
             `INSERT INTO users (
                 email, password, name, role, status, google_id, google_email, google_linked_at, firm_id, firm_name
              ) VALUES (
-                $1, $2, $3, 'user', 'active', $4, $5, CASE WHEN $4 IS NOT NULL THEN CURRENT_TIMESTAMP ELSE NULL END, $6, $7
+                $1, $2, $3, 'user', 'active', $4, $5, $6, $7, $8
              )
              RETURNING *`,
-            [email, password, name, googleId, googleEmail, firm.id, firm.name]
+            [email, password, name, googleId, googleEmail, googleId ? new Date() : null, firm.id, firm.name]
         );
 
         await client.query('COMMIT');
         return userResult.rows[0];
     } catch (error) {
         await client.query('ROLLBACK');
+        safeLog('error', 'Auto-approved self-service registration failed', {
+            email,
+            error: error.message,
+            code: error.code,
+            detail: error.detail,
+            constraint: error.constraint
+        });
         throw error;
     } finally {
         client.release();
     }
+}
+
+async function createDedicatedAutoApprovedFirm(client, credits) {
+    for (let attempt = 0; attempt < MAX_AUTO_APPROVED_FIRM_NAME_ATTEMPTS; attempt++) {
+        const firmName = attempt === 0
+            ? AUTO_APPROVED_SELF_SERVICE_FIRM_NAME
+            : `${AUTO_APPROVED_SELF_SERVICE_FIRM_NAME} ${attempt + 1}`;
+        const savepointName = `auto_approved_firm_name_${attempt}`;
+
+        await client.query(`SAVEPOINT ${savepointName}`);
+
+        try {
+            const firmResult = await client.query(
+                `INSERT INTO firms (name, status, credits)
+                 VALUES ($1, 'active', $2)
+                 RETURNING id, name`,
+                [firmName, credits]
+            );
+
+            await client.query(`RELEASE SAVEPOINT ${savepointName}`);
+            return firmResult.rows[0];
+        } catch (error) {
+            if (error?.code === '23505') {
+                await client.query(`ROLLBACK TO SAVEPOINT ${savepointName}`);
+                continue;
+            }
+            await client.query(`ROLLBACK TO SAVEPOINT ${savepointName}`).catch(() => {});
+            throw error;
+        }
+    }
+
+    throw new Error('Unable to allocate a dedicated test firm name');
 }
 
 async function resolveFirmAssignment(userData) {
