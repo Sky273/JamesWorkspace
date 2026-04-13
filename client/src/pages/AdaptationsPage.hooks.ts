@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useScopedViewRefresh } from '../hooks/useScopedViewRefresh';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import type { Resume as ResumeEntity } from '../types/entities';
-import { createAuthOptionsWithCsrf, fetchWithCsrfRetry } from '../utils/apiInterceptor';
+import { createAuthOptionsWithCsrf, fetchWithCsrfRetry, prepareLongRunningRequest } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
 import resumeAdaptationService from '../utils/resumeAdaptationService';
 import { templateService } from '../utils/templateService';
@@ -344,6 +344,7 @@ export function useAdaptationsDashboard() {
       const endpoint = selectedExportFormat === 'pdf' ? '/generate-pdf' : '/generate-docx';
       const fileExtension = selectedExportFormat === 'pdf' ? 'pdf' : selectedExportFormat;
 
+      await prepareLongRunningRequest(300000, { requiresCsrf: true });
       const exportOptions = await createAuthOptionsWithCsrf({
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
@@ -356,7 +357,7 @@ export function useAdaptationsDashboard() {
           footerHeight: template.FooterHeight || 25,
           format: selectedExportFormat,
         }),
-      });
+      }, true);
 
       const response = await fetchWithCsrfRetry(endpoint, exportOptions, 300000);
       if (!response.ok) {

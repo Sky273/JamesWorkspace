@@ -5,7 +5,7 @@
 
 import { useCallback, type MutableRefObject } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterceptor';
+import { fetchWithAuth, createAuthOptionsWithCsrf, prepareLongRunningRequest } from '../../utils/apiInterceptor';
 import logger from '../../utils/logger.frontend';
 import toast from 'react-hot-toast';
 import type { FileStatus, ExportFormats } from '../batchUpload.utils';
@@ -53,6 +53,7 @@ export function useBatchExport({
     try {
       const resumeIds = successfulFiles.map(f => f.resumeId).filter(Boolean);
       
+      await prepareLongRunningRequest(300000, { requiresCsrf: true });
       const options = await createAuthOptionsWithCsrf({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -61,9 +62,9 @@ export function useBatchExport({
           templateId: selectedTemplate,
           formats: exportFormats
         })
-      });
+      }, true);
       
-      const response = await fetchWithAuth('/api/batch-export', options);
+      const response = await fetchWithAuth('/api/batch-export', options, 300000);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Erreur d\'export' }));

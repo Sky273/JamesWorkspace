@@ -7,7 +7,7 @@ import type { Resume } from '../types/entities';
 import { resumeService } from '../utils/resumeService';
 import { templateService } from '../utils/templateService';
 import logger from '../utils/logger.frontend';
-import { createAuthOptionsWithCsrf, fetchWithCsrfRetry } from '../utils/apiInterceptor';
+import { createAuthOptionsWithCsrf, fetchWithCsrfRetry, prepareLongRunningRequest } from '../utils/apiInterceptor';
 import type { ExportFormat } from '../components/ResumeAnalysis/ExportTab';
 import { buildExportPayload } from './resumeDocumentPayload';
 import { resolveResumeForPage } from './resumeLoader';
@@ -23,12 +23,13 @@ interface Template {
 }
 
 async function generateAttachmentBlob(resume: Resume, template: Template, format: ExportFormat): Promise<Blob> {
+  await prepareLongRunningRequest(300000, { requiresCsrf: true });
   const endpoint = format === 'pdf' ? '/generate-pdf' : '/generate-docx';
   const exportOptions = await createAuthOptionsWithCsrf({
     method: 'POST',
     headers: { 'Content-Type': 'application/json; charset=utf-8' },
     body: JSON.stringify(buildExportPayload(resume, template, format))
-  });
+  }, true);
 
   const response = await fetchWithCsrfRetry(endpoint, exportOptions, 300000);
   if (!response.ok) {

@@ -40,6 +40,7 @@ import {
   setSessionExpiredHandler,
   resetSessionState,
   attemptTokenRefresh,
+  prepareLongRunningRequest,
   fetchWithAuth,
   createAuthOptions,
   createAuthOptionsWithCsrf,
@@ -116,6 +117,22 @@ describe('apiInterceptor', () => {
 
     await expect(attemptTokenRefresh()).resolves.toBe(true);
     expect(fetch).toHaveBeenCalledWith('/api/auth/refresh', expect.objectContaining({ method: 'POST' }));
+  });
+
+  it('prepares long-running requests by refreshing auth and csrf', async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({}, { status: 200 }));
+
+    await prepareLongRunningRequest(300000, { requiresCsrf: true });
+
+    expect(fetch).toHaveBeenCalledWith('/api/auth/refresh', expect.objectContaining({ method: 'POST' }));
+    expect(mocks.refreshCsrfToken).toHaveBeenCalled();
+  });
+
+  it('skips long-running preparation below threshold', async () => {
+    await prepareLongRunningRequest(120000, { requiresCsrf: true });
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(mocks.refreshCsrfToken).not.toHaveBeenCalled();
   });
 
   it('blocks requests when session redirect is already in progress', async () => {

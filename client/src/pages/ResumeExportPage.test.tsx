@@ -10,6 +10,7 @@ const {
   getTemplateByIdMock,
   createAuthOptionsWithCsrfMock,
   fetchWithCsrfRetryMock,
+  prepareLongRunningRequestMock,
   toastSuccessMock,
   toastErrorMock,
   removeSuggestionMarkersMock,
@@ -24,6 +25,7 @@ const {
   getTemplateByIdMock: vi.fn(),
   createAuthOptionsWithCsrfMock: vi.fn(),
   fetchWithCsrfRetryMock: vi.fn(),
+  prepareLongRunningRequestMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
   removeSuggestionMarkersMock: vi.fn((value: string) => value.replace(/\[\[suggestion\]\]/g, '')),
@@ -73,6 +75,7 @@ vi.mock('../utils/templateService', () => ({
 vi.mock('../utils/apiInterceptor', () => ({
   createAuthOptionsWithCsrf: createAuthOptionsWithCsrfMock,
   fetchWithCsrfRetry: fetchWithCsrfRetryMock,
+  prepareLongRunningRequest: prepareLongRunningRequestMock,
 }));
 
 vi.mock('react-hot-toast', () => ({
@@ -197,6 +200,7 @@ describe('ResumeExportPage', () => {
       { id: 'template-2', Name: 'Executive' },
     ]);
     createAuthOptionsWithCsrfMock.mockImplementation(async (options: RequestInit) => options);
+    prepareLongRunningRequestMock.mockResolvedValue(undefined);
 
     Object.defineProperty(window, 'URL', {
       configurable: true,
@@ -284,6 +288,13 @@ describe('ResumeExportPage', () => {
         }),
       }),
       300000
+    );
+    expect(prepareLongRunningRequestMock).toHaveBeenCalledWith(300000, { requiresCsrf: true });
+    expect(createAuthOptionsWithCsrfMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'POST',
+      }),
+      true
     );
     expect(createObjectURLMock).toHaveBeenCalled();
     expect(clickMock).toHaveBeenCalled();

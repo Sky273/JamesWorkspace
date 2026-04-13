@@ -55,6 +55,7 @@ import {
 // ============================================
 
 const API_BASE_URL = '';
+const LONG_RUNNING_REQUEST_REFRESH_THRESHOLD_MS = 240000;
 
 let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
@@ -272,6 +273,30 @@ export const resetSessionState = (): void => {
  */
 export const createAuthOptions = (options: FetchOptions = {}): FetchOptions => {
   return buildAuthOptions(options);
+};
+
+export const prepareLongRunningRequest = async (
+  timeout: number,
+  options: { requiresCsrf?: boolean } = {}
+): Promise<void> => {
+  if (timeout < LONG_RUNNING_REQUEST_REFRESH_THRESHOLD_MS) {
+    return;
+  }
+
+  if (isSessionRedirectInProgress()) {
+    throw new SessionRedirectError();
+  }
+
+  try {
+    logger.log('[API Interceptor] Preparing session for long-running request');
+    await attemptTokenRefresh();
+  } catch (error) {
+    logger.warn('[API Interceptor] Long-running request pre-refresh failed', error);
+  }
+
+  if (options.requiresCsrf) {
+    await refreshCsrfToken();
+  }
 };
 
 /**

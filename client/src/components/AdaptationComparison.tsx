@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
 import { createSafeHtml } from '../utils/sanitizer.frontend';
 import { useTranslation } from 'react-i18next';
-import { createAuthOptionsWithCsrf, fetchWithCsrfRetry } from '../utils/apiInterceptor';
+import { createAuthOptionsWithCsrf, fetchWithCsrfRetry, prepareLongRunningRequest } from '../utils/apiInterceptor';
 import { removeSuggestionMarkers } from './TiptapEditor/suggestionsHtml';
 import {
   applyTemplatePlaceholders,
@@ -103,6 +103,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
         ...summarizeTemplatePayload(template),
       });
 
+      await prepareLongRunningRequest(300000, { requiresCsrf: true });
       const exportOptions = await createAuthOptionsWithCsrf({
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
@@ -115,7 +116,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
           footerHeight: template.FooterHeight || 25,
           format: selectedExportFormat,
         })
-      });
+      }, true);
 
       const response = await fetchWithCsrfRetry(selectedExportFormat === 'pdf' ? '/generate-pdf' : '/generate-docx', exportOptions, 300000);
 

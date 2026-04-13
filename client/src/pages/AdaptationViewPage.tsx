@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthFetch } from '../hooks/useAuthFetch';
-import { createAuthOptionsWithCsrf, fetchWithAuth, fetchWithCsrfRetry } from '../utils/apiInterceptor';
+import { createAuthOptionsWithCsrf, fetchWithAuth, fetchWithCsrfRetry, prepareLongRunningRequest } from '../utils/apiInterceptor';
 import { templateService } from '../utils/templateService';
 import type { TiptapEditorRef } from '../components/TiptapEditor';
 import SendEmailModal from '../components/ResumeAnalysis/SendEmailModal';
@@ -217,6 +217,7 @@ const AdaptationViewPage = (): JSX.Element => {
       const endpoint = selectedExportFormat === 'pdf' ? '/generate-pdf' : '/generate-docx';
       const fileExtension = selectedExportFormat === 'pdf' ? 'pdf' : selectedExportFormat;
 
+      await prepareLongRunningRequest(300000, { requiresCsrf: true });
       const exportOptions = await createAuthOptionsWithCsrf({
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
@@ -229,7 +230,7 @@ const AdaptationViewPage = (): JSX.Element => {
           footerHeight: template.FooterHeight || 25,
           format: selectedExportFormat,
         }),
-      });
+      }, true);
 
       const response = await fetchWithCsrfRetry(endpoint, exportOptions, 300000);
       if (!response.ok) throw new Error(`Failed to generate ${selectedExportFormat.toUpperCase()}`);
