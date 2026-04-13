@@ -37,10 +37,19 @@ ANTHROPIC_MODEL=claude-sonnet-4-20250514
 DEEPSEEK_API_KEY=sk-votre-cle-deepseek
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 
+# Hugging Face
+HUGGINGFACE_API_KEY=hf-votre-cle-huggingface
+HUGGINGFACE_BASE_URL=https://router.huggingface.co/v1
+
 # MiniMax
 MINIMAX_API_KEY=sk-api-votre-cle-minimax
 MINIMAX_OPENAI_BASE_URL=https://api.minimax.io/v1
 MINIMAX_ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic
+
+# Cache applicatif
+CACHE_BACKEND=memory
+CACHE_REDIS_URL=redis://127.0.0.1:6379
+CACHE_KEY_PREFIX=resumeconverter
 
 # Ollama distant uniquement
 # ResumeConverter n'embarque pas Ollama localement dans le conteneur ou le serveur.
@@ -83,11 +92,30 @@ Relancez la migration après chaque mise à jour de code ou de schéma.
 
 Hors Docker, `npm run migrate` applique automatiquement `docker/schema.sql` si la base est vide, puis les migrations SQL/applicatives restantes.
 
+## Cache applicatif
+
+### Paramètres
+
+- `CACHE_BACKEND` : backend demandé (`memory` ou `redis`)
+- `CACHE_REDIS_URL` : URL Redis quand `CACHE_BACKEND=redis`
+- `CACHE_KEY_PREFIX` : préfixe des clés de cache partagées
+- `DISABLE_INTERNAL_REDIS` : en Docker, désactive le Redis embarqué si vous pointez déjà vers un Redis externe
+
+### Principe de fonctionnement
+
+- Le cache applicatif est géré côté backend, au niveau des services.
+- Les lectures partagées utilisent des scopes versionnés stockés en base et un cache L1 en mémoire locale.
+- Redis peut être activé comme backend de stockage, mais l'invalidation reste pilotée par les versions de scope et les notifications PostgreSQL.
+- Toute création, modification ou suppression invalide l'élément concerné, incrémente les vues impactées et force les autres instances à relire la source de vérité.
+- Le paramètre `refresh=1` bypass explicitement le cache applicatif pour recharger une vue depuis la base.
+
 ## Notes LLM
 
 - **OpenAI** : provider par défaut, recommandé pour les workflows GPT-5 / GPT-4o.
 - **Anthropic** : activez le provider avec `ANTHROPIC_API_KEY`. `ANTHROPIC_MODEL` permet de fixer un modèle par défaut côté serveur, par exemple `claude-sonnet-4-20250514` ou `claude-3-5-sonnet-20241022`.
 - **DeepSeek** : activez le provider avec `DEEPSEEK_API_KEY`. `DEEPSEEK_BASE_URL` est optionnelle si vous utilisez l'endpoint officiel. L'intégration appelle actuellement DeepSeek-V3.2 via les identifiants `deepseek-chat` et `deepseek-reasoner`.
+- **Hugging Face** : activez le provider avec `HUGGINGFACE_API_KEY`. `HUGGINGFACE_BASE_URL` est optionnelle et pointe par défaut vers `https://router.huggingface.co/v1`.
+- **Modèle Hugging Face pris en charge** : `MiniMaxAI/MiniMax-M2.7`, avec l'alias accepté `minimax-m2.7:cloud`.
 - **MiniMax** : activez le provider avec `MINIMAX_API_KEY`. Les URLs `MINIMAX_OPENAI_BASE_URL` et `MINIMAX_ANTHROPIC_BASE_URL` sont optionnelles. Les modèles exposés dans l'application incluent `MiniMax-M2.7`, `MiniMax-M2.7-highspeed`, `MiniMax-M2.5`, `MiniMax-M2.5-highspeed`, `MiniMax-M2.1`, `MiniMax-M2.1-highspeed`, `MiniMax-M2`, et `M2-her`.
 - **Ollama** : seule une instance **distante** est supportée. Configurez son URL via `OLLAMA_BASE_URL`.
 - Si vous choisissez Ollama dans l'application, configurez aussi l'URL, le `keep alive` et le contexte (`num_ctx`) dans les paramètres LLM de l'interface.
