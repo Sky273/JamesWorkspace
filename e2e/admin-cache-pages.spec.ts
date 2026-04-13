@@ -12,8 +12,8 @@ const cacheManagedPages: Array<{
   refreshName: RegExp;
 }> = [
   {
-    path: '/dashboard/users',
-    ready: { kind: 'heading', name: /utilisateurs|users/i },
+    path: '/admin?tab=users',
+    ready: { kind: 'button', name: /actualiser|rafra[iî]chir|refresh/i },
     refreshName: /actualiser|rafra[iî]chir|refresh/i,
   },
   {
@@ -32,8 +32,18 @@ const cacheManagedPages: Array<{
     refreshName: /actualiser|rafra[iî]chir|refresh/i,
   },
   {
-    path: '/templates',
-    ready: { kind: 'heading', name: /mod[eè]les|templates/i },
+    path: '/admin?tab=templates',
+    ready: { kind: 'button', name: /actualiser|rafra[iî]chir|refresh/i },
+    refreshName: /actualiser|rafra[iî]chir|refresh/i,
+  },
+  {
+    path: '/admin?tab=emailTemplates',
+    ready: { kind: 'button', name: /actualiser|rafra[iî]chir|refresh/i },
+    refreshName: /actualiser|rafra[iî]chir|refresh/i,
+  },
+  {
+    path: '/admin?tab=tags',
+    ready: { kind: 'button', name: /actualiser|rafra[iî]chir|refresh/i },
     refreshName: /actualiser|rafra[iî]chir|refresh/i,
   },
 ];

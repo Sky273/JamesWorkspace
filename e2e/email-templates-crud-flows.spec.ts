@@ -13,8 +13,9 @@ test.describe('Email templates CRUD flows', () => {
     const templateName = uniqueName('Email Template E2E');
     const updatedTemplateName = `${templateName} Updated`;
 
-    await page.goto('/email-templates');
-    await expect(page.getByRole('heading', { name: /templates email|email templates/i }).first()).toBeVisible();
+    await page.goto('/admin?tab=emailTemplates');
+    await expect(page).toHaveURL(/\/admin\?tab=emailTemplates$/);
+    await expect(page.getByRole('button', { name: /adminWorkspace\.tabs\.emailTemplates|templates email|email templates/i }).first()).toBeVisible();
 
     await page.getByRole('button', { name: /nouveau template|new template/i }).click();
     await page.getByPlaceholder(/candidature standard/i).fill(templateName);

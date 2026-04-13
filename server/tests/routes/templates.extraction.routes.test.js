@@ -114,6 +114,10 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+vi.mock('../../services/aiCredits.service.js', () => ({
+    runAiActionWithCredits: (_options, action) => action()
+}));
+
 vi.mock('../../middleware/rateLimit.middleware.js', () => ({
     userRateLimit: (...args) => mockUserRateLimit(...args)
 }));
@@ -123,7 +127,8 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
         if (req.headers.authorization === 'Bearer valid-token') {
             req.user = {
                 id: 'admin-1',
-                role: req.headers['x-test-role'] || 'admin'
+                role: req.headers['x-test-role'] || 'admin',
+                firmId: 'firm-1'
             };
             next();
         } else {

@@ -36,4 +36,23 @@ describe('viewRefreshScopes', () => {
 
     expect(mockMarkViewScopesDirty).toHaveBeenCalledWith(['deals', 'resumes']);
   });
+
+  it('marks administration alongside admin workspace domains', async () => {
+    const {
+      markUsersViewDirty,
+      markTemplatesViewDirty,
+      markTagsViewDirty,
+      markEmailTemplatesViewDirty,
+    } = await import('./viewRefreshScopes');
+
+    markUsersViewDirty();
+    markTemplatesViewDirty();
+    markTagsViewDirty();
+    markEmailTemplatesViewDirty();
+
+    expect(mockMarkViewScopesDirty).toHaveBeenCalledWith(['users', 'administration']);
+    expect(mockMarkViewScopesDirty).toHaveBeenCalledWith(['templates', 'administration']);
+    expect(mockMarkViewScopesDirty).toHaveBeenCalledWith(['tags', 'administration']);
+    expect(mockMarkViewScopesDirty).toHaveBeenCalledWith(['emailTemplates', 'administration']);
+  });
 });

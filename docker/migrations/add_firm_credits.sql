@@ -1,0 +1,6 @@
+ALTER TABLE firms
+ADD COLUMN IF NOT EXISTS credits integer NOT NULL DEFAULT 1000;
+
+UPDATE firms
+SET credits = 1000
+WHERE credits IS NULL;

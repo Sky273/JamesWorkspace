@@ -2,6 +2,7 @@ import { safeLog } from '../../../utils/logger.backend.js';
 import { extractFromDOCX, extractFromPDF } from './extractors.js';
 import { inferMimeTypeFromFilename } from '../../../utils/uploadFileTypes.js';
 import { isValidDocxArchive, isValidFileSignature } from '../../../utils/fileSignature.js';
+import { runAiActionWithCredits } from '../../../services/aiCredits.service.js';
 
 function createExtractFromCvHandler() {
     return async (req, res) => {
@@ -27,14 +28,38 @@ function createExtractFromCvHandler() {
                 userId: req.user?.id
             });
 
-            if (resolvedMimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-                result = await extractFromDOCX(buffer, originalname);
-            } else if (resolvedMimeType === 'application/pdf') {
-                result = await extractFromPDF(buffer, originalname);
-            } else if (resolvedMimeType === 'application/msword') {
-                return res.status(400).json({ error: 'Old .doc format is not supported. Please convert to .docx or PDF.' });
-            } else {
-                return res.status(400).json({ error: 'Unsupported file type.' });
+            try {
+                result = await runAiActionWithCredits({
+                    firmId: req.user?.firmId || req.user?.firm_id || null,
+                    userId: req.user?.id || null,
+                    actionType: 'template.extract',
+                    metadata: {
+                        fileName: originalname,
+                        mimeType: resolvedMimeType
+                    }
+                }, async () => {
+                    if (resolvedMimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+                        return extractFromDOCX(buffer, originalname);
+                    }
+                    if (resolvedMimeType === 'application/pdf') {
+                        return extractFromPDF(buffer, originalname);
+                    }
+                    if (resolvedMimeType === 'application/msword') {
+                        throw Object.assign(new Error('Old .doc format is not supported. Please convert to .docx or PDF.'), { statusCode: 400 });
+                    }
+                    throw Object.assign(new Error('Unsupported file type.'), { statusCode: 400 });
+                });
+            } catch (error) {
+                if (error.code === 'INSUFFICIENT_CREDITS') {
+                    return res.status(402).json({
+                        error: 'Insufficient credits for this AI action',
+                        details: error.details
+                    });
+                }
+                if (error.statusCode === 400) {
+                    return res.status(400).json({ error: error.message });
+                }
+                throw error;
             }
 
             return res.json({

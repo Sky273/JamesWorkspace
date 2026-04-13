@@ -24,10 +24,12 @@ vi.mock('../../config/constants.js', () => ({
 
 // Mock firms service
 const mockListFirms = vi.fn();
+const mockListFirmCredits = vi.fn();
 const mockGetFirmById = vi.fn();
 const mockCreateFirm = vi.fn();
 const mockUpdateFirm = vi.fn();
 const mockDeleteFirm = vi.fn();
+const mockAddFirmCredits = vi.fn();
 const mockGetAssociatedUsersCount = vi.fn();
 const mockUploadFirmLogo = vi.fn();
 const mockGetFirmLogo = vi.fn();
@@ -35,10 +37,12 @@ const mockDeleteFirmLogo = vi.fn();
 
 vi.mock('../../services/firms.service.js', () => ({
     listFirms: (...args) => mockListFirms(...args),
+    listFirmCredits: (...args) => mockListFirmCredits(...args),
     getFirmById: (...args) => mockGetFirmById(...args),
     createFirm: (...args) => mockCreateFirm(...args),
     updateFirm: (...args) => mockUpdateFirm(...args),
     deleteFirm: (...args) => mockDeleteFirm(...args),
+    addFirmCredits: (...args) => mockAddFirmCredits(...args),
     getAssociatedUsersCount: (...args) => mockGetAssociatedUsersCount(...args),
     uploadFirmLogo: (...args) => mockUploadFirmLogo(...args),
     getFirmLogo: (...args) => mockGetFirmLogo(...args),
@@ -84,11 +88,15 @@ vi.mock('../../utils/validation.js', () => ({
 vi.mock('../../middleware/auth.middleware.js', () => ({
     authenticateToken: (req, res, next) => {
         if (req.headers.authorization === 'Bearer valid-token') {
+            const role = req.headers['x-test-role'] || 'admin';
+            const firmId = req.headers['x-test-firm-id'];
             req.user = {
                 id: 'user-123',
                 email: 'test@example.com',
-                role: req.headers['x-test-role'] || 'admin',
-                firm: 'Test Firm'
+                role,
+                firm: 'Test Firm',
+                firmId: firmId === undefined ? 'firm-123' : firmId,
+                firm_id: firmId === undefined ? 'firm-123' : firmId
             };
             next();
         } else {
@@ -101,7 +109,19 @@ vi.mock('../../middleware/auth.middleware.js', () => ({
         } else {
             res.status(403).json({ error: 'Admin access required' });
         }
-    }
+    },
+    requireUserManager: (req, res, next) => {
+        if (req.user?.role === 'admin' || req.user?.role === 'localAdmin') {
+            next();
+        } else {
+            res.status(403).json({ error: 'Manager access required' });
+        }
+    },
+    isUserAdmin: (req) => req.user?.role === 'admin'
+}));
+
+vi.mock('../../utils/firmHelpers.js', () => ({
+    getUserFirmIdFromUser: (user) => user?.firmId || user?.firm_id || null
 }));
 
 import firmsRoutes from '../../routes/firms.routes.js';
@@ -121,6 +141,11 @@ describe('Firms Routes', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         app = createTestApp();
+        mockListFirmCredits.mockResolvedValue({
+            firms: [],
+            hasMore: false,
+            totalCount: 0
+        });
     });
 
     describe('GET /api/firms', () => {
@@ -233,6 +258,46 @@ describe('Firms Routes', () => {
                 expect.objectContaining({ page: 1, limit: 200 })
             );
             expect(res.body.pagination.limit).toBe(200);
+        });
+    });
+
+    describe('GET /api/firms/credits', () => {
+        it('should return firm credits for a super admin', async () => {
+            mockListFirmCredits.mockResolvedValue({
+                firms: [{ id: 'f-1', name: 'Firm A', credits: 1000 }],
+                hasMore: false,
+                totalCount: 1
+            });
+
+            const res = await request(app).get('/api/firms/credits').set(authHeader);
+
+            expect(res.status).toBe(200);
+            expect(res.body.data[0].credits).toBe(1000);
+            expect(mockListFirmCredits).toHaveBeenCalledWith(expect.objectContaining({ firmId: null }));
+        });
+
+        it('should restrict local admins to their own firm', async () => {
+            mockListFirmCredits.mockResolvedValue({
+                firms: [{ id: 'firm-local', name: 'Firm Local', credits: 1000 }],
+                hasMore: false,
+                totalCount: 1
+            });
+
+            const res = await request(app)
+                .get('/api/firms/credits')
+                .set({ ...authHeader, 'x-test-role': 'localAdmin', 'x-test-firm-id': 'firm-local' });
+
+            expect(res.status).toBe(200);
+            expect(mockListFirmCredits).toHaveBeenCalledWith(expect.objectContaining({ firmId: 'firm-local' }));
+        });
+
+        it('should reject local admins without a firm association', async () => {
+            const res = await request(app)
+                .get('/api/firms/credits')
+                .set({ ...authHeader, 'x-test-role': 'localAdmin', 'x-test-firm-id': '' });
+
+            expect(res.status).toBe(403);
+            expect(mockListFirmCredits).not.toHaveBeenCalled();
         });
     });
 
@@ -377,6 +442,39 @@ describe('Firms Routes', () => {
                 .send({ name: 'Existing' });
 
             expect(res.status).toBe(400);
+        });
+    });
+
+    describe('POST /api/firms/:id/credits', () => {
+        it('should add credits for a super admin', async () => {
+            mockAddFirmCredits.mockResolvedValue({ id: 'f-1', name: 'Firm A', credits: 1300 });
+
+            const res = await request(app)
+                .post('/api/firms/f-1/credits')
+                .set(authHeader)
+                .send({ amount: 300 });
+
+            expect(res.status).toBe(200);
+            expect(res.body.credits).toBe(1300);
+            expect(mockAddFirmCredits).toHaveBeenCalledWith('f-1', 300, 'user-123');
+        });
+
+        it('should reject invalid amounts', async () => {
+            const res = await request(app)
+                .post('/api/firms/f-1/credits')
+                .set(authHeader)
+                .send({ amount: 0 });
+
+            expect(res.status).toBe(400);
+        });
+
+        it('should reject local admins', async () => {
+            const res = await request(app)
+                .post('/api/firms/f-1/credits')
+                .set({ ...authHeader, 'x-test-role': 'localAdmin' })
+                .send({ amount: 100 });
+
+            expect(res.status).toBe(403);
         });
     });
 

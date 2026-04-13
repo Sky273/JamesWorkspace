@@ -53,8 +53,8 @@ function matchesTemplateSearch(template: Template, rawSearch: string): boolean {
     .some((value) => value.toLowerCase().includes(normalizedSearch));
 }
 
-export function useTemplatesDashboard() {
-  const refreshConsumerId = 'templates-page';
+export function useTemplatesDashboard(options: { embedded?: boolean } = {}) {
+  const refreshConsumerId = options.embedded ? 'admin-workspace:templates-page' : 'templates-page';
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
@@ -103,8 +103,8 @@ export function useTemplatesDashboard() {
     if (navigationState?.createdTemplate) {
       setTotalCount((currentTotal) => currentTotal + 1);
     }
-    navigate(location.pathname, { replace: true, state: null });
-  }, [location.pathname, location.state, navigate]);
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+  }, [location.pathname, location.search, location.state, navigate]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -182,7 +182,7 @@ export function useTemplatesDashboard() {
 
   useScopedViewRefresh({
     consumerId: refreshConsumerId,
-    scopes: ['templates'],
+    scopes: ['templates', 'administration'],
     onRefresh: () => {
       void fetchTemplates({ clearPendingTemplate: true, forceRefresh: true });
     },
@@ -275,8 +275,8 @@ export function useTemplatesDashboard() {
     fetchTemplates,
     refreshTemplates,
     filteredTemplates,
-    goToEditTemplate: (templateId: string) => navigate(`/templates/edit/${templateId}`),
-    goToNewTemplate: () => navigate('/templates/new'),
+    goToEditTemplate: (templateId: string) => navigate(`/admin/templates/edit/${templateId}`),
+    goToNewTemplate: () => navigate('/admin/templates/new'),
     goToPage,
     handleConfirmDelete,
     isDeleteModalOpen,

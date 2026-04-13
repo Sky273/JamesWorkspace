@@ -88,6 +88,7 @@ export function UsersManagementToolbar({
   activeTab,
   canManageFirms,
   firmsCount,
+  hideTabs = false,
   onCreate,
   onRefresh,
   onResetSearch,
@@ -99,6 +100,7 @@ export function UsersManagementToolbar({
   activeTab: UsersManagementTab;
   canManageFirms: boolean;
   firmsCount: number;
+  hideTabs?: boolean;
   onCreate: () => void;
   onRefresh: () => Promise<void>;
   onResetSearch: () => void;
@@ -112,10 +114,12 @@ export function UsersManagementToolbar({
   return (
     <div className="section-shell mb-6 rounded-[2rem]">
       <div className="flex flex-col border-b border-[var(--cv-outline)] p-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex gap-4 mb-4 md:mb-0">
-          <button onClick={() => onTabChange('users')} className={`app-tab-button ${activeTab === 'users' ? 'app-tab-button-active' : ''}`}><UsersIcon className="w-5 h-5" />{t('users.management.tabs.users')} ({usersCount})</button>
-          {canManageFirms ? <button onClick={() => onTabChange('firms')} className={`app-tab-button ${activeTab === 'firms' ? 'app-tab-button-active' : ''}`}><BuildingOfficeIcon className="w-5 h-5" />{t('users.management.tabs.firms')} ({firmsCount})</button> : null}
-        </div>
+        {!hideTabs ? (
+          <div className="flex gap-4 mb-4 md:mb-0">
+            <button onClick={() => onTabChange('users')} className={`app-tab-button ${activeTab === 'users' ? 'app-tab-button-active' : ''}`}><UsersIcon className="w-5 h-5" />{t('users.management.tabs.users')} ({usersCount})</button>
+            {canManageFirms ? <button onClick={() => onTabChange('firms')} className={`app-tab-button ${activeTab === 'firms' ? 'app-tab-button-active' : ''}`}><BuildingOfficeIcon className="w-5 h-5" />{t('users.management.tabs.firms')} ({firmsCount})</button> : null}
+          </div>
+        ) : <div />}
         <div className="flex gap-2">
           <button
             onClick={() => void onRefresh()}
@@ -162,20 +166,19 @@ export function UsersResults({
   const { t } = useTranslation();
 
   return (
-    <>
-      <PaginationPair
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalCount={totalCount}
-        pageSize={USERS_PAGE_SIZE}
-        onPageChange={onPageChange}
-        loading={loading}
-        itemName={t('users.management.results')}
-      />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <PaginationPair
+      currentPage={currentPage}
+      totalPages={totalPages}
+      totalCount={totalCount}
+      pageSize={USERS_PAGE_SIZE}
+      onPageChange={onPageChange}
+      loading={loading}
+      itemName={t('users.management.results')}
+    >
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         <UsersResultsGrid users={users} onDelete={onDelete} onEdit={onEdit} onPassword={onPassword} />
       </div>
-    </>
+    </PaginationPair>
   );
 }
 
@@ -203,19 +206,18 @@ export function FirmsResults({
   const { t } = useTranslation();
 
   return (
-    <>
-      <PaginationPair
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalCount={totalCount}
-        pageSize={USERS_PAGE_SIZE}
-        onPageChange={onPageChange}
-        loading={loading}
-        itemName={t('users.management.firmsResults')}
-      />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <PaginationPair
+      currentPage={currentPage}
+      totalPages={totalPages}
+      totalCount={totalCount}
+      pageSize={USERS_PAGE_SIZE}
+      onPageChange={onPageChange}
+      loading={loading}
+      itemName={t('users.management.firmsResults')}
+    >
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         <FirmsResultsGrid firms={firms} users={users} onDelete={onDelete} onEdit={onEdit} />
       </div>
-    </>
+    </PaginationPair>
   );
 }

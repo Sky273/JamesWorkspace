@@ -17,7 +17,15 @@ const FirmFormModal = lazy(() => import('../components/UsersManagement/FirmFormM
 const PasswordModal = lazy(() => import('../components/UsersManagement/PasswordModal'));
 const UserFormModal = lazy(() => import('../components/UsersManagement/UserFormModal'));
 
-const UsersManagement = (): JSX.Element => {
+const UsersManagement = ({
+  embedded = false,
+  forcedTab,
+  hideTabSelector = false,
+}: {
+  embedded?: boolean;
+  forcedTab?: 'users' | 'firms';
+  hideTabSelector?: boolean;
+} = {}): JSX.Element => {
   const { t } = useTranslation();
   const {
     activeTab,
@@ -64,7 +72,16 @@ const UsersManagement = (): JSX.Element => {
     usersPage,
     usersTotalCount,
     usersTotalPages,
-  } = useUsersManagementDashboard();
+  } = useUsersManagementDashboard({ embedded, forcedTab });
+
+  const effectiveTab = forcedTab || activeTab;
+
+  const setManagementTab = (nextTab: 'users' | 'firms') => {
+    if (forcedTab) {
+      return;
+    }
+    setActiveTab(nextTab);
+  };
 
   if (loading) {
     return <UsersManagementLoadingState />;
@@ -75,24 +92,25 @@ const UsersManagement = (): JSX.Element => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="cv-surface app-page-shell"
+      className={embedded ? 'space-y-6' : 'cv-surface app-page-shell'}
     >
-      <UsersManagementHeader />
+      {!embedded ? <UsersManagementHeader /> : null}
       <UsersManagementStatsCards stats={stats} showFirmsStats={canManageFirms} />
       <UsersManagementToolbar
-        activeTab={activeTab}
+        activeTab={effectiveTab}
         canManageFirms={canManageFirms}
         firmsCount={firms.length}
-        onCreate={activeTab === 'users' ? openCreateUser : openCreateFirm}
+        hideTabs={hideTabSelector || Boolean(forcedTab)}
+        onCreate={effectiveTab === 'users' ? openCreateUser : openCreateFirm}
         onRefresh={fetchData}
         onResetSearch={resetSearch}
         onSearchChange={setSearchTerm}
-        onTabChange={setActiveTab}
+        onTabChange={setManagementTab}
         searchTerm={searchTerm}
         usersCount={users.length}
       />
 
-      {activeTab === 'users' ? (
+      {effectiveTab === 'users' ? (
         <UsersResults
           currentPage={usersPage}
           loading={loading}

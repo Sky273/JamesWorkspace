@@ -1,0 +1,70 @@
+{
+  "firmCredits": {
+    "title": "Firm credits",
+    "subtitle": "Track the credits available per firm and adjust them from super administration.",
+    "toolbarTitle": "Search and controls",
+    "searchPlaceholder": "Search a firm...",
+    "results": "firms",
+    "currentBalance": "Current balance",
+    "statusLabel": "Status",
+    "addCredits": "Add credits",
+    "access": {
+      "superAdminTitle": "Global control",
+      "superAdminDescription": "You can review every firm and top up credits immediately when operations require it.",
+      "localAdminTitle": "Your firm overview",
+      "localAdminDescription": "You can review your firm balance. Credit top-ups remain restricted to the super administrator."
+    },
+    "card": {
+      "consumed": "Consumed credits",
+      "added": "Added credits",
+      "lastActivity": "Last activity",
+      "topConsumers": "Usage by user",
+      "recentActivity": "Recent activity",
+      "noConsumption": "No consumption recorded yet",
+      "noActivity": "No activity recorded yet",
+      "userActions": "{{count}} AI actions"
+    },
+    "empty": {
+      "title": "No firms to display",
+      "description": "No firm matches the current search, or no firm is available yet."
+    },
+    "stats": {
+      "totalFirms": "Visible firms",
+      "visibleCredits": "Visible credits",
+      "visibleCreditsHelper": "Sum of credits currently displayed on this page.",
+      "consumedCredits": "Consumed credits",
+      "consumedCreditsHelper": "Sum of AI credits consumed by the firms currently displayed.",
+      "averageCredits": "Average credits",
+      "defaultCreditsHelper": "Default grant per firm: {{value}} credits."
+    },
+    "modal": {
+      "title": "Add credits",
+      "subtitle": "Firm: {{name}}",
+      "amountLabel": "Credits amount to add",
+      "currentBalance": "Balance before top-up",
+      "previewBalance": "Balance after top-up: {{value}}",
+      "confirm": "Add credits"
+    },
+    "messages": {
+      "errorLoading": "Failed to load firm credits",
+      "invalidAmount": "Amount must be a positive integer",
+      "creditsAdded": "{{amount}} credits added to {{name}}",
+      "errorAddingCredits": "Failed to add credits"
+    },
+    "actions": {
+      "firm.initial_grant": "Initial grant",
+      "firm.credit_grant": "Manual top-up",
+      "credit.refund": "Refund",
+      "chatbot.message": "Chatbot",
+      "resume.ai_modify": "Resume edit",
+      "template.extract": "Template extraction",
+      "resume.analysis": "Resume analysis",
+      "resume.improvement": "Resume improvement",
+      "resume.adaptation": "Resume adaptation",
+      "resume.match": "Resume matching",
+      "profile.search": "Profile search",
+      "profile.analysis": "Profile analysis",
+      "default": "AI action"
+    }
+  }
+}

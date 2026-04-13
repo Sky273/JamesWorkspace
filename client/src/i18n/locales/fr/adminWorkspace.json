@@ -1,0 +1,18 @@
+{
+  "adminWorkspace": {
+    "title": "Administration",
+    "subtitle": "Pilotez les cabinets, utilisateurs, contenus et crédits depuis un seul espace de travail.",
+    "eyebrow": "Espace transversal",
+    "description": "Cette vue regroupe les principaux écrans d'administration dans une navigation par onglets, afin de réduire les allers-retours et garder un contexte de gestion cohérent.",
+    "tabLabel": "Rubrique",
+    "openStandalone": "Ouvrir la page dédiée",
+    "tabs": {
+      "firms": "Cabinets",
+      "users": "Utilisateurs",
+      "templates": "Modèles de CV",
+      "emailTemplates": "Templates email",
+      "tags": "Étiquettes",
+      "firmCredits": "Crédits cabinet"
+    }
+  }
+}

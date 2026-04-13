@@ -8,6 +8,8 @@ import AuthMessages from "./auth.json";
 import AboutMessages from "./about.json";
 import ResumeMessages from "./resume.json";
 import UsersMessages from "./users.json";
+import FirmCreditsMessages from "./firmCredits.json";
+import AdminWorkspaceMessages from "./adminWorkspace.json";
 import ErrorsMessages from "./errors.json";
 import HomeMessages from "./home.json";
 import ResumesMessages from "./resumes.json";
@@ -55,6 +57,8 @@ const frMessages = {
   ...AboutMessages,
   ...ResumeMessages,
   ...UsersMessages,
+  ...FirmCreditsMessages,
+  ...AdminWorkspaceMessages,
   ...ErrorsMessages,
   ...HomeMessages,
   ...ResumesMessages,

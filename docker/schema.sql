@@ -440,6 +440,7 @@ CREATE TABLE public.firms (
     id uuid DEFAULT public.uuid_generate_v4() CONSTRAINT customers_id_not_null NOT NULL,
     name character varying(255) CONSTRAINT customers_name_not_null NOT NULL,
     status character varying(50) DEFAULT 'active'::character varying,
+    credits integer DEFAULT 1000 NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     logo_url text,
@@ -468,6 +469,25 @@ COMMENT ON COLUMN public.firms.logo_data IS 'Binary data of the firm logo';
 --
 
 COMMENT ON COLUMN public.firms.logo_mime_type IS 'MIME type of the logo (e.g., image/png, image/jpeg)';
+
+
+--
+-- Name: firm_credit_transactions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.firm_credit_transactions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    firm_id uuid NOT NULL,
+    user_id uuid,
+    action_type character varying(100) NOT NULL,
+    credits_delta integer NOT NULL,
+    balance_after integer NOT NULL,
+    metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+    related_transaction_id uuid,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT firm_credit_transactions_pkey PRIMARY KEY (id),
+    CONSTRAINT firm_credit_transactions_credits_delta_check CHECK ((credits_delta <> 0))
+);
 
 
 --
@@ -581,12 +601,32 @@ CREATE TABLE public.llm_settings (
     dpo_email character varying(255) DEFAULT ''::character varying,
     dpo_phone character varying(50) DEFAULT ''::character varying,
     webgl_enabled character varying(3) DEFAULT 'on'::character varying,
+    firm_initial_credits integer DEFAULT 1000 NOT NULL,
+    ai_credit_chatbot_message integer DEFAULT 1 NOT NULL,
+    ai_credit_resume_ai_modify integer DEFAULT 5 NOT NULL,
+    ai_credit_template_extract integer DEFAULT 15 NOT NULL,
+    ai_credit_resume_analysis integer DEFAULT 25 NOT NULL,
+    ai_credit_resume_improvement integer DEFAULT 75 NOT NULL,
+    ai_credit_resume_adaptation integer DEFAULT 50 NOT NULL,
+    ai_credit_resume_match integer DEFAULT 8 NOT NULL,
+    ai_credit_profile_search integer DEFAULT 12 NOT NULL,
+    ai_credit_profile_analysis integer DEFAULT 25 NOT NULL,
     CONSTRAINT llm_settings_ats_weight_check CHECK (((ats_weight >= 0) AND (ats_weight <= 100))),
+    CONSTRAINT llm_settings_ai_credit_chatbot_message_check CHECK ((ai_credit_chatbot_message >= 0)),
+    CONSTRAINT llm_settings_ai_credit_profile_analysis_check CHECK ((ai_credit_profile_analysis >= 0)),
+    CONSTRAINT llm_settings_ai_credit_profile_search_check CHECK ((ai_credit_profile_search >= 0)),
+    CONSTRAINT llm_settings_ai_credit_resume_adaptation_check CHECK ((ai_credit_resume_adaptation >= 0)),
+    CONSTRAINT llm_settings_ai_credit_resume_ai_modify_check CHECK ((ai_credit_resume_ai_modify >= 0)),
+    CONSTRAINT llm_settings_ai_credit_resume_analysis_check CHECK ((ai_credit_resume_analysis >= 0)),
+    CONSTRAINT llm_settings_ai_credit_resume_improvement_check CHECK ((ai_credit_resume_improvement >= 0)),
+    CONSTRAINT llm_settings_ai_credit_resume_match_check CHECK ((ai_credit_resume_match >= 0)),
+    CONSTRAINT llm_settings_ai_credit_template_extract_check CHECK ((ai_credit_template_extract >= 0)),
     CONSTRAINT llm_settings_chatbot_enabled_check CHECK (((chatbot_enabled)::text = ANY (ARRAY[('on'::character varying)::text, ('off'::character varying)::text]))),
     CONSTRAINT llm_settings_cv_mode_check CHECK (((cv_mode)::text = ANY (ARRAY[('nominative'::character varying)::text, ('anonymous'::character varying)::text]))),
     CONSTRAINT llm_settings_education_weight_check CHECK (((education_weight >= 0) AND (education_weight <= 100))),
     CONSTRAINT llm_settings_executive_summary_weight_check CHECK (((executive_summary_weight >= 0) AND (executive_summary_weight <= 100))),
     CONSTRAINT llm_settings_experience_weight_check CHECK (((experience_weight >= 0) AND (experience_weight <= 100))),
+    CONSTRAINT llm_settings_firm_initial_credits_check CHECK ((firm_initial_credits >= 0)),
     CONSTRAINT llm_settings_hobbies_languages_weight_check CHECK (((hobbies_languages_weight >= 0) AND (hobbies_languages_weight <= 100))),
     CONSTRAINT llm_settings_profile_matching_local_coverage_multiplier_check CHECK (((profile_matching_local_coverage_multiplier >= 0) AND (profile_matching_local_coverage_multiplier <= 100))),
     CONSTRAINT llm_settings_profile_matching_local_industry_weight_check CHECK (((profile_matching_local_industry_weight >= 0) AND (profile_matching_local_industry_weight <= 100))),
@@ -2204,6 +2244,27 @@ CREATE INDEX idx_firms_name ON public.firms USING btree (name);
 
 
 --
+-- Name: idx_firm_credit_transactions_action_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_firm_credit_transactions_action_type ON public.firm_credit_transactions USING btree (action_type);
+
+
+--
+-- Name: idx_firm_credit_transactions_firm_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_firm_credit_transactions_firm_created_at ON public.firm_credit_transactions USING btree (firm_id, created_at DESC);
+
+
+--
+-- Name: idx_firm_credit_transactions_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_firm_credit_transactions_user_id ON public.firm_credit_transactions USING btree (user_id);
+
+
+--
 -- Name: idx_firms_status; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3137,6 +3198,30 @@ ALTER TABLE ONLY public.email_templates
 
 ALTER TABLE ONLY public.firm_gdpr_mail_tokens
     ADD CONSTRAINT firm_gdpr_mail_tokens_firm_id_fkey FOREIGN KEY (firm_id) REFERENCES public.firms(id) ON DELETE CASCADE;
+
+
+--
+-- Name: firm_credit_transactions firm_credit_transactions_firm_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.firm_credit_transactions
+    ADD CONSTRAINT firm_credit_transactions_firm_id_fkey FOREIGN KEY (firm_id) REFERENCES public.firms(id) ON DELETE CASCADE;
+
+
+--
+-- Name: firm_credit_transactions firm_credit_transactions_related_transaction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.firm_credit_transactions
+    ADD CONSTRAINT firm_credit_transactions_related_transaction_id_fkey FOREIGN KEY (related_transaction_id) REFERENCES public.firm_credit_transactions(id) ON DELETE SET NULL;
+
+
+--
+-- Name: firm_credit_transactions firm_credit_transactions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.firm_credit_transactions
+    ADD CONSTRAINT firm_credit_transactions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
 
 
 --

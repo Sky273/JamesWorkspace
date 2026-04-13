@@ -66,6 +66,28 @@ interface SanitizedTemplateData {
     firm_id?: string | null;
 }
 
+const getRecordValue = <T>(template: Partial<Template> | null | undefined, key: string): T | undefined => (
+    (template as Record<string, unknown> | undefined)?.[key] as T | undefined
+);
+
+const normalizeTemplate = (template: Partial<Template> | null | undefined): Template => ({
+    id: template?.id || '',
+    Name: template?.Name || getRecordValue<string>(template, 'name') || '',
+    Description: template?.Description || getRecordValue<string>(template, 'description'),
+    HeaderContent: template?.HeaderContent || getRecordValue<string>(template, 'headerContent'),
+    TemplateContent: template?.TemplateContent || getRecordValue<string>(template, 'templateContent') || '',
+    FooterContent: template?.FooterContent || getRecordValue<string>(template, 'footerContent'),
+    FooterHeight: template?.FooterHeight || getRecordValue<number>(template, 'footerHeight'),
+    Status: template?.Status || getRecordValue<string>(template, 'status') || 'Active',
+    Tags: template?.Tags || getRecordValue<string[]>(template, 'tags'),
+    Popular: template?.Popular ?? getRecordValue<boolean>(template, 'popular'),
+    Stylesheet: template?.Stylesheet || getRecordValue<string>(template, 'stylesheet'),
+    FirmId: template?.FirmId || getRecordValue<string>(template, 'firmId') || template?.firm_id,
+    firm_id: template?.firm_id || getRecordValue<string>(template, 'firmId') || template?.FirmId,
+    createdAt: template?.createdAt || getRecordValue<string>(template, 'created_at'),
+    updatedAt: template?.updatedAt || getRecordValue<string>(template, 'updated_at'),
+});
+
 const validateTemplateData = (data: TemplateData): void => {
     if (!data.name || typeof data.name !== 'string') {
         throw new Error('Name is a required field and must be a string.');
@@ -215,7 +237,7 @@ export const templateService = {
             if (!response.ok) {
                 throw new Error('Failed to fetch template');
             }
-            return await response.json();
+            return normalizeTemplate(await response.json());
         } catch (error) {
             logger.error('Error fetching template:', error);
             throw error;
@@ -231,7 +253,7 @@ export const templateService = {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Invalid template data. Please check all required fields are filled correctly.');
             }
-            return await response.json();
+            return normalizeTemplate(await response.json());
         } catch (error) {
             logger.error('Error creating template:', error);
             throw error;
@@ -247,7 +269,7 @@ export const templateService = {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Invalid template data. Please check all required fields are filled correctly.');
             }
-            return await response.json();
+            return normalizeTemplate(await response.json());
         } catch (error) {
             logger.error('Error updating template:', error);
             throw error;
@@ -275,7 +297,7 @@ export const templateService = {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Failed to duplicate template');
             }
-            return await response.json();
+            return normalizeTemplate(await response.json());
         } catch (error) {
             logger.error('Error duplicating template:', error);
             throw error;

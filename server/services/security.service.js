@@ -252,6 +252,9 @@ export function getRequestMetadata(req) {
         method: req.method,
         userAgent: req.get('user-agent'),
         userId: req.user?.id || null,
-        email: req.user?.email || null
+        email: req.user?.email || null,
+        userName: req.user?.name || null,
+        firmId: req.user?.firmId || req.user?.firm_id || null,
+        firmName: req.user?.firmName || req.user?.firm || null
     };
 }

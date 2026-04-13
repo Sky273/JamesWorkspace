@@ -116,8 +116,8 @@ function _cleanTagsForCategory(tags: string[], softClean = false): string[] {
   return [...new Set(allCleaned)].sort();
 }
 
-const TagsManagement = (): JSX.Element => {
-  const refreshConsumerId = 'tags-management';
+const TagsManagement = ({ embedded = false }: { embedded?: boolean } = {}): JSX.Element => {
+  const refreshConsumerId = embedded ? 'admin-workspace:tags-management' : 'tags-management';
   const { t } = useTranslation();
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'admin';
@@ -168,7 +168,7 @@ const TagsManagement = (): JSX.Element => {
 
   useScopedViewRefresh({
     consumerId: refreshConsumerId,
-    scopes: ['tags'],
+    scopes: ['tags', 'administration'],
     onRefresh: () => {
       void fetchTags(true);
     },
@@ -296,7 +296,7 @@ const TagsManagement = (): JSX.Element => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="cv-surface app-page-shell max-w-6xl"
+        className={embedded ? 'max-w-6xl' : 'cv-surface app-page-shell max-w-6xl'}
       >
         <div className="section-shell rounded-[2rem] p-8">
           <div className="flex items-start gap-4">
@@ -325,9 +325,9 @@ const TagsManagement = (): JSX.Element => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45 }}
-      className="cv-surface app-page-shell max-w-6xl"
+      className={embedded ? 'max-w-6xl space-y-6' : 'cv-surface app-page-shell max-w-6xl'}
     >
-      <PageHeader title={t('tags.title')} subtitle={t('tags.subtitle')} />
+      {!embedded ? <PageHeader title={t('tags.title')} subtitle={t('tags.subtitle')} /> : null}
 
       <div className="space-y-6">
         {loadError && (

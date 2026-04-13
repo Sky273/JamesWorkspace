@@ -109,19 +109,19 @@ export function AdaptationsListPanel({
         onPageChange={goToPage}
         loading={loading}
         itemName={t('adaptations.results')}
-      />
-
-      <AdaptationsGrid
-        adaptations={adaptations}
-        filterStatus={filterStatus}
-        getMissionTitle={getMissionTitle}
-        getResumeName={getResumeName}
-        loading={loading}
-        onDelete={onDelete}
-        onExport={onExport}
-        onOpen={onOpen}
-        searchTerm={searchTerm}
-      />
+      >
+        <AdaptationsGrid
+          adaptations={adaptations}
+          filterStatus={filterStatus}
+          getMissionTitle={getMissionTitle}
+          getResumeName={getResumeName}
+          loading={loading}
+          onDelete={onDelete}
+          onExport={onExport}
+          onOpen={onOpen}
+          searchTerm={searchTerm}
+        />
+      </PaginationPair>
     </>
   );
 }

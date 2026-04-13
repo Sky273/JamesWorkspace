@@ -42,6 +42,10 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+vi.mock('../../services/aiCredits.service.js', () => ({
+    runAiActionWithCredits: (_options, action) => action()
+}));
+
 import { executeResumeAdaptation } from '../../services/resumeAdaptation.service.js';
 
 describe('resumeAdaptation.service E2E mocked mode', () => {

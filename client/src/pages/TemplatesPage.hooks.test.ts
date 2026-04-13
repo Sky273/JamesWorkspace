@@ -48,6 +48,7 @@ describe('useTemplatesDashboard', () => {
     vi.clearAllMocks();
     useLocationMock.mockReturnValue({
       pathname: '/templates',
+      search: '',
       state: null,
     });
     getTemplatesPaginatedMock.mockResolvedValue({
@@ -68,6 +69,7 @@ describe('useTemplatesDashboard', () => {
   it('keeps a newly created template visible when returning to the list view', async () => {
     useLocationMock.mockReturnValue({
       pathname: '/templates',
+      search: '',
       state: {
         createdTemplate: {
           id: 'tpl-new',
@@ -103,6 +105,7 @@ describe('useTemplatesDashboard', () => {
   it('keeps an updated template visible after a refresh with an active search term', async () => {
     useLocationMock.mockReturnValue({
       pathname: '/templates',
+      search: '',
       state: {
         updatedTemplate: {
           id: 'tpl-updated',
@@ -159,5 +162,27 @@ describe('useTemplatesDashboard', () => {
     await waitFor(() => {
       expect(result.current.filteredTemplates.some((template) => template.id === 'tpl-updated')).toBe(true);
     });
+  });
+
+  it('preserves the admin tab query string when clearing navigation state', async () => {
+    useLocationMock.mockReturnValue({
+      pathname: '/admin',
+      search: '?tab=templates',
+      state: {
+        createdTemplate: {
+          id: 'tpl-admin',
+          Name: 'Admin Template',
+          Status: 'active',
+        },
+      },
+    });
+
+    const { result } = renderHook(() => useTemplatesDashboard({ embedded: true }));
+
+    await waitFor(() => {
+      expect(result.current.filteredTemplates[0]?.id).toBe('tpl-admin');
+    });
+
+    expect(navigateMock).toHaveBeenCalledWith('/admin?tab=templates', { replace: true, state: null });
   });
 });

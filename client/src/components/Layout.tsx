@@ -85,6 +85,7 @@ const Layout = (): JSX.Element => {
   };
 
   const isResumesRoute = location.pathname === '/resumes';
+  const isAdminWorkspaceRoute = location.pathname === '/admin';
   const isMissionsRoute = location.pathname === '/missions';
   const editorialRoutes = [
     '/resumes',
@@ -94,12 +95,9 @@ const Layout = (): JSX.Element => {
     '/upload',
     '/batch-upload',
     '/clients',
-    '/templates',
-    '/dashboard/tags',
-    '/dashboard/users',
+    '/admin',
     '/dashboard/security-logs',
     '/dashboard/metrics',
-    '/email-templates',
     '/dashboard/gdpr-audit',
     '/dashboard/backup',
     '/settings',
@@ -109,7 +107,7 @@ const Layout = (): JSX.Element => {
     '/profile',
   ];
   const isEditorialMigratedRoute = editorialRoutes.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`));
-  const editorialRouteClassName = isResumesRoute
+  const editorialRouteClassName = isResumesRoute || isAdminWorkspaceRoute
     ? ' resumes-editorial-shell'
     : isMissionsRoute
       ? ' missions-editorial-shell'

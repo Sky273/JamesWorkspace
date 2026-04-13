@@ -122,7 +122,7 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
     onClose();
     
     // Navigate to new template page
-    navigate('/templates/new?fromExtraction=true');
+    navigate('/admin/templates/new?fromExtraction=true');
   };
 
   useEffect(() => {

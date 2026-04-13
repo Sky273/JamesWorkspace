@@ -123,7 +123,7 @@ describe('ExtractTemplateModal', () => {
     expect(JSON.parse(sessionStorage.getItem('extractedTemplate') || '{}')).toMatchObject({
       name: 'Template CV',
     });
-    expect(mockNavigate).toHaveBeenCalledWith('/templates/new?fromExtraction=true');
+    expect(mockNavigate).toHaveBeenCalledWith('/admin/templates/new?fromExtraction=true');
   });
 
   it('affiche une erreur d’extraction et permet de revenir à l’upload', async () => {

@@ -3,12 +3,15 @@
  * Manage email templates for CV submissions.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
+import { useScopedViewRefresh } from '../../hooks/useScopedViewRefresh';
+import { markEmailTemplatesViewDirty } from '../../utils/viewRefreshScopes';
+import PaginationPair from '../../components/page/PaginationPair';
 import PageHeader from '../../components/page/PageHeader';
 import type { EmailTemplate, EmailTemplateKeywords } from '../../types/entities';
 import emailTemplateService from '../../services/emailTemplateService';
@@ -34,7 +37,9 @@ const EMPTY_FORM: EmailTemplateFormState = {
   isDefault: false,
 };
 
-const EmailTemplatesPage = (): JSX.Element => {
+const EMAIL_TEMPLATES_PAGE_SIZE = 9;
+
+const EmailTemplatesPage = ({ embedded = false }: { embedded?: boolean } = {}): JSX.Element => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'admin';
@@ -49,6 +54,7 @@ const EmailTemplatesPage = (): JSX.Element => {
   );
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<EmailTemplateFormState>(EMPTY_FORM);
+  const [page, setPage] = useState(1);
   const [previewHtml, setPreviewHtml] = useState('');
   const [previewSubject, setPreviewSubject] = useState('');
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -88,6 +94,24 @@ const EmailTemplatesPage = (): JSX.Element => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useScopedViewRefresh({
+    consumerId: embedded ? 'admin-workspace:email-templates-page' : 'email-templates-page',
+    scopes: ['emailTemplates', 'administration'],
+    onRefresh: () => {
+      void loadData({ forceRefresh: true });
+    },
+  });
+
+  const totalPages = Math.max(1, Math.ceil(templates.length / EMAIL_TEMPLATES_PAGE_SIZE));
+  const paginatedTemplates = useMemo(() => {
+    const startIndex = (page - 1) * EMAIL_TEMPLATES_PAGE_SIZE;
+    return templates.slice(startIndex, startIndex + EMAIL_TEMPLATES_PAGE_SIZE);
+  }, [page, templates]);
+
+  useEffect(() => {
+    setPage((currentPage) => Math.min(currentPage, totalPages));
+  }, [totalPages]);
 
   const updateForm = useCallback(
     (field: keyof EmailTemplateFormState, value: string | boolean) => {
@@ -189,6 +213,7 @@ const EmailTemplatesPage = (): JSX.Element => {
       templatesRequestIdRef.current += 1;
       const duplicatedTemplate = await emailTemplateService.duplicateTemplate(duplicateTemplateTarget.id, duplicateFirmId);
       setTemplates((currentTemplates) => [duplicatedTemplate, ...currentTemplates]);
+      markEmailTemplatesViewDirty();
       toast.success(t('emailTemplates.success.duplicated'));
       closeDuplicateModal();
     } catch {
@@ -211,6 +236,7 @@ const EmailTemplatesPage = (): JSX.Element => {
         templatesRequestIdRef.current += 1;
         await emailTemplateService.deleteTemplate(template.id);
         setTemplates((currentTemplates) => currentTemplates.filter((currentTemplate) => currentTemplate.id !== template.id));
+        markEmailTemplatesViewDirty();
         toast.success(t('emailTemplates.success.deleted'));
         void loadData({ forceRefresh: true });
       } catch {
@@ -240,6 +266,8 @@ const EmailTemplatesPage = (): JSX.Element => {
         templatesRequestIdRef.current += 1;
         const createdTemplate = await emailTemplateService.createTemplate(data);
         setTemplates((currentTemplates) => [createdTemplate, ...currentTemplates]);
+        setPage(1);
+        markEmailTemplatesViewDirty();
         toast.success(t('emailTemplates.success.created'));
       } else if (modalMode === 'edit' && selectedTemplate) {
         templatesRequestIdRef.current += 1;
@@ -247,6 +275,7 @@ const EmailTemplatesPage = (): JSX.Element => {
         setTemplates((currentTemplates) => currentTemplates.map((currentTemplate) => (
           currentTemplate.id === selectedTemplate.id ? updatedTemplate : currentTemplate
         )));
+        markEmailTemplatesViewDirty();
         toast.success(t('emailTemplates.success.updated'));
       }
 
@@ -288,8 +317,8 @@ const EmailTemplatesPage = (): JSX.Element => {
 
   if (loading) {
     return (
-      <div className="cv-surface app-page-shell max-w-6xl">
-        <PageHeader title={t('emailTemplates.title')} subtitle={t('emailTemplates.subtitle')} />
+      <div className={embedded ? 'max-w-6xl' : 'cv-surface app-page-shell max-w-6xl'}>
+        {!embedded ? <PageHeader title={t('emailTemplates.title')} subtitle={t('emailTemplates.subtitle')} /> : null}
         <div className="section-shell rounded-[2rem] p-8">
           <div className="flex items-start gap-4">
             <ArrowPathIcon className="mt-1 h-6 w-6 animate-spin text-primary-500" />
@@ -315,12 +344,14 @@ const EmailTemplatesPage = (): JSX.Element => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45 }}
-      className="cv-surface app-page-shell max-w-6xl"
+      className={embedded ? 'max-w-6xl space-y-6' : 'cv-surface app-page-shell max-w-6xl'}
     >
-      <PageHeader
-        title={t('emailTemplates.title')}
-        subtitle={t('emailTemplates.subtitle')}
-      />
+      {!embedded ? (
+        <PageHeader
+          title={t('emailTemplates.title')}
+          subtitle={t('emailTemplates.subtitle')}
+        />
+      ) : null}
 
       <div className="space-y-6">
         <div className="section-shell rounded-[2rem] p-6 sm:p-7">
@@ -364,25 +395,35 @@ const EmailTemplatesPage = (): JSX.Element => {
         )}
 
         <div className="section-shell rounded-[2rem] p-6">
-          <EmailTemplatesList
-            canDuplicate={isSuperAdmin}
-            firmLabel={t('emailTemplates.firmLabel')}
-            globalFirmLabel={t('emailTemplates.globalFirm')}
-            templates={templates}
+          <PaginationPair
+            currentPage={page}
+            totalPages={totalPages}
+            totalCount={templates.length}
+            pageSize={EMAIL_TEMPLATES_PAGE_SIZE}
+            onPageChange={setPage}
             loading={loading}
-            noTemplatesLabel={t('emailTemplates.noTemplates')}
-            systemTemplateLabel={t('emailTemplates.systemTemplate')}
-            defaultTemplateLabel={t('emailTemplates.defaultTemplate')}
-            subjectLabel={t('emailTemplates.subjectLabel')}
-            previewLabel={t('emailTemplates.preview')}
-            editLabel={t('common.edit')}
-            duplicateLabel={t('emailTemplates.duplicate')}
-            deleteLabel={t('common.delete')}
-            onPreview={handlePreview}
-            onEdit={handleEdit}
-            onDuplicate={handleDuplicate}
-            onDelete={handleDelete}
-          />
+            itemName={t('emailTemplates.stats.total').toLowerCase()}
+          >
+            <EmailTemplatesList
+              canDuplicate={isSuperAdmin}
+              firmLabel={t('emailTemplates.firmLabel')}
+              globalFirmLabel={t('emailTemplates.globalFirm')}
+              templates={paginatedTemplates}
+              loading={loading}
+              noTemplatesLabel={t('emailTemplates.noTemplates')}
+              systemTemplateLabel={t('emailTemplates.systemTemplate')}
+              defaultTemplateLabel={t('emailTemplates.defaultTemplate')}
+              subjectLabel={t('emailTemplates.subjectLabel')}
+              previewLabel={t('emailTemplates.preview')}
+              editLabel={t('common.edit')}
+              duplicateLabel={t('emailTemplates.duplicate')}
+              deleteLabel={t('common.delete')}
+              onPreview={handlePreview}
+              onEdit={handleEdit}
+              onDuplicate={handleDuplicate}
+              onDelete={handleDelete}
+            />
+          </PaginationPair>
         </div>
       </div>
 

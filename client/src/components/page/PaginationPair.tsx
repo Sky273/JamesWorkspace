@@ -1,6 +1,9 @@
+import type { ReactNode } from 'react';
+
 import Pagination from '../Pagination';
 
 interface PaginationPairProps {
+  children?: ReactNode;
   currentPage: number;
   itemName: string;
   loading: boolean;
@@ -11,6 +14,7 @@ interface PaginationPairProps {
 }
 
 export default function PaginationPair({
+  children,
   currentPage,
   itemName,
   loading,
@@ -19,8 +23,12 @@ export default function PaginationPair({
   totalCount,
   totalPages,
 }: PaginationPairProps) {
-  if (loading || totalCount === 0) {
+  if (loading) {
     return null;
+  }
+
+  if (totalCount === 0) {
+    return children ? <>{children}</> : null;
   }
 
   return (
@@ -34,6 +42,7 @@ export default function PaginationPair({
         loading={loading}
         itemName={itemName}
       />
+      {children}
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}

@@ -30,10 +30,8 @@ test.describe('Admin CRUD flows', () => {
     const updatedUserName = `${userName} Updated`;
     const userEmail = `e2e-${Date.now()}@example.com`;
 
-    await page.goto('/dashboard/users');
-    await expect(page.getByRole('heading', { name: /users|utilisateurs/i }).first()).toBeVisible();
-
-    await page.getByRole('button', { name: /firms|cabinets/i }).click();
+    await page.goto('/admin?tab=firms');
+    await expect(page).toHaveURL(/\/admin\?tab=firms$/);
     await page.getByRole('button', { name: /add firm|ajouter.*cabinet/i }).click();
     const createFirmResponsePromise = page.waitForResponse((response) => response.request().method() === 'POST' && /\/api\/firms$/.test(response.url()));
     await fieldFollowingLabel(page, /nom|name/i).fill(firmName);
@@ -69,7 +67,8 @@ test.describe('Admin CRUD flows', () => {
     await expect(deleteFirmResponse.ok()).toBeTruthy();
     await expectHiddenAfterRefresh(page, () => cardContaining(page, updatedFirmName));
 
-    await page.getByRole('button', { name: /^(utilisateurs|users)/i }).first().click();
+    await page.goto('/admin?tab=users');
+    await expect(page).toHaveURL(/\/admin\?tab=users$/);
     const resetFiltersButton = page.getByRole('button', { name: /réinitialiser|reset/i }).first();
     if (await resetFiltersButton.count()) {
       await resetFiltersButton.click();
@@ -151,8 +150,8 @@ test.describe('Admin CRUD flows', () => {
     const templateName = uniqueName('Template E2E');
     const updatedTemplateName = `${templateName} Updated`;
 
-    await page.goto('/templates');
-    await expect(page).toHaveURL(/\/templates$/);
+    await page.goto('/admin?tab=templates');
+    await expect(page).toHaveURL(/\/admin\?tab=templates$/);
     await expect(page.getByRole('button', { name: /new template|nouveau/i })).toBeVisible();
 
     await page.getByRole('button', { name: /new template|nouveau/i }).click();
@@ -168,7 +167,7 @@ test.describe('Admin CRUD flows', () => {
     const createdTemplateResponse = await createTemplateResponsePromise;
     await expect(createdTemplateResponse.ok()).toBeTruthy();
 
-    await expect(page).toHaveURL(/\/templates$/);
+    await expect(page).toHaveURL(/\/admin\?tab=templates$/);
     const templateSearch = page.getByRole('textbox').first();
     await templateSearch.fill(templateName);
     await expect.poll(async () => {
@@ -178,7 +177,7 @@ test.describe('Admin CRUD flows', () => {
       );
       return templatesLookup.data?.some((template) => template.Name === templateName) ?? false;
     }).toBe(true);
-    await expectVisibleAfterRefresh(page, () => cardContaining(page, templateName));
+    await expectVisibleAfterRefresh(page, () => page.getByText(templateName).first());
 
     const templateCard = cardContaining(page, templateName);
     await templateCard.getByRole('button', { name: EDIT_LABEL_REGEX }).click();
@@ -188,7 +187,7 @@ test.describe('Admin CRUD flows', () => {
     const updateTemplateResponse = await updateTemplateResponsePromise;
     await expect(updateTemplateResponse.ok()).toBeTruthy();
 
-    await expect(page).toHaveURL(/\/templates$/);
+    await expect(page).toHaveURL(/\/admin\?tab=templates$/);
     await templateSearch.fill(updatedTemplateName);
     await expect.poll(async () => {
       const templatesLookup = await getJsonViaApi<{ data?: Array<{ Name: string }> }>(
@@ -197,7 +196,7 @@ test.describe('Admin CRUD flows', () => {
       );
       return templatesLookup.data?.some((template) => template.Name === updatedTemplateName) ?? false;
     }).toBe(true);
-    await expectVisibleAfterRefresh(page, () => cardContaining(page, updatedTemplateName));
+    await expectVisibleAfterRefresh(page, () => page.getByText(updatedTemplateName).first());
 
     const updatedTemplateCard = cardContaining(page, updatedTemplateName);
     await updatedTemplateCard.locator(`button[title*="Delete" i], button[title*="Supprimer" i]`).click();

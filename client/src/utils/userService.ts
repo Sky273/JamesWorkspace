@@ -10,10 +10,30 @@ import logger from './logger.frontend';
 // TYPES
 // ============================================
 
-interface Firm {
+export interface Firm {
   id: string;
   name: string;
   status?: string;
+  credits?: number;
+  total_credits_consumed?: number;
+  total_credits_added?: number;
+  last_credit_activity_at?: string | null;
+  top_consumers?: Array<{
+    user_id?: string | null;
+    user_name: string;
+    credits_consumed: number;
+    action_count: number;
+    last_used_at?: string | null;
+  }>;
+  recent_credit_transactions?: Array<{
+    id: string;
+    user_id?: string | null;
+    user_name: string;
+    action_type: string;
+    credits_delta: number;
+    balance_after: number;
+    created_at: string;
+  }>;
   logo_url?: string;
   created_at?: string;
   updated_at?: string;
@@ -165,6 +185,35 @@ const userService = {
     };
   },
 
+  async getFirmCreditsPaginated({ page = 1, pageSize = 12, search = '', forceRefresh = false } = {}): Promise<PaginatedFirmsResponse> {
+    try {
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('limit', pageSize.toString());
+      if (search) params.append('search', search);
+      if (forceRefresh) params.append('refresh', '1');
+
+      const response = await fetchWithAuth(`/api/firms/credits?${params.toString()}`, createAuthOptions());
+      if (!response.ok) {
+        throw new Error('Failed to fetch firm credits');
+      }
+
+      const data = await response.json();
+      return {
+        firms: data.data || [],
+        pagination: data.pagination || {
+          page,
+          pageSize,
+          totalCount: Array.isArray(data.data) ? data.data.length : 0,
+          hasMore: false,
+        }
+      };
+    } catch (error) {
+      logger.error('Error fetching firm credits:', error);
+      throw error;
+    }
+  },
+
   async getAllUsers(): Promise<User[]> {
     try {
       const response = await fetchWithAuth('/api/users?limit=100', createAuthOptions());
@@ -313,6 +362,20 @@ const userService = {
 
   async deleteCustomer(customerId: string): Promise<{ message: string }> {
     return userService.deleteFirm(customerId);
+  },
+
+  async addFirmCredits(firmId: string, amount: number): Promise<Firm> {
+    try {
+      const response = await authPost(`/api/firms/${firmId}/credits`, { amount });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add firm credits');
+      }
+      return await response.json();
+    } catch (error) {
+      logger.error('Error adding firm credits:', error);
+      throw error;
+    }
   },
 
   async uploadFirmLogo(firmId: string, file: File): Promise<UploadLogoResponse> {

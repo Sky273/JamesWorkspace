@@ -20,7 +20,7 @@ import {
 } from './TemplatesPage.components';
 import { useTemplatesDashboard, type Template } from './TemplatesPage.hooks';
 
-const TemplatesPage = (): JSX.Element => {
+const TemplatesPage = ({ embedded = false }: { embedded?: boolean } = {}): JSX.Element => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'admin';
@@ -59,7 +59,7 @@ const TemplatesPage = (): JSX.Element => {
     templateToDelete,
     totalCount,
     totalPages,
-  } = useTemplatesDashboard();
+  } = useTemplatesDashboard({ embedded });
 
   const availableDuplicateFirms = useMemo(
     () => duplicateFirms.filter((firm) => firm.id !== duplicateTarget?.FirmId),
@@ -110,8 +110,8 @@ const TemplatesPage = (): JSX.Element => {
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="cv-surface app-page-shell">
-      <TemplatesHeader />
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className={embedded ? 'space-y-6' : 'cv-surface app-page-shell'}>
+      {!embedded ? <TemplatesHeader /> : null}
       <TemplatesStats stats={stats} />
       <TemplatesToolbar
         onCreate={goToNewTemplate}

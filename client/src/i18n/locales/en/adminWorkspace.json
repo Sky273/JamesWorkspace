@@ -1,0 +1,18 @@
+{
+  "adminWorkspace": {
+    "title": "Administration",
+    "subtitle": "Manage firms, users, content, and credits from a single workspace.",
+    "eyebrow": "Unified workspace",
+    "description": "This screen groups the main administration views behind tabs so managers can stay in one place while handling related operations.",
+    "tabLabel": "Section",
+    "openStandalone": "Open dedicated page",
+    "tabs": {
+      "firms": "Firms",
+      "users": "Users",
+      "templates": "Resume templates",
+      "emailTemplates": "Email templates",
+      "tags": "Tags",
+      "firmCredits": "Firm credits"
+    }
+  }
+}

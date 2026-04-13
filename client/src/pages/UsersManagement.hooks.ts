@@ -98,8 +98,8 @@ type FetchFirmsOptions = {
   preserveFirm?: Firm | null;
 };
 
-export function useUsersManagementDashboard() {
-  const refreshConsumerId = 'users-management';
+export function useUsersManagementDashboard(options: { embedded?: boolean; forcedTab?: UsersManagementTab } = {}) {
+  const refreshConsumerId = options.embedded ? 'admin-workspace:users-management' : 'users-management';
   const { t } = useTranslation();
   const { user } = useAuth();
   const tRef = useRef(t);
@@ -132,6 +132,7 @@ export function useUsersManagementDashboard() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedFirm, setSelectedFirm] = useState<Firm | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const effectiveActiveTab = options.forcedTab || activeTab;
   const canManageFirms = user?.role === 'admin';
   const canAssignSuperAdmin = user?.role === 'admin';
   const currentUserFirmId = user?.firmId || user?.firm_id || '';
@@ -322,7 +323,7 @@ export function useUsersManagementDashboard() {
       return;
     }
 
-    const shouldPrioritizeFirms = activeTab === 'firms' || userModalOpen || firmModalOpen;
+    const shouldPrioritizeFirms = effectiveActiveTab === 'firms' || userModalOpen || firmModalOpen;
     if (shouldPrioritizeFirms) {
       void fetchFirms();
       return;
@@ -333,7 +334,7 @@ export function useUsersManagementDashboard() {
     }, 250);
 
     return () => window.clearTimeout(deferredFetch);
-  }, [activeTab, canManageFirms, fetchFirms, firmModalOpen, userModalOpen]);
+  }, [canManageFirms, effectiveActiveTab, fetchFirms, firmModalOpen, userModalOpen]);
 
   useEffect(() => {
     setLoading(usersLoading);
@@ -347,7 +348,7 @@ export function useUsersManagementDashboard() {
 
   useScopedViewRefresh({
     consumerId: refreshConsumerId,
-    scopes: ['users'],
+    scopes: ['users', 'administration'],
     onRefresh: () => {
       void fetchUsers({ forceRefresh: true });
     },
@@ -355,7 +356,7 @@ export function useUsersManagementDashboard() {
 
   useScopedViewRefresh({
     consumerId: refreshConsumerId,
-    scopes: ['firms'],
+    scopes: ['firms', 'administration'],
     enabled: canManageFirms,
     onRefresh: () => {
       void fetchFirms({ forceRefresh: true });
@@ -628,7 +629,7 @@ export function useUsersManagementDashboard() {
       forceRefresh: true,
     });
 
-    if (canManageFirms && (activeTab === 'firms' || firms.length > 0)) {
+    if (canManageFirms && (effectiveActiveTab === 'firms' || firms.length > 0)) {
       await fetchFirms({
         page: nextFirmsPage,
         search: normalizedFirmsSearch,
@@ -636,24 +637,24 @@ export function useUsersManagementDashboard() {
         forceRefresh: true,
       });
     }
-  }, [activeTab, canManageFirms, debouncedFirmsSearchTerm, debouncedUsersSearchTerm, fetchFirms, fetchUsers, firms.length, firmsPage, firmsSearchTerm, usersPage, usersSearchTerm]);
+  }, [canManageFirms, debouncedFirmsSearchTerm, debouncedUsersSearchTerm, effectiveActiveTab, fetchFirms, fetchUsers, firms.length, firmsPage, firmsSearchTerm, usersPage, usersSearchTerm]);
 
-  const searchTerm = activeTab === 'users' ? usersSearchTerm : firmsSearchTerm;
+  const searchTerm = effectiveActiveTab === 'users' ? usersSearchTerm : firmsSearchTerm;
   const setSearchTerm = useCallback((value: string) => {
-    if (activeTab === 'users') {
+    if (effectiveActiveTab === 'users') {
       setUsersSearchTerm(value);
       return;
     }
     setFirmsSearchTerm(value);
-  }, [activeTab]);
+  }, [effectiveActiveTab]);
 
   const resetSearch = useCallback(() => {
-    if (activeTab === 'users') {
+    if (effectiveActiveTab === 'users') {
       setUsersSearchTerm('');
       return;
     }
     setFirmsSearchTerm('');
-  }, [activeTab]);
+  }, [effectiveActiveTab]);
 
   return {
     activeTab,

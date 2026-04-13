@@ -38,6 +38,7 @@ export const FactsPage = lazyWithCss(() => import('../pages/FactsPage'), editori
 export const MetiersPage = lazyWithCss(() => import('../pages/MetiersPage'), editorialCssLoaders);
 export const ClientsPage = lazyWithCss(() => import('../pages/ClientsPage'), editorialCssLoaders);
 export const EmailTemplatesPage = lazyWithCss(() => import('../pages/admin/EmailTemplatesPage'), editorialCssLoaders);
+export const FirmCreditsPage = lazyWithCss(() => import('../pages/FirmCreditsPage'), editorialCssLoaders);
 export const SignIn = lazy(() => import('../components/SignIn'));
 export const Register = lazy(() => import('../components/Register'));
 export const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage'));
@@ -51,4 +52,5 @@ export const SharedFilePage = lazy(() => import('../pages/SharedFilePage'));
 export const BackupPage = lazyWithCss(() => import('../pages/BackupPage'), editorialCssLoaders);
 export const BatchUploadPage = lazyWithCss(() => import('../pages/BatchUploadPage'), editorialCssLoaders);
 export const BatchJobsPage = lazy(() => import('../pages/BatchJobsPage'));
+export const AdminWorkspacePage = lazyWithCss(() => import('../pages/AdminWorkspacePage'), resumesEditorialCssLoaders);
 export const AppToaster = lazy(() => import('../components/AppToaster'));

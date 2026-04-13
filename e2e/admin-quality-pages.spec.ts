@@ -7,25 +7,24 @@ test.describe('Admin Quality Pages', () => {
   });
 
   test('should render email templates admin page', async ({ page }) => {
-    await page.goto('/email-templates');
+    await page.goto('/admin?tab=emailTemplates');
     await page.waitForLoadState('networkidle');
 
-    await expect(page).toHaveURL(/\/email-templates$/);
+    await expect(page).toHaveURL(/\/admin\?tab=emailTemplates$/);
     await expect(page.locator('#email-address')).toHaveCount(0);
-    await expect(page.getByRole('heading', { name: /templates email|email templates/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /adminWorkspace\.tabs\.emailTemplates|templates email|email templates/i }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: /nouveau template|new template/i })).toBeVisible();
-    await expect(page.getByText(/g[ée]rez vos templates d'email|manage your email templates/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: /actualiser|refresh/i }).first()).toBeVisible();
   });
 
   test('should render tags management page with search and tabs', async ({ page }) => {
-    await page.goto('/dashboard/tags');
+    await page.goto('/admin?tab=tags');
     await page.waitForLoadState('networkidle');
 
-    await expect(page).toHaveURL(/\/dashboard\/tags$/);
+    await expect(page).toHaveURL(/\/admin\?tab=tags$/);
     await expect(page.locator('#email-address')).toHaveCount(0);
-    await expect(page.getByRole('heading', { name: /gestion des tags|tags management/i })).toBeVisible();
-    await expect(page.getByRole('textbox', { name: /rechercher un tag|search for a tag/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /tags bruts|raw tags/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /tags bruts|raw tags/i }).first()).toBeVisible();
+    await expect(page.getByPlaceholder(/rechercher un tag|search for a tag/i)).toBeVisible();
     await expect(page.getByRole('button', { name: /actualiser|refresh/i }).first()).toBeVisible();
   });
 

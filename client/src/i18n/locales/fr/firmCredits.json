@@ -1,0 +1,70 @@
+{
+  "firmCredits": {
+    "title": "Crédits par cabinet",
+    "subtitle": "Suivez les crédits disponibles par cabinet et ajustez-les côté super administration.",
+    "toolbarTitle": "Recherche et pilotage",
+    "searchPlaceholder": "Rechercher un cabinet...",
+    "results": "cabinets",
+    "currentBalance": "Solde actuel",
+    "statusLabel": "Statut",
+    "addCredits": "Ajouter des crédits",
+    "access": {
+      "superAdminTitle": "Pilotage global",
+      "superAdminDescription": "Vous pouvez consulter tous les cabinets et réallouer des crédits immédiatement selon les besoins opérationnels.",
+      "localAdminTitle": "Consultation de votre cabinet",
+      "localAdminDescription": "Vous consultez le solde de votre cabinet. L'ajout de crédits reste réservé au super administrateur."
+    },
+    "card": {
+      "consumed": "Crédits consommés",
+      "added": "Crédits ajoutés",
+      "lastActivity": "Dernière activité",
+      "topConsumers": "Consommation par utilisateur",
+      "recentActivity": "Dernières opérations",
+      "noConsumption": "Aucune consommation enregistrée",
+      "noActivity": "Aucune activité enregistrée",
+      "userActions": "{{count}} actions IA"
+    },
+    "empty": {
+      "title": "Aucun cabinet à afficher",
+      "description": "Aucun cabinet ne correspond à la recherche ou aucun cabinet n'est encore disponible."
+    },
+    "stats": {
+      "totalFirms": "Cabinets visibles",
+      "visibleCredits": "Crédits visibles",
+      "visibleCreditsHelper": "Somme des crédits affichés sur cette page.",
+      "consumedCredits": "Crédits consommés",
+      "consumedCreditsHelper": "Somme des crédits IA consommés sur les cabinets affichés.",
+      "averageCredits": "Crédits moyens",
+      "defaultCreditsHelper": "Dotation initiale par cabinet : {{value}} crédits."
+    },
+    "modal": {
+      "title": "Ajouter des crédits",
+      "subtitle": "Cabinet : {{name}}",
+      "amountLabel": "Nombre de crédits à ajouter",
+      "currentBalance": "Solde avant ajout",
+      "previewBalance": "Solde après ajout : {{value}}",
+      "confirm": "Ajouter les crédits"
+    },
+    "messages": {
+      "errorLoading": "Erreur lors du chargement des crédits des cabinets",
+      "invalidAmount": "Le montant doit être un entier positif",
+      "creditsAdded": "{{amount}} crédits ajoutés à {{name}}",
+      "errorAddingCredits": "Erreur lors de l'ajout des crédits"
+    },
+    "actions": {
+      "firm.initial_grant": "Dotation initiale",
+      "firm.credit_grant": "Ajout manuel",
+      "credit.refund": "Remboursement",
+      "chatbot.message": "Chatbot",
+      "resume.ai_modify": "Modification CV",
+      "template.extract": "Extraction template",
+      "resume.analysis": "Analyse CV",
+      "resume.improvement": "Amélioration CV",
+      "resume.adaptation": "Adaptation CV",
+      "resume.match": "Matching CV",
+      "profile.search": "Recherche profils",
+      "profile.analysis": "Analyse profil",
+      "default": "Action IA"
+    }
+  }
+}

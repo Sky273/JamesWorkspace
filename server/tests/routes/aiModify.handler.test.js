@@ -41,6 +41,10 @@ vi.mock('../../services/metrics.service.js', () => ({
     buildLLMMetricLabel: (provider, model) => `${provider}:${model}`
 }));
 
+vi.mock('../../services/aiCredits.service.js', () => ({
+    runAiActionWithCredits: (_options, action) => action()
+}));
+
 import { aiModifyHandler } from '../../routes/resumes/aiModify.handler.js';
 
 function mockReqRes(body = {}) {

@@ -11,6 +11,8 @@ import ResumesMessages from "./resumes.json";
 import UploadMessages from "./upload.json";
 import ResumeMessages from "./resume.json";
 import UsersMessages from "./users.json";
+import FirmCreditsMessages from "./firmCredits.json";
+import AdminWorkspaceMessages from "./adminWorkspace.json";
 import ErrorsMessages from "./errors.json";
 import TemplatesMessages from "./templates.json";
 import ProcessingMessages from "./processing.json";
@@ -58,6 +60,8 @@ const enMessages = {
   ...UploadMessages,
   ...ResumeMessages,
   ...UsersMessages,
+  ...FirmCreditsMessages,
+  ...AdminWorkspaceMessages,
   ...ErrorsMessages,
   ...TemplatesMessages,
   ...ProcessingMessages,

@@ -4,11 +4,8 @@ import { AdminRoute, ManagerRoute, ProtectedRoute, PublicHomeRoute } from './rou
 import {
   HomePage,
   ResumesPage,
-  TemplatesPage,
   UploadPage,
   NewTemplatePage,
-  TagsManagement,
-  UsersManagement,
   SecurityLogs,
   MetricsPage,
   SettingsPage,
@@ -26,7 +23,6 @@ import {
   FactsPage,
   MetiersPage,
   ClientsPage,
-  EmailTemplatesPage,
   SignIn,
   Register,
   ForgotPasswordPage,
@@ -40,6 +36,7 @@ import {
   BackupPage,
   BatchUploadPage,
   BatchJobsPage,
+  AdminWorkspacePage,
 } from './lazyPages';
 
 export function AppRoutes(): JSX.Element {
@@ -81,18 +78,14 @@ export function AppRoutes(): JSX.Element {
         <Route path="profile-matching" element={<ProfileMatchingPage />} />
         <Route path="guide" element={<UserGuidePage />} />
         <Route path="profile" element={<UserProfilePage />} />
-        <Route path="templates" element={<ManagerRoute><TemplatesPage /></ManagerRoute>} />
-        <Route path="templates/new" element={<ManagerRoute><NewTemplatePage /></ManagerRoute>} />
-        <Route path="templates/edit/:id" element={<ManagerRoute><NewTemplatePage /></ManagerRoute>} />
-        <Route path="dashboard/tags" element={<ManagerRoute><TagsManagement /></ManagerRoute>} />
-        <Route path="dashboard/users" element={<ManagerRoute><UsersManagement /></ManagerRoute>} />
+        <Route path="admin" element={<ManagerRoute><AdminWorkspacePage /></ManagerRoute>} />
+        <Route path="admin/templates/new" element={<ManagerRoute><NewTemplatePage /></ManagerRoute>} />
+        <Route path="admin/templates/edit/:id" element={<ManagerRoute><NewTemplatePage /></ManagerRoute>} />
         <Route path="dashboard/security-logs" element={<AdminRoute><SecurityLogs /></AdminRoute>} />
         <Route path="dashboard/metrics" element={<AdminRoute><MetricsPage /></AdminRoute>} />
         <Route path="settings" element={<AdminRoute><SettingsPage /></AdminRoute>} />
         <Route path="facts" element={<FactsPage />} />
         <Route path="metiers" element={<AdminRoute><MetiersPage /></AdminRoute>} />
-        <Route path="email-templates" element={<ManagerRoute><EmailTemplatesPage /></ManagerRoute>} />
-        <Route path="dashboard/email-templates" element={<Navigate to="/email-templates" replace />} />
         <Route path="dashboard/gdpr-audit" element={<AdminRoute><GdprAuditPage /></AdminRoute>} />
         <Route path="dashboard/backup" element={<AdminRoute><BackupPage /></AdminRoute>} />
       </Route>

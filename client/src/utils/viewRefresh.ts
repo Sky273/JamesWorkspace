@@ -6,6 +6,7 @@ export const VIEW_REFRESH_CONSUMER_STORAGE_PREFIX = 'appDirtyViewScopesSeen:';
 export const VIEW_REFRESH_DEBUG_STORAGE_KEY = 'appViewRefreshDebug';
 
 export const VIEW_REFRESH_SCOPES = [
+  'administration',
   'users',
   'firms',
   'clients',
@@ -14,6 +15,7 @@ export const VIEW_REFRESH_SCOPES = [
   'resumes',
   'adaptations',
   'templates',
+  'emailTemplates',
   'jobs',
   'gdprAudit',
   'marketFacts',

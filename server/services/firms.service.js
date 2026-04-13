@@ -14,6 +14,13 @@ import {
     invalidateFirmsCaches,
     invalidateMissionsCaches
 } from './cache.service.js';
+import {
+    addFirmCreditsTransaction,
+    addInitialFirmCreditGrant,
+    getConfiguredInitialFirmCredits,
+    listFirmCredits as listFirmCreditsWithUsage
+} from './aiCredits.service.js';
+import { getClient } from '../config/database.js';
 
 /**
  * Allowed column names for dynamic INSERT/UPDATE on the firms table.
@@ -29,11 +36,12 @@ const ALLOWED_COLUMNS = new Set(['name', 'status', 'logo_url']);
  * @param {number} [options.limit=100]
  * @returns {Promise<{firms: Array, hasMore: boolean, totalCount: number|null}>}
  */
-export async function listFirms({ search, page = 1, limit = 100, bypassCache = false } = {}) {
+export async function listFirms({ search, page = 1, limit = 100, bypassCache = false, firmId = null } = {}) {
     const cacheKey = JSON.stringify({
         search: search || '',
         page,
-        limit
+        limit,
+        firmId: firmId || ''
     });
 
     const loader = async () => {
@@ -41,6 +49,12 @@ export async function listFirms({ search, page = 1, limit = 100, bypassCache = f
         const conditions = [];
         const params = [];
         let paramIndex = 1;
+
+        if (firmId) {
+            conditions.push(`id = $${paramIndex}`);
+            params.push(firmId);
+            paramIndex++;
+        }
 
         if (search) {
             conditions.push(`LOWER(name) LIKE $${paramIndex}`);
@@ -111,31 +125,52 @@ export async function getFirmById(id, { bypassCache = false } = {}) {
  * @returns {Promise<Object>} created firm
  */
 export async function createFirm(firmData) {
-    const fields = [];
-    const values = [];
-    const placeholders = [];
-    let idx = 1;
+    const client = await getClient();
+    try {
+        await client.query('BEGIN');
+        const initialCredits = await getConfiguredInitialFirmCredits();
 
-    for (const [key, value] of Object.entries(firmData)) {
-        if (value !== undefined && ALLOWED_COLUMNS.has(key)) {
-            fields.push(key);
-            values.push(value);
-            placeholders.push(`$${idx}`);
-            idx++;
+        const fields = [];
+        const values = [];
+        const placeholders = [];
+        let idx = 1;
+
+        for (const [key, value] of Object.entries(firmData)) {
+            if (value !== undefined && ALLOWED_COLUMNS.has(key)) {
+                fields.push(key);
+                values.push(value);
+                placeholders.push(`$${idx}`);
+                idx++;
+            }
         }
-    }
 
-    const result = await query(
-        `INSERT INTO firms (${fields.join(', ')}) VALUES (${placeholders.join(', ')}) RETURNING *`,
-        values
-    );
-    await Promise.all([
-        invalidateFirmsCaches(),
-        invalidateClientsCaches(),
-        invalidateDealsCaches(),
-        invalidateMissionsCaches()
-    ]);
-    return result.rows[0];
+        fields.push('credits');
+        values.push(initialCredits);
+        placeholders.push(`$${idx}`);
+        idx++;
+
+        const result = await client.query(
+            `INSERT INTO firms (${fields.join(', ')}) VALUES (${placeholders.join(', ')}) RETURNING *`,
+            values
+        );
+
+        await addInitialFirmCreditGrant(result.rows[0].id, { client, amount: initialCredits });
+        await client.query('COMMIT');
+
+        await Promise.all([
+            invalidateFirmsCaches(),
+            invalidateClientsCaches(),
+            invalidateDealsCaches(),
+            invalidateMissionsCaches()
+        ]);
+
+        return result.rows[0];
+    } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+    } finally {
+        client.release();
+    }
 }
 
 /**
@@ -214,6 +249,21 @@ export async function deleteFirm(id) {
         invalidateMissionsCaches()
     ]);
     return true;
+}
+
+/**
+ * Add credits to a firm.
+ * @param {string} id
+ * @param {number} amount
+ * @returns {Promise<Object>}
+ */
+export async function addFirmCredits(id, amount, userId = null) {
+    const { firm } = await addFirmCreditsTransaction({ firmId: id, amount, userId });
+    return firm;
+}
+
+export async function listFirmCredits(options = {}) {
+    return listFirmCreditsWithUsage(options);
 }
 
 /**

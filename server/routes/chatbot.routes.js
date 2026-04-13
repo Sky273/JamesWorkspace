@@ -9,6 +9,8 @@ import { callLLM } from '../services/llm.service.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { asyncHandler } from '../middleware/asyncHandler.middleware.js';
 import { validateBody, chatbotRequestSchema } from '../utils/validation.js';
+import { getRequestMetadata } from '../services/security.service.js';
+import { runAiActionWithCredits } from '../services/aiCredits.service.js';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -146,28 +148,50 @@ Réponds toujours en français, sauf si l'utilisateur pose sa question en anglai
     let llmResponse;
     let lastError;
     
-    for (let attempt = 1; attempt <= 2; attempt++) {
-        try {
-            llmResponse = await callLLM(messages, {
-                temperature: 0.7,
-                max_tokens: 4000 // Increase max tokens for better responses with larger context
-            });
-            
-            if (llmResponse && llmResponse.content) {
-                break; // Success
+    try {
+        llmResponse = await runAiActionWithCredits({
+            firmId: req.user?.firmId || req.user?.firm_id || null,
+            userId,
+            actionType: 'chatbot.message',
+            metadata: {
+                ...getRequestMetadata(req),
+                messageLength: message.length,
+                historyLength: normalizedHistory.length
             }
-        } catch (error) {
-            lastError = error;
-            safeLog('warn', `LLM call attempt ${attempt} failed`, {
-                error: error.message,
-                attempt
-            });
-            
-            if (attempt < 2) {
-                // Wait before retry
-                await new Promise(resolve => setTimeout(resolve, 1000));
+        }, async () => {
+            for (let attempt = 1; attempt <= 2; attempt++) {
+                try {
+                    const response = await callLLM(messages, {
+                        temperature: 0.7,
+                        max_tokens: 4000 // Increase max tokens for better responses with larger context
+                    });
+
+                    if (response && response.content) {
+                        return response;
+                    }
+                } catch (error) {
+                    lastError = error;
+                    safeLog('warn', `LLM call attempt ${attempt} failed`, {
+                        error: error.message,
+                        attempt
+                    });
+
+                    if (attempt < 2) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
             }
+
+            return null;
+        });
+    } catch (error) {
+        if (error.code === 'INSUFFICIENT_CREDITS') {
+            return res.status(402).json({
+                error: 'Insufficient credits for this AI action',
+                details: error.details
+            });
         }
+        throw error;
     }
 
     if (!llmResponse || !llmResponse.content) {

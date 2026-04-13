@@ -18,6 +18,7 @@ import { metrics } from '../metrics.service.js';
 import { getLLMSettings } from '../settings.service.js';
 import { persistResumeSkillEvidence } from '../skillEvidence.service.js';
 import { insertResume, updateResume, updateResumeFileUrl } from '../resumes.service.js';
+import { runAiActionWithCredits } from '../aiCredits.service.js';
 
 function buildOcrMetricsMetadata(extractionResult, baseMetadata = {}) {
     return {
@@ -214,9 +215,20 @@ export async function processImportItem(item, job, options) {
 
         if (!analysis) {
             safeLog('info', 'Analyzing CV with LLM', { itemId: item.id, firmId: job.firm_id, fileName: item.file_name });
-            analysis = await analyzeResumeWithLLM(analysisInputText, job.firm_id, item.file_name, {
+            analysis = await runAiActionWithCredits({
+                firmId: job.firm_id,
+                userId: job.user_id || null,
+                actionType: 'resume.analysis',
+                metadata: {
+                    source: 'batch-job',
+                    jobId: job.id,
+                    itemId: item.id,
+                    resumeId,
+                    fileName: item.file_name
+                }
+            }, () => analyzeResumeWithLLM(analysisInputText, job.firm_id, item.file_name, {
                 ocrUsed: !!extractionResult?.ocrUsed
-            });
+            }));
             metrics.trackBatchImportActivity({
                 event: 'analyze',
                 mimeType,

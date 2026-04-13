@@ -57,7 +57,7 @@ const Breadcrumbs = ({ items, className = '', tone = 'default' }: BreadcrumbsPro
       return { label: t('adaptations.details', 'Détail adaptation'), current: true };
     }
 
-    if (previousSegment === 'edit' && location.pathname.startsWith('/templates/edit/')) {
+    if (previousSegment === 'edit' && location.pathname.startsWith('/admin/templates/edit/')) {
       return { label: t('templates.editTemplate', 'Modifier le template'), current: true };
     }
 
@@ -95,7 +95,7 @@ const Breadcrumbs = ({ items, className = '', tone = 'default' }: BreadcrumbsPro
           breadcrumbs.push({ label: t('navigation.adaptations'), href: isLast ? undefined : '/adaptations', current: isLast });
           break;
         case 'templates':
-          breadcrumbs.push({ label: t('navigation.templates'), href: isLast ? undefined : '/templates', current: isLast });
+          breadcrumbs.push({ label: t('navigation.templates'), href: isLast ? undefined : '/admin?tab=templates', current: isLast });
           break;
         case 'new':
           if (previousSegment === 'templates') {
@@ -146,20 +146,23 @@ const Breadcrumbs = ({ items, className = '', tone = 'default' }: BreadcrumbsPro
         case 'metiers':
           breadcrumbs.push({ label: t('navigation.metiers', 'Métiers'), current: true });
           break;
+        case 'admin':
+          breadcrumbs.push({ label: t('navigation.administration', 'Administration'), href: isLast ? undefined : '/admin', current: isLast });
+          break;
         case 'metrics':
           breadcrumbs.push({ label: t('navigation.metrics'), href: isLast ? undefined : '/dashboard/metrics', current: isLast });
           break;
         case 'users':
-          breadcrumbs.push({ label: t('navigation.users'), href: isLast ? undefined : '/dashboard/users', current: isLast });
+          breadcrumbs.push({ label: t('navigation.users'), href: isLast ? undefined : '/admin?tab=users', current: isLast });
           break;
         case 'security-logs':
           breadcrumbs.push({ label: t('navigation.securityLogs'), href: isLast ? undefined : '/dashboard/security-logs', current: isLast });
           break;
         case 'tags':
-          breadcrumbs.push({ label: t('navigation.tags'), href: isLast ? undefined : '/dashboard/tags', current: isLast });
+          breadcrumbs.push({ label: t('navigation.tags'), href: isLast ? undefined : '/admin?tab=tags', current: isLast });
           break;
         case 'email-templates':
-          breadcrumbs.push({ label: t('navigation.emailTemplates'), href: isLast ? undefined : '/email-templates', current: isLast });
+          breadcrumbs.push({ label: t('navigation.emailTemplates'), href: isLast ? undefined : '/admin?tab=emailTemplates', current: isLast });
           break;
         case 'gdpr-audit':
           breadcrumbs.push({ label: t('navigation.gdprAudit', 'Audit RGPD'), href: isLast ? undefined : '/dashboard/gdpr-audit', current: isLast });

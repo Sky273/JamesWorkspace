@@ -6,7 +6,7 @@
 import { motion } from 'framer-motion';
 import { ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
-import { LLMTab, PromptsTab, WeightsTab, ChatbotTab, GdprTab, DpoTab } from '../components/SettingsPage';
+import { LLMTab, PromptsTab, WeightsTab, CreditsTab, ChatbotTab, GdprTab, DpoTab } from '../components/SettingsPage';
 import SettingsHeader from '../components/SettingsPage/SettingsHeader';
 import SettingsTabsNav from '../components/SettingsPage/SettingsTabsNav';
 import SettingsApiDocsPanel from '../components/SettingsPage/SettingsApiDocsPanel';
@@ -148,6 +148,14 @@ const SettingsPage = (): JSX.Element => {
             formData={formData}
             onInputChange={handleInputChange}
             totalWeight={totalWeight}
+            t={t}
+          />
+        )}
+
+        {activeTab === 'credits' && (
+          <CreditsTab
+            formData={formData}
+            onInputChange={handleInputChange}
             t={t}
           />
         )}

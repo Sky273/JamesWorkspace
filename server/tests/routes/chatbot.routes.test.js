@@ -13,6 +13,14 @@ vi.mock('../../services/llm.service.js', () => ({
     callLLM: (...args) => mockCallLLM(...args)
 }));
 
+vi.mock('../../services/aiCredits.service.js', () => ({
+    runAiActionWithCredits: (_options, action) => action()
+}));
+
+vi.mock('../../services/security.service.js', () => ({
+    getRequestMetadata: vi.fn(() => ({ ip: '127.0.0.1', userId: 'user-123', firmId: 'firm-1' }))
+}));
+
 // Mock metrics
 vi.mock('../../services/metrics.service.js', () => ({
     metrics: {
@@ -48,7 +56,7 @@ vi.mock('fs/promises', () => ({
 vi.mock('../../middleware/auth.middleware.js', () => ({
     authenticateToken: (req, res, next) => {
         if (req.headers.authorization === 'Bearer valid-token') {
-            req.user = { id: 'user-123', name: 'Test User', email: 'user@test.com', role: 'user' };
+            req.user = { id: 'user-123', name: 'Test User', email: 'user@test.com', role: 'user', firmId: 'firm-1' };
             next();
         } else {
             res.status(401).json({ error: 'Unauthorized' });

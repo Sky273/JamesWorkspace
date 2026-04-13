@@ -6,6 +6,7 @@ import { analyzeImprovedResumeWithLLM, improveResumeWithLLM } from '../llmIntegr
 import { getLLMSettings } from '../../settings.service.js';
 import { extractSummaryText, stringifyJsonField } from './shared.js';
 import { updateResume } from '../../resumes.service.js';
+import { runAiActionWithCredits } from '../../aiCredits.service.js';
 
 export async function processImprovement(item, resumeId, text, analysis, job) {
     safeLog('info', 'Improving CV with LLM', { itemId: item.id, resumeId });
@@ -33,12 +34,22 @@ export async function processImprovement(item, resumeId, text, analysis, job) {
     for (let attempt = 1; attempt <= maxImproveRetries; attempt++) {
         try {
             safeLog('info', `Improvement attempt ${attempt}/${maxImproveRetries}`, { itemId: item.id, resumeId });
-            improvedResult = await improveResumeWithLLM(
+            improvedResult = await runAiActionWithCredits({
+                firmId: job.firm_id,
+                userId: job.user_id || null,
+                actionType: 'resume.improvement',
+                metadata: {
+                    source: 'batch-job',
+                    jobId: job.id,
+                    itemId: item.id,
+                    resumeId
+                }
+            }, () => improveResumeWithLLM(
                 textForImprovement,
                 analysis,
                 job.firm_id,
                 item.file_name
-            );
+            ));
             break;
         } catch (improveError) {
             lastImproveError = improveError;
@@ -231,7 +242,17 @@ export async function processImproveItem(item, job) {
                 itemId: item.id,
                 resumeId: item.resume_id
             });
-            improvedResult = await improveResumeWithLLM(text, analysis, job.firm_id, item.file_name);
+            improvedResult = await runAiActionWithCredits({
+                firmId: job.firm_id,
+                userId: job.user_id || null,
+                actionType: 'resume.improvement',
+                metadata: {
+                    source: 'batch-job',
+                    jobId: job.id,
+                    itemId: item.id,
+                    resumeId: item.resume_id
+                }
+            }, () => improveResumeWithLLM(text, analysis, job.firm_id, item.file_name));
             break;
         } catch (improveError) {
             lastImproveError = improveError;

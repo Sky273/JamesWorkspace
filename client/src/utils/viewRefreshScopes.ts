@@ -9,7 +9,7 @@ function markScopes(scopes: ViewRefreshScope[]): void {
 }
 
 export function markUsersViewDirty(): void {
-  markScopes(['users']);
+  markScopes(['users', 'administration']);
 }
 
 export function markFirmViewsDirty(): void {
@@ -41,7 +41,11 @@ export function markAdaptationsViewDirty(): void {
 }
 
 export function markTemplatesViewDirty(): void {
-  markScopes(['templates']);
+  markScopes(['templates', 'administration']);
+}
+
+export function markEmailTemplatesViewDirty(): void {
+  markScopes(['emailTemplates', 'administration']);
 }
 
 export function markJobsViewDirty(): void {
@@ -49,5 +53,5 @@ export function markJobsViewDirty(): void {
 }
 
 export function markTagsViewDirty(): void {
-  markScopes(['tags']);
+  markScopes(['tags', 'administration']);
 }

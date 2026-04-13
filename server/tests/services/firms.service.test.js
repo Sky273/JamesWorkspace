@@ -6,7 +6,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../config/database.js', () => ({
-    query: vi.fn()
+    query: vi.fn(),
+    getClient: vi.fn()
 }));
 
 vi.mock('../../utils/logger.backend.js', () => ({
@@ -23,6 +24,18 @@ const { mockFirmsCache, mockInvalidateFirmsCaches, mockInvalidateClientsCaches, 
     mockInvalidateMissionsCaches: vi.fn(async () => undefined)
 }));
 
+const {
+    mockAddFirmCreditsTransaction,
+    mockAddInitialFirmCreditGrant,
+    mockGetConfiguredInitialFirmCredits,
+    mockListFirmCreditsWithUsage
+} = vi.hoisted(() => ({
+    mockAddFirmCreditsTransaction: vi.fn(),
+    mockAddInitialFirmCreditGrant: vi.fn(),
+    mockGetConfiguredInitialFirmCredits: vi.fn(),
+    mockListFirmCreditsWithUsage: vi.fn()
+}));
+
 vi.mock('../../services/cache.service.js', () => ({
     firmsCache: mockFirmsCache,
     CACHE_KEYS: {
@@ -36,14 +49,23 @@ vi.mock('../../services/cache.service.js', () => ({
     invalidateMissionsCaches: (...args) => mockInvalidateMissionsCaches(...args)
 }));
 
-import { query } from '../../config/database.js';
+vi.mock('../../services/aiCredits.service.js', () => ({
+    addFirmCreditsTransaction: (...args) => mockAddFirmCreditsTransaction(...args),
+    addInitialFirmCreditGrant: (...args) => mockAddInitialFirmCreditGrant(...args),
+    getConfiguredInitialFirmCredits: (...args) => mockGetConfiguredInitialFirmCredits(...args),
+    listFirmCredits: (...args) => mockListFirmCreditsWithUsage(...args)
+}));
+
+import { query, getClient } from '../../config/database.js';
 import {
     listFirms,
+    listFirmCredits,
     getFirmById,
     createFirm,
     updateFirm,
     getAssociatedUsersCount,
     deleteFirm,
+    addFirmCredits,
     uploadFirmLogo,
     getFirmLogo,
     deleteFirmLogo
@@ -53,6 +75,13 @@ describe('Firms Service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockFirmsCache.getOrLoad.mockImplementation(async (_key, loader) => loader());
+        mockAddInitialFirmCreditGrant.mockResolvedValue(undefined);
+        mockAddFirmCreditsTransaction.mockResolvedValue({ firm: { id: 'f1', credits: 1250 } });
+        mockGetConfiguredInitialFirmCredits.mockResolvedValue(1000);
+        getClient.mockResolvedValue({
+            query: vi.fn(),
+            release: vi.fn()
+        });
     });
 
     describe('listFirms', () => {
@@ -108,6 +137,17 @@ describe('Firms Service', () => {
 
             expect(mockFirmsCache.getOrLoad).not.toHaveBeenCalled();
         });
+
+        it('should apply firmId filter when requested', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [{ id: 'f1', credits: 1000 }] })
+                .mockResolvedValueOnce({ rows: [{ count: '1' }] });
+
+            await listFirms({ firmId: 'f1' });
+
+            expect(query.mock.calls[0][0]).toContain('id = $1');
+            expect(query.mock.calls[0][1][0]).toBe('f1');
+        });
     });
 
     describe('getFirmById', () => {
@@ -137,20 +177,54 @@ describe('Firms Service', () => {
 
     describe('createFirm', () => {
         it('should create and return firm', async () => {
-            query.mockResolvedValueOnce({ rows: [{ id: 'f1', name: 'New' }] });
+            const client = {
+                query: vi.fn()
+                    .mockResolvedValueOnce(undefined)
+                    .mockResolvedValueOnce({ rows: [{ id: 'f1', name: 'New' }] })
+                    .mockResolvedValueOnce(undefined),
+                release: vi.fn()
+            };
+            getClient.mockResolvedValueOnce(client);
 
             const result = await createFirm({ name: 'New', status: 'active' });
 
             expect(result.name).toBe('New');
-            expect(query.mock.calls[0][0]).toContain('INSERT INTO firms');
+            expect(client.query.mock.calls[1][0]).toContain('INSERT INTO firms');
+            expect(client.query.mock.calls[1][1]).toContain(1000);
+            expect(mockAddInitialFirmCreditGrant).toHaveBeenCalledWith('f1', { client, amount: 1000 });
         });
 
         it('should skip undefined values', async () => {
-            query.mockResolvedValueOnce({ rows: [{ id: 'f1' }] });
+            const client = {
+                query: vi.fn()
+                    .mockResolvedValueOnce(undefined)
+                    .mockResolvedValueOnce({ rows: [{ id: 'f1' }] })
+                    .mockResolvedValueOnce(undefined),
+                release: vi.fn()
+            };
+            getClient.mockResolvedValueOnce(client);
 
             await createFirm({ name: 'X', status: undefined });
 
-            expect(query.mock.calls[0][1]).toHaveLength(1); // only name
+            expect(client.query.mock.calls[1][1]).toHaveLength(2); // name + configured credits
+        });
+
+        it('should apply the configured initial credit grant to new firms', async () => {
+            mockGetConfiguredInitialFirmCredits.mockResolvedValueOnce(2500);
+            const client = {
+                query: vi.fn()
+                    .mockResolvedValueOnce(undefined)
+                    .mockResolvedValueOnce({ rows: [{ id: 'f1', name: 'New', credits: 2500 }] })
+                    .mockResolvedValueOnce(undefined),
+                release: vi.fn()
+            };
+            getClient.mockResolvedValueOnce(client);
+
+            const result = await createFirm({ name: 'New', status: 'active' });
+
+            expect(result.credits).toBe(2500);
+            expect(client.query.mock.calls[1][1]).toContain(2500);
+            expect(mockAddInitialFirmCreditGrant).toHaveBeenCalledWith('f1', { client, amount: 2500 });
         });
     });
 
@@ -206,6 +280,33 @@ describe('Firms Service', () => {
         });
     });
 
+    describe('addFirmCredits', () => {
+        it('should add credits and return updated firm', async () => {
+            mockAddFirmCreditsTransaction.mockResolvedValueOnce({ firm: { id: 'f1', credits: 1250 } });
+
+            const result = await addFirmCredits('f1', 250);
+
+            expect(result.credits).toBe(1250);
+            expect(mockAddFirmCreditsTransaction).toHaveBeenCalledWith({ firmId: 'f1', amount: 250, userId: null });
+        });
+
+        it('should pass through the acting user when present', async () => {
+            mockAddFirmCreditsTransaction.mockResolvedValueOnce({ firm: { id: 'f1', credits: 1100 } });
+
+            await addFirmCredits('f1', 100, 'user-1');
+
+            expect(mockAddFirmCreditsTransaction).toHaveBeenCalledWith({ firmId: 'f1', amount: 100, userId: 'user-1' });
+        });
+
+        it('should reject invalid amounts', async () => {
+            const error = new Error('Credits amount must be a positive integer');
+            error.statusCode = 400;
+            mockAddFirmCreditsTransaction.mockRejectedValueOnce(error);
+
+            await expect(addFirmCredits('f1', 0)).rejects.toMatchObject({ statusCode: 400 });
+        });
+    });
+
     describe('uploadFirmLogo', () => {
         it('should update logo and return URL', async () => {
             query.mockResolvedValueOnce({ rows: [] });
@@ -247,3 +348,17 @@ describe('Firms Service', () => {
         });
     });
 });
+    describe('listFirmCredits', () => {
+        it('should delegate to the AI credits usage service', async () => {
+            mockListFirmCreditsWithUsage.mockResolvedValue({
+                firms: [{ id: 'f1', credits: 1000, total_credits_consumed: 0 }],
+                hasMore: false,
+                totalCount: 1
+            });
+
+            const result = await listFirmCredits({ page: 1, limit: 12 });
+
+            expect(mockListFirmCreditsWithUsage).toHaveBeenCalledWith({ page: 1, limit: 12 });
+            expect(result.firms[0].id).toBe('f1');
+        });
+    });

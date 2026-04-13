@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
+import { authenticateToken, requireAdmin, requireUserManager, isUserAdmin } from '../middleware/auth.middleware.js';
 import { validateBody, validateParams, createFirmSchema, normalizeRequestBodyAliases, updateFirmSchema } from '../utils/validation.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../services/security.service.js';
 import { invalidateFirmsCaches } from '../services/cache.service.js';
@@ -10,6 +10,7 @@ import { applySafeBinaryHeaders, setSafeFileResponseHeaders } from '../utils/fil
 import { resolveUploadMimeType } from '../utils/uploadFileTypes.js';
 import { isValidFileSignature } from '../utils/fileSignature.js';
 import { shouldBypassCache } from '../utils/requestCacheControl.js';
+import { getUserFirmIdFromUser } from '../utils/firmHelpers.js';
 
 const LOGO_ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 const DEFAULT_PAGE = 1;
@@ -43,6 +44,14 @@ function parsePaginationParams(pageInput, limitInput) {
         page: parsedPage,
         limit: Math.min(parsedLimit, MAX_LIMIT)
     };
+}
+
+function getManagedFirmId(req) {
+    if (isUserAdmin(req)) {
+        return null;
+    }
+
+    return getUserFirmIdFromUser(req.user);
 }
 
 // Configure multer for logo uploads - use memory storage to store in database
@@ -96,6 +105,49 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
     }
 });
 
+// GET /api/firms/credits - Get firm credits list for manager screens
+router.get('/credits', authenticateToken, requireUserManager, async (req, res) => {
+    try {
+        const pagination = parsePaginationParams(req.query.page, req.query.limit);
+        if (pagination.error) {
+            return res.status(400).json({ error: pagination.error });
+        }
+
+        const { page, limit } = pagination;
+        const { search } = req.query;
+        const bypassCache = shouldBypassCache(req);
+        const managedFirmId = getManagedFirmId(req);
+
+        if (!isUserAdmin(req) && !managedFirmId) {
+            return res.status(403).json({ error: 'No firm association' });
+        }
+
+        const { firms, hasMore, totalCount } = await firmsService.listFirmCredits({
+            search,
+            page,
+            limit,
+            bypassCache,
+            firmId: managedFirmId
+        });
+
+        return res.json({
+            data: firms,
+            pagination: {
+                page,
+                limit,
+                hasMore,
+                totalCount,
+                nextPage: hasMore ? page + 1 : null
+            }
+        });
+    } catch (error) {
+        safeLog('error', 'Error fetching firm credits', { error: error.message, userId: req.user?.id });
+        return res.status(500).json({
+            error: 'Failed to fetch firm credits'
+        });
+    }
+});
+
 // GET /api/firms/:id - Get firm by ID
 router.get('/:id', authenticateToken, requireAdmin, validateParams('id'), async (req, res) => {
     try {
@@ -110,6 +162,40 @@ router.get('/:id', authenticateToken, requireAdmin, validateParams('id'), async 
         safeLog('error', 'Error fetching firm', { error: error.message, firmId: req.params.id });
         return res.status(500).json({ 
             error: 'Failed to fetch firm' 
+        });
+    }
+});
+
+// POST /api/firms/:id/credits - Add credits to a firm (super admin only)
+router.post('/:id/credits', authenticateToken, requireAdmin, validateParams('id'), async (req, res) => {
+    try {
+        const amount = Number.parseInt(req.body?.amount, 10);
+        if (!Number.isInteger(amount) || amount <= 0) {
+            return res.status(400).json({ error: 'amount must be a positive integer' });
+        }
+
+        const firm = await firmsService.addFirmCredits(req.params.id, amount, req.user?.id);
+
+        securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.ADMIN_ACTION, {
+            ...getRequestMetadata(req),
+            firmId: req.params.id,
+            updatedBy: req.user.id,
+            amount,
+            action: 'FIRM_CREDITS_ADDED',
+            message: 'Credits added to firm'
+        });
+
+        return res.json(firm);
+    } catch (error) {
+        if (error.statusCode === 400) {
+            return res.status(400).json({ error: error.message });
+        }
+        if (error.statusCode === 404) {
+            return res.status(404).json({ error: 'Firm not found' });
+        }
+        safeLog('error', 'Error adding firm credits', { error: error.message, firmId: req.params.id });
+        return res.status(500).json({
+            error: 'Failed to add firm credits'
         });
     }
 });

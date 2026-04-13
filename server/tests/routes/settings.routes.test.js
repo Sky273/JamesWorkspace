@@ -234,6 +234,16 @@ vi.mock('../../utils/mappers.js', () => ({
         'Profile Matching Local Title Exact Weight': settings.profile_matching_local_title_exact_weight ?? settings['Profile Matching Local Title Exact Weight'] ?? 5,
         'Profile Matching Local Title Token Weight': settings.profile_matching_local_title_token_weight ?? settings['Profile Matching Local Title Token Weight'] ?? 2,
         'Profile Matching Local Coverage Multiplier': settings.profile_matching_local_coverage_multiplier ?? settings['Profile Matching Local Coverage Multiplier'] ?? 3,
+        firmInitialCredits: settings.firm_initial_credits ?? settings.firmInitialCredits ?? 1000,
+        aiCreditChatbotMessage: settings.ai_credit_chatbot_message ?? settings.aiCreditChatbotMessage ?? 1,
+        aiCreditResumeAiModify: settings.ai_credit_resume_ai_modify ?? settings.aiCreditResumeAiModify ?? 5,
+        aiCreditTemplateExtract: settings.ai_credit_template_extract ?? settings.aiCreditTemplateExtract ?? 15,
+        aiCreditResumeAnalysis: settings.ai_credit_resume_analysis ?? settings.aiCreditResumeAnalysis ?? 25,
+        aiCreditResumeImprovement: settings.ai_credit_resume_improvement ?? settings.aiCreditResumeImprovement ?? 75,
+        aiCreditResumeAdaptation: settings.ai_credit_resume_adaptation ?? settings.aiCreditResumeAdaptation ?? 50,
+        aiCreditResumeMatch: settings.ai_credit_resume_match ?? settings.aiCreditResumeMatch ?? 8,
+        aiCreditProfileSearch: settings.ai_credit_profile_search ?? settings.aiCreditProfileSearch ?? 12,
+        aiCreditProfileAnalysis: settings.ai_credit_profile_analysis ?? settings.aiCreditProfileAnalysis ?? 25,
         'DPO Name': settings.dpo_name ?? settings['DPO Name'] ?? '',
         'DPO Email': settings.dpo_email ?? settings['DPO Email'] ?? '',
         'DPO Phone': settings.dpo_phone ?? settings['DPO Phone'] ?? ''
@@ -371,6 +381,11 @@ describe('Settings Routes', () => {
             expect(res.body['Pre Analysis Prompt']).toBe('default-pre-analysis');
             expect(res.body['Analysis Prompt']).toBe('default-analysis');
             expect(res.body['Profile Matching Local Skill Weight']).toBe(6);
+            expect(res.body.firmInitialCredits).toBe(1000);
+            expect(res.body.aiCreditResumeAnalysis).toBe(25);
+            expect(res.body.aiCreditResumeImprovement).toBe(75);
+            expect(res.body.aiCreditResumeAdaptation).toBe(50);
+            expect(res.body.aiCreditProfileAnalysis).toBe(25);
             expect(res.body.promptGovernance['Adaptation Prompt']).toEqual(expect.objectContaining({
                 promptId: 'mission.adaptation.default',
                 promptVersion: '1.8.8'
@@ -527,6 +542,8 @@ describe('Settings Routes', () => {
                 education_weight: 15,
                 ats_weight: 10,
                 hobbies_languages_weight: 10,
+                firm_initial_credits: 1500,
+                ai_credit_resume_analysis: 30,
                 dpo_name: '',
                 dpo_email: '',
                 dpo_phone: ''
@@ -536,12 +553,14 @@ describe('Settings Routes', () => {
             const res = await request(app)
                 .put('/api/settings/set-1')
                 .set(authHeader)
-                .send({ llmModel: 'gpt-4-turbo', cvMode: 'anonymous' });
+                .send({ llmModel: 'gpt-4-turbo', cvMode: 'anonymous', firmInitialCredits: 1500, aiCreditResumeAnalysis: 30 });
 
             expect(res.status).toBe(200);
             expect(res.body.llmModel).toBe('gpt-4-turbo');
             expect(res.body.cvMode).toBe('anonymous');
             expect(mockUpsertSettings).toHaveBeenCalledWith('set-1', expect.objectContaining({
+                firmInitialCredits: 1500,
+                aiCreditResumeAnalysis: 30,
                 promptVersionState: expect.objectContaining({
                     'Analysis Prompt': expect.objectContaining({
                         currentRevision: 1

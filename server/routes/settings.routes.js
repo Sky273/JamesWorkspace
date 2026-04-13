@@ -30,6 +30,7 @@ import {
     PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT,
     PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER
 } from '../config/constants.js';
+import { buildAiCreditSettingsDefaults } from '../config/aiCredits.js';
 import {
     decorateSettingsResponse,
     mergeCanonicalLlmSettings,
@@ -54,6 +55,7 @@ function createSettingsRouteHandler(logMessage, errorMessage, handler) {
 }
 
 function buildDefaultSettingsPayload() {
+    const aiCreditDefaults = buildAiCreditSettingsDefaults();
     return {
         llmProvider: 'openai',
         llmModel: DEFAULT_OPENAI_MODEL,
@@ -78,7 +80,17 @@ function buildDefaultSettingsPayload() {
         'Profile Matching Local Soft Skill Weight': PROFILE_MATCHING_LOCAL_SOFTSKILL_WEIGHT,
         'Profile Matching Local Title Exact Weight': PROFILE_MATCHING_LOCAL_TITLE_EXACT_WEIGHT,
         'Profile Matching Local Title Token Weight': PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT,
-        'Profile Matching Local Coverage Multiplier': PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER
+        'Profile Matching Local Coverage Multiplier': PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER,
+        firmInitialCredits: aiCreditDefaults.firmInitialCredits,
+        aiCreditChatbotMessage: aiCreditDefaults.aiCreditChatbotMessage,
+        aiCreditResumeAiModify: aiCreditDefaults.aiCreditResumeAiModify,
+        aiCreditTemplateExtract: aiCreditDefaults.aiCreditTemplateExtract,
+        aiCreditResumeAnalysis: aiCreditDefaults.aiCreditResumeAnalysis,
+        aiCreditResumeImprovement: aiCreditDefaults.aiCreditResumeImprovement,
+        aiCreditResumeAdaptation: aiCreditDefaults.aiCreditResumeAdaptation,
+        aiCreditResumeMatch: aiCreditDefaults.aiCreditResumeMatch,
+        aiCreditProfileSearch: aiCreditDefaults.aiCreditProfileSearch,
+        aiCreditProfileAnalysis: aiCreditDefaults.aiCreditProfileAnalysis
     };
 }
 

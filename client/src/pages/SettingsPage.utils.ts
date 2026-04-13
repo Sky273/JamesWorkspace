@@ -97,6 +97,16 @@ export interface Settings {
   'Profile Matching Local Title Exact Weight'?: number;
   'Profile Matching Local Title Token Weight'?: number;
   'Profile Matching Local Coverage Multiplier'?: number;
+  firmInitialCredits?: number;
+  aiCreditChatbotMessage?: number;
+  aiCreditResumeAiModify?: number;
+  aiCreditTemplateExtract?: number;
+  aiCreditResumeAnalysis?: number;
+  aiCreditResumeImprovement?: number;
+  aiCreditResumeAdaptation?: number;
+  aiCreditResumeMatch?: number;
+  aiCreditProfileSearch?: number;
+  aiCreditProfileAnalysis?: number;
   'DPO Name'?: string;
   'DPO Email'?: string;
   'DPO Phone'?: string;
@@ -134,6 +144,16 @@ export interface SettingsFormData {
   'Profile Matching Local Title Exact Weight': number;
   'Profile Matching Local Title Token Weight': number;
   'Profile Matching Local Coverage Multiplier': number;
+  firmInitialCredits: number;
+  aiCreditChatbotMessage: number;
+  aiCreditResumeAiModify: number;
+  aiCreditTemplateExtract: number;
+  aiCreditResumeAnalysis: number;
+  aiCreditResumeImprovement: number;
+  aiCreditResumeAdaptation: number;
+  aiCreditResumeMatch: number;
+  aiCreditProfileSearch: number;
+  aiCreditProfileAnalysis: number;
   'DPO Name': string;
   'DPO Email': string;
   'DPO Phone': string;
@@ -189,6 +209,16 @@ export const defaultFormData: SettingsFormData = {
   'Profile Matching Local Title Exact Weight': 5,
   'Profile Matching Local Title Token Weight': 2,
   'Profile Matching Local Coverage Multiplier': 3,
+  firmInitialCredits: 1000,
+  aiCreditChatbotMessage: 1,
+  aiCreditResumeAiModify: 5,
+  aiCreditTemplateExtract: 15,
+  aiCreditResumeAnalysis: 25,
+  aiCreditResumeImprovement: 75,
+  aiCreditResumeAdaptation: 50,
+  aiCreditResumeMatch: 8,
+  aiCreditProfileSearch: 12,
+  aiCreditProfileAnalysis: 25,
   'DPO Name': '',
   'DPO Email': '',
   'DPO Phone': '',
@@ -235,6 +265,16 @@ export const toFormData = (settings?: Settings | null): SettingsFormData => ({
   'Profile Matching Local Title Exact Weight': settings?.['Profile Matching Local Title Exact Weight'] || 5,
   'Profile Matching Local Title Token Weight': settings?.['Profile Matching Local Title Token Weight'] || 2,
   'Profile Matching Local Coverage Multiplier': settings?.['Profile Matching Local Coverage Multiplier'] || 3,
+  firmInitialCredits: settings?.firmInitialCredits ?? 1000,
+  aiCreditChatbotMessage: settings?.aiCreditChatbotMessage ?? 1,
+  aiCreditResumeAiModify: settings?.aiCreditResumeAiModify ?? 5,
+  aiCreditTemplateExtract: settings?.aiCreditTemplateExtract ?? 15,
+  aiCreditResumeAnalysis: settings?.aiCreditResumeAnalysis ?? 25,
+  aiCreditResumeImprovement: settings?.aiCreditResumeImprovement ?? 75,
+  aiCreditResumeAdaptation: settings?.aiCreditResumeAdaptation ?? 50,
+  aiCreditResumeMatch: settings?.aiCreditResumeMatch ?? 8,
+  aiCreditProfileSearch: settings?.aiCreditProfileSearch ?? 12,
+  aiCreditProfileAnalysis: settings?.aiCreditProfileAnalysis ?? 25,
   'DPO Name': settings?.['DPO Name'] || '',
   'DPO Email': settings?.['DPO Email'] || '',
   'DPO Phone': settings?.['DPO Phone'] || '',
@@ -262,6 +302,16 @@ export const createSavePayload = (
     'Profile Matching Local Title Exact Weight': Number(formData['Profile Matching Local Title Exact Weight']),
     'Profile Matching Local Title Token Weight': Number(formData['Profile Matching Local Title Token Weight']),
     'Profile Matching Local Coverage Multiplier': Number(formData['Profile Matching Local Coverage Multiplier']),
+    firmInitialCredits: Number(formData.firmInitialCredits),
+    aiCreditChatbotMessage: Number(formData.aiCreditChatbotMessage),
+    aiCreditResumeAiModify: Number(formData.aiCreditResumeAiModify),
+    aiCreditTemplateExtract: Number(formData.aiCreditTemplateExtract),
+    aiCreditResumeAnalysis: Number(formData.aiCreditResumeAnalysis),
+    aiCreditResumeImprovement: Number(formData.aiCreditResumeImprovement),
+    aiCreditResumeAdaptation: Number(formData.aiCreditResumeAdaptation),
+    aiCreditResumeMatch: Number(formData.aiCreditResumeMatch),
+    aiCreditProfileSearch: Number(formData.aiCreditProfileSearch),
+    aiCreditProfileAnalysis: Number(formData.aiCreditProfileAnalysis),
   };
   delete dataToSave.llmModelParametersJson;
 

@@ -36,6 +36,8 @@ interface FormData {
   firmId: string;
 }
 
+const ADMIN_TEMPLATES_ROUTE = '/admin?tab=templates';
+
 const NewTemplatePage = (): JSX.Element => {
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
@@ -131,7 +133,7 @@ const NewTemplatePage = (): JSX.Element => {
       } catch (error) {
         logger.error('Error fetching template:', error);
         toast.error(t('templates.editor.error.load'));
-        navigate('/templates');
+        navigate(ADMIN_TEMPLATES_ROUTE);
       } finally {
         setLoading(false);
       }
@@ -178,7 +180,7 @@ const NewTemplatePage = (): JSX.Element => {
         const updatedTemplate = await templateService.updateTemplate(id, templateData);
       markTemplatesViewDirty();
         toast.success(t('templates.editor.success.update'));
-        navigate('/templates', {
+        navigate(ADMIN_TEMPLATES_ROUTE, {
           state: {
             updatedTemplate,
           },
@@ -187,7 +189,7 @@ const NewTemplatePage = (): JSX.Element => {
         const createdTemplate = await templateService.createTemplate(templateData);
       markTemplatesViewDirty();
         toast.success(t('templates.editor.success.create'));
-        navigate('/templates', {
+        navigate(ADMIN_TEMPLATES_ROUTE, {
           state: {
             createdTemplate,
           },
@@ -216,7 +218,7 @@ const NewTemplatePage = (): JSX.Element => {
               <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">{t(id ? 'templates.editor.title.edit' : 'templates.editor.title.new')}</h1>
             </div>
           </div>
-          <button onClick={() => navigate('/templates')} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">{t('common.cancel')}</button>
+          <button onClick={() => navigate(ADMIN_TEMPLATES_ROUTE)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">{t('common.cancel')}</button>
         </div>
 
         {loading ? (
@@ -328,7 +330,7 @@ const NewTemplatePage = (): JSX.Element => {
             </div>
 
             <div className="flex justify-end space-x-4">
-              <button type="button" onClick={() => navigate('/templates')} className="btn btn-secondary px-4 py-2">{t('common.cancel')}</button>
+              <button type="button" onClick={() => navigate(ADMIN_TEMPLATES_ROUTE)} className="btn btn-secondary px-4 py-2">{t('common.cancel')}</button>
               <button type="submit" disabled={!editorReady} className={`btn btn-primary px-4 py-2 ${!editorReady ? 'opacity-50 cursor-not-allowed' : ''}`}>{t('common.save')}</button>
             </div>
           </form>

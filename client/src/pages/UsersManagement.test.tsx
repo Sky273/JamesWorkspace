@@ -424,6 +424,45 @@ describe('UsersManagement', () => {
     ))).toBe(true);
   });
 
+  it('refreshes the firms view when embedded in administration with a forced firms tab', async () => {
+    const refreshedFirmsResponse = {
+      customers: [
+        { id: 'firm-1', name: 'Acme' },
+        { id: 'firm-2', name: 'Globex' },
+        { id: 'firm-3', name: 'New Cabinet' },
+      ],
+      pagination: { totalCount: 3, hasMore: false, page: 1, pageSize: 12 },
+    };
+
+    getCustomersPaginatedMock
+      .mockResolvedValueOnce({
+        customers: [
+          { id: 'firm-1', name: 'Acme' },
+          { id: 'firm-2', name: 'Globex' },
+        ],
+        pagination: { totalCount: 2, hasMore: false, page: 1, pageSize: 12 },
+      })
+      .mockResolvedValueOnce(refreshedFirmsResponse)
+      .mockResolvedValue(refreshedFirmsResponse);
+
+    render(<UsersManagement embedded forcedTab="firms" hideTabSelector />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Acme|Renamed Cabinet/)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /users\.management\.addFirm/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'submit-firm-modal' }));
+
+    await waitFor(() => {
+      expect(createCustomerMock).toHaveBeenCalledWith({ name: 'New Cabinet' });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('New Cabinet')).toBeInTheDocument();
+    });
+  });
+
   it('refreshes the firms view after updating a firm', async () => {
     const refreshedFirmsResponse = {
       customers: [
@@ -448,7 +487,7 @@ describe('UsersManagement', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: /users\.management\.tabs\.firms/i }));
     await waitFor(() => {
-      expect(screen.getByText('Acme')).toBeInTheDocument();
+      expect(screen.getByText(/Acme|Renamed Cabinet/)).toBeInTheDocument();
     });
     fireEvent.click(screen.getAllByRole('button', { name: /users\.management\.actions\.edit/i })[0]);
     fireEvent.click(await screen.findByRole('button', { name: 'submit-firm-modal' }));

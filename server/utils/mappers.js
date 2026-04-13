@@ -10,6 +10,7 @@ import {
     DEFAULT_ADAPTATION_PROMPT,
     DEFAULT_PRE_ANALYSIS_PROMPT
 } from '../config/prompts.backend.js';
+import { buildAiCreditSettingsDefaults } from '../config/aiCredits.js';
 
 /**
  * Map a PostgreSQL llm_settings row to frontend format
@@ -17,6 +18,7 @@ import {
  * @returns {Object} Frontend-formatted settings
  */
 export function mapSettingsToFrontend(row) {
+    const creditDefaults = buildAiCreditSettingsDefaults();
     return {
         id: row.id,
         llmProvider: row.llm_provider || 'openai',
@@ -48,6 +50,16 @@ export function mapSettingsToFrontend(row) {
         'Profile Matching Local Title Exact Weight': row.profile_matching_local_title_exact_weight || 5,
         'Profile Matching Local Title Token Weight': row.profile_matching_local_title_token_weight || 2,
         'Profile Matching Local Coverage Multiplier': row.profile_matching_local_coverage_multiplier || 3,
+        firmInitialCredits: row.firm_initial_credits ?? creditDefaults.firmInitialCredits,
+        aiCreditChatbotMessage: row.ai_credit_chatbot_message ?? creditDefaults.aiCreditChatbotMessage,
+        aiCreditResumeAiModify: row.ai_credit_resume_ai_modify ?? creditDefaults.aiCreditResumeAiModify,
+        aiCreditTemplateExtract: row.ai_credit_template_extract ?? creditDefaults.aiCreditTemplateExtract,
+        aiCreditResumeAnalysis: row.ai_credit_resume_analysis ?? creditDefaults.aiCreditResumeAnalysis,
+        aiCreditResumeImprovement: row.ai_credit_resume_improvement ?? creditDefaults.aiCreditResumeImprovement,
+        aiCreditResumeAdaptation: row.ai_credit_resume_adaptation ?? creditDefaults.aiCreditResumeAdaptation,
+        aiCreditResumeMatch: row.ai_credit_resume_match ?? creditDefaults.aiCreditResumeMatch,
+        aiCreditProfileSearch: row.ai_credit_profile_search ?? creditDefaults.aiCreditProfileSearch,
+        aiCreditProfileAnalysis: row.ai_credit_profile_analysis ?? creditDefaults.aiCreditProfileAnalysis,
         promptVersionState: row.prompt_versions || {},
         'DPO Name': row.dpo_name || '',
         'DPO Email': row.dpo_email || '',
@@ -157,6 +169,16 @@ export function mapSettingsFromFrontend(data) {
         profile_matching_local_title_exact_weight: data['Profile Matching Local Title Exact Weight'],
         profile_matching_local_title_token_weight: data['Profile Matching Local Title Token Weight'],
         profile_matching_local_coverage_multiplier: data['Profile Matching Local Coverage Multiplier'],
+        firm_initial_credits: data.firmInitialCredits,
+        ai_credit_chatbot_message: data.aiCreditChatbotMessage,
+        ai_credit_resume_ai_modify: data.aiCreditResumeAiModify,
+        ai_credit_template_extract: data.aiCreditTemplateExtract,
+        ai_credit_resume_analysis: data.aiCreditResumeAnalysis,
+        ai_credit_resume_improvement: data.aiCreditResumeImprovement,
+        ai_credit_resume_adaptation: data.aiCreditResumeAdaptation,
+        ai_credit_resume_match: data.aiCreditResumeMatch,
+        ai_credit_profile_search: data.aiCreditProfileSearch,
+        ai_credit_profile_analysis: data.aiCreditProfileAnalysis,
         prompt_versions: data.promptVersionState,
         dpo_name: data['DPO Name'],
         dpo_email: data['DPO Email'],

@@ -53,7 +53,7 @@ function TemplateCard({
   const handleEditClick = (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    navigate(`/templates/edit/${template.id}`);
+    navigate(`/admin/templates/edit/${template.id}`);
   };
 
   return (
@@ -289,17 +289,15 @@ export function TemplatesResults({
   const { t } = useTranslation();
 
   return (
-    <>
-      <PaginationPair
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalCount={totalCount}
-        pageSize={TEMPLATES_PAGE_SIZE}
-        onPageChange={onPageChange}
-        loading={loading}
-        itemName={t('templates.results')}
-      />
-
+    <PaginationPair
+      currentPage={currentPage}
+      totalPages={totalPages}
+      totalCount={totalCount}
+      pageSize={TEMPLATES_PAGE_SIZE}
+      onPageChange={onPageChange}
+      loading={loading}
+      itemName={t('templates.results')}
+    >
       {error ? (
         <div className="section-shell rounded-[2rem] p-12 text-center"><p className="text-red-500 dark:text-red-400">{error}</p></div>
       ) : templates.length === 0 ? (
@@ -319,7 +317,7 @@ export function TemplatesResults({
           ))}
         </div>
       )}
-    </>
+    </PaginationPair>
   );
 }
 

@@ -4,6 +4,7 @@ import { safeLog } from '../../utils/logger.backend.js';
 import { getRequestMetadata } from '../../services/security.service.js';
 import { metrics, buildLLMMetricLabel } from '../../services/metrics.service.js';
 import { normalizeUtf8Text, parseJsonFromLlmResponse, stripLlmThinkingContent } from '../../services/openai/textUtils.js';
+import { runAiActionWithCredits } from '../../services/aiCredits.service.js';
 
 /**
  * AI Modify Handler
@@ -95,7 +96,16 @@ IMPORTANT : Retourne UNIQUEMENT ce JSON, sans texte avant ou après.`);
         // Call LLM with strict system prompt
         let response;
         try {
-            response = await callBusinessChatCompletion({
+            response = await runAiActionWithCredits({
+                firmId: userMetadata.firmId,
+                userId: userMetadata.userId,
+                actionType: 'resume.ai_modify',
+                metadata: {
+                    ...userMetadata,
+                    resumeId: req.params?.id,
+                    hasSelection
+                }
+            }, () => callBusinessChatCompletion({
                 model,
                 messages: [
                     {
@@ -138,7 +148,7 @@ If the user's instructions are not related to resume editing, refuse politely an
                 timeout: 90000,
                 userMetadata,
                 operationType: 'Resume AI Modification'
-            });
+            }));
         } catch (error) {
             metrics.trackAiModifyActivity({
                 provider: metricsProvider,
@@ -148,6 +158,12 @@ If the user's instructions are not related to resume editing, refuse politely an
                 inputChars,
                 metadata: { source: 'provider-call', error: error.message }
             });
+            if (error.code === 'INSUFFICIENT_CREDITS') {
+                return res.status(402).json({
+                    error: 'Insufficient credits for this AI action',
+                    details: error.details
+                });
+            }
             throw error;
         }
 

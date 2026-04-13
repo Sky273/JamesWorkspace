@@ -5,6 +5,7 @@ import {
   Cog6ToothIcon,
   SparklesIcon,
   ScaleIcon,
+  BanknotesIcon,
   DocumentTextIcon,
   ChatBubbleLeftRightIcon,
   ShieldCheckIcon,
@@ -40,6 +41,10 @@ export {
 
 export function useSettingsPage() {
   const { t } = useTranslation();
+  const getFallbackText = useCallback((key: string, fallback: string) => {
+    const translated = t(key);
+    return translated === key ? fallback : translated;
+  }, [t]);
   const { authGet, authPost, authPut } = useAuthFetch();
   const { setChatbotEnabled } = useChatbot();
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -229,14 +234,15 @@ export function useSettingsPage() {
   const totalWeight = useMemo(() => getSettingsTotalWeight(formData), [formData]);
 
   const tabs = useMemo<SettingsTabItem[]>(() => ([
-    { id: 'llm', name: t('settings.tabs.llm'), icon: SparklesIcon },
-    { id: 'prompts', name: t('settings.tabs.prompts'), icon: Cog6ToothIcon },
-    { id: 'weights', name: t('settings.tabs.weights'), icon: ScaleIcon },
-    { id: 'chatbot', name: t('settings.tabs.chatbot'), icon: ChatBubbleLeftRightIcon },
-    { id: 'gdpr', name: t('settings.tabs.gdpr'), icon: ShieldCheckIcon },
-    { id: 'dpo', name: t('settings.tabs.dpo'), icon: UserCircleIcon },
-    { id: 'swagger', name: t('settings.tabs.apiDocs'), icon: DocumentTextIcon }
-  ]), [t]);
+    { id: 'llm', name: getFallbackText('settings.tabs.llm', 'Modele LLM'), icon: SparklesIcon },
+    { id: 'prompts', name: getFallbackText('settings.tabs.prompts', 'Prompts'), icon: Cog6ToothIcon },
+    { id: 'weights', name: getFallbackText('settings.tabs.weights', 'Poids'), icon: ScaleIcon },
+    { id: 'credits', name: getFallbackText('settings.tabs.credits', 'Credits IA'), icon: BanknotesIcon },
+    { id: 'chatbot', name: getFallbackText('settings.tabs.chatbot', 'Chatbot'), icon: ChatBubbleLeftRightIcon },
+    { id: 'gdpr', name: getFallbackText('settings.tabs.gdpr', 'RGPD'), icon: ShieldCheckIcon },
+    { id: 'dpo', name: getFallbackText('settings.tabs.dpo', 'Contact DPO'), icon: UserCircleIcon },
+    { id: 'swagger', name: getFallbackText('settings.tabs.apiDocs', 'Documentation API'), icon: DocumentTextIcon }
+  ]), [getFallbackText]);
 
   return {
     t,

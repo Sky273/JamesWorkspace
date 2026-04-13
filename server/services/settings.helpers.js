@@ -8,6 +8,7 @@ import {
     PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT,
     PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER
 } from '../config/constants.js';
+import { buildAiCreditSettingsDefaults } from '../config/aiCredits.js';
 import { resolveAvailableModel, getProviderAvailabilityFlags } from './llmAvailability.service.js';
 import { getProviderDefaultModel } from './llmConfiguration.service.js';
 import { buildLlmAdminMetadataWithOptions, sanitizeLlmModelParameters } from './llmAdminParameters.service.js';
@@ -27,6 +28,7 @@ export function buildCanonicalSettingsDefaults(fields = {}) {
 }
 
 export function buildMappedLlmSettings(dbSettings) {
+    const creditDefaults = buildAiCreditSettingsDefaults();
     return {
         llmModel: dbSettings.llm_model,
         llmProvider: dbSettings.llm_provider || DEFAULT_LLM_PROVIDER,
@@ -60,6 +62,16 @@ export function buildMappedLlmSettings(dbSettings) {
         'Profile Matching Local Title Exact Weight': dbSettings.profile_matching_local_title_exact_weight ?? PROFILE_MATCHING_LOCAL_TITLE_EXACT_WEIGHT,
         'Profile Matching Local Title Token Weight': dbSettings.profile_matching_local_title_token_weight ?? PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT,
         'Profile Matching Local Coverage Multiplier': dbSettings.profile_matching_local_coverage_multiplier ?? PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER,
+        firmInitialCredits: dbSettings.firm_initial_credits ?? creditDefaults.firmInitialCredits,
+        aiCreditChatbotMessage: dbSettings.ai_credit_chatbot_message ?? creditDefaults.aiCreditChatbotMessage,
+        aiCreditResumeAiModify: dbSettings.ai_credit_resume_ai_modify ?? creditDefaults.aiCreditResumeAiModify,
+        aiCreditTemplateExtract: dbSettings.ai_credit_template_extract ?? creditDefaults.aiCreditTemplateExtract,
+        aiCreditResumeAnalysis: dbSettings.ai_credit_resume_analysis ?? creditDefaults.aiCreditResumeAnalysis,
+        aiCreditResumeImprovement: dbSettings.ai_credit_resume_improvement ?? creditDefaults.aiCreditResumeImprovement,
+        aiCreditResumeAdaptation: dbSettings.ai_credit_resume_adaptation ?? creditDefaults.aiCreditResumeAdaptation,
+        aiCreditResumeMatch: dbSettings.ai_credit_resume_match ?? creditDefaults.aiCreditResumeMatch,
+        aiCreditProfileSearch: dbSettings.ai_credit_profile_search ?? creditDefaults.aiCreditProfileSearch,
+        aiCreditProfileAnalysis: dbSettings.ai_credit_profile_analysis ?? creditDefaults.aiCreditProfileAnalysis,
         promptVersionState: resolvePromptVersionState({
             storedState: dbSettings.prompt_versions || {},
             promptTexts: extractPromptTextsFromSettingsRecord(dbSettings),

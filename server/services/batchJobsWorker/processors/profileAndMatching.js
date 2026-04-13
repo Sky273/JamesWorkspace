@@ -6,6 +6,7 @@ import { findResumeRecord, findMissionRecord } from '../../resumes.service.js';
 import { getLLMSettings } from '../../settings.service.js';
 import { DEFAULT_MATCH_ANALYSIS_PROMPT } from '../../../config/prompts.backend.js';
 import { findMatchingProfiles, analyzeProfileForMission } from '../../profileMatching.service.js';
+import { runAiActionWithCredits } from '../../aiCredits.service.js';
 
 export async function processAdaptItem(item, job, options) {
     const missionId = options?.missionId;
@@ -74,7 +75,18 @@ export async function processMatchItem(item, job, options) {
 
     const matchPrompt = settings['Match Analysis Prompt'] || DEFAULT_MATCH_ANALYSIS_PROMPT;
 
-    const matchAnalysis = await matchResumeWithMission(
+    const matchAnalysis = await runAiActionWithCredits({
+        firmId: job.firm_id || resumeRecord.firm_id || null,
+        userId: job.user_id || null,
+        actionType: 'resume.match',
+        metadata: {
+            source: 'batch-job',
+            jobId: job.id,
+            itemId: item.id,
+            resumeId: item.resume_id,
+            missionId
+        }
+    }, () => matchResumeWithMission(
         resumeText,
         missionRecord.title || '',
         missionRecord.content || '',
@@ -85,7 +97,7 @@ export async function processMatchItem(item, job, options) {
             jobId: job.id,
             itemId: item.id
         }
-    );
+    ));
 
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, {
         progress: 90,
@@ -112,7 +124,17 @@ export async function processProfileSearchItem(item, job, options) {
 
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 25 });
 
-    const results = await findMatchingProfiles(missionId, {
+    const results = await runAiActionWithCredits({
+        firmId: job.firm_id || null,
+        userId: job.user_id || null,
+        actionType: 'profile.search',
+        metadata: {
+            source: 'batch-job',
+            jobId: job.id,
+            itemId: item.id,
+            missionId
+        }
+    }, () => findMatchingProfiles(missionId, {
         limit: options?.limit ?? 0,
         minScore: options?.minScore ?? 0,
         status: options?.status ?? null,
@@ -131,7 +153,7 @@ export async function processProfileSearchItem(item, job, options) {
         itemId: item.id,
         userId: job.user_id,
         firm: job.firm_id
-    });
+    }));
 
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, {
         progress: 90,
@@ -168,7 +190,18 @@ export async function processProfileAnalysisItem(item, job, options) {
 
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 30 });
 
-    const analysisResponse = await analyzeProfileForMission(missionId, item.resume_id, {
+    const analysisResponse = await runAiActionWithCredits({
+        firmId: job.firm_id || null,
+        userId: job.user_id || null,
+        actionType: 'profile.analysis',
+        metadata: {
+            source: 'batch-job',
+            jobId: job.id,
+            itemId: item.id,
+            resumeId: item.resume_id,
+            missionId
+        }
+    }, () => analyzeProfileForMission(missionId, item.resume_id, {
         source: 'batch-job',
         jobId: job.id,
         itemId: item.id,
@@ -180,7 +213,7 @@ export async function processProfileAnalysisItem(item, job, options) {
                 progressDetails: details
             }
         })
-    });
+    }));
 
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, {
         progress: 90,
