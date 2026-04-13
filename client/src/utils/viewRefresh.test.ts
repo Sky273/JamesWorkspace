@@ -6,6 +6,7 @@ import {
   consumeDirtyViewScopesForConsumer,
   getViewRefreshSnapshot,
   markViewScopesDirty,
+  recordViewRefreshCycle,
   resetViewRefreshDebugStateForTests,
   subscribeToViewRefreshForConsumer,
 } from './viewRefresh';
@@ -74,5 +75,21 @@ describe('viewRefresh', () => {
     expect(snapshot.dirtyScopes.users).toBe(1);
 
     unsubscribe();
+  });
+
+  it('tracks refresh cycle performance globally and per scope', () => {
+    recordViewRefreshCycle(['users', 'firms'], 120, false);
+    recordViewRefreshCycle(['users'], 80, true);
+
+    const snapshot = getViewRefreshSnapshot();
+
+    expect(snapshot.refreshCycles.total).toBe(2);
+    expect(snapshot.refreshCycles.failures).toBe(1);
+    expect(snapshot.refreshCycles.maxDurationMs).toBe(120);
+    expect(snapshot.refreshCycles.lastDurationMs).toBe(80);
+    expect(snapshot.refreshCycles.averageDurationMs).toBe(100);
+    expect(snapshot.refreshCycles.byScope.users?.total).toBe(2);
+    expect(snapshot.refreshCycles.byScope.users?.failures).toBe(1);
+    expect(snapshot.refreshCycles.byScope.firms?.total).toBe(1);
   });
 });

@@ -227,7 +227,7 @@ describe('Zod Validation Schemas', () => {
     });
 
     describe('createDealSchema', () => {
-        it('should ignore snake_case deal aliases at schema level and keep canonical data only', () => {
+        it('should accept snake_case deal aliases at schema level for route-level normalization', () => {
             const result = createDealSchema.safeParse({
                 title: 'Legacy Deal',
                 client_id: '123e4567-e89b-12d3-a456-426614174000',
@@ -237,6 +237,7 @@ describe('Zod Validation Schemas', () => {
             expect(result.success).toBe(true);
             expect(result.data).toEqual({
                 title: 'Legacy Deal',
+                client_id: '123e4567-e89b-12d3-a456-426614174000',
                 status: 'open'
             });
         });

@@ -1,8 +1,9 @@
-﻿import { expect, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+
 import { signInAsE2EAdmin } from './helpers/auth';
+import { expectHiddenAfterRefresh, expectVisibleAfterRefresh } from './helpers/refresh';
 import {
   cardContaining,
-  clickRefreshButton,
   deleteViaApi,
   EDIT_LABEL_REGEX,
   fieldFollowingLabel,
@@ -50,10 +51,7 @@ test.describe('Admin CRUD flows', () => {
       );
       return firmsLookup.data?.some((firm) => firm.name === firmName) ?? false;
     }).toBe(true);
-
-    await expect(cardContaining(page, firmName)).toBeVisible();
-    await clickRefreshButton(page);
-    await expect(cardContaining(page, firmName)).toBeVisible();
+    await expectVisibleAfterRefresh(page, () => cardContaining(page, firmName));
 
     await putJsonViaApi(page, `/api/firms/${createdFirm.id}`, { name: updatedFirmName });
     await firmSearch.fill(updatedFirmName);
@@ -65,21 +63,18 @@ test.describe('Admin CRUD flows', () => {
       );
       return firmsLookup.data?.some((firm) => firm.name === updatedFirmName) ?? false;
     }).toBe(true);
-
-    await expect(cardContaining(page, updatedFirmName)).toBeVisible();
-    await clickRefreshButton(page);
-    await expect(cardContaining(page, updatedFirmName)).toBeVisible();
+    await expectVisibleAfterRefresh(page, () => cardContaining(page, updatedFirmName));
 
     const deleteFirmResponse = await deleteViaApi(page, `/api/firms/${createdFirm.id}`);
     await expect(deleteFirmResponse.ok()).toBeTruthy();
-    await clickRefreshButton(page);
-    await expect(cardContaining(page, updatedFirmName)).toHaveCount(0);
+    await expectHiddenAfterRefresh(page, () => cardContaining(page, updatedFirmName));
 
     await page.getByRole('button', { name: /^(utilisateurs|users)/i }).first().click();
     const resetFiltersButton = page.getByRole('button', { name: /réinitialiser|reset/i }).first();
     if (await resetFiltersButton.count()) {
       await resetFiltersButton.click();
     }
+
     const createdUserPayload = await postJsonViaApi<{
       id: string;
       email: string;
@@ -93,11 +88,19 @@ test.describe('Admin CRUD flows', () => {
       role: 'localAdmin',
       status: 'active',
     });
+
     const userSearch = page.getByPlaceholder(/rechercher un utilisateur|search users/i).first();
     await userSearch.fill(userName);
     await expect(userSearch).toHaveValue(userName);
-    await clickRefreshButton(page);
-    await expect(cardContaining(page, userName)).toBeVisible();
+    await expectVisibleAfterRefresh(page, () => cardContaining(page, userName), {
+      beforeRefresh: async () => {
+        await userSearch.fill(userName);
+      },
+      afterRefresh: async () => {
+        await userSearch.fill(userName);
+      },
+    });
+
     const usersLookup = await getJsonViaApi<{ data?: Array<{ id: string; email: string; firmId?: string }> }>(
       page,
       `/api/users?search=${encodeURIComponent(userEmail)}&refresh=1`,
@@ -116,7 +119,6 @@ test.describe('Admin CRUD flows', () => {
     });
     await userSearch.fill(updatedUserName);
     await expect(userSearch).toHaveValue(updatedUserName);
-    await clickRefreshButton(page);
     await expect.poll(async () => {
       const usersLookupAfterUpdate = await getJsonViaApi<{ data?: Array<{ name?: string; Name?: string }> }>(
         page,
@@ -124,12 +126,25 @@ test.describe('Admin CRUD flows', () => {
       );
       return usersLookupAfterUpdate.data?.some((user) => (user.name || user.Name) === updatedUserName) ?? false;
     }, { timeout: 15000 }).toBe(true);
-    await expect(cardContaining(page, updatedUserName)).toBeVisible();
+    await expectVisibleAfterRefresh(page, () => cardContaining(page, updatedUserName), {
+      beforeRefresh: async () => {
+        await userSearch.fill(updatedUserName);
+      },
+      afterRefresh: async () => {
+        await userSearch.fill(updatedUserName);
+      },
+    });
 
     const deleteUserResponse = await deleteViaApi(page, `/api/auth/users/${createdUser!.id}`);
     await expect(deleteUserResponse.ok()).toBeTruthy();
-    await clickRefreshButton(page);
-    await expect(cardContaining(page, updatedUserName)).toHaveCount(0);
+    await expectHiddenAfterRefresh(page, () => cardContaining(page, updatedUserName), {
+      beforeRefresh: async () => {
+        await userSearch.fill(updatedUserName);
+      },
+      afterRefresh: async () => {
+        await userSearch.fill(updatedUserName);
+      },
+    });
   });
 
   test('should create, update and delete a CV template from the UI', async ({ page }) => {
@@ -152,7 +167,6 @@ test.describe('Admin CRUD flows', () => {
     await page.getByRole('button', { name: SAVE_LABEL_REGEX }).click({ force: true });
     const createdTemplateResponse = await createTemplateResponsePromise;
     await expect(createdTemplateResponse.ok()).toBeTruthy();
-    const createdTemplate = await createdTemplateResponse.json();
 
     await expect(page).toHaveURL(/\/templates$/);
     const templateSearch = page.getByRole('textbox').first();
@@ -164,9 +178,7 @@ test.describe('Admin CRUD flows', () => {
       );
       return templatesLookup.data?.some((template) => template.Name === templateName) ?? false;
     }).toBe(true);
-    await expect(cardContaining(page, templateName)).toBeVisible();
-    await clickRefreshButton(page);
-    await expect(cardContaining(page, templateName)).toBeVisible();
+    await expectVisibleAfterRefresh(page, () => cardContaining(page, templateName));
 
     const templateCard = cardContaining(page, templateName);
     await templateCard.getByRole('button', { name: EDIT_LABEL_REGEX }).click();
@@ -185,15 +197,11 @@ test.describe('Admin CRUD flows', () => {
       );
       return templatesLookup.data?.some((template) => template.Name === updatedTemplateName) ?? false;
     }).toBe(true);
-    await expect(cardContaining(page, updatedTemplateName)).toBeVisible();
-    await clickRefreshButton(page);
-    await expect(cardContaining(page, updatedTemplateName)).toBeVisible();
+    await expectVisibleAfterRefresh(page, () => cardContaining(page, updatedTemplateName));
 
     const updatedTemplateCard = cardContaining(page, updatedTemplateName);
     await updatedTemplateCard.locator(`button[title*="Delete" i], button[title*="Supprimer" i]`).click();
     await page.getByRole('button', { name: /delete|supprimer/i }).last().click();
-    await clickRefreshButton(page);
-    await expect(cardContaining(page, updatedTemplateName)).toHaveCount(0);
+    await expectHiddenAfterRefresh(page, () => cardContaining(page, updatedTemplateName));
   });
 });
-

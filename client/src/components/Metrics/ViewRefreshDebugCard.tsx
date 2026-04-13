@@ -1,8 +1,12 @@
-﻿import { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 
-import { getViewRefreshSnapshot, type ViewRefreshScope } from '../../utils/viewRefresh';
+import {
+  getViewRefreshSnapshot,
+  isViewRefreshDebugEnabled,
+  type ViewRefreshScope,
+} from '../../utils/viewRefresh';
 
 type SnapshotState = ReturnType<typeof getViewRefreshSnapshot>;
 
@@ -29,12 +33,22 @@ function formatDirtyScopes(snapshot: SnapshotState): Array<{ scope: string; vers
     .filter(({ version }) => version > 0);
 }
 
+function formatScopePerf(snapshot: SnapshotState) {
+  return DEBUG_SCOPES_ORDER
+    .map((scope) => ({
+      scope,
+      stats: snapshot.refreshCycles.byScope[scope],
+    }))
+    .filter(({ stats }) => stats && stats.total > 0);
+}
+
 export default function ViewRefreshDebugCard(): JSX.Element | null {
   const { t } = useTranslation();
-  const debugEnabled = import.meta.env.VITE_DEBUG_VIEW_REFRESH === '1';
+  const debugEnabled = isViewRefreshDebugEnabled();
   const [snapshot, setSnapshot] = useState<SnapshotState>(() => getViewRefreshSnapshot());
 
   const dirtyScopes = useMemo(() => formatDirtyScopes(snapshot), [snapshot]);
+  const scopePerf = useMemo(() => formatScopePerf(snapshot), [snapshot]);
   const label = (key: string, fallback: string) => {
     const translated = t(key);
     return translated === key ? fallback : translated;
@@ -68,7 +82,7 @@ export default function ViewRefreshDebugCard(): JSX.Element | null {
         </button>
       </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-4">
+      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         <div className="rounded-2xl bg-white/70 p-4 dark:bg-slate-900/50">
           <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
             {label('metrics.viewRefreshDebug.marks', 'Marks')}
@@ -92,6 +106,12 @@ export default function ViewRefreshDebugCard(): JSX.Element | null {
             {label('metrics.viewRefreshDebug.dirtyScopes', 'Scopes dirty')}
           </p>
           <p className="mt-2 text-2xl font-semibold">{dirtyScopes.length}</p>
+        </div>
+        <div className="rounded-2xl bg-white/70 p-4 dark:bg-slate-900/50">
+          <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            {label('metrics.viewRefreshDebug.refreshCycles', 'Cycles de refresh')}
+          </p>
+          <p className="mt-2 text-2xl font-semibold">{snapshot.refreshCycles.total}</p>
         </div>
       </div>
 
@@ -136,7 +156,52 @@ export default function ViewRefreshDebugCard(): JSX.Element | null {
           )}
         </div>
       </div>
+
+      <div className="mt-4 rounded-2xl bg-white/70 p-4 dark:bg-slate-900/50">
+        <p className="text-sm font-semibold">{label('metrics.viewRefreshDebug.refreshSummary', 'Résumé des refreshs')}</p>
+        <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-700 dark:text-slate-200">
+          <span>{label('metrics.viewRefreshDebug.refreshCyclesFailures', 'Échecs')}: <strong>{snapshot.refreshCycles.failures}</strong></span>
+          <span>{label('metrics.viewRefreshDebug.refreshCyclesAverage', 'Moyenne')}: <strong>{snapshot.refreshCycles.averageDurationMs.toFixed(1)} ms</strong></span>
+          <span>{label('metrics.viewRefreshDebug.refreshCyclesLast', 'Dernier')}: <strong>{snapshot.refreshCycles.lastDurationMs.toFixed(1)} ms</strong></span>
+          <span>{label('metrics.viewRefreshDebug.refreshCyclesMax', 'Max')}: <strong>{snapshot.refreshCycles.maxDurationMs.toFixed(1)} ms</strong></span>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-2xl bg-white/70 p-4 dark:bg-slate-900/50">
+        <p className="text-sm font-semibold">{label('metrics.viewRefreshDebug.scopePerf', 'Performance par scope')}</p>
+        {scopePerf.length > 0 ? (
+          <div className="mt-3 overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                <tr>
+                  <th className="pb-2 pr-4">{label('metrics.viewRefreshDebug.scope', 'Scope')}</th>
+                  <th className="pb-2 pr-4">{label('metrics.viewRefreshDebug.refreshCyclesTotal', 'Total')}</th>
+                  <th className="pb-2 pr-4">{label('metrics.viewRefreshDebug.refreshCyclesFailures', 'Échecs')}</th>
+                  <th className="pb-2 pr-4">{label('metrics.viewRefreshDebug.refreshCyclesAverage', 'Moyenne')}</th>
+                  <th className="pb-2 pr-4">{label('metrics.viewRefreshDebug.refreshCyclesLast', 'Dernier')}</th>
+                  <th className="pb-2">{label('metrics.viewRefreshDebug.refreshCyclesMax', 'Max')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200/70 dark:divide-slate-700/70">
+                {scopePerf.map(({ scope, stats }) => (
+                  <tr key={scope}>
+                    <td className="py-2 pr-4 font-medium">{scope}</td>
+                    <td className="py-2 pr-4">{stats?.total || 0}</td>
+                    <td className="py-2 pr-4">{stats?.failures || 0}</td>
+                    <td className="py-2 pr-4">{stats?.averageDurationMs.toFixed(1)} ms</td>
+                    <td className="py-2 pr-4">{stats?.lastDurationMs.toFixed(1)} ms</td>
+                    <td className="py-2">{stats?.maxDurationMs.toFixed(1)} ms</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+            {label('metrics.viewRefreshDebug.noScopePerf', 'Aucun cycle de refresh mesuré pour le moment.')}
+          </p>
+        )}
+      </div>
     </section>
   );
 }
-

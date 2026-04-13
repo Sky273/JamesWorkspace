@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 
 import {
   consumeDirtyViewScopesForConsumer,
+  recordViewRefreshCycle,
   subscribeToViewRefreshForConsumer,
   type ViewRefreshScope,
 } from '../utils/viewRefresh';
@@ -9,7 +10,7 @@ import {
 interface UseScopedViewRefreshOptions {
   consumerId: string;
   scopes: ViewRefreshScope[];
-  onRefresh: (scopes: ViewRefreshScope[]) => void;
+  onRefresh: (scopes: ViewRefreshScope[]) => void | Promise<void>;
   enabled?: boolean;
 }
 
@@ -21,6 +22,21 @@ export function useScopedViewRefresh({
 }: UseScopedViewRefreshOptions): void {
   const scopeKey = scopes.join('|');
 
+  const runRefresh = (matchedScopes: ViewRefreshScope[]) => {
+    const startedAt = performance.now();
+
+    try {
+      const result = onRefresh(matchedScopes);
+      void Promise.resolve(result).then(
+        () => recordViewRefreshCycle(matchedScopes, performance.now() - startedAt, false),
+        () => recordViewRefreshCycle(matchedScopes, performance.now() - startedAt, true),
+      );
+    } catch (error) {
+      recordViewRefreshCycle(matchedScopes, performance.now() - startedAt, true);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     if (!enabled || scopes.length === 0) {
       return;
@@ -30,7 +46,7 @@ export function useScopedViewRefresh({
       return;
     }
 
-    onRefresh(scopes);
+    runRefresh(scopes);
   }, [consumerId, enabled, onRefresh, scopeKey]);
 
   useEffect(() => {
@@ -38,6 +54,6 @@ export function useScopedViewRefresh({
       return;
     }
 
-    return subscribeToViewRefreshForConsumer(consumerId, scopes, onRefresh);
+    return subscribeToViewRefreshForConsumer(consumerId, scopes, runRefresh);
   }, [consumerId, enabled, onRefresh, scopeKey]);
 }

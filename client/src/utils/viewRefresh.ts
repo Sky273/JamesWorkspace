@@ -3,6 +3,7 @@ import logger from './logger.frontend';
 export const VIEW_REFRESH_STORAGE_KEY = 'appDirtyViewScopes';
 export const VIEW_REFRESH_EVENT_NAME = 'app:view-refresh';
 export const VIEW_REFRESH_CONSUMER_STORAGE_PREFIX = 'appDirtyViewScopesSeen:';
+export const VIEW_REFRESH_DEBUG_STORAGE_KEY = 'appViewRefreshDebug';
 
 export const VIEW_REFRESH_SCOPES = [
   'users',
@@ -46,6 +47,20 @@ type ViewRefreshDebugSnapshot = {
     consumes: ViewRefreshVersionMap;
     deliveries: ViewRefreshVersionMap;
   };
+  refreshCycles: {
+    total: number;
+    failures: number;
+    averageDurationMs: number;
+    maxDurationMs: number;
+    lastDurationMs: number;
+    byScope: Partial<Record<ViewRefreshScope, {
+      total: number;
+      failures: number;
+      averageDurationMs: number;
+      maxDurationMs: number;
+      lastDurationMs: number;
+    }>>;
+  };
   recentEvents: ViewRefreshDebugEvent[];
 };
 
@@ -60,6 +75,14 @@ const viewRefreshDebugState: ViewRefreshDebugSnapshot = {
     marks: {},
     consumes: {},
     deliveries: {},
+  },
+  refreshCycles: {
+    total: 0,
+    failures: 0,
+    averageDurationMs: 0,
+    maxDurationMs: 0,
+    lastDurationMs: 0,
+    byScope: {},
   },
   recentEvents: [],
 };
@@ -171,7 +194,7 @@ function writeSeenScopes(consumerId: string, scopes: ViewRefreshVersionMap): voi
 }
 
 function debugViewRefresh(message: string, data?: unknown): void {
-  if (!viewRefreshDebugEnabled) {
+  if (!isViewRefreshDebugEnabled()) {
     return;
   }
 
@@ -206,7 +229,7 @@ function syncDirtyScopesSnapshot(dirtyScopes: ViewRefreshVersionMap): void {
 }
 
 function exposeViewRefreshDebugApi(): void {
-  if (typeof window === 'undefined' || !viewRefreshDebugEnabled) {
+  if (typeof window === 'undefined' || !isViewRefreshDebugEnabled()) {
     return;
   }
 
@@ -230,6 +253,12 @@ export function getViewRefreshSnapshot(): ViewRefreshDebugSnapshot {
       consumes: { ...viewRefreshDebugState.scopeCounters.consumes },
       deliveries: { ...viewRefreshDebugState.scopeCounters.deliveries },
     },
+    refreshCycles: {
+      ...viewRefreshDebugState.refreshCycles,
+      byScope: Object.fromEntries(
+        Object.entries(viewRefreshDebugState.refreshCycles.byScope).map(([scope, stats]) => [scope, { ...stats }]),
+      ) as ViewRefreshDebugSnapshot['refreshCycles']['byScope'],
+    },
     recentEvents: viewRefreshDebugState.recentEvents.map((event) => ({
       ...event,
       scopes: [...event.scopes],
@@ -249,7 +278,72 @@ export function resetViewRefreshDebugStateForTests(): void {
     consumes: {},
     deliveries: {},
   };
+  viewRefreshDebugState.refreshCycles = {
+    total: 0,
+    failures: 0,
+    averageDurationMs: 0,
+    maxDurationMs: 0,
+    lastDurationMs: 0,
+    byScope: {},
+  };
   viewRefreshDebugState.recentEvents = [];
+}
+
+function updateCycleStats(
+  stats: { total: number; failures: number; averageDurationMs: number; maxDurationMs: number; lastDurationMs: number },
+  durationMs: number,
+  failed: boolean,
+): void {
+  const nextTotal = stats.total + 1;
+  stats.averageDurationMs = ((stats.averageDurationMs * stats.total) + durationMs) / nextTotal;
+  stats.total = nextTotal;
+  stats.lastDurationMs = durationMs;
+  stats.maxDurationMs = Math.max(stats.maxDurationMs, durationMs);
+  if (failed) {
+    stats.failures += 1;
+  }
+}
+
+export function recordViewRefreshCycle(
+  scopes: ViewRefreshScope[],
+  durationMs: number,
+  failed = false,
+): void {
+  const normalizedDuration = Number.isFinite(durationMs) ? Number(durationMs.toFixed(2)) : 0;
+  updateCycleStats(viewRefreshDebugState.refreshCycles, normalizedDuration, failed);
+  scopes.forEach((scope) => {
+    const existing = viewRefreshDebugState.refreshCycles.byScope[scope] || {
+      total: 0,
+      failures: 0,
+      averageDurationMs: 0,
+      maxDurationMs: 0,
+      lastDurationMs: 0,
+    };
+    updateCycleStats(existing, normalizedDuration, failed);
+    viewRefreshDebugState.refreshCycles.byScope[scope] = existing;
+  });
+  debugViewRefresh('Recorded refresh cycle', {
+    scopes,
+    durationMs: normalizedDuration,
+    failed,
+  });
+}
+
+export function isViewRefreshDebugEnabled(): boolean {
+  if (viewRefreshDebugEnabled) {
+    return true;
+  }
+
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  const search = new URLSearchParams(window.location.search);
+  if (search.get('viewRefreshDebug') === '1') {
+    return true;
+  }
+
+  return window.localStorage.getItem(VIEW_REFRESH_DEBUG_STORAGE_KEY) === '1';
 }
 
 export function markViewScopesDirty(scopes: ViewRefreshScope[]): void {

@@ -1,10 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
 import { signInAsE2EAdmin } from './helpers/auth';
 import { createDealFixture, createMissionFixture } from './helpers/crud';
+import { expectHiddenAfterRefresh, expectVisibleAfterRefresh } from './helpers/refresh';
 import {
   cardContaining,
   clickNamedButton,
-  clickRefreshButton,
   deleteViaApi,
   EDIT_LABEL_REGEX,
   fieldFollowingLabel,
@@ -67,20 +67,18 @@ test.describe('CRM CRUD flows', () => {
     });
     await page.getByRole('dialog').last().getByRole('button', { name: SAVE_LABEL_REGEX }).last().click({ force: true });
 
-    await expect(cardContaining(page, clientName)).toBeVisible();
-    await clickRefreshButton(page);
-    await searchClients(page, clientName);
-    await expect(cardContaining(page, clientName)).toBeVisible();
+    await expectVisibleAfterRefresh(page, () => cardContaining(page, clientName), {
+      afterRefresh: async () => searchClients(page, clientName),
+    });
 
     const clientCard = cardContaining(page, clientName);
     await clientCard.getByRole('button', { name: EDIT_LABEL_REGEX }).click();
     await fieldFollowingLabel(page, /nom|name/i).fill(updatedClientName);
     await clickNamedButton(page, SAVE_LABEL_REGEX);
 
-    await expect(cardContaining(page, updatedClientName)).toBeVisible();
-    await clickRefreshButton(page);
-    await searchClients(page, updatedClientName);
-    await expect(cardContaining(page, updatedClientName)).toBeVisible();
+    await expectVisibleAfterRefresh(page, () => cardContaining(page, updatedClientName), {
+      afterRefresh: async () => searchClients(page, updatedClientName),
+    });
 
     const updatedClientCard = cardContaining(page, updatedClientName);
     await updatedClientCard.getByRole('button', { name: /view|voir/i }).click();
@@ -141,17 +139,17 @@ test.describe('CRM CRUD flows', () => {
     await expect(page).toHaveURL(/\/clients\?tab=deals/);
 
     await searchDeals(page, dealTitle);
-    await expect(dealCardByTitle(page, dealTitle)).toBeVisible();
-    await clickRefreshButton(page);
-    await searchDeals(page, dealTitle);
-    await expect(dealCardByTitle(page, dealTitle)).toBeVisible();
+    await expectVisibleAfterRefresh(page, () => dealCardByTitle(page, dealTitle), {
+      afterRefresh: async () => searchDeals(page, dealTitle),
+    });
 
     await putJsonViaApi(page, `/api/deals/${createdDeal.id}`, { title: updatedDealTitle });
 
     await searchDeals(page, updatedDealTitle);
-    await clickRefreshButton(page);
-    await searchDeals(page, updatedDealTitle);
-    await expect(dealCardByTitle(page, updatedDealTitle)).toBeVisible();
+    await expectVisibleAfterRefresh(page, () => dealCardByTitle(page, updatedDealTitle), {
+      beforeRefresh: async () => searchDeals(page, updatedDealTitle),
+      afterRefresh: async () => searchDeals(page, updatedDealTitle),
+    });
 
     const createdMission = await createMissionFixture(page, {
       title: missionTitle,
@@ -165,32 +163,33 @@ test.describe('CRM CRUD flows', () => {
     await page.getByRole('button', { name: /^liste$/i }).click();
     await searchMissions(page, missionTitle);
 
-    await expect(cardContaining(page, missionTitle)).toBeVisible();
-    await clickRefreshButton(page);
-    await searchMissions(page, missionTitle);
-    await expect(cardContaining(page, missionTitle)).toBeVisible();
+    await expectVisibleAfterRefresh(page, () => cardContaining(page, missionTitle), {
+      afterRefresh: async () => searchMissions(page, missionTitle),
+    });
 
     await putJsonViaApi(page, `/api/missions/${createdMission.id}`, { title: updatedMissionTitle });
 
     await searchMissions(page, updatedMissionTitle);
     await expect(page.locator('article').filter({ hasText: updatedMissionTitle }).first()).toBeVisible();
-    await clickRefreshButton(page);
-    await searchMissions(page, updatedMissionTitle);
-    await expect(page.locator('article').filter({ hasText: updatedMissionTitle }).first()).toBeVisible();
+    await expectVisibleAfterRefresh(page, () => page.locator('article').filter({ hasText: updatedMissionTitle }).first(), {
+      beforeRefresh: async () => searchMissions(page, updatedMissionTitle),
+      afterRefresh: async () => searchMissions(page, updatedMissionTitle),
+    });
 
     const deleteMissionResponse = await deleteViaApi(page, `/api/missions/${createdMission.id}`);
     expect(deleteMissionResponse.ok()).toBe(true);
-    await clickRefreshButton(page);
-    await searchMissions(page, updatedMissionTitle);
-    await expect(page.locator('article').filter({ hasText: updatedMissionTitle })).toHaveCount(0);
+    await expectHiddenAfterRefresh(page, () => page.locator('article').filter({ hasText: updatedMissionTitle }), {
+      afterRefresh: async () => searchMissions(page, updatedMissionTitle),
+    });
 
     await page.goto('/clients?tab=deals');
     await searchDeals(page, updatedDealTitle);
     const deleteDealResponse = await deleteViaApi(page, `/api/deals/${createdDeal.id}`);
     expect(deleteDealResponse.ok()).toBe(true);
-    await clickRefreshButton(page);
-    await searchDeals(page, updatedDealTitle);
-    await expect(dealCardByTitle(page, updatedDealTitle)).toHaveCount(0);
+    await expectHiddenAfterRefresh(page, () => dealCardByTitle(page, updatedDealTitle), {
+      beforeRefresh: async () => searchDeals(page, updatedDealTitle),
+      afterRefresh: async () => searchDeals(page, updatedDealTitle),
+    });
 
     await page.goto('/clients');
     await searchClients(page, updatedClientName);
@@ -199,8 +198,9 @@ test.describe('CRM CRUD flows', () => {
 
     const deleteClientResponse = await deleteViaApi(page, `/api/clients/${currentClientId}`);
     expect(deleteClientResponse.ok()).toBe(true);
-    await clickRefreshButton(page);
-    await searchClients(page, updatedClientName);
-    await expect(cardContaining(page, updatedClientName)).toHaveCount(0);
+    await expectHiddenAfterRefresh(page, () => cardContaining(page, updatedClientName), {
+      beforeRefresh: async () => searchClients(page, updatedClientName),
+      afterRefresh: async () => searchClients(page, updatedClientName),
+    });
   });
 });

@@ -87,6 +87,11 @@ When adding a new mutation:
 
 When `VITE_DEBUG_VIEW_REFRESH=1` is enabled, the metrics page exposes a debug card for the transverse refresh mechanism.
 
+You can also enable it at runtime without rebuilding the frontend:
+
+- query string: `?viewRefreshDebug=1`
+- browser storage: `localStorage.setItem('appViewRefreshDebug', '1')`
+
 This debug view is intended to answer:
 
 - which scopes are currently dirty
@@ -96,3 +101,35 @@ This debug view is intended to answer:
 - which recent refresh events were emitted
 
 This is a debugging aid. It is not a source of truth for backend cache health.
+
+## CI enforcement
+
+The cache/refresh doctrine is validated in CI through:
+
+- `npm run validate:core`
+- `npm run validate:e2e`
+
+See [C:\Users\mail\CascadeProjects\ResumeConverter\docs\CI_VALIDATION.md](C:\Users\mail\CascadeProjects\ResumeConverter\docs\CI_VALIDATION.md).
+
+## Performance review guidance
+
+The transverse refresh debug card now exposes refresh-cycle timing:
+
+- total refresh cycles
+- failures
+- average duration
+- last duration
+- max duration
+- per-scope duration breakdown
+
+Use it to answer:
+
+- which cached screens refresh most often
+- which scopes are expensive when forced with `refresh=1`
+- whether a scope is failing or simply slow
+
+Operational rule:
+
+- a slow scope with low failure count is a performance issue
+- a fast scope with stale UI is usually a dirty-scope propagation issue
+- a slow scope plus stale UI often means the front is preserving optimistic state while the backend refresh is late

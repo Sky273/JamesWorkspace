@@ -1,13 +1,14 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { markViewScopesDirty } from '../utils/viewRefresh';
+import { getViewRefreshSnapshot, markViewScopesDirty, resetViewRefreshDebugStateForTests } from '../utils/viewRefresh';
 import { useScopedViewRefresh } from './useScopedViewRefresh';
 
 describe('useScopedViewRefresh', () => {
   beforeEach(() => {
     window.sessionStorage.clear();
     vi.clearAllMocks();
+    resetViewRefreshDebugStateForTests();
   });
 
   it('runs the refresh callback on mount when a matching scope is already dirty', async () => {
@@ -54,5 +55,24 @@ describe('useScopedViewRefresh', () => {
 
     await new Promise((resolve) => window.setTimeout(resolve, 10));
     expect(onRefresh).not.toHaveBeenCalled();
+  });
+
+  it('records refresh cycle timing when the refresh callback resolves', async () => {
+    markViewScopesDirty(['missions']);
+    const onRefresh = vi.fn(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 5));
+    });
+
+    renderHook(() => useScopedViewRefresh({
+      consumerId: 'test-consumer',
+      scopes: ['missions'],
+      onRefresh,
+    }));
+
+    await waitFor(() => {
+      expect(getViewRefreshSnapshot().refreshCycles.total).toBe(1);
+    });
+
+    expect(getViewRefreshSnapshot().refreshCycles.byScope.missions?.total).toBe(1);
   });
 });

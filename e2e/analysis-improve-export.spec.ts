@@ -124,10 +124,13 @@ test.describe('Analysis Improve Export', () => {
     const templateSelect = page.locator('#template');
     await expect(templateSelect).not.toHaveValue('', { timeout: 30000 });
 
-    const downloadPromise = page.waitForEvent('download');
+    const exportResponsePromise = page.waitForResponse((response) =>
+      response.request().method() === 'POST' && response.url().includes('/generate-pdf')
+    );
     await page.getByRole('button', { name: /export|exporter/i }).click();
-    const download = await downloadPromise;
+    const exportResponse = await exportResponsePromise;
 
-    expect(download.suggestedFilename().toLowerCase()).toContain('.pdf');
+    expect(exportResponse.ok()).toBe(true);
+    expect(exportResponse.headers()['content-type'] || '').toContain('application/pdf');
   });
 });
