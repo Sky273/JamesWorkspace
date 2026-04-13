@@ -637,10 +637,12 @@ La configuration complète du fichier `.env` est détaillée dans la section [In
 | `CACHE_BACKEND` | Backend demandé (`memory` ou `redis`) | `memory` |
 | `CACHE_REDIS_URL` | URL de connexion Redis | `redis://127.0.0.1:6379` |
 | `CACHE_KEY_PREFIX` | Préfixe des clés Redis | `resumeconverter` |
+| `DISABLE_INTERNAL_REDIS` | Désactive le Redis embarqué quand vous utilisez un Redis externe ou un autre service Compose | `false` |
 
 Notes :
 - si `CACHE_BACKEND=redis` mais que Redis est indisponible, ResumeConverter bascule automatiquement sur un backend effectif `memory-fallback`
 - les métriques admin exposent à la fois le backend configuré et le backend effectivement utilisé
+- en environnement Docker, `DISABLE_INTERNAL_REDIS=true` évite de démarrer le Redis embarqué si `CACHE_REDIS_URL` pointe déjà vers un service Redis dédié
 
 #### Principe de fonctionnement du cache applicatif
 
