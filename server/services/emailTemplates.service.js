@@ -16,9 +16,9 @@ import { CACHE_KEYS, emailTemplatesCache, invalidateEmailTemplatesCaches } from 
 
 let mjml2html = null;
 let mjmlCoreModule = null;
+let mjmlPreset = null;
 let mjmlLastUsed = 0;
 let mjmlUnloadTimer = null;
-let mjmlComponentsRegistered = false;
 
 // Unload mjml after 10 minutes of inactivity
 const MJML_UNLOAD_TIMEOUT = 10 * 60 * 1000;
@@ -51,9 +51,8 @@ function unloadMjml() {
     if (mjml2html || mjmlCoreModule) {
         mjml2html = null;
         mjmlCoreModule = null;
+        mjmlPreset = null;
         mjmlLastUsed = 0;
-        // Keep mjmlComponentsRegistered = true since components stay registered in mjml-core's internal state
-        // Re-registering would cause warnings, so we track this separately
         
         if (global.gc) {
             global.gc();
@@ -72,23 +71,10 @@ async function getMjml() {
     
     if (!mjml2html) {
         mjmlCoreModule = await import('mjml-core');
-        
-        // Register components only once (they persist in mjml-core's internal state)
-        if (!mjmlComponentsRegistered) {
-            const mjmlPreset = await import('mjml-preset-core');
-            const preset = mjmlPreset.default;
-            if (preset && preset.components) {
-                for (const component of preset.components) {
-                    mjmlCoreModule.registerComponent(component);
-                }
-            }
-            mjmlComponentsRegistered = true;
-            safeLog('info', 'mjml-core components registered');
-        }
-        
-        // mjml-core exports the function at default.default
+        const mjmlPresetModule = await import('mjml-preset-core');
+        mjmlPreset = mjmlPresetModule.default;
         mjml2html = mjmlCoreModule.default.default;
-        safeLog('info', 'mjml-core module loaded lazily (~10MB)');
+        safeLog('info', 'mjml-core module loaded lazily with preset support (~10MB)');
     }
     
     scheduleMjmlUnload();
@@ -411,7 +397,8 @@ export async function compileMjml(mjmlContent) {
         const mjml = await getMjml();
         const result = mjml(mjmlContent, {
             validationLevel: 'soft',
-            minify: false
+            minify: false,
+            presets: mjmlPreset ? [mjmlPreset] : []
         });
         
         if (result.errors && result.errors.length > 0) {

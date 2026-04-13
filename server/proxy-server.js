@@ -258,6 +258,13 @@ app.use((req, res, next) => {
             return;
         }
 
+        const shouldQuietExpectedE2EAuthValidation =
+            process.env.E2E_QUIET_EXPECTED_WARNINGS === 'true'
+            && ['/signin', '/register', '/refresh', '/forgot-password', '/reset-password'].includes(req.path);
+        if (shouldQuietExpectedE2EAuthValidation) {
+            return;
+        }
+
         badRequestDiagnosticLogged = true;
         safeLog('warn', '400 Bad Request diagnostic', {
             requestId: req.requestId,

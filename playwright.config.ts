@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { defineConfig, devices } from '@playwright/test';
 
 /**
@@ -37,9 +38,12 @@ export default defineConfig({
     timeout: 120 * 1000,
     env: {
       ...process.env,
+      JWT_SECRET: process.env.JWT_SECRET || 'playwright-jwt-secret-minimum-32-characters',
+      CSRF_SECRET: process.env.CSRF_SECRET || 'playwright-csrf-secret-minimum-32chars',
       PDF_SERVER_INTERNAL_TOKEN: process.env.PDF_SERVER_INTERNAL_TOKEN || 'playwright-pdf-server-internal-token-32chars',
-      REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET || 'playwright-refresh-token-secret-minimum-32-chars',
+      REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET || 'playwright-refresh-token-secret-minimum-32-chars',
       HTTPS_ENABLED: process.env.HTTPS_ENABLED || 'false',
+      CACHE_BACKEND: process.env.CACHE_BACKEND || 'memory',
       VITE_BUILD_OUT_DIR: 'dist-e2e',
       STATIC_DIST_DIR: 'client/dist-e2e',
       VITE_DISABLE_ASSET_COMPRESSION: 'true',
@@ -48,6 +52,7 @@ export default defineConfig({
       E2E_DISABLE_BACKUP_SCHEDULER: 'true',
       E2E_DISABLE_EXTERNAL_LLM: 'true',
       E2E_RELAX_RATE_LIMITING: 'true',
+      E2E_QUIET_EXPECTED_WARNINGS: 'true',
     },
   },
 });

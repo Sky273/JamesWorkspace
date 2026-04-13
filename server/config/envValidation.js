@@ -47,6 +47,7 @@ export function validateEnvironment() {
     const errors = [];
     const warnings = [];
     const isProduction = process.env.NODE_ENV === 'production';
+    const quietExpectedWarnings = process.env.E2E_QUIET_EXPECTED_WARNINGS === 'true';
 
     for (const varConfig of REQUIRED_VARS) {
         const value = process.env[varConfig.name];
@@ -98,7 +99,7 @@ export function validateEnvironment() {
         errors.forEach(err => safeLog('error', err));
     }
 
-    if (warnings.length > 0) {
+    if (warnings.length > 0 && !quietExpectedWarnings) {
         safeLog('warn', 'Environment validation warnings', { warningCount: warnings.length });
         warnings.forEach(warn => safeLog('warn', warn));
     }

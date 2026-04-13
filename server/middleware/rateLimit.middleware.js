@@ -6,6 +6,10 @@ function isE2ERateLimitRelaxed() {
     return process.env.E2E_RELAX_RATE_LIMITING === 'true';
 }
 
+function shouldQuietExpectedE2EWarnings() {
+    return process.env.E2E_QUIET_EXPECTED_WARNINGS === 'true';
+}
+
 // ============================================
 // RATE LIMITING MIDDLEWARE
 // ============================================
@@ -33,7 +37,9 @@ export const authLimiter = rateLimit({
     message: 'Too many authentication attempts, please try again after 15 minutes.',
     skipSuccessfulRequests: true,
     handler: (req, res) => {
-        safeLog('warn', 'Auth rate limit exceeded', { ip: req.ip });
+        if (!shouldQuietExpectedE2EWarnings()) {
+            safeLog('warn', 'Auth rate limit exceeded', { ip: req.ip });
+        }
         res.status(429).json({
             error: 'Too many authentication attempts, please try again after 15 minutes.',
             retryAfter: Math.ceil(req.rateLimit.resetTime / 1000)

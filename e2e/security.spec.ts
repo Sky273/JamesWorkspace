@@ -30,21 +30,17 @@ test.describe('API Security', () => {
 });
 
 test.describe('Rate Limiting', () => {
-  test('should enforce rate limits on auth endpoints', async ({ request }) => {
+  test('should reject repeated invalid auth attempts', async ({ request }) => {
     const responses = [];
     
     // Make multiple rapid requests
     for (let i = 0; i < 15; i++) {
       const response = await request.post('/api/auth/signin', {
-        data: { email: 'test@test.com', password: 'wrong' }
+        data: { email: 'test@test.com', password: 'wrongpass-123' }
       });
       responses.push(response.status());
     }
     
-    // Should eventually get rate limited (429)
-    const hasRateLimit = responses.some(status => status === 429);
-    // Note: This test may pass or fail depending on rate limit config
-    // It's here to document expected behavior
-    console.log('Rate limit responses:', responses);
+    expect(responses.every(status => status >= 400)).toBe(true);
   });
 });

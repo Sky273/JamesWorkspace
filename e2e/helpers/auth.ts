@@ -1,8 +1,9 @@
 import 'dotenv/config';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import pg from 'pg';
 import { expect, type Page } from '@playwright/test';
-import { generateAccessToken, generateRefreshToken } from '../../server/services/jwt.service.js';
 
 const { Pool } = pg;
 
@@ -13,6 +14,10 @@ const DEFAULT_ADMIN_PASSWORD = 'PlaywrightAdmin123!';
 const E2E_TEMPLATE_NAME = '000 Playwright Export Template';
 const E2E_TEMPLATE_CONTENT = '<section><h1>-name-</h1><h2>-title-</h2><div>-content-</div></section>';
 const E2E_TEMPLATE_STYLESHEET = 'body { font-family: Arial, sans-serif; } h1 { font-size: 20px; } h2 { font-size: 14px; color: #555; }';
+const JWT_SECRET = process.env.JWT_SECRET || 'playwright-jwt-secret-minimum-32-characters';
+const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'playwright-refresh-token-secret-minimum-32-chars';
+const JWT_EXPIRES_IN = '1h';
+const REFRESH_TOKEN_EXPIRES_IN = '7d';
 
 export const E2E_USER_EMAIL = process.env.E2E_USER_EMAIL || DEFAULT_USER_EMAIL;
 export const E2E_USER_PASSWORD = process.env.E2E_USER_PASSWORD || DEFAULT_USER_PASSWORD;
@@ -44,6 +49,37 @@ let bootstrappedTemplate: {
   id: string;
   name: string;
 } | null = null;
+
+function generateAccessToken(user: {
+  id: string;
+  email: string;
+  name: string;
+  status: string;
+  role: string;
+  firm_id: string;
+  firm?: string | null;
+}) {
+  const jti = crypto.randomBytes(16).toString('hex');
+  return jwt.sign({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    status: user.status,
+    role: user.role || 'user',
+    firmId: user.firm_id,
+    firmName: user.firm || null,
+    jti,
+  }, JWT_SECRET, { algorithm: 'HS256', expiresIn: JWT_EXPIRES_IN });
+}
+
+function generateRefreshToken(user: { id: string; email: string; }) {
+  const jti = crypto.randomBytes(16).toString('hex');
+  return jwt.sign(
+    { id: user.id, email: user.email, type: 'refresh', jti },
+    REFRESH_TOKEN_SECRET,
+    { algorithm: 'HS256', expiresIn: REFRESH_TOKEN_EXPIRES_IN }
+  );
+}
 
 function createPool(): pg.Pool {
   const password = process.env.POSTGRES_PASSWORD;

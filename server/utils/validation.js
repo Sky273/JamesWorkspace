@@ -425,6 +425,10 @@ export function validateBody(schema) {
       next();
     } catch (error) {
       if (error instanceof z.ZodError) {
+        const shouldQuietExpectedE2EAuthValidation =
+          process.env.E2E_QUIET_EXPECTED_WARNINGS === 'true'
+          && ['/signin', '/register', '/refresh', '/forgot-password', '/reset-password'].includes(req.path);
+
         const errors = error.issues.map((err) => ({
           field: err.path?.join('.') || 'unknown',
           message: err.message || 'Validation error',
@@ -464,12 +468,14 @@ export function validateBody(schema) {
           };
         };
         
-        safeLog('error', 'Request validation failed', {
-          path: req.path,
-          errors: JSON.stringify(errors),
-          receivedFields: Object.keys(req.body || {}),
-          requestBodySummary: summarizeRequestBody(req.body)
-        });
+        if (!shouldQuietExpectedE2EAuthValidation) {
+          safeLog('error', 'Request validation failed', {
+            path: req.path,
+            errors: JSON.stringify(errors),
+            receivedFields: Object.keys(req.body || {}),
+            requestBodySummary: summarizeRequestBody(req.body)
+          });
+        }
         
         res.status(400).json({
           error: 'Validation failed',

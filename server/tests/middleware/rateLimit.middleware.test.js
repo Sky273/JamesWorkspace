@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { safeLog } from '../../utils/logger.backend.js';
 
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
@@ -26,6 +27,7 @@ vi.mock('../../config/constants.js', () => ({
 }));
 
 import {
+    authLimiter,
     userRateLimit,
     combinedRateLimit,
     cleanupRateLimitStore
@@ -53,7 +55,21 @@ describe('Rate Limit Middleware', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         delete process.env.E2E_RELAX_RATE_LIMITING;
+        delete process.env.E2E_QUIET_EXPECTED_WARNINGS;
         cleanupRateLimitStore();
+    });
+
+    describe('authLimiter', () => {
+        it('should suppress expected auth rate-limit warnings when e2e quiet mode is enabled', () => {
+            process.env.E2E_QUIET_EXPECTED_WARNINGS = 'true';
+            const { req, res } = mockReqRes();
+            req.rateLimit = { resetTime: 1000 };
+
+            authLimiter._options.handler(req, res);
+
+            expect(safeLog).not.toHaveBeenCalledWith('warn', 'Auth rate limit exceeded', expect.anything());
+            expect(res.status).toHaveBeenCalledWith(429);
+        });
     });
 
     describe('userRateLimit', () => {

@@ -5,6 +5,11 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+const mockMjmlCompile = vi.fn((mjml) => ({
+    html: `<html><head></head><body>${mjml}</body></html>`,
+    errors: []
+}));
+
 vi.mock('../../config/database.js', () => ({
     query: vi.fn()
 }));
@@ -26,16 +31,12 @@ vi.mock('../../services/cache.service.js', () => ({
 // Mock mjml-core lazy loading
 vi.mock('mjml-core', () => ({
     default: {
-        default: vi.fn((mjml) => ({
-            html: `<html><head></head><body>${mjml}</body></html>`,
-            errors: []
-        }))
-    },
-    registerComponent: vi.fn()
+        default: mockMjmlCompile
+    }
 }));
 
 vi.mock('mjml-preset-core', () => ({
-    default: { components: [] }
+    default: { components: [], dependencies: {} }
 }));
 
 import { query } from '../../config/database.js';
@@ -189,6 +190,14 @@ describe('Email Templates Service', () => {
 
             expect(result.name).toBe('New');
             expect(query.mock.calls[0][0]).toContain('INSERT INTO email_templates');
+            expect(mockMjmlCompile).toHaveBeenCalledWith(
+                '<mjml><mj-body></mj-body></mjml>',
+                expect.objectContaining({
+                    validationLevel: 'soft',
+                    minify: false,
+                    presets: [{ components: [], dependencies: {} }]
+                })
+            );
         });
 
         it('should unset other defaults when creating as default', async () => {
