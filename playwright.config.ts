@@ -32,7 +32,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'npm run build && node scripts/start-e2e-stack.mjs',
+    command: 'node scripts/start-playwright-webserver.mjs',
     url: 'http://localhost:3001/health',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,

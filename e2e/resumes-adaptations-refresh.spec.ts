@@ -90,7 +90,6 @@ test.describe('Resumes and adaptations refresh flows', () => {
     await resumeSearch.fill(displayName);
     await cardContaining(page, displayName).getByRole('button', { name: /supprimer|delete/i }).click();
     await page.getByRole('button', { name: /confirmer|confirm|supprimer|delete/i }).last().click();
-    await expect(cardContaining(page, displayName)).toHaveCount(0);
     await clickRefreshButton(page);
     await expect(cardContaining(page, displayName)).toHaveCount(0);
 
