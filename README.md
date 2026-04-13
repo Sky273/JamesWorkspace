@@ -38,7 +38,7 @@ Application professionnelle de gestion et d'analyse de CVs avec intelligence art
 - **Métiers ROME** : Référentiel complet avec recherche et navigation
 
 ### Chatbot IA
-- **Assistant conversationnel** : Aide à la rédaction et conseils carrière
+- **Hugging Face** : Support du provider `huggingface` via le routeur OpenAI-compatible Hugging Face, avec `MiniMaxAI/MiniMax-M2.7` comme modele initial et l'alias `minimax-m2.7:cloud`.
 - **Multi-modèles** : Support OpenAI (GPT-5.4 / GPT-5.4-pro / GPT-5.2 / GPT-5.1 / GPT-5 / GPT-4.1 / GPT-4o), Anthropic (Claude Opus 4.x / Sonnet 4 / Claude 3.7 / Claude 3.5), DeepSeek (DeepSeek-V3.2 via `deepseek-chat` et `deepseek-reasoner`), Gemma Cloud via Gemini, GLM (`glm-5.1`, `glm-5`), MiniMax et Ollama distant
 - **Contexte CV** : Réponses personnalisées basées sur le profil
 
@@ -169,11 +169,25 @@ Application professionnelle de gestion et d'analyse de CVs avec intelligence art
 - `POST /api/tags/extract` - Extraire les tags d'un texte
 
 ### LLM (Proxy)
-- `POST /api/llm/openai` - Proxy OpenAI (GPT-5, GPT-4o) avec routage compatible DeepSeek / Gemma / GLM / MiniMax / Ollama selon configuration
+- `POST /api/llm/openai` - Proxy OpenAI (GPT-5, GPT-4o) avec routage compatible DeepSeek / Gemma / GLM / MiniMax / Hugging Face / Ollama selon configuration
 - `POST /api/llm/anthropic` - Proxy Anthropic (Claude) avec routage compatible MiniMax selon configuration
 - `POST /api/llm/messages` - Proxy Anthropic / providers compatibles
-- `POST /api/llm/chat/completions` - Proxy OpenAI-compatible unifié (OpenAI, DeepSeek, Gemma, GLM, MiniMax, Ollama selon configuration)
-- `GET /api/llm/circuit-breakers` - Etat des familles LLM (`openai`, `anthropic`, `gemma`, `deepseek`, `glm`, `minimax`, `ollama`)
+- `POST /api/llm/chat/completions` - Proxy OpenAI-compatible unifié (OpenAI, DeepSeek, Gemma, GLM, MiniMax, Hugging Face, Ollama selon configuration)
+- `GET /api/llm/circuit-breakers` - Etat des familles LLM (`openai`, `anthropic`, `gemma`, `deepseek`, `glm`, `minimax`, `huggingface`, `ollama`)
+
+### Cache applicatif
+- Le cache applicatif fonctionne au niveau backend.
+- Les lectures partagees passent par la couche service et utilisent des scopes versionnes stockes en base.
+- Une creation, modification ou suppression invalide l'entite concernee, incremente les vues impactees et notifie les autres instances.
+- `refresh=1` force une relecture depuis la source de verite.
+
+### Configuration Hugging Face
+- Variables d'environnement :
+  - `HUGGINGFACE_API_KEY`
+  - `HUGGINGFACE_BASE_URL` (optionnelle, valeur par defaut `https://router.huggingface.co/v1`)
+- Provider : `huggingface`
+- Modele initial supporte : `MiniMaxAI/MiniMax-M2.7`
+- Alias accepte : `minimax-m2.7:cloud`
 
 ### Cabinets (Firms)
 - `GET /api/firms` - Liste des cabinets

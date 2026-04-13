@@ -56,6 +56,29 @@ This audit covers the providers and model families exposed by the application an
 - The alias `minimax-m2.7:cloud` is normalized to `MiniMaxAI/MiniMax-M2.7`.
 - The current app profile keeps the standard OpenAI-compatible surface but disables `response_format` and drops `presence_penalty`, `frequency_penalty`, `logit_bias`, and `n` for this model family.
 
+### Hugging Face configuration
+
+To enable the Hugging Face provider in the application settings:
+
+- set `HUGGINGFACE_API_KEY`
+- optionally override `HUGGINGFACE_BASE_URL`
+- choose provider `huggingface` in the admin LLM settings
+- use model `MiniMaxAI/MiniMax-M2.7`
+
+Current defaults:
+
+- provider key: `huggingface`
+- default base URL: `https://router.huggingface.co/v1`
+- default model: `MiniMaxAI/MiniMax-M2.7`
+
+Accepted model aliases currently normalized by the backend:
+
+- `minimax-m2.7:cloud`
+- `MiniMaxAI/MiniMax-M2.7`
+- `minimaxai/minimax-m2.7`
+- `minimaxai/minimax-m2.7:cloud`
+- `minimaxai/minimax-m2.7:huggingface`
+
 ### GLM
 
 - `glm-5` and `glm-5.1` expose `thinking`, `response_format`, tools, and function calling.

@@ -11,6 +11,65 @@ The current doctrine is:
 - refresh of impacted views after successful mutations
 - explicit `refresh=1` bypass for admin and CRUD screens that must force a read from the source of truth
 
+## Application cache operating model
+
+The application cache is not a browser cache and not a Redis-only feature. It is a backend application cache with a layered design:
+
+- L1 in-process cache inside the Node.js application
+- optional Redis backend when `CACHE_BACKEND=redis`
+- versioned cache scopes stored in PostgreSQL
+- invalidation fan-out through PostgreSQL notifications
+
+In practice, each shared business view is cached under a logical scope such as `users`, `firms`, `clients`, `deals`, `missions`, `resumes`, or `templates`.
+
+Each cached read follows this sequence:
+
+1. the route calls a service-layer read, not the database directly
+2. the service resolves the cache scope version from `cache_scope_versions`
+3. the service builds a versioned cache key
+4. the service serves the cached value if present
+5. otherwise it reads from PostgreSQL, stores the result, and returns it
+
+Each successful mutation follows this sequence:
+
+1. the write is performed through the service layer
+2. the affected entity cache is invalidated when an entity-level cache exists
+3. the impacted shared view scopes are version-bumped
+4. a PostgreSQL notification is emitted so other instances drop stale entries
+5. the frontend marks the impacted scopes dirty and triggers a forced refresh on the relevant screens
+
+This means the cache maximizes reuse on repeated reads, but stale entries become unreachable as soon as the scope version changes.
+
+## Cache layers and source of truth
+
+The source of truth remains PostgreSQL.
+
+The cache improves latency and reduces repeated database work, but correctness is maintained by:
+
+- service-owned invalidation after successful writes
+- versioned scope keys
+- cross-instance invalidation notifications
+- forced `refresh=1` reads for screens that must bypass cached reads on demand
+
+Operationally:
+
+- `CACHE_BACKEND=memory` means the effective storage is process-local memory
+- `CACHE_BACKEND=redis` means the shared storage backend is Redis when reachable
+- even when Redis is configured, the application cache doctrine still applies because scope versioning and invalidation remain service-driven
+
+## Manual refresh semantics
+
+Manual refresh buttons must perform a real server reload.
+
+The contract is:
+
+- the frontend sends `refresh=1`
+- the backend bypasses the cached read for that request
+- the response comes from the current source of truth
+- the cache may then be repopulated with the fresh result
+
+This is the recovery path when a user wants to force reconciliation after create, update, or delete.
+
 ## Current contract
 
 ### Backend
@@ -19,6 +78,7 @@ The current doctrine is:
 - Mutations must invalidate after the successful write, not before.
 - Background or batch processes must write through services so cache invalidation stays centralized.
 - Read routes that back cached screens should accept `refresh=1` and bypass cache.
+- Cache invalidation is version-based first; TTL is only a secondary safety net.
 
 ### Frontend
 
@@ -45,6 +105,8 @@ The main application cache and refresh scopes currently cover:
 - `marketTrends`
 - `rome`
 - `tags`
+
+These scopes back both the backend application cache and the transverse frontend refresh mechanism.
 
 ## Intentional exclusions
 

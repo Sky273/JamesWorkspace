@@ -229,6 +229,13 @@ GEMINI_API_KEY=votre-cle-gemini
 # Optionnel: surcharger l'endpoint OpenAI-compatible Google AI Studio
 GEMINI_OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
 
+# Hugging Face
+# Obtenir une cle: https://huggingface.co/settings/tokens
+# Le provider `huggingface` utilise le routeur OpenAI-compatible Hugging Face
+HUGGINGFACE_API_KEY=hf-votre-cle-huggingface
+# Optionnel: surcharger l'endpoint du routeur
+HUGGINGFACE_BASE_URL=https://router.huggingface.co/v1
+
 # MiniMax
 # Obtenir une clé: https://platform.minimax.io/
 MINIMAX_API_KEY=sk-api-votre-cle-minimax
@@ -438,6 +445,8 @@ HTTPS_PORT=3443
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
 GEMINI_API_KEY=...
+HUGGINGFACE_API_KEY=hf-...
+HUGGINGFACE_BASE_URL=https://router.huggingface.co/v1
 
 # Google OAuth (optionnel)
 GOOGLE_CLIENT_ID=votre-client-id
@@ -617,6 +626,7 @@ La configuration complète du fichier `.env` est détaillée dans la section [In
 | `OPENAI_API_KEY` | Clé API OpenAI (GPT-4/GPT-5) | https://platform.openai.com/api-keys |
 | `ANTHROPIC_API_KEY` | Clé API Anthropic (Claude) | https://console.anthropic.com/ |
 | `GEMINI_API_KEY` | Clé API Gemini / Gemma Cloud | https://aistudio.google.com/app/apikey |
+| `HUGGINGFACE_API_KEY` | Clé API Hugging Face | https://huggingface.co/settings/tokens |
 | `MINIMAX_API_KEY` | Clé API MiniMax | https://platform.minimax.io/ |
 | `OLLAMA_BASE_URL` | URL de l'instance Ollama distante | Votre instance Ollama auto-hébergée |
 
@@ -631,6 +641,14 @@ La configuration complète du fichier `.env` est détaillée dans la section [In
 Notes :
 - si `CACHE_BACKEND=redis` mais que Redis est indisponible, ResumeConverter bascule automatiquement sur un backend effectif `memory-fallback`
 - les métriques admin exposent à la fois le backend configuré et le backend effectivement utilisé
+
+#### Principe de fonctionnement du cache applicatif
+
+- Le cache applicatif est géré côté backend, au niveau des services.
+- Les lectures partagées utilisent des scopes versionnés stockés en base et un cache L1 en mémoire locale.
+- Redis peut être activé comme backend de stockage, mais l'invalidation reste pilotée par les versions de scope et les notifications PostgreSQL.
+- Toute création, modification ou suppression invalide l'élément concerné, incrémente les vues impactées et force les autres instances à relire la source de vérité.
+- Le paramètre `refresh=1` bypass explicitement le cache applicatif pour recharger une vue depuis la base.
 
 #### Variables optionnelles par fonctionnalité
 
@@ -656,6 +674,8 @@ Notes :
 ### Notes LLM supplémentaires
 
 - **MiniMax** : le provider `minimax` utilise `MINIMAX_API_KEY`. Les URLs `MINIMAX_OPENAI_BASE_URL` et `MINIMAX_ANTHROPIC_BASE_URL` sont optionnelles.
+- **Hugging Face** : le provider `huggingface` utilise `HUGGINGFACE_API_KEY`. `HUGGINGFACE_BASE_URL` est optionnelle et pointe par défaut vers `https://router.huggingface.co/v1`.
+- **Modèle Hugging Face pris en charge** : `MiniMaxAI/MiniMax-M2.7`, avec l'alias accepté `minimax-m2.7:cloud`.
 - **Gemma Cloud** : le provider `gemma` utilise `GEMINI_API_KEY`. `GEMINI_OPENAI_BASE_URL` est optionnelle et pointe par défaut vers l'endpoint OpenAI-compatible Google AI Studio.
 - **Ollama** : seule une instance **distante** est supportée. ResumeConverter n'embarque plus de runtime Ollama dans le conteneur.
 - Si vous utilisez Ollama, configurez l'URL distante dans `OLLAMA_BASE_URL` et aussi dans les paramètres de l'application (`ollamaBaseUrl`).
