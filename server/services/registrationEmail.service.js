@@ -1,6 +1,13 @@
 import { sendEmail } from './mail/gdprMailService.js';
 
+function getSignInUrl() {
+    const baseUrl = String(process.env.FRONTEND_URL || 'https://resumeconverter.net').replace(/\/+$/, '');
+    return `${baseUrl}/signin`;
+}
+
 function buildRegistrationConfirmationHtml(name) {
+    const signInUrl = getSignInUrl();
+
     return `
 <!DOCTYPE html>
 <html lang="fr">
@@ -13,6 +20,10 @@ function buildRegistrationConfirmationHtml(name) {
     <div style="padding:32px 24px;">
       <p style="color:#374151;font-size:16px;margin-top:0;">Bonjour <strong>${name}</strong>,</p>
       <p style="color:#374151;font-size:16px;">Votre compte de test est maintenant actif et vous pouvez commencer à utiliser l'application.</p>
+      <div style="margin:28px 0;text-align:center;">
+        <a href="${signInUrl}" style="display:inline-block;background:#4f46e5;color:#ffffff;text-decoration:none;font-weight:700;padding:14px 24px;border-radius:12px;">Se connecter</a>
+      </div>
+      <p style="color:#6b7280;font-size:14px;">Ou copiez ce lien dans votre navigateur : <a href="${signInUrl}" style="color:#4f46e5;">${signInUrl}</a></p>
       <p style="color:#374151;font-size:16px;">N'hésitez pas à contacter Aptea si vous souhaitez plus d'informations ou un accompagnement sur vos usages.</p>
       <p style="color:#6b7280;font-size:14px;margin-top:24px;">L'équipe Aptea</p>
     </div>
@@ -25,13 +36,17 @@ function buildRegistrationConfirmationHtml(name) {
 }
 
 function buildRegistrationConfirmationText(name) {
+    const signInUrl = getSignInUrl();
+
     return `Bonjour ${name},
 
 Votre compte de test est maintenant actif et vous pouvez commencer à utiliser l'application.
 
-N'hesitez pas a contacter Aptea si vous souhaitez plus d'informations ou un accompagnement sur vos usages.
+Connectez-vous ici : ${signInUrl}
 
-L'equipe Aptea`;
+N'hésitez pas à contacter Aptea si vous souhaitez plus d'informations ou un accompagnement sur vos usages.
+
+L'équipe Aptea`;
 }
 
 export async function sendRegistrationConfirmationEmail({ to, name }) {
