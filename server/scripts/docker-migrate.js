@@ -2,6 +2,8 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import { ALL_SUPPORTED_LLM_PROVIDERS } from '../services/llmConfiguration.service.js';
+import { hasExactSupportedProviders } from './dockerMigrate.helpers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,6 +14,7 @@ const MIGRATION_TABLE = 'schema_migrations';
 const MINIMAX_PROVIDER_MIGRATION = 'add_minimax_provider.sql';
 const DEEPSEEK_PROVIDER_MIGRATION = 'add_deepseek_provider.sql';
 const HUGGINGFACE_PROVIDER_MIGRATION = 'add_huggingface_provider.sql';
+const FIX_LLM_PROVIDER_CONSTRAINT_MIGRATION = 'fix_llm_provider_constraint_supported_providers.sql';
 
 async function pathExists(targetPath) {
     try {
@@ -232,7 +235,7 @@ async function tableExists(tableName) {
     return result.rows[0]?.exists === true;
 }
 
-async function llmProviderConstraintSupportsMiniMax() {
+async function getLlmProviderConstraintDefinition() {
     const result = await query(
         `
             SELECT pg_get_constraintdef(oid) AS definition
@@ -242,36 +245,7 @@ async function llmProviderConstraintSupportsMiniMax() {
         `
     );
 
-    const definition = result.rows[0]?.definition || '';
-    return definition.toLowerCase().includes('minimax');
-}
-
-async function llmProviderConstraintSupportsDeepSeek() {
-    const result = await query(
-        `
-            SELECT pg_get_constraintdef(oid) AS definition
-            FROM pg_constraint
-            WHERE conname = 'llm_settings_llm_provider_check'
-              AND conrelid = 'public.llm_settings'::regclass
-        `
-    );
-
-    const definition = result.rows[0]?.definition || '';
-    return definition.toLowerCase().includes('deepseek');
-}
-
-async function llmProviderConstraintSupportsHuggingFace() {
-    const result = await query(
-        `
-            SELECT pg_get_constraintdef(oid) AS definition
-            FROM pg_constraint
-            WHERE conname = 'llm_settings_llm_provider_check'
-              AND conrelid = 'public.llm_settings'::regclass
-        `
-    );
-
-    const definition = result.rows[0]?.definition || '';
-    return definition.toLowerCase().includes('huggingface');
+    return result.rows[0]?.definition || '';
 }
 
 async function readSqlFile(filePath) {
@@ -319,31 +293,26 @@ async function reconcileCriticalMigrations(appliedMigrations) {
         return appliedMigrations;
     }
 
-    const minimaxConstraintOk = await llmProviderConstraintSupportsMiniMax();
-    if (appliedMigrations.has(MINIMAX_PROVIDER_MIGRATION) && !minimaxConstraintOk) {
-        safeLog('warn', 'MiniMax provider migration was marked applied but schema is still outdated; forcing reapply', {
-            migrationName: MINIMAX_PROVIDER_MIGRATION
-        });
-        await unmarkMigrationApplied(MINIMAX_PROVIDER_MIGRATION);
-        appliedMigrations.delete(MINIMAX_PROVIDER_MIGRATION);
-    }
+    const definition = await getLlmProviderConstraintDefinition();
+    const constraintMatchesSupportedProviders = hasExactSupportedProviders(definition, ALL_SUPPORTED_LLM_PROVIDERS);
 
-    const deepseekConstraintOk = await llmProviderConstraintSupportsDeepSeek();
-    if (appliedMigrations.has(DEEPSEEK_PROVIDER_MIGRATION) && !deepseekConstraintOk) {
-        safeLog('warn', 'DeepSeek provider migration was marked applied but schema is still outdated; forcing reapply', {
-            migrationName: DEEPSEEK_PROVIDER_MIGRATION
-        });
-        await unmarkMigrationApplied(DEEPSEEK_PROVIDER_MIGRATION);
-        appliedMigrations.delete(DEEPSEEK_PROVIDER_MIGRATION);
-    }
+    if (!constraintMatchesSupportedProviders) {
+        const migrationsToReplay = [
+            MINIMAX_PROVIDER_MIGRATION,
+            DEEPSEEK_PROVIDER_MIGRATION,
+            HUGGINGFACE_PROVIDER_MIGRATION,
+            FIX_LLM_PROVIDER_CONSTRAINT_MIGRATION
+        ].filter((migrationName) => appliedMigrations.has(migrationName));
 
-    const huggingFaceConstraintOk = await llmProviderConstraintSupportsHuggingFace();
-    if (appliedMigrations.has(HUGGINGFACE_PROVIDER_MIGRATION) && !huggingFaceConstraintOk) {
-        safeLog('warn', 'Hugging Face provider migration was marked applied but schema is still outdated; forcing reapply', {
-            migrationName: HUGGINGFACE_PROVIDER_MIGRATION
+        safeLog('warn', 'LLM provider constraint is out of sync with supported providers; forcing migration replay', {
+            supportedProviders: ALL_SUPPORTED_LLM_PROVIDERS,
+            migrationsToReplay
         });
-        await unmarkMigrationApplied(HUGGINGFACE_PROVIDER_MIGRATION);
-        appliedMigrations.delete(HUGGINGFACE_PROVIDER_MIGRATION);
+
+        for (const migrationName of migrationsToReplay) {
+            await unmarkMigrationApplied(migrationName);
+            appliedMigrations.delete(migrationName);
+        }
     }
 
     return appliedMigrations;

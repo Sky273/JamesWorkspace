@@ -1,0 +1,49 @@
+import { describe, it, expect } from 'vitest';
+import { extractAllowedLlmProvidersFromConstraint, hasExactSupportedProviders } from '../../scripts/dockerMigrate.helpers.js';
+
+describe('dockerMigrate.helpers', () => {
+    it('extracts providers from the llm provider constraint definition', () => {
+        const definition = "CHECK ((llm_provider)::text = ANY (ARRAY['openai'::text,'anthropic'::text,'huggingface'::text,'gemma'::text,'deepseek'::text,'glm'::text,'minimax'::text,'ollama'::text]))";
+
+        expect(extractAllowedLlmProvidersFromConstraint(definition)).toEqual([
+            'anthropic',
+            'deepseek',
+            'gemma',
+            'glm',
+            'huggingface',
+            'minimax',
+            'ollama',
+            'openai'
+        ]);
+    });
+
+    it('accepts only the exact supported provider set', () => {
+        const definition = "CHECK ((llm_provider)::text = ANY (ARRAY['openai'::text,'anthropic'::text,'huggingface'::text,'gemma'::text,'deepseek'::text,'glm'::text,'minimax'::text,'ollama'::text]))";
+
+        expect(hasExactSupportedProviders(definition, [
+            'openai',
+            'anthropic',
+            'huggingface',
+            'gemma',
+            'deepseek',
+            'glm',
+            'minimax',
+            'ollama'
+        ])).toBe(true);
+    });
+
+    it('rejects outdated constraints that miss a supported provider', () => {
+        const definition = "CHECK ((llm_provider)::text = ANY (ARRAY['openai'::text,'anthropic'::text,'huggingface'::text,'deepseek'::text,'glm'::text,'minimax'::text,'ollama'::text]))";
+
+        expect(hasExactSupportedProviders(definition, [
+            'openai',
+            'anthropic',
+            'huggingface',
+            'gemma',
+            'deepseek',
+            'glm',
+            'minimax',
+            'ollama'
+        ])).toBe(false);
+    });
+});

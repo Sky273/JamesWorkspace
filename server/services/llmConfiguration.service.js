@@ -11,6 +11,8 @@ export const LLM_PROVIDER_DEFAULT_MODELS = {
     ollama: null
 };
 
+export const ALL_SUPPORTED_LLM_PROVIDERS = Object.freeze(Object.keys(LLM_PROVIDER_DEFAULT_MODELS));
+
 const HUGGINGFACE_MODEL_ALIASES = Object.freeze({
     'minimax-m2.7:cloud': 'MiniMaxAI/MiniMax-M2.7',
     'minimaxai/minimax-m2.7': 'MiniMaxAI/MiniMax-M2.7',
