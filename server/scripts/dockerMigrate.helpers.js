@@ -2,6 +2,17 @@ export function normalizeConstraintDefinition(definition = '') {
     return String(definition || '').toLowerCase();
 }
 
+export const SUPPORTED_LLM_PROVIDERS_FOR_CONSTRAINT = Object.freeze([
+    'openai',
+    'anthropic',
+    'huggingface',
+    'gemma',
+    'deepseek',
+    'glm',
+    'minimax',
+    'ollama'
+]);
+
 export function extractAllowedLlmProvidersFromConstraint(definition = '') {
     const normalized = normalizeConstraintDefinition(definition);
     const matches = normalized.matchAll(/'([a-z0-9_-]+)'::text/g);

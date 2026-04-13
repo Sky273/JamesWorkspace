@@ -2,8 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { ALL_SUPPORTED_LLM_PROVIDERS } from '../services/llmConfiguration.service.js';
-import { hasExactSupportedProviders } from './dockerMigrate.helpers.js';
+import { hasExactSupportedProviders, SUPPORTED_LLM_PROVIDERS_FOR_CONSTRAINT } from './dockerMigrate.helpers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -294,7 +293,7 @@ async function reconcileCriticalMigrations(appliedMigrations) {
     }
 
     const definition = await getLlmProviderConstraintDefinition();
-    const constraintMatchesSupportedProviders = hasExactSupportedProviders(definition, ALL_SUPPORTED_LLM_PROVIDERS);
+    const constraintMatchesSupportedProviders = hasExactSupportedProviders(definition, SUPPORTED_LLM_PROVIDERS_FOR_CONSTRAINT);
 
     if (!constraintMatchesSupportedProviders) {
         const migrationsToReplay = [
@@ -305,7 +304,7 @@ async function reconcileCriticalMigrations(appliedMigrations) {
         ].filter((migrationName) => appliedMigrations.has(migrationName));
 
         safeLog('warn', 'LLM provider constraint is out of sync with supported providers; forcing migration replay', {
-            supportedProviders: ALL_SUPPORTED_LLM_PROVIDERS,
+            supportedProviders: SUPPORTED_LLM_PROVIDERS_FOR_CONSTRAINT,
             migrationsToReplay
         });
 
