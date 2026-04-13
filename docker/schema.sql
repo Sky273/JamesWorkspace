@@ -828,6 +828,27 @@ COMMENT ON COLUMN public.password_reset_tokens.used_at IS 'Timestamp when token 
 
 
 --
+-- Name: email_verification_tokens; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.email_verification_tokens (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    user_id uuid NOT NULL,
+    token_hash text NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    used_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+--
+-- Name: TABLE email_verification_tokens; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.email_verification_tokens IS 'Email verification tokens for self-service registrations';
+
+
+--
 -- Name: pipeline_history; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1425,6 +1446,7 @@ CREATE TABLE public.users (
     totp_pending_secret text,
     totp_pending_backup_codes text,
     totp_enabled_at timestamp with time zone,
+    email_verified_at timestamp with time zone,
     must_change_password boolean DEFAULT false NOT NULL,
     CONSTRAINT users_role_check CHECK (((role)::text = ANY (ARRAY[('admin'::character varying)::text, ('localAdmin'::character varying)::text, ('user'::character varying)::text]))),
     CONSTRAINT users_status_check CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('inactive'::character varying)::text, ('pending'::character varying)::text])))
@@ -1457,6 +1479,13 @@ COMMENT ON COLUMN public.users.google_email IS 'Email from Google account (may d
 --
 
 COMMENT ON COLUMN public.users.google_linked_at IS 'Timestamp when Google account was linked';
+
+
+--
+-- Name: COLUMN users.email_verified_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.users.email_verified_at IS 'Timestamp when the user confirmed ownership of the login email';
 
 
 --
@@ -1847,6 +1876,22 @@ ALTER TABLE ONLY public.password_reset_tokens
 
 
 --
+-- Name: email_verification_tokens email_verification_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.email_verification_tokens
+    ADD CONSTRAINT email_verification_tokens_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: email_verification_tokens email_verification_tokens_token_hash_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.email_verification_tokens
+    ADD CONSTRAINT email_verification_tokens_token_hash_key UNIQUE (token_hash);
+
+
+--
 -- Name: password_reset_tokens password_reset_tokens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2071,6 +2116,13 @@ CREATE INDEX idx_adaptations_resume_id ON public.resume_adaptations USING btree 
 --
 
 CREATE INDEX idx_adaptations_status ON public.resume_adaptations USING btree (status);
+
+
+--
+-- Name: idx_email_verification_tokens_user_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_email_verification_tokens_user_id ON public.email_verification_tokens USING btree (user_id);
 
 
 --
@@ -3281,6 +3333,14 @@ ALTER TABLE ONLY public.missions
 
 ALTER TABLE ONLY public.password_reset_tokens
     ADD CONSTRAINT password_reset_tokens_user_fk FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: email_verification_tokens email_verification_tokens_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.email_verification_tokens
+    ADD CONSTRAINT email_verification_tokens_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --

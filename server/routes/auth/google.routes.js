@@ -12,7 +12,6 @@ import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '..
 import { safeLog } from '../../utils/logger.backend.js';
 import * as googleAuthService from '../../services/googleAuth.service.js';
 import * as authService from '../../services/auth.service.js';
-import { sendRegistrationConfirmationEmail } from '../../services/registrationEmail.service.js';
 import {
     setAuthOauthState,
     hasAuthOauthState,
@@ -169,21 +168,6 @@ router.get('/google/callback', async (req, res) => {
                     googleEmail: googleUser.email
                 });
                 const createdUser = registrationResult.user;
-
-                if (registrationResult.autoApproved) {
-                    try {
-                        await sendRegistrationConfirmationEmail({
-                            to: googleUser.email,
-                            name: googleUser.name
-                        });
-                    } catch (emailError) {
-                        safeLog('warn', 'Google registration confirmation email failed after auto-approval', {
-                            email: googleUser.email,
-                            userId: createdUser.id,
-                            error: emailError.message
-                        });
-                    }
-                }
 
                 securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.USER_CREATED, {
                     ...metadata,

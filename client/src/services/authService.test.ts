@@ -118,6 +118,8 @@ describe('authService', () => {
                 email: 'new@test.com',
                 password: 'password123',
                 name: 'New User',
+                website: '',
+                formRenderedAt: 1710000000000,
             });
 
             expect(result.success).toBe(true);
@@ -133,6 +135,8 @@ describe('authService', () => {
                 email: 'new@test.com',
                 password: 'password123',
                 name: 'New User',
+                website: '',
+                formRenderedAt: 1710000000000,
             });
 
             expect(result.registrationStatus).toBe('active');
@@ -145,8 +149,35 @@ describe('authService', () => {
             );
 
             await expect(
-                authService.register({ email: 'dup@test.com', password: 'pass', name: 'Dup' })
+                authService.register({ email: 'dup@test.com', password: 'pass', name: 'Dup', website: '', formRenderedAt: 1710000000000 })
             ).rejects.toThrow('Email already exists');
+        });
+
+        it('should include anti-bot registration metadata in the payload', async () => {
+            mockFetchWithAuth.mockResolvedValueOnce(
+                mockResponse(true, { message: 'Registration successful' })
+            );
+
+            await authService.register({
+                email: 'new@test.com',
+                password: 'password123',
+                name: 'New User',
+                website: '',
+                formRenderedAt: 1710000000000,
+                captchaToken: 'token-123',
+                captchaProvider: 'turnstile',
+            });
+
+            const [, options] = mockFetchWithAuth.mock.calls[0];
+            expect(JSON.parse((options as RequestInit).body as string)).toMatchObject({
+                email: 'new@test.com',
+                password: 'password123',
+                name: 'New User',
+                website: '',
+                formRenderedAt: 1710000000000,
+                captchaToken: 'token-123',
+                captchaProvider: 'turnstile',
+            });
         });
     });
 

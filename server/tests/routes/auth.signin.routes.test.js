@@ -47,9 +47,18 @@ vi.mock('../../services/auth.service.js', () => ({
     registerSelfServiceUser: (...args) => mockRegisterSelfServiceUser(...args)
 }));
 
-const mockSendRegistrationConfirmationEmail = vi.fn();
-vi.mock('../../services/registrationEmail.service.js', () => ({
-    sendRegistrationConfirmationEmail: (...args) => mockSendRegistrationConfirmationEmail(...args)
+const mockSendVerificationEmail = vi.fn();
+const mockVerifyEmailToken = vi.fn();
+const mockGetEmailVerificationRedirectUrl = vi.fn();
+vi.mock('../../services/emailVerification.service.js', () => ({
+    sendVerificationEmail: (...args) => mockSendVerificationEmail(...args),
+    verifyEmailToken: (...args) => mockVerifyEmailToken(...args),
+    getEmailVerificationRedirectUrl: (...args) => mockGetEmailVerificationRedirectUrl(...args)
+}));
+
+const mockEnforceRegistrationProtection = vi.fn((req, res, next) => next());
+vi.mock('../../services/registrationProtection.service.js', () => ({
+    enforceRegistrationProtection: (...args) => mockEnforceRegistrationProtection(...args)
 }));
 
 // Mock bcrypt
@@ -105,8 +114,10 @@ vi.mock('../../services/jwt.service.js', () => ({
 
 // Mock rate limiter
 const mockAuthLimiter = vi.fn((req, res, next) => next());
+const mockRegistrationLimiter = vi.fn((req, res, next) => next());
 vi.mock('../../middleware/rateLimit.middleware.js', () => ({
-    authLimiter: (...args) => mockAuthLimiter(...args)
+    authLimiter: (...args) => mockAuthLimiter(...args),
+    registrationLimiter: (...args) => mockRegistrationLimiter(...args)
 }));
 
 // Mock auth middleware
@@ -232,7 +243,8 @@ describe('Auth Routes - POST /api/auth/signin', () => {
                 role: 'user',
                 firm_id: 'firm-123',
                 firm_name: 'Test Firm',
-                must_change_password: true
+                must_change_password: true,
+                email_verified_at: '2026-01-01T00:00:00.000Z'
             });
             mockBcryptCompare.mockResolvedValueOnce(true);
 
@@ -244,6 +256,27 @@ describe('Auth Routes - POST /api/auth/signin', () => {
             expect(res.body.code).toBe('password_change_required');
         });
 
+        it('should return 403 when email verification is required', async () => {
+            mockFindUserWithFirmByEmail.mockResolvedValueOnce({
+                id: 'user-123',
+                email: 'test@example.com',
+                password: '$2a$10$hashedpassword',
+                status: 'active',
+                role: 'user',
+                firm_id: 'firm-123',
+                firm_name: 'Test Firm',
+                email_verified_at: null
+            });
+            mockBcryptCompare.mockResolvedValueOnce(true);
+
+            const res = await request(app)
+                .post('/api/auth/signin')
+                .send({ email: 'test@example.com', password: 'password123' });
+
+            expect(res.status).toBe(403);
+            expect(res.body.code).toBe('email_verification_required');
+        });
+
         it('should return 403 for active user without firm assignment', async () => {
             mockFindUserWithFirmByEmail.mockResolvedValueOnce({
                 id: 'user-123',
@@ -252,7 +285,8 @@ describe('Auth Routes - POST /api/auth/signin', () => {
                 status: 'active',
                 role: 'user',
                 firm_id: null,
-                firm_name: null
+                firm_name: null,
+                email_verified_at: '2026-01-01T00:00:00.000Z'
             });
             mockBcryptCompare.mockResolvedValueOnce(true);
 
@@ -273,7 +307,8 @@ describe('Auth Routes - POST /api/auth/signin', () => {
                 status: 'active',
                 role: 'user',
                 firm_id: 'firm-123',
-                firm_name: 'Test Firm'
+                firm_name: 'Test Firm',
+                email_verified_at: '2026-01-01T00:00:00.000Z'
             });
             mockBcryptCompare.mockResolvedValueOnce(true);
             mockUpdateLastLogin.mockResolvedValueOnce();
@@ -300,7 +335,8 @@ describe('Auth Routes - POST /api/auth/signin', () => {
                 email: 'test@example.com',
                 password: '$2a$10$hashedpassword',
                 status: 'active',
-                role: 'user'
+                role: 'user',
+                email_verified_at: '2026-01-01T00:00:00.000Z'
             });
             mockBcryptCompare.mockResolvedValueOnce(true);
             mockUpdateLastLogin.mockResolvedValueOnce();
@@ -326,6 +362,7 @@ describe('Auth Routes - POST /api/auth/register', () => {
     it('should create a pending user on self-service registration', async () => {
         mockFindExistingUserByEmail.mockResolvedValueOnce(null);
         mockBcryptHash.mockResolvedValueOnce('hashed-password');
+        mockSendVerificationEmail.mockResolvedValueOnce({ success: true });
         mockRegisterSelfServiceUser.mockResolvedValueOnce({
             autoApproved: false,
             user: {
@@ -342,7 +379,9 @@ describe('Auth Routes - POST /api/auth/register', () => {
             .send({
                 email: 'newuser@example.com',
                 password: 'password123',
-                name: 'New User'
+                name: 'New User',
+                website: '',
+                formRenderedAt: Date.now() - 5000
             });
 
         expect(res.status).toBe(201);
@@ -354,12 +393,17 @@ describe('Auth Routes - POST /api/auth/register', () => {
             password: 'hashed-password',
             name: 'New User'
         });
-        expect(mockSendRegistrationConfirmationEmail).not.toHaveBeenCalled();
+        expect(mockSendVerificationEmail).toHaveBeenCalledWith({
+            userId: 'user-123',
+            email: 'newuser@example.com',
+            name: 'New User'
+        });
     });
 
     it('should auto-approve self-service registration when enabled', async () => {
         mockFindExistingUserByEmail.mockResolvedValueOnce(null);
         mockBcryptHash.mockResolvedValueOnce('hashed-password');
+        mockSendVerificationEmail.mockResolvedValueOnce({ success: true });
         mockRegisterSelfServiceUser.mockResolvedValueOnce({
             autoApproved: true,
             user: {
@@ -376,7 +420,9 @@ describe('Auth Routes - POST /api/auth/register', () => {
             .send({
                 email: 'activeuser@example.com',
                 password: 'password123',
-                name: 'Active User'
+                name: 'Active User',
+                website: '',
+                formRenderedAt: Date.now() - 5000
             });
 
         expect(res.status).toBe(201);
@@ -387,8 +433,9 @@ describe('Auth Routes - POST /api/auth/register', () => {
             password: 'hashed-password',
             name: 'Active User'
         });
-        expect(mockSendRegistrationConfirmationEmail).toHaveBeenCalledWith({
-            to: 'activeuser@example.com',
+        expect(mockSendVerificationEmail).toHaveBeenCalledWith({
+            userId: 'user-456',
+            email: 'activeuser@example.com',
             name: 'Active User'
         });
     });
@@ -401,7 +448,9 @@ describe('Auth Routes - POST /api/auth/register', () => {
             .send({
                 email: 'newuser@example.com',
                 password: 'password123',
-                name: 'New User'
+                name: 'New User',
+                website: '',
+                formRenderedAt: Date.now() - 5000
             });
 
         expect(res.status).toBe(409);
@@ -530,6 +579,40 @@ describe('Auth Routes - POST /api/auth/refresh', () => {
         expect(cookies.some(c => c.includes('refreshToken'))).toBe(true);
         expect(mockConsumeRefreshToken).toHaveBeenCalledWith('valid-refresh-token');
         expect(mockGenerateRefreshToken).toHaveBeenCalled();
+    });
+});
+
+describe('Auth Routes - GET /api/auth/verify-email', () => {
+    let app;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        app = createTestApp();
+        mockGetEmailVerificationRedirectUrl.mockImplementation((result) => {
+            if (result?.success) {
+                return '/signin?success=email_verified';
+            }
+            return `/signin?error=${result?.error || 'email_verification_failed'}`;
+        });
+    });
+
+    it('should redirect to signin success after verification', async () => {
+        mockVerifyEmailToken.mockResolvedValueOnce({ success: true });
+
+        const res = await request(app)
+            .get('/api/auth/verify-email?token=valid-token');
+
+        expect(res.status).toBe(302);
+        expect(res.headers.location).toBe('/signin?success=email_verified');
+    });
+
+    it('should redirect to signin with error when token is missing', async () => {
+        const res = await request(app)
+            .get('/api/auth/verify-email');
+
+        expect(res.status).toBe(302);
+        expect(res.headers.location).toBe('/signin?error=invalid_token');
+        expect(mockVerifyEmailToken).not.toHaveBeenCalled();
     });
 });
 

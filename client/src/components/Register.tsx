@@ -3,7 +3,7 @@
  * TypeScript version
  */
 
-import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
+import { useState, useEffect, useRef, FormEvent, ChangeEvent } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
@@ -12,12 +12,32 @@ import { fetchWithCsrfRetry } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
 import AuthPageShell from './AuthPageShell';
 
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (container: HTMLElement, options: {
+        sitekey: string;
+        callback?: (token: string) => void;
+        'expired-callback'?: () => void;
+        'error-callback'?: () => void;
+        theme?: 'light' | 'dark' | 'auto';
+      }) => string;
+      remove?: (widgetId: string) => void;
+      reset?: (widgetId?: string) => void;
+    };
+  }
+}
+
 interface FormData {
   name: string;
   email: string;
   password: string;
   confirmPassword: string;
+  website: string;
 }
+
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim() || '';
+const TURNSTILE_SCRIPT_ID = 'cf-turnstile-script';
 
 const Register = (): JSX.Element => {
   const { register } = useAuth();
@@ -28,13 +48,18 @@ const Register = (): JSX.Element => {
     name: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    website: '',
   });
+  const [formRenderedAt] = useState<number>(() => Date.now());
+  const [captchaToken, setCaptchaToken] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [googleLoading, setGoogleLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
+  const captchaContainerRef = useRef<HTMLDivElement | null>(null);
+  const turnstileWidgetIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const regError = searchParams.get('error');
@@ -43,6 +68,59 @@ const Register = (): JSX.Element => {
       navigate('/register', { replace: true });
     }
   }, [searchParams, navigate, t]);
+
+  useEffect(() => {
+    if (!TURNSTILE_SITE_KEY || !captchaContainerRef.current || typeof window === 'undefined') {
+      return;
+    }
+
+    let cancelled = false;
+
+    const renderTurnstile = () => {
+      if (cancelled || !captchaContainerRef.current || !window.turnstile || turnstileWidgetIdRef.current) {
+        return;
+      }
+
+      turnstileWidgetIdRef.current = window.turnstile.render(captchaContainerRef.current, {
+        sitekey: TURNSTILE_SITE_KEY,
+        theme: 'auto',
+        callback: (token: string) => {
+          setCaptchaToken(token);
+        },
+        'expired-callback': () => {
+          setCaptchaToken('');
+        },
+        'error-callback': () => {
+          setCaptchaToken('');
+        },
+      });
+    };
+
+    if (window.turnstile) {
+      renderTurnstile();
+    } else {
+      const existingScript = document.getElementById(TURNSTILE_SCRIPT_ID) as HTMLScriptElement | null;
+      if (existingScript) {
+        existingScript.addEventListener('load', renderTurnstile, { once: true });
+      } else {
+        const script = document.createElement('script');
+        script.id = TURNSTILE_SCRIPT_ID;
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        script.async = true;
+        script.defer = true;
+        script.addEventListener('load', renderTurnstile, { once: true });
+        document.head.appendChild(script);
+      }
+    }
+
+    return () => {
+      cancelled = true;
+      if (turnstileWidgetIdRef.current && window.turnstile?.remove) {
+        window.turnstile.remove(turnstileWidgetIdRef.current);
+      }
+      turnstileWidgetIdRef.current = null;
+    };
+  }, []);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>): void => {
     const { name, value } = e.target;
@@ -58,6 +136,9 @@ const Register = (): JSX.Element => {
     if (!formData.password) return t('errors.required');
     if (formData.password.length < 8) return t('errors.passwordLength');
     if (formData.password !== formData.confirmPassword) return t('errors.passwordMismatch');
+    if (TURNSTILE_SITE_KEY && !captchaToken) {
+      return 'Captcha verification is required.';
+    }
     return null;
   };
 
@@ -76,12 +157,20 @@ const Register = (): JSX.Element => {
       const registrationResult = await register({
         name: formData.name,
         email: formData.email.toLowerCase(),
-        password: formData.password
+        password: formData.password,
+        website: formData.website,
+        formRenderedAt,
+        captchaToken: TURNSTILE_SITE_KEY ? captchaToken : undefined,
+        captchaProvider: TURNSTILE_SITE_KEY ? 'turnstile' : undefined,
       });
       navigate(`/signin?success=${registrationResult.registrationStatus === 'active' ? 'registered_active_test' : 'registered_pending'}`);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : t('errors.serverError');
       setError(errorMessage);
+      if (turnstileWidgetIdRef.current) {
+        window.turnstile?.reset?.(turnstileWidgetIdRef.current);
+        setCaptchaToken('');
+      }
     } finally {
       setLoading(false);
     }
@@ -129,6 +218,20 @@ const Register = (): JSX.Element => {
         ) : null}
 
         <div className="rounded-2xl border border-slate-200 shadow-sm -space-y-px dark:border-white/10">
+          <label htmlFor="website" className="sr-only">
+            Website
+          </label>
+          <input
+            id="website"
+            name="website"
+            type="text"
+            tabIndex={-1}
+            autoComplete="off"
+            value={formData.website}
+            onChange={handleChange}
+            className="absolute left-[-10000px] top-auto h-px w-px overflow-hidden opacity-0 pointer-events-none"
+            aria-hidden="true"
+          />
           <label htmlFor="name" className="sr-only">
             {t('auth.register.nameLabel')}
           </label>
@@ -209,6 +312,12 @@ const Register = (): JSX.Element => {
             </button>
           </div>
         </div>
+
+        {TURNSTILE_SITE_KEY ? (
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm dark:border-white/10 dark:bg-gray-800">
+            <div ref={captchaContainerRef} data-testid="turnstile-container" />
+          </div>
+        ) : null}
 
         <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:bg-white/5 dark:text-slate-400">
           {t('auth.resetPassword.passwordHint')}

@@ -48,11 +48,22 @@ const SignIn = (): JSX.Element => {
       navigate('/signin', { replace: true });
     }
 
+    if (success === 'email_verified') {
+      const emailVerifiedMessage = t('auth.signIn.emailVerified');
+      toast.success(
+        emailVerifiedMessage === 'auth.signIn.emailVerified'
+          ? 'Email verifie. Vous pouvez maintenant vous connecter.'
+          : emailVerifiedMessage,
+        { duration: 6000, icon: 'OK' }
+      );
+      navigate('/signin', { replace: true });
+    }
+
     if (success === 'registered_active_test') {
       const registeredActiveTestMessage = t('auth.signIn.registeredActiveTest');
       toast.success(
         registeredActiveTestMessage === 'auth.signIn.registeredActiveTest'
-          ? "Inscription réussie ! Votre compte de test est actif et vous pouvez vous connecter immédiatement."
+          ? 'Inscription reussie. Verifiez votre email, puis connectez-vous pour acceder a votre compte de test.'
           : registeredActiveTestMessage,
         { duration: 6000, icon: 'OK' }
       );
@@ -64,6 +75,19 @@ const SignIn = (): JSX.Element => {
       navigate('/signin', { replace: true });
     } else if (googleError === 'account_inactive') {
       setError(t('auth.signIn.accountInactive'));
+      navigate('/signin', { replace: true });
+    } else if (
+      googleError === 'invalid_token' ||
+      googleError === 'token_expired' ||
+      googleError === 'token_used' ||
+      googleError === 'email_verification_failed'
+    ) {
+      const emailVerificationFailedMessage = t('auth.signIn.emailVerificationFailed');
+      setError(
+        emailVerificationFailedMessage === 'auth.signIn.emailVerificationFailed'
+          ? "Le lien de verification d'email est invalide ou expire."
+          : emailVerificationFailedMessage
+      );
       navigate('/signin', { replace: true });
     } else if (googleError) {
       setError(t('auth.signIn.googleAuthFailed'));
@@ -96,7 +120,7 @@ const SignIn = (): JSX.Element => {
       logger.error('Sign in failed:', authError);
       const rawMessage = authError instanceof Error ? authError.message : '';
       setError(
-        rawMessage.includes('Password replacement required')
+        rawMessage.includes('Password replacement required') || rawMessage.includes('Email verification required')
           ? rawMessage
           : t('errors.unauthorized')
       );

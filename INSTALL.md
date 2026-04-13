@@ -167,6 +167,11 @@ JWT_SECRET=REMPLACEZ_PAR_UN_SECRET_DE_64_CARACTERES_HEXADECIMAUX
 REFRESH_TOKEN_SECRET=REMPLACEZ_PAR_UN_AUTRE_SECRET_DE_64_CARACTERES
 CSRF_SECRET=REMPLACEZ_PAR_UN_SECRET_CSRF_DE_64_CARACTERES_HEX
 
+# CAPTCHA inscription (Cloudflare Turnstile)
+# Cles de test pour le local et la validation uniquement.
+VITE_TURNSTILE_SITE_KEY=1x00000000000000000000AA
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+
 # ==============================================================================
 # SERVEUR [OPTIONNEL]
 # ==============================================================================
@@ -397,6 +402,23 @@ npm run dev
 
 ---
 
+### CAPTCHA inscription
+
+ResumeConverter supporte actuellement **Cloudflare Turnstile** sur le formulaire d'inscription.
+
+- `VITE_TURNSTILE_SITE_KEY` est la cle publique utilisee par le frontend
+- `TURNSTILE_SECRET_KEY` est la cle secrete verifiee par le backend
+- si `TURNSTILE_SECRET_KEY` n'est pas renseignee, le backend n'impose pas de CAPTCHA
+- si `TURNSTILE_SECRET_KEY` est renseignee, `VITE_TURNSTILE_SITE_KEY` doit aussi etre defini sinon l'inscription sera bloquee
+- les valeurs `1x00000000000000000000AA` et `1x0000000000000000000000000000000AA` sont des cles de test Turnstile, adaptees au local et aux environnements de validation
+
+Avant mise en production :
+- remplacez les cles de test par vos vraies cles Turnstile
+- autorisez explicitement votre domaine de production dans Cloudflare
+- verifiez le flux d'inscription complet apres changement de cle
+
+---
+
 ## Installation avec Docker (Production)
 
 ### Étape 1 : Cloner le dépôt
@@ -435,6 +457,8 @@ POSTGRES_PASSWORD=votre_mot_de_passe
 JWT_SECRET=votre-secret-jwt-min-32-caracteres
 REFRESH_TOKEN_SECRET=votre-secret-refresh-min-32-caracteres
 CSRF_SECRET=votre-secret-csrf-min-32-caracteres
+VITE_TURNSTILE_SITE_KEY=1x00000000000000000000AA
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
 
 # Mode production
 NODE_ENV=production
@@ -656,6 +680,7 @@ Notes :
 
 | Fonctionnalité | Variables requises |
 |----------------|-------------------|
+| **CAPTCHA inscription (Turnstile)** | `VITE_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` |
 | **Google SSO** | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_AUTH_REDIRECT_URI` |
 | **Envoi email Gmail** | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `MAIL_TOKEN_ENCRYPTION_KEY` |
 | **Emails GDPR via SMTP** | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` |

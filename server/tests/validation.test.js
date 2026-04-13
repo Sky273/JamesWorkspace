@@ -108,7 +108,9 @@ describe('Zod Schemas', () => {
       const validData = {
         email: 'test@example.com',
         password: 'password123',
-        name: 'John Doe'
+        name: 'John Doe',
+        website: '',
+        formRenderedAt: Date.now()
       };
       expect(() => registerSchema.parse(validData)).not.toThrow();
     });
@@ -118,6 +120,15 @@ describe('Zod Schemas', () => {
         email: 'test@example.com',
         password: 'password123',
         name: ''
+      };
+      expect(() => registerSchema.parse(invalidData)).toThrow();
+    });
+
+    it('should reject missing anti-bot metadata', () => {
+      const invalidData = {
+        email: 'test@example.com',
+        password: 'password123',
+        name: 'John Doe'
       };
       expect(() => registerSchema.parse(invalidData)).toThrow();
     });

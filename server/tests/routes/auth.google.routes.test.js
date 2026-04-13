@@ -64,11 +64,6 @@ vi.mock('../../services/auth.service.js', () => ({
     findUserWithFirmById: (...args) => mockFindUserWithFirmById(...args)
 }));
 
-const mockSendRegistrationConfirmationEmail = vi.fn();
-vi.mock('../../services/registrationEmail.service.js', () => ({
-    sendRegistrationConfirmationEmail: (...args) => mockSendRegistrationConfirmationEmail(...args)
-}));
-
 // Mock auth config
 vi.mock('../../routes/auth/config.js', () => ({
     useSecureCookies: false,
@@ -210,7 +205,6 @@ describe('Google OAuth Routes', () => {
                 googleId: 'g-123',
                 googleEmail: 'newuser@test.com'
             });
-            expect(mockSendRegistrationConfirmationEmail).not.toHaveBeenCalled();
         });
 
         it('should auto-approve a Google self-registration when enabled', async () => {
@@ -239,10 +233,6 @@ describe('Google OAuth Routes', () => {
 
             expect(res.status).toBe(302);
             expect(res.headers.location).toContain('/signin?success=registered_active_test');
-            expect(mockSendRegistrationConfirmationEmail).toHaveBeenCalledWith({
-                to: 'activegoogle@test.com',
-                name: 'Google Active User'
-            });
         });
 
         it('should block Google callback sign-in when existing user has no firm assignment', async () => {

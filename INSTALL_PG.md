@@ -24,6 +24,8 @@ POSTGRES_USER=resumeconverter
 POSTGRES_PASSWORD=votre_mot_de_passe_securise
 POSTGRES_MAX_CONNECTIONS=20
 POSTGRES_SSL=false
+VITE_TURNSTILE_SITE_KEY=1x00000000000000000000AA
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
 
 # Au moins un provider LLM est requis pour l'analyse / l'amélioration
 # OpenAI
@@ -57,6 +59,15 @@ OLLAMA_BASE_URL=http://192.168.1.20:11434
 OLLAMA_AUTO_PULL=true
 OLLAMA_REQUEST_TIMEOUT_MS=300000
 ```
+
+## CAPTCHA inscription
+
+L'inscription peut etre protegee par **Cloudflare Turnstile**.
+
+- `VITE_TURNSTILE_SITE_KEY` : cle publique frontend
+- `TURNSTILE_SECRET_KEY` : cle secrete backend
+- les valeurs de test `1x00000000000000000000AA` et `1x0000000000000000000000000000000AA` permettent d'activer le flux en local et en validation
+- remplacez ces cles de test par de vraies cles avant toute mise en production
 
 ## Migration de la base
 

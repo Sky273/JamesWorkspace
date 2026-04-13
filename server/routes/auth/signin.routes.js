@@ -12,8 +12,12 @@ import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '..
 import { safeLog } from '../../utils/logger.backend.js';
 import { is2FAEnabled, verifyTotpCode } from '../../services/totp.service.js';
 import * as authService from '../../services/auth.service.js';
-import { sendRegistrationConfirmationEmail } from '../../services/registrationEmail.service.js';
 import { enforceRegistrationProtection } from '../../services/registrationProtection.service.js';
+import {
+    getEmailVerificationRedirectUrl,
+    sendVerificationEmail,
+    verifyEmailToken
+} from '../../services/emailVerification.service.js';
 import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, CLEAR_ACCESS_TOKEN, CLEAR_REFRESH_TOKEN } from './config.js';
 
 const router = express.Router();
@@ -67,6 +71,10 @@ function blockUnassignedUser(res) {
     return res.status(403).json({
         error: 'Account is not assigned to a firm. Contact an administrator.'
     });
+}
+
+function isEmailVerified(user) {
+    return Boolean(user?.email_verified_at);
 }
 
 // ============================================
@@ -138,6 +146,24 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
                 metadata: { reason: 'account_inactive' }
             });
             return res.status(403).json({ error: 'Account is inactive. Please contact administrator.' });
+        }
+
+        if (!isEmailVerified(user)) {
+            securityLog(LOG_LEVELS.WARNING, SECURITY_EVENTS.AUTH_BLOCKED, {
+                ...metadata,
+                email: normalizedEmail,
+                userId: user.id,
+                firm: user.firm_name,
+                role: user.role,
+                statusCode: 403,
+                action: 'LOGIN_ATTEMPT',
+                message: 'Login blocked until email is verified',
+                metadata: { reason: 'email_verification_required' }
+            });
+            return res.status(403).json({
+                error: 'Email verification required. Check your inbox before signing in.',
+                code: 'email_verification_required'
+            });
         }
 
         if (!hasFirmAssignment(user)) {
@@ -271,12 +297,27 @@ router.post('/register', authLimiter, registrationLimiter, validateBody(register
 
         if (registrationResult.autoApproved) {
             try {
-                await sendRegistrationConfirmationEmail({
-                    to: normalizedEmail,
+                await sendVerificationEmail({
+                    userId: createdUser.id,
+                    email: normalizedEmail,
                     name
                 });
             } catch (emailError) {
-                safeLog('warn', 'Registration confirmation email failed after auto-approval', {
+                safeLog('warn', 'Registration verification email failed after auto-approval', {
+                    email: normalizedEmail,
+                    userId: createdUser.id,
+                    error: emailError.message
+                });
+            }
+        } else {
+            try {
+                await sendVerificationEmail({
+                    userId: createdUser.id,
+                    email: normalizedEmail,
+                    name
+                });
+            } catch (emailError) {
+                safeLog('warn', 'Registration verification email failed', {
                     email: normalizedEmail,
                     userId: createdUser.id,
                     error: emailError.message
@@ -303,8 +344,8 @@ router.post('/register', authLimiter, registrationLimiter, validateBody(register
 
         res.status(201).json({
             message: registrationResult.autoApproved
-                ? 'Registration successful. Your test account is active and ready to use.'
-                : 'Registration successful. Please wait for admin approval to access your account.',
+                ? 'Registration successful. Verify your email, then sign in to access your test account.'
+                : 'Registration successful. Verify your email, then wait for admin approval before signing in.',
             registrationStatus: registrationResult.autoApproved ? 'active' : 'pending',
             autoApproved: registrationResult.autoApproved
         });
@@ -409,6 +450,22 @@ const logoutHandler = async (req, res) => {
 
 router.post('/signout', logoutHandler);
 router.post('/logout', logoutHandler);
+
+router.get('/verify-email', async (req, res) => {
+    const token = typeof req.query.token === 'string' ? req.query.token.trim() : '';
+
+    if (!token) {
+        return res.redirect(getEmailVerificationRedirectUrl({ success: false, error: 'invalid_token' }));
+    }
+
+    try {
+        const result = await verifyEmailToken(token);
+        return res.redirect(getEmailVerificationRedirectUrl(result));
+    } catch (error) {
+        safeLog('error', 'Email verification error', { error: error.message });
+        return res.redirect(getEmailVerificationRedirectUrl({ success: false, error: 'email_verification_failed' }));
+    }
+});
 
 // GET /api/auth/me - Get current user
 router.get('/me', authenticateToken, async (req, res) => {

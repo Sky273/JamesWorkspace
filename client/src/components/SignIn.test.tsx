@@ -165,6 +165,16 @@ describe('SignIn', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/signin', { replace: true });
   });
 
+  it('shows email verified toast from query params', async () => {
+    mockSearchParams = new URLSearchParams('success=email_verified');
+    renderSignIn();
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalled();
+    });
+    expect(mockNavigate).toHaveBeenCalledWith('/signin', { replace: true });
+  });
+
   it('shows active test registration success toast from query params', async () => {
     mockSearchParams = new URLSearchParams('success=registered_active_test');
     renderSignIn();
@@ -180,6 +190,14 @@ describe('SignIn', () => {
     renderSignIn();
 
     expect(await screen.findByText('auth.signIn.googleNoAccount')).toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith('/signin', { replace: true });
+  });
+
+  it('shows email verification error from query params', async () => {
+    mockSearchParams = new URLSearchParams('error=token_expired');
+    renderSignIn();
+
+    expect(await screen.findByText("Le lien de verification d'email est invalide ou expire.")).toBeInTheDocument();
     expect(mockNavigate).toHaveBeenCalledWith('/signin', { replace: true });
   });
 
@@ -202,5 +220,16 @@ describe('SignIn', () => {
     fireEvent.click(screen.getByRole('button', { name: 'auth.signIn.signInWithGoogle' }));
 
     expect(await screen.findByText('auth.signIn.googleAuthFailed')).toBeInTheDocument();
+  });
+
+  it('shows email verification required message when backend blocks sign in', async () => {
+    mockSignIn.mockRejectedValue(new Error('Email verification required. Check your inbox before signing in.'));
+    renderSignIn();
+
+    fireEvent.change(screen.getByPlaceholderText('auth.signIn.emailPlaceholder'), { target: { value: 'john@example.com' } });
+    fireEvent.change(screen.getByPlaceholderText('auth.signIn.passwordPlaceholder'), { target: { value: 'secret' } });
+    fireEvent.submit(screen.getByRole('button', { name: 'auth.signIn.signInButton' }).closest('form') as HTMLFormElement);
+
+    expect(await screen.findByText('Email verification required. Check your inbox before signing in.')).toBeInTheDocument();
   });
 });

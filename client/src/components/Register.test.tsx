@@ -7,10 +7,16 @@ const {
   mockRegister,
   mockNavigate,
   mockFetchWithCsrfRetry,
+  mockTurnstileRender,
+  mockTurnstileReset,
+  mockTurnstileRemove,
 } = vi.hoisted(() => ({
   mockRegister: vi.fn(),
   mockNavigate: vi.fn(),
   mockFetchWithCsrfRetry: vi.fn(),
+  mockTurnstileRender: vi.fn(),
+  mockTurnstileReset: vi.fn(),
+  mockTurnstileRemove: vi.fn(),
 }));
 
 let mockSearchParams = new URLSearchParams();
@@ -53,6 +59,14 @@ describe('Register', () => {
     mockFetchWithCsrfRetry.mockResolvedValue({
       json: async () => ({ authUrl: 'https://accounts.google.com/oauth' }),
     });
+    window.turnstile = {
+      render: mockTurnstileRender.mockImplementation((_container, options) => {
+        options.callback?.('captcha-token');
+        return 'widget-1';
+      }),
+      reset: mockTurnstileReset,
+      remove: mockTurnstileRemove,
+    };
   });
 
   it('renders registration fields and actions', () => {
@@ -118,11 +132,13 @@ describe('Register', () => {
     fireEvent.click(screen.getByRole('button', { name: 'auth.register.registerButton' }));
 
     await waitFor(() => {
-      expect(mockRegister).toHaveBeenCalledWith({
+      expect(mockRegister).toHaveBeenCalledWith(expect.objectContaining({
         name: 'John Doe',
         email: 'john@example.com',
         password: 'password123',
-      });
+        website: '',
+        formRenderedAt: expect.any(Number),
+      }));
     });
     expect(mockNavigate).toHaveBeenCalledWith('/signin?success=registered_pending');
   });

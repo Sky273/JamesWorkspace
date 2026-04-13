@@ -158,8 +158,20 @@ export async function registerGoogleUser({ email, name, googleId, googleEmail, f
     });
 
     const result = await query(
-        `INSERT INTO users (email, password, name, role, status, google_id, google_email, google_linked_at, firm_id, firm_name)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, $8, $9)
+        `INSERT INTO users (
+            email,
+            password,
+            name,
+            role,
+            status,
+            google_id,
+            google_email,
+            google_linked_at,
+            firm_id,
+            firm_name,
+            email_verified_at
+        )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, $8, $9, CURRENT_TIMESTAMP)
          RETURNING *`,
         [email, '', name, 'user', 'pending', googleId, googleEmail, firmAssignment.firm_id, firmAssignment.firm_name]
     );
@@ -194,12 +206,12 @@ async function createAutoApprovedSelfServiceUser({ email, password, name, google
         const firm = await createDedicatedAutoApprovedFirm(client, credits);
         const userResult = await client.query(
             `INSERT INTO users (
-                email, password, name, role, status, google_id, google_email, google_linked_at, firm_id, firm_name
+                email, password, name, role, status, google_id, google_email, google_linked_at, firm_id, firm_name, email_verified_at
              ) VALUES (
-                $1, $2, $3, 'user', 'active', $4, $5, $6, $7, $8
+                $1, $2, $3, 'user', 'active', $4, $5, $6, $7, $8, $9
              )
              RETURNING *`,
-            [email, password, name, googleId, googleEmail, googleId ? new Date() : null, firm.id, firm.name]
+            [email, password, name, googleId, googleEmail, googleId ? new Date() : null, firm.id, firm.name, googleId ? new Date() : null]
         );
         await createDefaultFirmTemplate(client, firm);
 

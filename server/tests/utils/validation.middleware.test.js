@@ -578,7 +578,9 @@ describe('Zod Schemas', () => {
             const data = {
                 email: 'test@example.com',
                 password: 'password123',
-                name: 'John Doe'
+                name: 'John Doe',
+                website: '',
+                formRenderedAt: Date.now()
             };
             expect(() => registerSchema.parse(data)).not.toThrow();
         });
@@ -587,6 +589,16 @@ describe('Zod Schemas', () => {
             const data = {
                 email: 'test@example.com',
                 password: 'password123'
+            };
+            expect(() => registerSchema.parse(data)).toThrow();
+        });
+
+        it('should reject registration payloads without form timing metadata', () => {
+            const data = {
+                email: 'test@example.com',
+                password: 'password123',
+                name: 'John Doe',
+                website: ''
             };
             expect(() => registerSchema.parse(data)).toThrow();
         });

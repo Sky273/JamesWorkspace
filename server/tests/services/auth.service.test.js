@@ -239,7 +239,7 @@ describe('Auth Service', () => {
             expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO firms'), ['Cabinet test', 1800]);
             expect(mockClient.query).toHaveBeenCalledWith(
                 expect.stringContaining('INSERT INTO users'),
-                ['active@test.com', 'hash', 'Active User', null, null, null, 'firm-test-1', 'Cabinet test']
+                ['active@test.com', 'hash', 'Active User', null, null, null, 'firm-test-1', 'Cabinet test', null]
             );
             expect(mockClient.query).toHaveBeenCalledWith(
                 expect.stringContaining('INSERT INTO templates'),
@@ -293,7 +293,7 @@ describe('Auth Service', () => {
             expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO firms'), ['Cabinet test 2', 1000]);
             expect(mockClient.query).toHaveBeenCalledWith(
                 expect.stringContaining('INSERT INTO users'),
-                ['retry@test.com', 'hash', 'Retry User', null, null, null, 'firm-test-2', 'Cabinet test 2']
+                ['retry@test.com', 'hash', 'Retry User', null, null, null, 'firm-test-2', 'Cabinet test 2', null]
             );
             expect(mockClient.query).toHaveBeenCalledWith(
                 expect.stringContaining('INSERT INTO templates'),
