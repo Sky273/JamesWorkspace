@@ -50,7 +50,13 @@ const NON_CRITICAL_MODULE_PRELOAD_PATTERNS = [
 ];
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, __dirname, '');
+  const rootEnv = loadEnv(mode, path.resolve(__dirname, '..'), '');
+  const clientEnv = loadEnv(mode, __dirname, '');
+  const env = {
+    ...rootEnv,
+    ...clientEnv,
+    ...process.env,
+  };
   const httpsEnabled = env.VITE_HTTPS_ENABLED === 'true';
   const httpsPort = env.VITE_HTTPS_PORT || '3443';
   const devServerPort = Number.parseInt(env.VITE_DEV_SERVER_PORT || '5173', 10);
