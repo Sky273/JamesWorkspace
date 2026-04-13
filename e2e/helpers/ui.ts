@@ -11,6 +11,35 @@ export function uniqueName(prefix: string): string {
   return `${prefix} ${Date.now()} ${Math.floor(Math.random() * 1000)}`;
 }
 
+export async function clickButtonSafely(button: Locator): Promise<void> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      await expect(button).toBeVisible();
+      await button.scrollIntoViewIfNeeded();
+      await button.click({ timeout: 5_000 });
+      return;
+    } catch (error) {
+      if (attempt === 2) {
+        try {
+          await button.evaluate((element) => {
+            (element as HTMLButtonElement).click();
+          });
+          return;
+        } catch {
+          throw error;
+        }
+      }
+
+      await button.page().waitForTimeout(200);
+    }
+  }
+}
+
+export async function clickNamedButton(root: Page | Locator, name: RegExp): Promise<void> {
+  const button = root.getByRole('button', { name }).last();
+  await clickButtonSafely(button);
+}
+
 export async function clickRefreshButton(page: Page): Promise<void> {
   const button = page
     .locator('button[title*="Actualiser" i], button[title*="Refresh" i], button[title*="Rafra" i], button[aria-label*="Actualiser" i], button[aria-label*="Refresh" i], button[aria-label*="Rafra" i]')
@@ -19,8 +48,7 @@ export async function clickRefreshButton(page: Page): Promise<void> {
   if (await button.count()) {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
-        await expect(button).toBeVisible();
-        await button.click({ timeout: 5_000 });
+        await clickButtonSafely(button);
         return;
       } catch (error) {
         if (attempt === 2) {
@@ -36,10 +64,7 @@ export async function clickRefreshButton(page: Page): Promise<void> {
 
 export async function deleteViaApi(page: Page, path: string): Promise<APIResponse> {
   const request = page.context().request;
-  const csrfResponse = await request.get('/api/csrf-token');
-  expect(csrfResponse.ok()).toBe(true);
-  const csrfPayload = await csrfResponse.json();
-  const csrfToken = typeof csrfPayload?.csrfToken === 'string' ? csrfPayload.csrfToken : '';
+  const csrfToken = await getCsrfToken(page);
 
   return request.delete(path, {
     headers: {
@@ -55,23 +80,55 @@ export async function getJsonViaApi<T>(page: Page, path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+export async function getCsrfToken(page: Page): Promise<string> {
+  const request = page.context().request;
+  const csrfResponse = await request.get('/api/csrf-token');
+  expect(csrfResponse.ok()).toBe(true);
+  const csrfPayload = await csrfResponse.json();
+  return typeof csrfPayload?.csrfToken === 'string' ? csrfPayload.csrfToken : '';
+}
+
+export async function postJsonViaApi<TResponse = unknown>(page: Page, path: string, payload: unknown): Promise<TResponse> {
+  const request = page.context().request;
+  const csrfToken = await getCsrfToken(page);
+  const response = await request.post(path, {
+    headers: {
+      'content-type': 'application/json',
+      'x-csrf-token': csrfToken,
+    },
+    data: payload,
+  });
+
+  expect(response.ok()).toBe(true);
+  return response.json() as Promise<TResponse>;
+}
+
+export async function putJsonViaApi<TResponse = unknown>(page: Page, path: string, payload: unknown): Promise<TResponse> {
+  const request = page.context().request;
+  const csrfToken = await getCsrfToken(page);
+  const response = await request.put(path, {
+    headers: {
+      'content-type': 'application/json',
+      'x-csrf-token': csrfToken,
+    },
+    data: payload,
+  });
+
+  expect(response.ok()).toBe(true);
+  return response.json() as Promise<TResponse>;
+}
+
 export async function clickConfirmButton(page: Page): Promise<void> {
   const dialog = page.getByRole('dialog').last();
 
   if (await dialog.count()) {
     const button = dialog.getByRole('button', { name: CONFIRM_LABEL_REGEX }).last();
-    await expect(button).toBeVisible();
-    await button.evaluate((element) => {
-      (element as HTMLButtonElement).click();
-    });
+    await clickButtonSafely(button);
     return;
   }
 
   const button = page.getByRole('button', { name: CONFIRM_LABEL_REGEX }).last();
-  await expect(button).toBeVisible();
-  await button.evaluate((element) => {
-    (element as HTMLButtonElement).click();
-  });
+  await clickButtonSafely(button);
 }
 
 export async function fillProseMirror(page: Page, index: number, text: string): Promise<void> {

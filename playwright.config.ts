@@ -6,10 +6,10 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: 'html',
   
   use: {
@@ -40,7 +40,14 @@ export default defineConfig({
       PDF_SERVER_INTERNAL_TOKEN: process.env.PDF_SERVER_INTERNAL_TOKEN || 'playwright-pdf-server-internal-token-32chars',
       REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET || 'playwright-refresh-token-secret-minimum-32-chars',
       HTTPS_ENABLED: process.env.HTTPS_ENABLED || 'false',
+      VITE_BUILD_OUT_DIR: 'dist-e2e',
+      STATIC_DIST_DIR: 'client/dist-e2e',
       VITE_DISABLE_ASSET_COMPRESSION: 'true',
+      E2E_DISABLE_EXTERNAL_EMAIL: 'true',
+      E2E_DISABLE_GDPR_SCHEDULER: 'true',
+      E2E_DISABLE_BACKUP_SCHEDULER: 'true',
+      E2E_DISABLE_EXTERNAL_LLM: 'true',
+      E2E_RELAX_RATE_LIMITING: 'true',
     },
   },
 });

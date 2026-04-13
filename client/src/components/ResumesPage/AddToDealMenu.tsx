@@ -174,6 +174,9 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
               initial={{ scale: 0.96, opacity: 0, y: 10 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.96, opacity: 0, y: 10 }}
+              role="dialog"
+              aria-modal="true"
+              aria-label={t('crm.deals.modal.manageDeals')}
               className="cv-panel flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-[2rem]"
               onClick={(e) => e.stopPropagation()}
             >

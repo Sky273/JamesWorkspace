@@ -1,0 +1,2 @@
+import{a as e}from"./rolldown-runtime-B589uzA9.js";import{r as t}from"./vendor-charts-DO53rMkR.js";import{a as n,t as r}from"./viewRefresh-D1OKGSr_.js";var i=e(t(),1);function a({consumerId:e,scopes:t,onRefresh:a,enabled:o=!0}){let s=t.join(`|`);(0,i.useEffect)(()=>{!o||t.length===0||r(e,t)&&a(t)},[e,o,a,s]),(0,i.useEffect)(()=>{if(!(!o||t.length===0))return n(e,t,a)},[e,o,a,s])}export{a as t};
+//# sourceMappingURL=useScopedViewRefresh-C80TGxEp.js.map

@@ -52,6 +52,7 @@ function mockReqRes(userOverrides = {}, reqOverrides = {}) {
 describe('Rate Limit Middleware', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        delete process.env.E2E_RELAX_RATE_LIMITING;
         cleanupRateLimitStore();
     });
 
@@ -64,6 +65,19 @@ describe('Rate Limit Middleware', () => {
             mw(req, res, next);
 
             expect(next).toHaveBeenCalled();
+            expect(res.status).not.toHaveBeenCalled();
+        });
+
+        it('should skip user rate limiting when E2E relaxation is enabled', () => {
+            process.env.E2E_RELAX_RATE_LIMITING = 'true';
+            const mw = userRateLimit(1, 60000);
+            const { req, res, next } = mockReqRes();
+
+            for (let i = 0; i < 3; i++) {
+                mw(req, res, next);
+            }
+
+            expect(next).toHaveBeenCalledTimes(3);
             expect(res.status).not.toHaveBeenCalled();
         });
 
@@ -139,6 +153,19 @@ describe('Rate Limit Middleware', () => {
             mw(req, res, next);
 
             expect(next).toHaveBeenCalled();
+        });
+
+        it('should skip combined rate limiting when E2E relaxation is enabled', () => {
+            process.env.E2E_RELAX_RATE_LIMITING = 'true';
+            const mw = combinedRateLimit(1, 60000);
+            const { req, res, next } = mockReqRes();
+
+            for (let i = 0; i < 3; i++) {
+                mw(req, res, next);
+            }
+
+            expect(next).toHaveBeenCalledTimes(3);
+            expect(res.status).not.toHaveBeenCalled();
         });
     });
 

@@ -158,7 +158,18 @@ describe('Email Templates Routes', () => {
                 .set('Authorization', 'Bearer valid-token');
 
             expect(res.status).toBe(200);
-            expect(mockGetTemplates).toHaveBeenCalledWith(null, true);
+            expect(mockGetTemplates).toHaveBeenCalledWith(null, true, { bypassCache: false });
+        });
+
+        it('should bypass cache when refresh is requested', async () => {
+            mockGetTemplates.mockResolvedValueOnce([sampleTemplate]);
+
+            const res = await request(app)
+                .get('/api/email-templates?refresh=1')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+            expect(mockGetTemplates).toHaveBeenCalledWith(null, true, { bypassCache: true });
         });
 
         it('should return empty list for non-admin without firm', async () => {
@@ -181,7 +192,7 @@ describe('Email Templates Routes', () => {
                 .set('x-test-no-firm', 'true');
 
             expect(res.status).toBe(200);
-            expect(mockGetTemplates).toHaveBeenCalledWith(null, true);
+            expect(mockGetTemplates).toHaveBeenCalledWith(null, true, { bypassCache: false });
         });
 
         it('should return 500 on service error', async () => {
@@ -281,6 +292,17 @@ describe('Email Templates Routes', () => {
 
             expect(res.status).toBe(200);
             expect(res.body.template.id).toBe('et-123');
+        });
+
+        it('should bypass cache for detail when refresh is requested', async () => {
+            mockGetTemplate.mockResolvedValueOnce(sampleTemplate);
+
+            const res = await request(app)
+                .get('/api/email-templates/et-123?refresh=true')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+            expect(mockGetTemplate).toHaveBeenCalledWith('et-123', { bypassCache: true });
         });
 
         it('should return 404 if not found', async () => {

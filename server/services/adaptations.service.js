@@ -81,9 +81,15 @@ export async function listAdaptations({ firmId, resumeId, missionId, status, sea
         paramIndex++;
     }
 
-    // Search filter
+    // Search filter: keep this aligned with the fields surfaced in the list UI.
     if (search) {
-        conditions.push(`(mission_title ILIKE $${paramIndex} OR adapted_text ILIKE $${paramIndex})`);
+        conditions.push(`(
+            mission_title ILIKE $${paramIndex}
+            OR adapted_text ILIKE $${paramIndex}
+            OR resume_name ILIKE $${paramIndex}
+            OR candidate_name ILIKE $${paramIndex}
+            OR adapted_title ILIKE $${paramIndex}
+        )`);
         params.push(`%${escapeLike(search)}%`);
         paramIndex++;
     }

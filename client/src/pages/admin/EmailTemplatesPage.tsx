@@ -58,13 +58,13 @@ const EmailTemplatesPage = (): JSX.Element => {
   const [duplicating, setDuplicating] = useState(false);
   const templatesRequestIdRef = useRef(0);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async ({ forceRefresh = false }: { forceRefresh?: boolean } = {}) => {
     const requestId = ++templatesRequestIdRef.current;
     setLoading(true);
     setLoadError(false);
     try {
       const [templatesData, keywordsData] = await Promise.all([
-        emailTemplateService.getTemplates(),
+        emailTemplateService.getTemplates({ forceRefresh }),
         emailTemplateService.getKeywords(),
       ]);
       if (requestId !== templatesRequestIdRef.current) {
@@ -120,7 +120,7 @@ const EmailTemplatesPage = (): JSX.Element => {
       }
 
       try {
-        const fullTemplate = await emailTemplateService.getTemplate(template.id);
+        const fullTemplate = await emailTemplateService.getTemplate(template.id, { forceRefresh: true });
         setSelectedTemplate(fullTemplate);
         setForm({
           name: fullTemplate.name,
@@ -212,7 +212,7 @@ const EmailTemplatesPage = (): JSX.Element => {
         await emailTemplateService.deleteTemplate(template.id);
         setTemplates((currentTemplates) => currentTemplates.filter((currentTemplate) => currentTemplate.id !== template.id));
         toast.success(t('emailTemplates.success.deleted'));
-        void loadData();
+        void loadData({ forceRefresh: true });
       } catch {
         toast.error(t('emailTemplates.errors.deleteFailed'));
       }
@@ -252,7 +252,7 @@ const EmailTemplatesPage = (): JSX.Element => {
 
       closeModal();
       if (modalMode === 'edit') {
-        void loadData();
+        void loadData({ forceRefresh: true });
       }
     } catch {
       toast.error(
@@ -328,6 +328,9 @@ const EmailTemplatesPage = (): JSX.Element => {
             createLabel={t('emailTemplates.createNew')}
             defaultTemplatesCount={defaultTemplatesCount}
             onCreate={handleCreate}
+            onRefresh={() => {
+              void loadData({ forceRefresh: true });
+            }}
             systemTemplatesCount={systemTemplatesCount}
             totalTemplates={templates.length}
             introLabel={t('emailTemplates.headerIntro')}
@@ -350,7 +353,7 @@ const EmailTemplatesPage = (): JSX.Element => {
               <button
                 type="button"
                 onClick={() => {
-                  void loadData();
+                  void loadData({ forceRefresh: true });
                 }}
                 className="cv-ghost-button inline-flex min-h-11 items-center px-4 py-2 text-sm font-medium"
               >

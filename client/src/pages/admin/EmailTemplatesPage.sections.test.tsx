@@ -51,12 +51,14 @@ const template = {
 describe('EmailTemplatesPage sections', () => {
   it('affiche le header avec les statistiques et le bouton de création', () => {
     const onCreate = vi.fn();
+    const onRefresh = vi.fn();
 
     render(
       <EmailTemplatesHeader
         createLabel="Créer"
         defaultTemplatesCount={2}
         onCreate={onCreate}
+        onRefresh={onRefresh}
         systemTemplatesCount={1}
         totalTemplates={5}
         introLabel="Intro"
@@ -73,6 +75,8 @@ describe('EmailTemplatesPage sections', () => {
 
     fireEvent.click(screen.getByText('Créer'));
     expect(onCreate).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: /actualiser/i }));
+    expect(onRefresh).toHaveBeenCalledTimes(1);
   });
 
   it('affiche la liste et déclenche les actions sur un template', () => {

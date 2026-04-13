@@ -8,7 +8,7 @@ import { authenticateToken } from '../middleware/auth.middleware.js';
 import { validateBody, validateParams, createMissionSchema, updateMissionSchema } from '../utils/validation.js';
 import { sanitizeHtmlContent } from '../utils/sanitizer.backend.js';
 import { safeLog } from '../utils/logger.backend.js';
-import { getUserFirmId } from '../utils/firmHelpers.js';
+import { getUserFirmId, getUserFirmNameFromUser } from '../utils/firmHelpers.js';
 import * as missionsService from '../services/missions.service.js';
 import { invalidateDashboardAndGroupedViews } from '../services/viewCacheInvalidation.service.js';
 import { shouldBypassCache } from '../utils/requestCacheControl.js';
@@ -39,9 +39,10 @@ function createMissionsRouteHandler(logMessage, errorMessage, handler, errorResp
 
 async function getMissionRequestScope(req) {
     const isAdmin = req.user?.role === 'admin';
+    const userFirmId = await getUserFirmId(req);
     return {
         isAdmin,
-        userFirmId: isAdmin ? null : await getUserFirmId(req)
+        userFirmId
     };
 }
 
@@ -155,7 +156,7 @@ router.get('/:id', authenticateToken, validateParams('id'), createMissionsRouteH
 router.post('/', authenticateToken, validateBody(createMissionSchema), createMissionsRouteHandler('Error creating mission', 'Failed to create mission', async (req, res) => {
         const missionData = req.body;
         const normalizedMission = normalizeMissionPayload(missionData);
-        const userFirm = req.user?.firmName || null;
+        const userFirm = getUserFirmNameFromUser(req.user) || null;
         const scope = await requireMissionScopeWithFirm(req, res);
         if (!scope) {
             return;

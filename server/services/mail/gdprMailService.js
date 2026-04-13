@@ -246,6 +246,21 @@ async function getAccessToken() {
  * @returns {Promise<Object>}
  */
 export async function sendEmail({ to, subject, html, text }, isRetry = false) {
+    if (String(process.env.E2E_DISABLE_EXTERNAL_EMAIL || '').toLowerCase() === 'true') {
+        safeLog('info', 'GDPR email delivery disabled by environment flag', {
+            envName: 'E2E_DISABLE_EXTERNAL_EMAIL',
+            to,
+            subject
+        });
+
+        return {
+            success: true,
+            messageId: `e2e-disabled-${Date.now()}`,
+            sentTo: to,
+            disabled: true
+        };
+    }
+
     // Get GLOBAL access token (will refresh if needed)
     let accessToken;
     try {

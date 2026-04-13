@@ -59,7 +59,8 @@ export function useResumeExportPage() {
           id,
           currentResume: currentResumeForPage,
           resumes: resumes as Resume[],
-          fetchResume: async (resumeId) => await resumeService.getResume(resumeId) as Resume | null,
+          preferFresh: true,
+          fetchResume: async (resumeId) => await resumeService.getResume(resumeId, { forceRefresh: true }) as Resume | null,
         });
 
         if (resolvedResume.kind === 'missing-id') {

@@ -32,6 +32,10 @@ vi.mock('../../config/prompts.backend.js', () => ({
 
 import {
     acquireLLMSlot,
+    analyzeResumeWithLLM,
+    analyzeImprovedResumeWithLLM,
+    improveResumeWithLLM,
+    preAnalyzeResumeWithLLM,
     releaseLLMSlot,
     resetLLMQueue
 } from '../../services/batchJobsWorker/llmIntegration.js';
@@ -40,6 +44,7 @@ describe('Batch Jobs Worker - LLM Integration', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         resetLLMQueue();
+        delete process.env.E2E_DISABLE_EXTERNAL_LLM;
     });
 
     describe('acquireLLMSlot / releaseLLMSlot', () => {
@@ -96,6 +101,42 @@ describe('Batch Jobs Worker - LLM Integration', () => {
             await acquireLLMSlot();
             releaseLLMSlot();
             resetLLMQueue();
+        });
+    });
+
+    describe('E2E mocked LLM mode', () => {
+        it('should return mocked analysis when external LLM is disabled', async () => {
+            process.env.E2E_DISABLE_EXTERNAL_LLM = 'true';
+
+            const result = await analyzeResumeWithLLM('<p>CV test</p>', 'firm-1', 'candidate.docx');
+
+            expect(result.globalRating).toBe(76);
+            expect(result.tags.skills).toContain('React');
+        });
+
+        it('should return mocked pre-analysis text when external LLM is disabled', async () => {
+            process.env.E2E_DISABLE_EXTERNAL_LLM = 'true';
+
+            const result = await preAnalyzeResumeWithLLM('Texte source', 'firm-1', 'candidate.docx');
+
+            expect(result).toBe('Texte source');
+        });
+
+        it('should return mocked improvement when external LLM is disabled', async () => {
+            process.env.E2E_DISABLE_EXTERNAL_LLM = 'true';
+
+            const result = await improveResumeWithLLM('<p>CV test</p>', null, 'firm-1', 'candidate.docx');
+
+            expect(result.text).toContain('Version optimisée E2E');
+            expect(result.analysis.globalRating).toBe(88);
+        });
+
+        it('should return mocked post-improvement analysis when external LLM is disabled', async () => {
+            process.env.E2E_DISABLE_EXTERNAL_LLM = 'true';
+
+            const result = await analyzeImprovedResumeWithLLM('<p>CV amélioré</p>', 'firm-1', 'candidate.docx');
+
+            expect(result.globalRating).toBe(88);
         });
     });
 });

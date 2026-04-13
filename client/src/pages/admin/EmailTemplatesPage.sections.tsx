@@ -1,4 +1,5 @@
 import {
+  ArrowPathIcon,
   Bars3BottomLeftIcon,
   BuildingOfficeIcon,
   DocumentDuplicateIcon,
@@ -24,6 +25,7 @@ export const EmailTemplatesHeader = ({
   createLabel,
   defaultTemplatesCount,
   onCreate,
+  onRefresh,
   systemTemplatesCount,
   totalTemplates,
   introLabel,
@@ -35,6 +37,7 @@ export const EmailTemplatesHeader = ({
   createLabel: string;
   defaultTemplatesCount: number;
   onCreate: () => void;
+  onRefresh: () => void;
   systemTemplatesCount: number;
   totalTemplates: number;
   introLabel: string;
@@ -53,13 +56,24 @@ export const EmailTemplatesHeader = ({
           {hintLabel}
         </div>
       </div>
-      <button
-        onClick={onCreate}
-        className="cv-gradient-button inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2 text-sm font-semibold"
-      >
-        <PlusIcon className="h-5 w-5" />
-        {createLabel}
-      </button>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={onRefresh}
+          className="cv-ghost-button inline-flex min-h-11 min-w-11 items-center justify-center rounded-[1rem] p-3"
+          title="Actualiser"
+          aria-label="Actualiser"
+        >
+          <ArrowPathIcon className="h-5 w-5" />
+        </button>
+        <button
+          onClick={onCreate}
+          className="cv-gradient-button inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2 text-sm font-semibold"
+        >
+          <PlusIcon className="h-5 w-5" />
+          {createLabel}
+        </button>
+      </div>
     </div>
 
     <div className="grid gap-3 md:grid-cols-3">

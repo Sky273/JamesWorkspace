@@ -40,19 +40,19 @@ export async function listClients({ page = 1, limit = 20, search, type, firmId, 
         let paramIndex = 1;
 
         if (firmId) {
-            conditions.push(`firm_id = $${paramIndex}`);
+            conditions.push(`c.firm_id = $${paramIndex}`);
             params.push(firmId);
             paramIndex++;
         }
 
         if (search) {
-            conditions.push(`(LOWER(name) LIKE $${paramIndex} OR LOWER(industry) LIKE $${paramIndex})`);
+            conditions.push(`(LOWER(c.name) LIKE $${paramIndex} OR LOWER(c.industry) LIKE $${paramIndex})`);
             params.push(`%${escapeLike(search.toLowerCase())}%`);
             paramIndex++;
         }
 
         if (type && ['client', 'prospect'].includes(type)) {
-            conditions.push(`type = $${paramIndex}`);
+            conditions.push(`c.type = $${paramIndex}`);
             params.push(type);
             paramIndex++;
         }

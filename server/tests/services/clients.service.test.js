@@ -96,7 +96,7 @@ describe('Clients Service', () => {
             await listClients({ page: 1, limit: 20, firmId: 'firm-1' });
 
             const callArgs = query.mock.calls[0];
-            expect(callArgs[0]).toContain('firm_id = $1');
+            expect(callArgs[0]).toContain('c.firm_id = $1');
             expect(callArgs[1]).toContain('firm-1');
         });
 
@@ -108,7 +108,7 @@ describe('Clients Service', () => {
             await listClients({ page: 1, limit: 20, search: 'test' });
 
             const callArgs = query.mock.calls[0];
-            expect(callArgs[0]).toContain('LOWER(name) LIKE');
+            expect(callArgs[0]).toContain('LOWER(c.name) LIKE');
             expect(callArgs[1]).toContain('%test%');
         });
 
@@ -120,7 +120,7 @@ describe('Clients Service', () => {
             await listClients({ page: 1, limit: 20, type: 'client' });
 
             const callArgs = query.mock.calls[0];
-            expect(callArgs[0]).toContain('type = $');
+            expect(callArgs[0]).toContain('c.type = $');
             expect(callArgs[1]).toContain('client');
         });
 

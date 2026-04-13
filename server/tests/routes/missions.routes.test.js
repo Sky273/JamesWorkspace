@@ -74,8 +74,10 @@ vi.mock('../../services/viewCacheInvalidation.service.js', () => ({
 
 // Mock firmHelpers
 const mockGetUserFirmId = vi.fn();
+const mockGetUserFirmNameFromUser = vi.fn();
 vi.mock('../../utils/firmHelpers.js', () => ({
-    getUserFirmId: (...args) => mockGetUserFirmId(...args)
+    getUserFirmId: (...args) => mockGetUserFirmId(...args),
+    getUserFirmNameFromUser: (...args) => mockGetUserFirmNameFromUser(...args)
 }));
 
 // Mock logger
@@ -170,6 +172,7 @@ describe('Missions Routes - GET /api/missions', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         app = createTestApp();
+        mockGetUserFirmNameFromUser.mockImplementation((user) => user?.firmName || user?.firm_name || user?.firm || null);
     });
 
     it('should return 401 without authentication', async () => {
@@ -311,7 +314,7 @@ describe('Missions Routes - GET /api/missions', () => {
             .set('x-test-role', 'admin');
 
         expect(res.status).toBe(200);
-        expect(mockGetUserFirmId).not.toHaveBeenCalled();
+        expect(mockGetUserFirmId).toHaveBeenCalledTimes(1);
         expect(mockListMissions).toHaveBeenCalledWith(expect.objectContaining({ firmId: null }));
     });
 
@@ -337,6 +340,7 @@ describe('Missions Routes - GET /api/missions/grouped-by-deal', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         app = createTestApp();
+        mockGetUserFirmNameFromUser.mockImplementation((user) => user?.firmName || user?.firm_name || user?.firm || null);
     });
 
     it('should bypass cache on grouped view when refresh=1 is provided', async () => {
@@ -361,6 +365,7 @@ describe('Missions Routes - GET /api/missions/:id', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         app = createTestApp();
+        mockGetUserFirmNameFromUser.mockImplementation((user) => user?.firmName || user?.firm_name || user?.firm || null);
     });
 
     it('should return 401 without authentication', async () => {
@@ -474,6 +479,7 @@ describe('Missions Routes - POST /api/missions', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         app = createTestApp();
+        mockGetUserFirmNameFromUser.mockImplementation((user) => user?.firmName || user?.firm_name || user?.firm || null);
     });
 
     it('should return 401 without authentication', async () => {
@@ -602,6 +608,28 @@ describe('Missions Routes - POST /api/missions', () => {
 
         expect(res.status).toBe(403);
     });
+
+    it('should default admin mission creation to the admin firm when no firmId is provided', async () => {
+        mockGetUserFirmId.mockResolvedValueOnce('firm-123');
+        mockValidateMissionAssociations.mockResolvedValueOnce({ ok: true });
+        const created = makeMissionRow({ id: 'admin-mission-1', title: 'Admin Mission', firm_id: 'firm-123' });
+        mockCreateMission.mockResolvedValueOnce(created);
+
+        const res = await request(app)
+            .post('/api/missions')
+            .set('Authorization', 'Bearer valid-token')
+            .set('x-test-role', 'admin')
+            .send({ Title: 'Admin Mission' });
+
+        expect(res.status).toBe(200);
+        expect(mockValidateMissionAssociations).toHaveBeenCalledWith(expect.objectContaining({
+            expectedFirmId: 'firm-123'
+        }));
+        expect(mockCreateMission).toHaveBeenCalledWith(expect.objectContaining({
+            firm_id: 'firm-123',
+            firm: 'Test Firm'
+        }));
+    });
 });
 
 // ============================================
@@ -613,6 +641,7 @@ describe('Missions Routes - PUT /api/missions/:id', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         app = createTestApp();
+        mockGetUserFirmNameFromUser.mockImplementation((user) => user?.firmName || user?.firm_name || user?.firm || null);
     });
 
     it('should return 401 without authentication', async () => {
@@ -769,6 +798,7 @@ describe('Missions Routes - DELETE /api/missions/:id', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         app = createTestApp();
+        mockGetUserFirmNameFromUser.mockImplementation((user) => user?.firmName || user?.firm_name || user?.firm || null);
     });
 
     it('should return 401 without authentication', async () => {
@@ -865,6 +895,7 @@ describe('Missions Routes - GET /api/missions/:missionId/adaptations', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         app = createTestApp();
+        mockGetUserFirmNameFromUser.mockImplementation((user) => user?.firmName || user?.firm_name || user?.firm || null);
     });
 
     it('should return 401 without authentication', async () => {
@@ -940,6 +971,7 @@ describe('Missions Routes - DELETE /api/missions/:missionId/keywords-cache', () 
     beforeEach(() => {
         vi.resetAllMocks();
         app = createTestApp();
+        mockGetUserFirmNameFromUser.mockImplementation((user) => user?.firmName || user?.firm_name || user?.firm || null);
     });
 
     it('should clear cached keywords for an authorized user matched by firm_id', async () => {

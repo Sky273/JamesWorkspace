@@ -2,6 +2,10 @@ import rateLimit from 'express-rate-limit';
 import { RATE_LIMIT } from '../config/constants.js';
 import { safeLog } from '../utils/logger.backend.js';
 
+function isE2ERateLimitRelaxed() {
+    return process.env.E2E_RELAX_RATE_LIMITING === 'true';
+}
+
 // ============================================
 // RATE LIMITING MIDDLEWARE
 // ============================================
@@ -12,7 +16,7 @@ export const globalLimiter = rateLimit({
     max: RATE_LIMIT.GLOBAL.max,
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) => req.path === '/health',
+    skip: (req) => req.path === '/health' || isE2ERateLimitRelaxed(),
     handler: (req, res) => {
         safeLog('warn', 'Rate limit exceeded', { ip: req.ip, method: req.method, path: req.path });
         res.status(429).json({
@@ -62,6 +66,10 @@ function getClientIP(req) {
  */
 export function userRateLimit(maxRequests = RATE_LIMIT.USER.max, windowMs = RATE_LIMIT.USER.windowMs) {
     return (req, res, next) => {
+        if (isE2ERateLimitRelaxed()) {
+            return next();
+        }
+
         if (!req.user || !req.user.id) {
             return next();
         }
@@ -133,6 +141,10 @@ export function userRateLimit(maxRequests = RATE_LIMIT.USER.max, windowMs = RATE
  */
 export function combinedRateLimit(maxRequests = 30, windowMs = 60 * 1000) {
     return (req, res, next) => {
+        if (isE2ERateLimitRelaxed()) {
+            return next();
+        }
+
         const ip = getClientIP(req);
         const userId = req.user?.id || 'anonymous';
         const combinedKey = `${ip}:${userId}`;
@@ -197,6 +209,7 @@ export const uploadLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 50,
     message: 'Too many file uploads, please try again later.',
+    skip: () => isE2ERateLimitRelaxed(),
     handler: (req, res) => {
         safeLog('warn', 'Upload rate limit exceeded', { ip: req.ip });
         res.status(429).json({
@@ -211,6 +224,7 @@ export const llmLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
     max: 100,
     message: 'Too many LLM requests, please try again later.',
+    skip: () => isE2ERateLimitRelaxed(),
     handler: (req, res) => {
         safeLog('warn', 'LLM rate limit exceeded', { ip: req.ip });
         res.status(429).json({

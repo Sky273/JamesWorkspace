@@ -112,6 +112,10 @@ describe('Adaptations Service', () => {
             await listAdaptations({ search: 'dev', page: 1, limit: 20 });
 
             expect(query.mock.calls[0][0]).toContain('ILIKE');
+            expect(query.mock.calls[0][0]).toContain('candidate_name ILIKE');
+            expect(query.mock.calls[0][0]).toContain('resume_name ILIKE');
+            expect(query.mock.calls[0][0]).toContain('adapted_title ILIKE');
+            expect(query.mock.calls[0][1]).toContain('%dev%');
         });
 
         it('should combine multiple filters', async () => {

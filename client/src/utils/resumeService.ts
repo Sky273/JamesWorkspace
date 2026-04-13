@@ -23,8 +23,13 @@ export const resumeService = {
      * Get a resume by ID
      * @param resumeId - The resume ID
      */
-    async getResume(resumeId: string): Promise<unknown> {
-        const response = await authGet(`/api/resumes/${resumeId}`);
+    async getResume(resumeId: string, options: { forceRefresh?: boolean } = {}): Promise<unknown> {
+        const searchParams = new URLSearchParams();
+        if (options.forceRefresh) {
+            searchParams.set('refresh', '1');
+        }
+        const query = searchParams.toString();
+        const response = await authGet(`/api/resumes/${resumeId}${query ? `?${query}` : ''}`);
         if (!response.ok) {
             throw new Error('Failed to fetch resume');
         }

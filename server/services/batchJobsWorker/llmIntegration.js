@@ -17,6 +17,55 @@ const llmQueue = [];
 // Track queue health for debugging
 let _lastLLMActivity = Date.now();
 
+function isExternalLlmDisabledForE2E() {
+    return process.env.E2E_DISABLE_EXTERNAL_LLM === 'true';
+}
+
+function buildMockAnalysis(text, originalFileName = null, { improved = false } = {}) {
+    const normalizedText = typeof text === 'string' && text.trim().length > 0
+        ? text.trim()
+        : '<p>Profil analysé automatiquement pour les tests E2E.</p>';
+    const inferredName = originalFileName
+        ? String(originalFileName).replace(/\.[^.]+$/, '')
+        : 'Candidat E2E';
+
+    return {
+        structuredText: normalizedText,
+        title: improved ? 'Consultant IT confirmé' : 'Consultant IT',
+        globalRating: improved ? 88 : 76,
+        skillsRating: improved ? 90 : 78,
+        experiencesRating: improved ? 86 : 74,
+        educationRating: improved ? 82 : 72,
+        atsOptimizationRating: improved ? 89 : 75,
+        executiveSummaryRating: improved ? 85 : 73,
+        hobbiesLanguagesRating: improved ? 70 : 65,
+        candidateName: inferredName,
+        tags: {
+            skills: ['JavaScript', 'TypeScript', 'React'],
+            industries: ['IT'],
+            tools: ['Node.js', 'PostgreSQL'],
+            softSkills: ['Communication']
+        },
+        suggestions: {
+            critical: [],
+            recommended: ['Mettre en avant les réalisations clés'],
+            optional: []
+        }
+    };
+}
+
+function buildMockImprovement(text) {
+    const baseText = typeof text === 'string' && text.trim().length > 0
+        ? text.trim()
+        : '<p>CV amélioré automatiquement pour les tests E2E.</p>';
+    return {
+        text: looksLikeHtml(baseText)
+            ? `${baseText}\n<p><strong>Version optimisée E2E.</strong></p>`
+            : `${baseText}\nVersion optimisée E2E.`,
+        analysis: buildMockAnalysis(baseText, null, { improved: true })
+    };
+}
+
 function looksLikeHtml(value) {
     return typeof value === 'string' && /<\/?[a-z][^>]*>/i.test(value);
 }
@@ -75,6 +124,11 @@ export function resetLLMQueue() {
  * @param {string} originalFileName - Original file name for name extraction hint
  */
 export async function analyzeResumeWithLLM(text, _firmId, originalFileName = null, options = {}) {
+    if (isExternalLlmDisabledForE2E()) {
+        safeLog('info', 'Using mocked batch resume analysis for E2E', { originalFileName });
+        return buildMockAnalysis(text, originalFileName, { improved: false, ocrUsed: options.ocrUsed });
+    }
+
     const { analyzeResume, cleanupText } = await import('../openai.service.js');
     const { getLLMSettings, calculateWeightedGlobalRating } = await import('../settings.service.js');
     const { getAcceptedIndustriesString, getIndustryMappingString } = await import('../industry.service.js');
@@ -129,6 +183,11 @@ export async function analyzeResumeWithLLM(text, _firmId, originalFileName = nul
 }
 
 export async function preAnalyzeResumeWithLLM(text, _firmId, originalFileName = null) {
+    if (isExternalLlmDisabledForE2E()) {
+        safeLog('info', 'Using mocked batch resume pre-analysis for E2E', { originalFileName });
+        return typeof text === 'string' ? text : '';
+    }
+
     const { preAnalyzeResumeText } = await import('../openai.service.js');
     const { getLLMSettings } = await import('../settings.service.js');
     const { DEFAULT_PRE_ANALYSIS_PROMPT } = await import('../../config/prompts.backend.js');
@@ -160,6 +219,14 @@ export async function preAnalyzeResumeWithLLM(text, _firmId, originalFileName = 
  * @param {string} originalFileName - Original file name for name extraction hint
  */
 export async function improveResumeWithLLM(text, analysis, _firmId, originalFileName = null) {
+    if (isExternalLlmDisabledForE2E()) {
+        safeLog('info', 'Using mocked batch resume improvement for E2E', { originalFileName });
+        return {
+            ...buildMockImprovement(text),
+            analysis: analysis || buildMockAnalysis(text, originalFileName, { improved: true })
+        };
+    }
+
     const { improveResume } = await import('../openai.service.js');
     const { getLLMSettings } = await import('../settings.service.js');
     const { getAcceptedIndustriesString } = await import('../industry.service.js');
@@ -221,6 +288,11 @@ export async function improveResumeWithLLM(text, analysis, _firmId, originalFile
 }
 
 export async function analyzeImprovedResumeWithLLM(text, _firmId, originalFileName = null) {
+    if (isExternalLlmDisabledForE2E()) {
+        safeLog('info', 'Using mocked post-improvement analysis for E2E', { originalFileName });
+        return buildMockAnalysis(text, originalFileName, { improved: true });
+    }
+
     const { analyzeResume } = await import('../openai.service.js');
     const { getLLMSettings, calculateWeightedGlobalRating } = await import('../settings.service.js');
     const { getAcceptedIndustriesString, getIndustryMappingString } = await import('../industry.service.js');

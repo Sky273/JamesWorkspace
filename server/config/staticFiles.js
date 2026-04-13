@@ -113,7 +113,10 @@ function buildPrecompressedAssetIndex(distPath) {
  * @param {string} serverDir - __dirname of the server directory
  */
 export function configureStaticFiles(app, serverDir) {
-    const distPath = path.join(serverDir, '..', 'client', 'dist');
+    const configuredDistPath = process.env.STATIC_DIST_DIR;
+    const distPath = configuredDistPath
+        ? path.resolve(serverDir, '..', configuredDistPath)
+        : path.join(serverDir, '..', 'client', 'dist');
     const precompressedAssetIndex = buildPrecompressedAssetIndex(distPath);
 
     // Serve pre-compressed files (Brotli and Gzip) if available.

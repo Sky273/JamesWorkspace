@@ -251,7 +251,7 @@ describe('ResumeExportPage', () => {
     );
 
     await waitFor(() => {
-      expect(getResumeMock).toHaveBeenCalledWith('resume-1');
+      expect(getResumeMock).toHaveBeenCalledWith('resume-1', { forceRefresh: true });
       expect(getAllTemplatesMock).toHaveBeenCalled();
     });
 

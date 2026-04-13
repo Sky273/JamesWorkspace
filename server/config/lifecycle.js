@@ -47,6 +47,10 @@ function getPositiveTimeout(envName, defaultValue) {
     return Number.isInteger(parsed) && parsed > 0 ? parsed : defaultValue;
 }
 
+function isEnvFlagEnabled(envName) {
+    return String(process.env[envName] || '').toLowerCase() === 'true';
+}
+
 // ============================================
 // SERVER STARTUP
 // ============================================
@@ -121,16 +125,24 @@ async function onServerStart(server, protocol, port) {
 
         // Start backup scheduler (scheduled database backups via FTP/SFTP)
         // Requires schema to be prepared separately via docker-migrate.
-        try {
-            await initBackupScheduler();
-            safeLog('info', 'Backup Scheduler initialized');
-        } catch (error) {
-            safeLog('error', 'Failed to initialize Backup Scheduler', { error: error.message });
+        if (isEnvFlagEnabled('E2E_DISABLE_BACKUP_SCHEDULER')) {
+            safeLog('info', 'Backup Scheduler disabled by environment flag', { envName: 'E2E_DISABLE_BACKUP_SCHEDULER' });
+        } else {
+            try {
+                await initBackupScheduler();
+                safeLog('info', 'Backup Scheduler initialized');
+            } catch (error) {
+                safeLog('error', 'Failed to initialize Backup Scheduler', { error: error.message });
+            }
         }
         
         // Start GDPR consent scheduler (checks for expired consents, sends reminders, purges)
-        startScheduler();
-        safeLog('info', 'GDPR Consent Scheduler started');
+        if (isEnvFlagEnabled('E2E_DISABLE_GDPR_SCHEDULER')) {
+            safeLog('info', 'GDPR Consent Scheduler disabled by environment flag', { envName: 'E2E_DISABLE_GDPR_SCHEDULER' });
+        } else {
+            startScheduler();
+            safeLog('info', 'GDPR Consent Scheduler started');
+        }
         
         // Initialize and start batch jobs worker
         try {

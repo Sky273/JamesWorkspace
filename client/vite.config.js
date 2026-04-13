@@ -55,6 +55,7 @@ export default defineConfig(({ mode }) => {
   const httpsPort = env.VITE_HTTPS_PORT || '3443';
   const devServerPort = Number.parseInt(env.VITE_DEV_SERVER_PORT || '5173', 10);
   const disableAssetCompression = env.VITE_DISABLE_ASSET_COMPRESSION === 'true';
+  const buildOutDir = env.VITE_BUILD_OUT_DIR || 'dist';
 
   console.log(`HTTPS_ENABLED: ${httpsEnabled} (env value: "${env.VITE_HTTPS_ENABLED}")`);
 
@@ -159,7 +160,7 @@ export default defineConfig(({ mode }) => {
       include: OPTIMIZE_DEPENDENCY_INCLUDE,
     },
     build: {
-      outDir: 'dist',
+      outDir: buildOutDir,
       minify: true,
       sourcemap: true,
       chunkSizeWarningLimit: 1100,

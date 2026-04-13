@@ -5,6 +5,7 @@ interface ResolveResumeOptions<TResume extends Resume> {
   currentResume: TResume | null;
   resumes: TResume[];
   fetchResume: (id: string) => Promise<TResume | null | undefined>;
+  preferFresh?: boolean;
 }
 
 type ResumeResolution<TResume extends Resume> =
@@ -23,11 +24,13 @@ export async function resolveResumeForPage<TResume extends Resume>(
     return { kind: 'missing-id' };
   }
 
-  if (currentResume?.id === id) {
+  if (!options.preferFresh && currentResume?.id === id) {
     return { kind: 'current', resume: currentResume };
   }
 
-  const existingResume = resumes.find((resume) => resume.id === id);
+  const existingResume = !options.preferFresh
+    ? resumes.find((resume) => resume.id === id)
+    : undefined;
   if (existingResume) {
     return { kind: 'cached', resume: existingResume };
   }

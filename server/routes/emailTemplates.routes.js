@@ -9,6 +9,7 @@ import { validateBody, validateParams, createEmailTemplateFrontSchema, updateEma
 import { safeLog } from '../utils/logger.backend.js';
 import * as emailTemplatesService from '../services/emailTemplates.service.js';
 import { getUserFirmId, getUserFirmIdFromUser, getUserFirmNameFromUser, isUserAdmin, isUserManager } from '../utils/firmHelpers.js';
+import { shouldBypassCache } from '../utils/requestCacheControl.js';
 
 /**
  * Get firm ID from user info (either from JWT or database lookup)
@@ -107,6 +108,7 @@ router.get('/', authenticateToken, createEmailTemplatesRouteHandler('Error fetch
 
         const firmId = await getRequestFirmId(req);
         const superAdmin = isUserAdmin(req);
+        const bypassCache = shouldBypassCache(req);
         
         if (!firmId) {
             if (!superAdmin) {
@@ -117,11 +119,11 @@ router.get('/', authenticateToken, createEmailTemplatesRouteHandler('Error fetch
                 userId: getAuthenticatedUserId(req.user),
                 firmName: getUserFirmNameFromUser(req.user)
             });
-            const templates = await emailTemplatesService.getTemplates(null, true);
+            const templates = await emailTemplatesService.getTemplates(null, true, { bypassCache });
             return res.json({ templates });
         }
         
-        const templates = await emailTemplatesService.getTemplates(superAdmin ? null : firmId, superAdmin);
+        const templates = await emailTemplatesService.getTemplates(superAdmin ? null : firmId, superAdmin, { bypassCache });
         
         return res.json({ templates });
 }));
@@ -171,11 +173,12 @@ router.get('/:id', authenticateToken, validateParams('id'), createEmailTemplates
 
         const { id } = req.params;
         const firmId = await getRequestFirmId(req);
+        const bypassCache = shouldBypassCache(req);
         if (!firmId && !isUserAdmin(req)) {
             return res.status(403).json({ error: 'No firm association' });
         }
         
-        const template = await emailTemplatesService.getTemplate(id);
+        const template = await emailTemplatesService.getTemplate(id, { bypassCache });
         const accessibleTemplate = ensureTemplateOwnership(req, res, template, firmId);
         if (!accessibleTemplate) {
             return;
@@ -232,7 +235,7 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateE
             return res.status(403).json({ error: 'No firm association' });
         }
         
-        const existing = await emailTemplatesService.getTemplate(id);
+        const existing = await emailTemplatesService.getTemplate(id, { bypassCache: true });
         if (!ensureTemplateOwnership(req, res, existing, firmId, { allowSystemTemplate: false })) {
             return;
         }
@@ -269,7 +272,7 @@ router.delete('/:id', authenticateToken, validateParams('id'), createEmailTempla
             return res.status(403).json({ error: 'No firm association' });
         }
         
-        const existing = await emailTemplatesService.getTemplate(id);
+        const existing = await emailTemplatesService.getTemplate(id, { bypassCache: true });
         if (!ensureTemplateOwnership(req, res, existing, firmId)) {
             return;
         }
@@ -312,7 +315,7 @@ router.post('/:id/duplicate', authenticateToken, validateParams('id'), createEma
             return res.status(400).json({ error: 'Specified firm not found' });
         }
         
-        const existing = await emailTemplatesService.getTemplate(id);
+        const existing = await emailTemplatesService.getTemplate(id, { bypassCache: true });
         if (!ensureTemplateOwnership(req, res, existing, actorFirmId)) {
             return;
         }
@@ -333,12 +336,13 @@ router.post('/:id/preview', authenticateToken, validateParams('id'), validateBod
 
         const { id } = req.params;
         const firmId = await getRequestFirmId(req);
+        const bypassCache = shouldBypassCache(req);
         if (!firmId && !isUserAdmin(req)) {
             return res.status(403).json({ error: 'No firm association' });
         }
         const { context } = req.body;
         
-        const existing = await emailTemplatesService.getTemplate(id);
+        const existing = await emailTemplatesService.getTemplate(id, { bypassCache });
         if (!ensureTemplateOwnership(req, res, existing, firmId)) {
             return;
         }

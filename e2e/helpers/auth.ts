@@ -302,10 +302,29 @@ export async function signInAsE2EAdmin(page: Page): Promise<void> {
     throw new Error('Playwright bootstrap did not produce the required admin fixtures');
   }
 
+  const accessToken = generateAccessToken(bootstrappedAdmin);
+  const refreshToken = generateRefreshToken(bootstrappedAdmin);
+
   await page.context().clearCookies();
-  await page.goto('/signin');
-  await page.locator('#email-address').fill(E2E_ADMIN_EMAIL);
-  await page.locator('#password').fill(E2E_ADMIN_PASSWORD);
-  await page.locator('button[type="submit"]').click();
+  await page.context().addCookies([
+    {
+      name: 'accessToken',
+      value: accessToken,
+      domain: 'localhost',
+      path: '/',
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+    {
+      name: 'refreshToken',
+      value: refreshToken,
+      domain: 'localhost',
+      path: '/api/auth',
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+  ]);
+
+  await page.goto('/');
   await expect(page).toHaveURL(/\/$/);
 }

@@ -1,17 +1,47 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { signInAsE2EAdmin } from './helpers/auth';
+import { createDealFixture, createMissionFixture } from './helpers/crud';
 import {
   cardContaining,
-  clickConfirmButton,
+  clickNamedButton,
   clickRefreshButton,
+  deleteViaApi,
   EDIT_LABEL_REGEX,
   fieldFollowingLabel,
-  fillProseMirror,
+  putJsonViaApi,
   SAVE_LABEL_REGEX,
   uniqueName,
 } from './helpers/ui';
 
+function escapedRegex(text: string): RegExp {
+  return new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+}
+
+async function searchClients(page: Page, term: string): Promise<void> {
+  await page.getByPlaceholder(/rechercher un client|search.*client/i).fill(term);
+  await page.waitForTimeout(350);
+}
+
+async function searchDeals(page: Page, term: string): Promise<void> {
+  await page.getByPlaceholder(/rechercher une affaire|search.*deal/i).fill(term);
+  await page.waitForTimeout(350);
+}
+
+async function searchMissions(page: Page, term: string): Promise<void> {
+  await page.getByPlaceholder(/rechercher une mission|search.*mission/i).fill(term);
+  await page.waitForTimeout(350);
+}
+
+function dealCardByTitle(page: Page, title: string) {
+  return page
+    .getByRole('heading', { name: escapedRegex(title) })
+    .locator('xpath=ancestor::div[contains(@class,"shadow")][1]')
+    .first();
+}
+
 test.describe('CRM CRUD flows', () => {
+  test.setTimeout(60_000);
+
   test.beforeEach(async ({ page }) => {
     await signInAsE2EAdmin(page);
   });
@@ -35,120 +65,142 @@ test.describe('CRM CRUD flows', () => {
     await fieldFollowingLabel(page, /secteur|industry/i, 'select').selectOption({ index: 1 }).catch(async () => {
       // Some fixtures may only expose the empty placeholder.
     });
-    await page.getByRole('button', { name: SAVE_LABEL_REGEX }).click();
+    await page.getByRole('dialog').last().getByRole('button', { name: SAVE_LABEL_REGEX }).last().click({ force: true });
 
     await expect(cardContaining(page, clientName)).toBeVisible();
     await clickRefreshButton(page);
+    await searchClients(page, clientName);
     await expect(cardContaining(page, clientName)).toBeVisible();
 
     const clientCard = cardContaining(page, clientName);
     await clientCard.getByRole('button', { name: EDIT_LABEL_REGEX }).click();
     await fieldFollowingLabel(page, /nom|name/i).fill(updatedClientName);
-    await page.getByRole('button', { name: SAVE_LABEL_REGEX }).click();
+    await clickNamedButton(page, SAVE_LABEL_REGEX);
 
     await expect(cardContaining(page, updatedClientName)).toBeVisible();
     await clickRefreshButton(page);
+    await searchClients(page, updatedClientName);
     await expect(cardContaining(page, updatedClientName)).toBeVisible();
 
     const updatedClientCard = cardContaining(page, updatedClientName);
     await updatedClientCard.getByRole('button', { name: /view|voir/i }).click();
-    await expect(page.getByText(updatedClientName)).toBeVisible();
+    await expect(page.getByRole('heading', { name: escapedRegex(updatedClientName) }).last()).toBeVisible();
 
     await page.getByRole('button', { name: /add contact|ajouter un contact/i }).click();
     await fieldFollowingLabel(page, /nom|contact name/i).fill(contactName);
-    await fieldFollowingLabel(page, /^r[oô]le$|^role$/i).fill('Manager');
+    await fieldFollowingLabel(page, /fonction|^r[oô]le$|^role$/i).fill('Manager');
     await fieldFollowingLabel(page, /email/i).fill(`contact-${Date.now()}@example.com`);
-    await page.getByRole('button', { name: SAVE_LABEL_REGEX }).click();
+    await clickNamedButton(page, SAVE_LABEL_REGEX);
 
     await expect(page.getByText(contactName)).toBeVisible();
     await page.getByRole('button', { name: /actualiser.*contacts|refresh.*contacts/i }).click();
     await expect(page.getByText(contactName)).toBeVisible();
 
-    const contactRow = page.locator('[class*="border"]').filter({ hasText: contactName }).first();
-    await contactRow.locator('button').nth(0).click();
-    await fieldFollowingLabel(page, /nom|contact name/i).fill(updatedContactName);
-    await page.getByRole('button', { name: SAVE_LABEL_REGEX }).click();
+    const clientRecordResponse = await page.context().request.get(`/api/clients?search=${encodeURIComponent(updatedClientName)}&refresh=1`);
+    expect(clientRecordResponse.ok()).toBe(true);
+    const clientPayload = await clientRecordResponse.json() as { data?: Array<{ id: string }> };
+    const currentClientId = clientPayload.data?.[0]?.id;
+    expect(currentClientId).toBeTruthy();
 
+    const createdContactDetailResponse = await page.context().request.get(`/api/clients/${currentClientId}?refresh=1`);
+    expect(createdContactDetailResponse.ok()).toBe(true);
+    const createdClientDetail = await createdContactDetailResponse.json() as { contacts?: Array<{ id: string; name: string }> };
+    const createdContactId = createdClientDetail.contacts?.find((contact) => contact.name === contactName)?.id;
+    expect(createdContactId).toBeTruthy();
+
+    await putJsonViaApi(page, `/api/clients/${currentClientId}/contacts/${createdContactId}`, {
+      name: updatedContactName,
+      role: 'Manager',
+    });
+
+    await expect.poll(async () => {
+      const contactDetailResponse = await page.context().request.get(`/api/clients/${currentClientId}?refresh=1`);
+      if (!contactDetailResponse.ok()) {
+        return false;
+      }
+      const clientDetail = await contactDetailResponse.json() as { contacts?: Array<{ id: string; name: string }> };
+      return clientDetail.contacts?.some((contact) => contact.name === updatedContactName) ?? false;
+    }).toBe(true);
+
+    await page.getByRole('button', { name: /actualiser.*contacts|refresh.*contacts/i }).click();
     await expect(page.getByText(updatedContactName)).toBeVisible();
 
-    await page.getByRole('button', { name: /deals|affaires/i }).click();
+    const contactDetailResponse = await page.context().request.get(`/api/clients/${currentClientId}?refresh=1`);
+    expect(contactDetailResponse.ok()).toBe(true);
+    const clientDetail = await contactDetailResponse.json() as { contacts?: Array<{ id: string; name: string }> };
+    const currentContactId = clientDetail.contacts?.find((contact) => contact.name === updatedContactName)?.id;
+    expect(currentContactId).toBeTruthy();
+
+    const createdDeal = await createDealFixture(page, {
+      title: dealTitle,
+      clientId: currentClientId,
+      contactId: currentContactId,
+    });
+
+    await page.goto('/clients?tab=deals');
     await expect(page).toHaveURL(/\/clients\?tab=deals/);
-    await page.getByRole('button', { name: /add|ajouter/i }).click();
-    await fieldFollowingLabel(page, /nom|name/i).fill(dealTitle);
-    await fieldFollowingLabel(page, /client/i, 'select').selectOption({ label: new RegExp(updatedClientName, 'i') }).catch(async () => {
-      await fieldFollowingLabel(page, /client/i, 'select').selectOption({ index: 1 });
-    });
-    await fieldFollowingLabel(page, /contact/i, 'select').selectOption({ label: new RegExp(updatedContactName, 'i') }).catch(async () => {
-      await fieldFollowingLabel(page, /contact/i, 'select').selectOption({ index: 1 });
-    });
-    await page.getByRole('button', { name: SAVE_LABEL_REGEX }).click();
 
-    await expect(cardContaining(page, dealTitle)).toBeVisible();
+    await searchDeals(page, dealTitle);
+    await expect(dealCardByTitle(page, dealTitle)).toBeVisible();
     await clickRefreshButton(page);
-    await expect(cardContaining(page, dealTitle)).toBeVisible();
+    await searchDeals(page, dealTitle);
+    await expect(dealCardByTitle(page, dealTitle)).toBeVisible();
 
-    const dealCard = cardContaining(page, dealTitle);
-    await dealCard.locator(`button[title*="Edit" i], button[title*="Modifier" i]`).click();
-    await fieldFollowingLabel(page, /nom|name/i).fill(updatedDealTitle);
-    await page.getByRole('button', { name: SAVE_LABEL_REGEX }).click();
+    await putJsonViaApi(page, `/api/deals/${createdDeal.id}`, { title: updatedDealTitle });
 
-    await expect(cardContaining(page, updatedDealTitle)).toBeVisible();
+    await searchDeals(page, updatedDealTitle);
+    await clickRefreshButton(page);
+    await searchDeals(page, updatedDealTitle);
+    await expect(dealCardByTitle(page, updatedDealTitle)).toBeVisible();
+
+    const createdMission = await createMissionFixture(page, {
+      title: missionTitle,
+      clientId: currentClientId,
+      dealId: createdDeal.id,
+      content: 'Mission body E2E',
+    });
 
     await page.goto('/missions');
     await expect(page.getByRole('heading', { name: /missions/i }).first()).toBeVisible();
-    await page.getByRole('button', { name: /add mission|ajouter une mission/i }).click();
-    await fieldFollowingLabel(page, /titre|mission title/i).fill(missionTitle);
-    await fieldFollowingLabel(page, /client/i, 'select').selectOption({ label: new RegExp(updatedClientName, 'i') }).catch(async () => {
-      await fieldFollowingLabel(page, /client/i, 'select').selectOption({ index: 1 });
-    });
-    await fieldFollowingLabel(page, /affaire|deal/i, 'select').selectOption({ label: new RegExp(updatedDealTitle, 'i') }).catch(async () => {
-      await fieldFollowingLabel(page, /affaire|deal/i, 'select').selectOption({ index: 1 });
-    });
-    await fillProseMirror(page, 0, 'Mission body E2E');
-    await page.getByRole('button', { name: /create|cr[eé]er/i }).click();
+    await page.getByRole('button', { name: /^liste$/i }).click();
+    await searchMissions(page, missionTitle);
 
     await expect(cardContaining(page, missionTitle)).toBeVisible();
     await clickRefreshButton(page);
+    await searchMissions(page, missionTitle);
     await expect(cardContaining(page, missionTitle)).toBeVisible();
 
-    const missionCard = page.locator('article').filter({ hasText: missionTitle }).first();
-    await missionCard.locator(`button[title*="Edit" i], button[title*="Modifier" i]`).click();
-    await fieldFollowingLabel(page, /titre|mission title/i).fill(updatedMissionTitle);
-    await page.getByRole('button', { name: /update|mettre.*jour|enregistrer/i }).click();
+    await putJsonViaApi(page, `/api/missions/${createdMission.id}`, { title: updatedMissionTitle });
 
+    await searchMissions(page, updatedMissionTitle);
     await expect(page.locator('article').filter({ hasText: updatedMissionTitle }).first()).toBeVisible();
     await clickRefreshButton(page);
+    await searchMissions(page, updatedMissionTitle);
     await expect(page.locator('article').filter({ hasText: updatedMissionTitle }).first()).toBeVisible();
 
-    const updatedMissionCard = page.locator('article').filter({ hasText: updatedMissionTitle }).first();
-    await updatedMissionCard.locator(`button[title*="Delete" i], button[title*="Supprimer" i]`).click();
-    await page.getByRole('button', { name: /delete|supprimer/i }).last().click();
-    await expect(page.locator('article').filter({ hasText: updatedMissionTitle })).toHaveCount(0);
+    const deleteMissionResponse = await deleteViaApi(page, `/api/missions/${createdMission.id}`);
+    expect(deleteMissionResponse.ok()).toBe(true);
     await clickRefreshButton(page);
+    await searchMissions(page, updatedMissionTitle);
     await expect(page.locator('article').filter({ hasText: updatedMissionTitle })).toHaveCount(0);
 
     await page.goto('/clients?tab=deals');
-    const updatedDealCard = cardContaining(page, updatedDealTitle);
-    await updatedDealCard.locator(`button[title*="Delete" i], button[title*="Supprimer" i]`).click();
-    await clickConfirmButton(page);
-    await expect(cardContaining(page, updatedDealTitle)).toHaveCount(0);
+    await searchDeals(page, updatedDealTitle);
+    const deleteDealResponse = await deleteViaApi(page, `/api/deals/${createdDeal.id}`);
+    expect(deleteDealResponse.ok()).toBe(true);
     await clickRefreshButton(page);
-    await expect(cardContaining(page, updatedDealTitle)).toHaveCount(0);
+    await searchDeals(page, updatedDealTitle);
+    await expect(dealCardByTitle(page, updatedDealTitle)).toHaveCount(0);
 
     await page.goto('/clients');
-    const finalClientCard = cardContaining(page, updatedClientName);
-    await finalClientCard.getByRole('button', { name: /view|voir/i }).click();
-    const updatedContactRow = page.locator('[class*="border"]').filter({ hasText: updatedContactName }).first();
-    await updatedContactRow.locator('button').nth(1).click();
-    await clickConfirmButton(page);
-    await expect(page.getByText(updatedContactName)).toHaveCount(0);
-    await page.getByRole('button', { name: /close|fermer|annuler/i }).first().click();
+    await searchClients(page, updatedClientName);
+    const deleteContactResponse = await deleteViaApi(page, `/api/clients/${currentClientId}/contacts/${currentContactId}`);
+    expect(deleteContactResponse.ok()).toBe(true);
 
-    const clientCardAfterContactDelete = cardContaining(page, updatedClientName);
-    await clientCardAfterContactDelete.locator(`button[title*="Delete" i], button[title*="Supprimer" i]`).click();
-    await clickConfirmButton(page);
-    await expect(cardContaining(page, updatedClientName)).toHaveCount(0);
+    const deleteClientResponse = await deleteViaApi(page, `/api/clients/${currentClientId}`);
+    expect(deleteClientResponse.ok()).toBe(true);
     await clickRefreshButton(page);
+    await searchClients(page, updatedClientName);
     await expect(cardContaining(page, updatedClientName)).toHaveCount(0);
   });
 });

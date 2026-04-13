@@ -188,6 +188,8 @@ import { startServer } from '../../config/lifecycle.js';
 
 describe('Lifecycle config', () => {
     const originalExit = process.exit;
+    const originalDisableBackup = process.env.E2E_DISABLE_BACKUP_SCHEDULER;
+    const originalDisableGdpr = process.env.E2E_DISABLE_GDPR_SCHEDULER;
     const flushImmediate = () => new Promise((resolve) => setImmediate(resolve));
     const listenMock = (server) => vi.fn((...args) => {
         const callback = args[args.length - 1];
@@ -199,10 +201,22 @@ describe('Lifecycle config', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        delete process.env.E2E_DISABLE_BACKUP_SCHEDULER;
+        delete process.env.E2E_DISABLE_GDPR_SCHEDULER;
     });
 
     afterEach(() => {
         process.exit = originalExit;
+        if (originalDisableBackup === undefined) {
+            delete process.env.E2E_DISABLE_BACKUP_SCHEDULER;
+        } else {
+            process.env.E2E_DISABLE_BACKUP_SCHEDULER = originalDisableBackup;
+        }
+        if (originalDisableGdpr === undefined) {
+            delete process.env.E2E_DISABLE_GDPR_SCHEDULER;
+        } else {
+            process.env.E2E_DISABLE_GDPR_SCHEDULER = originalDisableGdpr;
+        }
     });
 
     it('should not start DB-dependent schedulers and workers when database init fails', async () => {
@@ -312,6 +326,32 @@ describe('Lifecycle config', () => {
         await flushImmediate();
 
         expect(mockUnsubscribeFromCacheInvalidations).toHaveBeenCalled();
+    });
+
+    it('should skip backup and gdpr schedulers when disabled by environment flags', async () => {
+        process.env.E2E_DISABLE_BACKUP_SCHEDULER = 'true';
+        process.env.E2E_DISABLE_GDPR_SCHEDULER = 'true';
+        mockInitializeDatabase.mockResolvedValue(true);
+
+        const server = {
+            timeout: 0,
+            keepAliveTimeout: 0,
+            headersTimeout: 0,
+            close: vi.fn()
+        };
+
+        const app = {
+            listen: listenMock(server)
+        };
+
+        startServer(app, 'C:\\Users\\mail\\CascadeProjects\\ResumeConverter\\server');
+        await flushImmediate();
+        await flushImmediate();
+
+        expect(mockInitBackupScheduler).not.toHaveBeenCalled();
+        expect(mockStartScheduler).not.toHaveBeenCalled();
+        expect(mockInitBatchJobsWorker).toHaveBeenCalled();
+        expect(mockStartBatchJobsWorker).toHaveBeenCalled();
     });
 
     it('should fail closed when server.close reports an error', async () => {

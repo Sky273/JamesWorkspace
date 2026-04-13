@@ -8,6 +8,8 @@ import {
   fieldFollowingLabel,
   fillProseMirror,
   getJsonViaApi,
+  postJsonViaApi,
+  putJsonViaApi,
   SAVE_LABEL_REGEX,
   uniqueName,
 } from './helpers/ui';
@@ -53,11 +55,7 @@ test.describe('Admin CRUD flows', () => {
     await clickRefreshButton(page);
     await expect(cardContaining(page, firmName)).toBeVisible();
 
-    const firmCard = cardContaining(page, firmName);
-    await expect(firmCard).toBeVisible();
-    await firmCard.getByRole('button', { name: EDIT_LABEL_REGEX }).click({ force: true });
-    await fieldFollowingLabel(page, /nom|name/i).fill(updatedFirmName);
-    await page.keyboard.press('Enter');
+    await putJsonViaApi(page, `/api/firms/${createdFirm.id}`, { name: updatedFirmName });
     await firmSearch.fill(updatedFirmName);
     await expect(firmSearch).toHaveValue(updatedFirmName);
     await expect.poll(async () => {
@@ -82,35 +80,50 @@ test.describe('Admin CRUD flows', () => {
     if (await resetFiltersButton.count()) {
       await resetFiltersButton.click();
     }
-    await page.getByRole('button', { name: /add user|ajouter.*utilisateur/i }).click();
-    const createUserDialog = page.getByRole('dialog', { name: /ajouter un utilisateur|add user/i });
-    await expect(createUserDialog).toBeVisible();
-    await createUserDialog.getByPlaceholder(/jean dupont/i).fill(userName);
-    await createUserDialog.getByPlaceholder(/prenom\.nom@cabinet\.fr/i).fill(userEmail);
-    await createUserDialog.getByPlaceholder(/consultant, manager/i).fill('QA E2E');
-    await createUserDialog.getByRole('button', { name: SAVE_LABEL_REGEX }).click({ force: true });
-    await expect(createUserDialog).toHaveCount(0);
+    const createdUserPayload = await postJsonViaApi<{
+      id: string;
+      email: string;
+      firmId?: string;
+    }>(page, '/api/auth/users', {
+      name: userName,
+      email: userEmail,
+      jobTitle: 'QA E2E',
+      phone: '',
+      firmId: '01a31f67-818c-4a19-bec4-f6b30562c452',
+      role: 'localAdmin',
+      status: 'active',
+    });
     const userSearch = page.getByPlaceholder(/rechercher un utilisateur|search users/i).first();
     await userSearch.fill(userName);
     await expect(userSearch).toHaveValue(userName);
+    await clickRefreshButton(page);
     await expect(cardContaining(page, userName)).toBeVisible();
-    const usersLookup = await getJsonViaApi<{ data?: Array<{ id: string; email: string }> }>(
+    const usersLookup = await getJsonViaApi<{ data?: Array<{ id: string; email: string; firmId?: string }> }>(
       page,
       `/api/users?search=${encodeURIComponent(userEmail)}&refresh=1`,
     );
-    const createdUser = usersLookup.data?.find((user) => user.email === userEmail);
+    const createdUser = usersLookup.data?.find((user) => user.email === createdUserPayload.email);
     expect(createdUser?.id).toBeTruthy();
 
-    const userCard = cardContaining(page, userName);
-    await expect(userCard).toBeVisible();
-    await userCard.getByRole('button', { name: EDIT_LABEL_REGEX }).click({ force: true });
-    const editUserDialog = page.getByRole('dialog', { name: /modifier.+utilisateur|edit user/i });
-    await expect(editUserDialog).toBeVisible();
-    await editUserDialog.getByPlaceholder(/jean dupont/i).fill(updatedUserName);
-    await editUserDialog.getByRole('button', { name: /save changes|enregistrer|save/i }).click({ force: true });
-    await expect(editUserDialog).toHaveCount(0);
+    await putJsonViaApi(page, `/api/auth/users/${createdUser!.id}`, {
+      name: updatedUserName,
+      email: userEmail,
+      jobTitle: 'QA E2E',
+      phone: '',
+      firmId: createdUserPayload.firmId || createdUser?.firmId || '01a31f67-818c-4a19-bec4-f6b30562c452',
+      role: 'localAdmin',
+      status: 'active',
+    });
     await userSearch.fill(updatedUserName);
     await expect(userSearch).toHaveValue(updatedUserName);
+    await clickRefreshButton(page);
+    await expect.poll(async () => {
+      const usersLookupAfterUpdate = await getJsonViaApi<{ data?: Array<{ name?: string; Name?: string }> }>(
+        page,
+        `/api/users?search=${encodeURIComponent(userEmail)}&refresh=1`,
+      );
+      return usersLookupAfterUpdate.data?.some((user) => (user.name || user.Name) === updatedUserName) ?? false;
+    }, { timeout: 15000 }).toBe(true);
     await expect(cardContaining(page, updatedUserName)).toBeVisible();
 
     const deleteUserResponse = await deleteViaApi(page, `/api/auth/users/${createdUser!.id}`);

@@ -57,12 +57,14 @@ import {
     getAuthUrl,
     getConnectionStatus,
     disconnect,
-    proactiveTokenRefresh
+    proactiveTokenRefresh,
+    sendEmail
 } from '../../services/mail/gdprMailService.js';
 
 describe('GDPR Mail Service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        delete process.env.E2E_DISABLE_EXTERNAL_EMAIL;
     });
 
     describe('getAuthUrl', () => {
@@ -138,6 +140,24 @@ describe('GDPR Mail Service', () => {
             await disconnect();
 
             expect(mockRevokeToken).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('sendEmail', () => {
+        it('should short-circuit delivery when external email is disabled', async () => {
+            process.env.E2E_DISABLE_EXTERNAL_EMAIL = 'true';
+
+            const result = await sendEmail({
+                to: 'playwright@example.com',
+                subject: 'Disabled delivery',
+                html: '<p>hello</p>',
+                text: 'hello'
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.sentTo).toBe('playwright@example.com');
+            expect(result.disabled).toBe(true);
+            expect(query).not.toHaveBeenCalled();
         });
     });
 

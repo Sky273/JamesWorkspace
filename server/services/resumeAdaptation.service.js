@@ -11,6 +11,20 @@ import {
 import { buildPromptExecutionMetadata } from '../config/llmGovernance.js';
 import { safeLog } from '../utils/logger.backend.js';
 
+function isExternalLlmDisabledForE2E() {
+    return process.env.E2E_DISABLE_EXTERNAL_LLM === 'true';
+}
+
+function buildMockMatchAnalysis(missionTitle) {
+    return {
+        matchScore: '84',
+        summary: `Profil aligné avec la mission ${missionTitle || 'cible'}.`,
+        strengths: ['Compétences techniques compatibles', 'Expérience pertinente'],
+        risks: [],
+        recommendations: ['Mettre en avant les réalisations les plus proches de la mission']
+    };
+}
+
 function parseMatchScore(matchAnalysis) {
     if (!matchAnalysis?.matchScore) {
         return null;
@@ -66,24 +80,34 @@ export async function executeResumeAdaptation({
     const matchUserMetadata = { ...userMetadata, promptMetadata: matchPromptMeta };
     const adaptationUserMetadata = { ...userMetadata, promptMetadata: adaptationPromptMeta };
 
-    const matchAnalysis = await matchResumeWithMission(
-        resumeText,
-        missionTitle,
-        missionContent,
-        model,
-        matchPrompt,
-        matchUserMetadata
-    );
+    const matchAnalysis = isExternalLlmDisabledForE2E()
+        ? buildMockMatchAnalysis(missionTitle)
+        : await matchResumeWithMission(
+            resumeText,
+            missionTitle,
+            missionContent,
+            model,
+            matchPrompt,
+            matchUserMetadata
+        );
 
-    const adaptationResult = await adaptResumeToMission({
-        resumeText,
-        missionTitle,
-        missionContent,
-        matchAnalysis,
-        model,
-        adaptationPrompt,
-        userMetadata: adaptationUserMetadata
-    });
+    const adaptationResult = isExternalLlmDisabledForE2E()
+        ? {
+            adaptedText: `${resumeText}\n\n<p><strong>Adaptation E2E:</strong> ${missionTitle || 'Mission cible'}</p>`,
+            adaptedTitle: missionTitle || resumeRecord.title || 'Mission adaptée',
+            structuredData: {
+                adaptationNotes: ['Adaptation simulée pour les tests E2E']
+            }
+        }
+        : await adaptResumeToMission({
+            resumeText,
+            missionTitle,
+            missionContent,
+            matchAnalysis,
+            model,
+            adaptationPrompt,
+            userMetadata: adaptationUserMetadata
+        });
 
     const adaptedText = typeof adaptationResult === 'string' ? adaptationResult : adaptationResult.adaptedText;
     const adaptedTitle = typeof adaptationResult === 'string' ? null : (adaptationResult.adaptedTitle || null);

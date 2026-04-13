@@ -2,22 +2,32 @@ import { normalizeRequestBodyAliases } from '../utils/validation.js';
 
 export function normalizeDealPayload(payload = {}) {
     const normalized = normalizeRequestBodyAliases(payload);
-
-    return {
-        ...normalized,
-        title: normalized.title,
-        description: normalized.description,
-        client_id: normalized.clientId,
-        contact_id: normalized.contactId,
-        status: normalized.status,
-        expected_start_date: normalized.expectedStartDate,
-        expected_end_date: normalized.expectedEndDate,
-        budget_min: normalized.budgetMin,
-        budget_max: normalized.budgetMax,
-        priority: normalized.priority,
-        tags: normalized.tags,
-        notes: normalized.notes
+    const result = {
+        ...normalized
     };
+
+    const aliasMap = {
+        title: 'title',
+        description: 'description',
+        clientId: 'client_id',
+        contactId: 'contact_id',
+        status: 'status',
+        expectedStartDate: 'expected_start_date',
+        expectedEndDate: 'expected_end_date',
+        budgetMin: 'budget_min',
+        budgetMax: 'budget_max',
+        priority: 'priority',
+        tags: 'tags',
+        notes: 'notes'
+    };
+
+    Object.entries(aliasMap).forEach(([sourceKey, targetKey]) => {
+        if (Object.prototype.hasOwnProperty.call(normalized, sourceKey)) {
+            result[targetKey] = normalized[sourceKey];
+        }
+    });
+
+    return result;
 }
 
 export function validateDealTitle(normalizedDeal, { required = false } = {}) {

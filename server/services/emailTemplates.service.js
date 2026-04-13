@@ -132,8 +132,41 @@ export const TEMPLATE_KEYWORDS = {
  * @param {boolean} includeSystemTemplates - Whether to include system templates (admin only)
  * @returns {Promise<Array>}
  */
-export async function getTemplates(firmId, includeSystemTemplates = false) {
+export async function getTemplates(firmId, includeSystemTemplates = false, { bypassCache = false } = {}) {
     const cacheKey = `list:${firmId || 'all'}:system:${includeSystemTemplates ? '1' : '0'}`;
+    if (bypassCache) {
+        let sql;
+        let params;
+        
+        if (includeSystemTemplates) {
+            sql = `
+                SELECT et.id, et.firm_id, et.name, et.description, et.subject_template,
+                       et.is_system, et.is_default, et.status, et.created_at, et.updated_at,
+                       f.name AS firm_name
+                FROM email_templates et
+                LEFT JOIN firms f ON f.id = et.firm_id
+                WHERE et.status = 'active'
+                ORDER BY et.is_system DESC, et.is_default DESC, et.name ASC
+            `;
+            params = [];
+        } else {
+            sql = `
+                SELECT et.id, et.firm_id, et.name, et.description, et.subject_template,
+                       et.is_system, et.is_default, et.status, et.created_at, et.updated_at,
+                       f.name AS firm_name
+                FROM email_templates et
+                LEFT JOIN firms f ON f.id = et.firm_id
+                WHERE et.firm_id = $1
+                  AND et.status = 'active'
+                ORDER BY et.is_default DESC, et.name ASC
+            `;
+            params = [firmId];
+        }
+
+        const result = await query(sql, params);
+        return result.rows;
+    }
+
     return emailTemplatesCache.getOrLoad(cacheKey, async () => {
         let sql;
         let params;
@@ -175,7 +208,19 @@ export async function getTemplates(firmId, includeSystemTemplates = false) {
  * @param {string} id - Template ID
  * @returns {Promise<Object|null>}
  */
-export async function getTemplate(id) {
+export async function getTemplate(id, { bypassCache = false } = {}) {
+    if (bypassCache) {
+        const result = await query(`
+            SELECT id, firm_id, name, description, subject_template, 
+                   mjml_content, html_content, is_system, is_default, 
+                   status, created_by, created_at, updated_at
+            FROM email_templates
+            WHERE id = $1
+        `, [id]);
+        
+        return result.rows[0] || null;
+    }
+
     return emailTemplatesCache.getOrLoad(`detail:${id}`, async () => {
         const result = await query(`
             SELECT id, firm_id, name, description, subject_template, 
@@ -191,8 +236,8 @@ export async function getTemplate(id) {
     });
 }
 
-async function getTemplateOrThrow(id) {
-    const template = await getTemplate(id);
+async function getTemplateOrThrow(id, { bypassCache = false } = {}) {
+    const template = await getTemplate(id, { bypassCache });
     if (!template) {
         throw new Error('Template not found');
     }

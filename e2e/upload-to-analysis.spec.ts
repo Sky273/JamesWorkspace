@@ -30,7 +30,7 @@ test.describe('Upload To Analysis', () => {
     await expect(page).toHaveURL(/\/resumes\/[^/]+\/analysis$/, { timeout: 90000 });
     await expect(page.locator('body')).toContainText(/resume analysis|analyse du cv/i);
     await expect(page.locator('body')).toContainText(/share|partager/i);
-    await expect(page.locator('body')).toContainText(/improve|ameliorer/i);
+    await expect(page.locator('body')).toContainText(/improve|ameliorer|améliorer/i);
     await expect(page.locator('body')).toContainText(/export/i);
   });
 });

@@ -39,6 +39,7 @@ vi.mock('mjml-preset-core', () => ({
 }));
 
 import { query } from '../../config/database.js';
+import { emailTemplatesCache } from '../../services/cache.service.js';
 import {
     TEMPLATE_KEYWORDS,
     getTemplates,
@@ -107,6 +108,15 @@ describe('Email Templates Service', () => {
             expect(query.mock.calls[0][0]).toContain('WHERE et.status = \'active\'');
             expect(query.mock.calls[0][1]).toEqual([]);
         });
+
+        it('should bypass cache when requested', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 't1', name: 'Template 1' }] });
+
+            const result = await getTemplates('f1', false, { bypassCache: true });
+
+            expect(result).toHaveLength(1);
+            expect(emailTemplatesCache.getOrLoad).not.toHaveBeenCalled();
+        });
     });
 
     describe('getTemplate', () => {
@@ -121,6 +131,15 @@ describe('Email Templates Service', () => {
         it('should return null if not found', async () => {
             query.mockResolvedValueOnce({ rows: [] });
             expect(await getTemplate('missing')).toBeNull();
+        });
+
+        it('should bypass cache for detail when requested', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 't1', name: 'Direct' }] });
+
+            const result = await getTemplate('t1', { bypassCache: true });
+
+            expect(result.name).toBe('Direct');
+            expect(emailTemplatesCache.getOrLoad).not.toHaveBeenCalled();
         });
     });
 

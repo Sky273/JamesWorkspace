@@ -11,8 +11,8 @@ const API_BASE = '/api/email-templates';
 /**
  * Get all templates for the current user's firm
  */
-export async function getTemplates(): Promise<EmailTemplate[]> {
-  const response = await fetchWithAuth(API_BASE);
+export async function getTemplates({ forceRefresh = false }: { forceRefresh?: boolean } = {}): Promise<EmailTemplate[]> {
+  const response = await fetchWithAuth(forceRefresh ? `${API_BASE}?refresh=1` : API_BASE);
   if (!response.ok) {
     throw new Error('Failed to fetch email templates');
   }
@@ -23,8 +23,8 @@ export async function getTemplates(): Promise<EmailTemplate[]> {
 /**
  * Get a single template by ID
  */
-export async function getTemplate(id: string): Promise<EmailTemplate> {
-  const response = await fetchWithAuth(`${API_BASE}/${id}`);
+export async function getTemplate(id: string, { forceRefresh = false }: { forceRefresh?: boolean } = {}): Promise<EmailTemplate> {
+  const response = await fetchWithAuth(forceRefresh ? `${API_BASE}/${id}?refresh=1` : `${API_BASE}/${id}`);
   if (!response.ok) {
     throw new Error('Failed to fetch email template');
   }
