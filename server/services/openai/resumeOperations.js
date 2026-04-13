@@ -9,6 +9,7 @@ import { metrics, buildLLMMetricLabel } from '../metrics.service.js';
 import {
     isLikelyAnthropicModel,
     isLikelyDeepSeekModel,
+    isLikelyHuggingFaceModel,
     isLikelyGlmModel,
     isLikelyMiniMaxModel
 } from '../llmConfiguration.service.js';
@@ -24,6 +25,7 @@ import {
 function inferMetricsProvider(model) {
     if (isLikelyAnthropicModel(model)) return 'anthropic';
     if (isLikelyDeepSeekModel(model)) return 'deepseek';
+    if (isLikelyHuggingFaceModel(model)) return 'huggingface';
     if (isLikelyGlmModel(model)) return 'glm';
     if (isLikelyMiniMaxModel(model)) return 'minimax';
     return 'openai';

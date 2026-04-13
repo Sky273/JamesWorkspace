@@ -84,6 +84,9 @@ export const PROVIDER_DEFAULT_PARAMETERS = Object.freeze({
         service_tier: createStringDefinition({ key: 'service_tier', label: 'Service tier', maxLength: 64 }),
         stream: createBooleanDefinition({ key: 'stream', label: 'Stream' })
     },
+    huggingface: {
+        ...SHARED_OPENAI_COMPATIBLE_PARAMETERS
+    },
     gemma: {
         ...SHARED_OPENAI_COMPATIBLE_PARAMETERS
     },
@@ -140,6 +143,9 @@ export const PROVIDER_CAPABILITIES = {
         { match: /^claude-3-5-sonnet-20241022$/i, maxOutputTokens: 8192, tokenParameter: 'max_tokens', unsupportedParameters: ['thinking'] },
         { match: /^claude-3-5-haiku-20241022$/i, maxOutputTokens: 8192, tokenParameter: 'max_tokens', unsupportedParameters: ['thinking'] },
         { match: /^claude-3-haiku-20240307$/i, maxOutputTokens: 4096, tokenParameter: 'max_tokens', unsupportedParameters: ['thinking'] }
+    ],
+    huggingface: [
+        { match: /^(?:MiniMaxAI\/MiniMax-M2\.7|minimax-m2\.7:cloud)$/i, maxOutputTokens: 4096, tokenParameter: 'max_tokens', supportsResponseFormat: false, temperatureRange: { min: 0, maxExclusive: 1 }, topPRange: { min: 0, maxInclusive: 1 }, unsupportedParameters: ['presence_penalty', 'frequency_penalty', 'logit_bias', 'n'] }
     ],
     deepseek: [
         { match: /^deepseek-chat$/i, maxOutputTokens: 8192, tokenParameter: 'max_tokens' },

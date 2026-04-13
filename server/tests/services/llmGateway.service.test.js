@@ -17,6 +17,10 @@ vi.mock('../../services/deepseek.service.js', () => ({
     callDeepSeekWithCircuitBreaker: vi.fn()
 }));
 
+vi.mock('../../services/huggingface.service.js', () => ({
+    callHuggingFaceWithCircuitBreaker: vi.fn()
+}));
+
 vi.mock('../../services/gemma.service.js', () => ({
     callGemmaChat: vi.fn()
 }));
@@ -47,6 +51,7 @@ vi.mock('../../utils/logger.backend.js', () => ({
 
 import { callOpenAI } from '../../services/openai/apiClient.js';
 import { callDeepSeekWithCircuitBreaker } from '../../services/deepseek.service.js';
+import { callHuggingFaceWithCircuitBreaker } from '../../services/huggingface.service.js';
 import { callGemmaChat } from '../../services/gemma.service.js';
 import { callOllama } from '../../services/ollama.service.js';
 import { callProviderChat } from '../../services/llmGateway.service.js';
@@ -116,6 +121,38 @@ describe('llmGateway.service', () => {
 
         expect(callDeepSeekWithCircuitBreaker).toHaveBeenCalledWith(expect.objectContaining({
             model: 'deepseek-chat',
+            maxTokens: 555,
+            metadata: { source: 'admin' },
+            stop: ['END'],
+            timeout: 1234,
+            operationType: 'Gateway test'
+        }));
+    });
+
+    it('forwards persisted advanced Hugging Face parameters to the provider client', async () => {
+        callHuggingFaceWithCircuitBreaker.mockResolvedValueOnce({
+            model: 'MiniMaxAI/MiniMax-M2.7',
+            choices: [{ message: { content: 'ok' } }],
+            usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
+        });
+
+        await callProviderChat({
+            provider: 'huggingface',
+            model: 'MiniMaxAI/MiniMax-M2.7',
+            messages: [{ role: 'user', content: 'hello' }],
+            options: {
+                max_tokens: 555,
+                temperature: 0.3,
+                top_p: 0.9,
+                metadata: { source: 'admin' },
+                stop: ['END'],
+                timeout: 1234,
+                operationType: 'Gateway test'
+            }
+        });
+
+        expect(callHuggingFaceWithCircuitBreaker).toHaveBeenCalledWith(expect.objectContaining({
+            model: 'MiniMaxAI/MiniMax-M2.7',
             maxTokens: 555,
             metadata: { source: 'admin' },
             stop: ['END'],

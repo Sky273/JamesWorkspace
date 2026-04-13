@@ -256,6 +256,7 @@ describe('Circuit Breaker Management', () => {
         
         expect(states).toHaveProperty('openai');
         expect(states).toHaveProperty('anthropic');
+        expect(states).toHaveProperty('huggingface');
         expect(states).toHaveProperty('deepseek');
         expect(states).toHaveProperty('glm');
         expect(states).toHaveProperty('minimax');

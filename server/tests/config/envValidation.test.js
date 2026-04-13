@@ -107,11 +107,13 @@ describe('envValidation', () => {
         it('should reflect missing keys', () => {
             delete process.env.OPENAI_API_KEY;
             delete process.env.ANTHROPIC_API_KEY;
+            delete process.env.HUGGINGFACE_API_KEY;
             delete process.env.DEEPSEEK_API_KEY;
             delete process.env.GLM_API_KEY;
             const info = getEnvironmentInfo();
             expect(info.hasOpenAI).toBe(false);
             expect(info.hasAnthropic).toBe(false);
+            expect(info.hasHuggingFace).toBe(false);
             expect(info.hasDeepSeek).toBe(false);
             expect(info.hasGlm).toBe(false);
         });

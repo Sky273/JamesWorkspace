@@ -11,6 +11,7 @@ const FALLBACK_DOCKER_DIR = '/docker-entrypoint-initdb.d';
 const MIGRATION_TABLE = 'schema_migrations';
 const MINIMAX_PROVIDER_MIGRATION = 'add_minimax_provider.sql';
 const DEEPSEEK_PROVIDER_MIGRATION = 'add_deepseek_provider.sql';
+const HUGGINGFACE_PROVIDER_MIGRATION = 'add_huggingface_provider.sql';
 
 async function pathExists(targetPath) {
     try {
@@ -259,6 +260,20 @@ async function llmProviderConstraintSupportsDeepSeek() {
     return definition.toLowerCase().includes('deepseek');
 }
 
+async function llmProviderConstraintSupportsHuggingFace() {
+    const result = await query(
+        `
+            SELECT pg_get_constraintdef(oid) AS definition
+            FROM pg_constraint
+            WHERE conname = 'llm_settings_llm_provider_check'
+              AND conrelid = 'public.llm_settings'::regclass
+        `
+    );
+
+    const definition = result.rows[0]?.definition || '';
+    return definition.toLowerCase().includes('huggingface');
+}
+
 async function readSqlFile(filePath) {
     return fs.readFile(filePath, 'utf8');
 }
@@ -320,6 +335,15 @@ async function reconcileCriticalMigrations(appliedMigrations) {
         });
         await unmarkMigrationApplied(DEEPSEEK_PROVIDER_MIGRATION);
         appliedMigrations.delete(DEEPSEEK_PROVIDER_MIGRATION);
+    }
+
+    const huggingFaceConstraintOk = await llmProviderConstraintSupportsHuggingFace();
+    if (appliedMigrations.has(HUGGINGFACE_PROVIDER_MIGRATION) && !huggingFaceConstraintOk) {
+        safeLog('warn', 'Hugging Face provider migration was marked applied but schema is still outdated; forcing reapply', {
+            migrationName: HUGGINGFACE_PROVIDER_MIGRATION
+        });
+        await unmarkMigrationApplied(HUGGINGFACE_PROVIDER_MIGRATION);
+        appliedMigrations.delete(HUGGINGFACE_PROVIDER_MIGRATION);
     }
 
     return appliedMigrations;

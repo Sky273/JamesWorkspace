@@ -183,6 +183,28 @@ describe('LLMTab', () => {
     expect(screen.getByText('Select a hosted Gemma model exposed through the Google AI OpenAI-compatible endpoint.')).toBeInTheDocument();
   });
 
+  it('exposes Hugging Face as a selectable provider', () => {
+    render(
+      <LLMTab
+        formData={{
+          llmProvider: 'huggingface',
+          llmModel: 'MiniMaxAI/MiniMax-M2.7',
+          llmModelParametersJson: '{}',
+          cvMode: 'nominative',
+          webglEnabled: 'on',
+          ollamaBaseUrl: '',
+        }}
+        onInputChange={vi.fn()}
+        onTestConnection={vi.fn()}
+        t={(key) => key}
+        llmModelCatalog={{ huggingface: [{ value: 'MiniMaxAI/MiniMax-M2.7', label: 'MiniMax M2.7 via Hugging Face (MiniMaxAI/MiniMax-M2.7)' }] }}
+      />
+    );
+
+    expect(screen.getByDisplayValue('Hugging Face')).toBeInTheDocument();
+    expect(screen.getByText('Select a hosted Hugging Face model exposed through the Hugging Face OpenAI-compatible router.')).toBeInTheDocument();
+  });
+
   it('renders the test model action', () => {
     render(
       <LLMTab

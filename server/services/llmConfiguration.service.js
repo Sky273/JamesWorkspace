@@ -3,6 +3,7 @@ import { resolveAvailableModel } from './llmAvailability.service.js';
 export const LLM_PROVIDER_DEFAULT_MODELS = {
     openai: 'gpt-4o',
     anthropic: 'claude-3-5-sonnet-20241022',
+    huggingface: 'MiniMaxAI/MiniMax-M2.7',
     gemma: 'gemma-4-31b-it',
     deepseek: 'deepseek-chat',
     glm: 'glm-5.1',
@@ -10,11 +11,31 @@ export const LLM_PROVIDER_DEFAULT_MODELS = {
     ollama: null
 };
 
+const HUGGINGFACE_MODEL_ALIASES = Object.freeze({
+    'minimax-m2.7:cloud': 'MiniMaxAI/MiniMax-M2.7',
+    'minimaxai/minimax-m2.7': 'MiniMaxAI/MiniMax-M2.7',
+    'minimaxai/minimax-m2.7:cloud': 'MiniMaxAI/MiniMax-M2.7',
+    'minimaxai/minimax-m2.7:huggingface': 'MiniMaxAI/MiniMax-M2.7'
+});
+
+export function resolveHuggingFaceModelId(model = '') {
+    const normalizedModel = String(model || '').trim();
+    if (!normalizedModel) {
+        return '';
+    }
+
+    return HUGGINGFACE_MODEL_ALIASES[normalizedModel.toLowerCase()] || normalizedModel;
+}
+
 export function normalizeModelForProvider(provider, model) {
     const normalizedProvider = String(provider || '').trim().toLowerCase();
     const normalizedModel = String(model || '').trim();
     if (!normalizedModel) {
         return normalizedModel;
+    }
+
+    if (normalizedProvider === 'huggingface') {
+        return resolveHuggingFaceModelId(normalizedModel);
     }
 
     if (normalizedProvider === 'gemma') {
@@ -90,6 +111,19 @@ export function isLikelyGemmaModel(model = '') {
     return /^gemma(?:[-\d]|$)/i.test(String(model || '').trim());
 }
 
+export function isLikelyHuggingFaceModel(model = '') {
+    const normalizedModel = String(model || '').trim();
+    if (!normalizedModel) {
+        return false;
+    }
+
+    if (Boolean(HUGGINGFACE_MODEL_ALIASES[normalizedModel.toLowerCase()])) {
+        return true;
+    }
+
+    return /^[^/\s]+\/[^/\s]+(?::[a-z0-9._-]+)?$/i.test(normalizedModel);
+}
+
 export function isLikelyGlmModel(model = '') {
     return /^glm/i.test(String(model || '').trim());
 }
@@ -130,6 +164,20 @@ export function resolveCompatibleProviderRuntimeConfig({ settings = {}, requeste
         return {
             provider: 'ollama',
             model: resolveLLMModel({ provider: 'ollama', settings, requestedModel })
+        };
+    }
+
+    if (configuredProvider === 'huggingface' || (candidateModel && isLikelyHuggingFaceModel(candidateModel))) {
+        if (responseShape === 'openai') {
+            return {
+                provider: 'huggingface',
+                model: resolveLLMModel({ provider: 'huggingface', settings, requestedModel })
+            };
+        }
+
+        return {
+            provider: 'anthropic',
+            model: isLikelyAnthropicModel(candidateModel) ? candidateModel : getProviderDefaultModel('anthropic')
         };
     }
 
@@ -185,6 +233,7 @@ export function resolveCompatibleProviderRuntimeConfig({ settings = {}, requeste
     const looksLikeKnownHostedModel =
         isLikelyOpenAIModel(candidateModel) ||
         isLikelyAnthropicModel(candidateModel) ||
+        isLikelyHuggingFaceModel(candidateModel) ||
         isLikelyDeepSeekModel(candidateModel) ||
         isLikelyGemmaModel(candidateModel) ||
         isLikelyGlmModel(candidateModel) ||

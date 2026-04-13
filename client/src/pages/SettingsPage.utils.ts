@@ -1,4 +1,4 @@
-type LLMProvider = 'openai' | 'anthropic' | 'gemma' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
+type LLMProvider = 'openai' | 'anthropic' | 'huggingface' | 'gemma' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 type LLMModelParameters = Record<string, Record<string, Record<string, JsonValue>>>;
 type LLMModelCatalog = Record<string, Array<{ value: string; label: string }>>;
@@ -196,6 +196,7 @@ export const defaultFormData: SettingsFormData = {
 
 export const getDefaultModelForProvider = (provider?: LLMProvider): string => {
   if (provider === 'anthropic') return 'claude-sonnet-4-20250514';
+  if (provider === 'huggingface') return 'MiniMaxAI/MiniMax-M2.7';
   if (provider === 'gemma') return 'gemma-4-31b-it';
   if (provider === 'deepseek') return 'deepseek-chat';
   if (provider === 'glm') return 'glm-5.1';

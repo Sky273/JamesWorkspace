@@ -1,5 +1,5 @@
 import express from 'express';
-import { OPENAI_API_KEY, ANTHROPIC_API_KEY, DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, GLM_API_KEY, GLM_BASE_URL, MINIMAX_API_KEY, MINIMAX_ANTHROPIC_BASE_URL, OLLAMA_BASE_URL } from '../config/constants.js';
+import { OPENAI_API_KEY, ANTHROPIC_API_KEY, DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, GLM_API_KEY, GLM_BASE_URL, HUGGINGFACE_API_KEY, HUGGINGFACE_BASE_URL, MINIMAX_API_KEY, MINIMAX_ANTHROPIC_BASE_URL, OLLAMA_BASE_URL } from '../config/constants.js';
 import { settingsCache, templatesCache, firmsCache, getCacheRegistryStats } from '../services/cache.service.js';
 import { checkDatabaseHealth } from '../services/health.service.js';
 import { getTrendsCacheStats } from '../services/marketTrends.service.js';
@@ -143,6 +143,25 @@ async function resolveProviderConnectivityChecks(deepCheck, initialOverallStatus
                         model: 'claude-3-haiku-20240307',
                         max_tokens: 1,
                         messages: [{ role: 'user', content: 'ping' }]
+                    })
+                },
+                connectedStatuses: [400]
+            })
+        },
+        {
+            key: 'huggingface',
+            apiKey: HUGGINGFACE_API_KEY,
+            runDeepCheck: () => runConnectivityCheck({
+                fetchUrl: `${HUGGINGFACE_BASE_URL.replace(/\/$/, '')}/chat/completions`,
+                fetchOptions: {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${HUGGINGFACE_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        messages: [{ role: 'user', content: 'ping' }],
+                        max_tokens: 1
                     })
                 },
                 connectedStatuses: [400]

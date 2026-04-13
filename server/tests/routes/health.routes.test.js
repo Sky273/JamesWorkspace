@@ -21,6 +21,8 @@ vi.mock('../../services/cache.service.js', () => ({
 vi.mock('../../config/constants.js', () => ({
     OPENAI_API_KEY: 'test-openai-key',
     ANTHROPIC_API_KEY: 'test-anthropic-key',
+    HUGGINGFACE_API_KEY: 'test-huggingface-key',
+    HUGGINGFACE_BASE_URL: 'https://router.huggingface.co/v1',
     DEEPSEEK_API_KEY: 'test-deepseek-key',
     DEEPSEEK_BASE_URL: 'https://api.deepseek.com',
     GLM_API_KEY: 'test-glm-key',
@@ -202,6 +204,7 @@ describe('Health Routes', () => {
             expect(response.checks.database.status).toBe('ok');
             expect(response.checks.openai.status).toBe('configured');
             expect(response.checks.anthropic.status).toBe('configured');
+            expect(response.checks.huggingface.status).toBe('configured');
             expect(response.checks.deepseek.status).toBe('configured');
             expect(response.checks.glm.status).toBe('configured');
             expect(response.checks.minimax.status).toBe('configured');
@@ -382,9 +385,10 @@ describe('Health Routes', () => {
             expect(response.responseTime).toMatch(/\d+ms/);
         });
 
-        it('should run deep connectivity checks for hosted providers including DeepSeek and MiniMax', async () => {
+        it('should run deep connectivity checks for hosted providers including Hugging Face, DeepSeek and MiniMax', async () => {
             mockReq.query = { deep: 'true' };
             global.fetch = vi.fn()
+                .mockResolvedValueOnce({ ok: true, status: 200 })
                 .mockResolvedValueOnce({ ok: true, status: 200 })
                 .mockResolvedValueOnce({ ok: true, status: 200 })
                 .mockResolvedValueOnce({ ok: true, status: 200 })
@@ -405,14 +409,16 @@ describe('Health Routes', () => {
             const response = mockRes.json.mock.calls[0][0];
             expect(response.checks.openai.status).toBe('ok');
             expect(response.checks.anthropic.status).toBe('ok');
+            expect(response.checks.huggingface.status).toBe('ok');
             expect(response.checks.deepseek.status).toBe('ok');
             expect(response.checks.glm.status).toBe('ok');
             expect(response.checks.minimax.status).toBe('ok');
-            expect(global.fetch).toHaveBeenCalledTimes(6);
-            expect(global.fetch.mock.calls[2][0]).toBe('https://api.deepseek.com/chat/completions');
-            expect(global.fetch.mock.calls[3][0]).toBe('https://api.z.ai/api/paas/v4/chat/completions');
-            expect(global.fetch.mock.calls[4][0]).toBe('https://api.minimax.io/anthropic/v1/messages');
-            expect(global.fetch.mock.calls[5][0]).toBe('http://127.0.0.1:11434/api/tags');
+            expect(global.fetch).toHaveBeenCalledTimes(7);
+            expect(global.fetch.mock.calls[2][0]).toBe('https://router.huggingface.co/v1/chat/completions');
+            expect(global.fetch.mock.calls[3][0]).toBe('https://api.deepseek.com/chat/completions');
+            expect(global.fetch.mock.calls[4][0]).toBe('https://api.z.ai/api/paas/v4/chat/completions');
+            expect(global.fetch.mock.calls[5][0]).toBe('https://api.minimax.io/anthropic/v1/messages');
+            expect(global.fetch.mock.calls[6][0]).toBe('http://127.0.0.1:11434/api/tags');
         });
     });
 });

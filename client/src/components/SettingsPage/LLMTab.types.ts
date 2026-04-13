@@ -1,5 +1,5 @@
 export interface FormData {
-  llmProvider: 'openai' | 'anthropic' | 'gemma' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
+  llmProvider: 'openai' | 'anthropic' | 'huggingface' | 'gemma' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
   llmModel: string;
   ollamaBaseUrl?: string;
   llmModelParametersJson?: string;

@@ -16,6 +16,8 @@ This audit covers the providers and model families exposed by the application an
 - DeepSeek:
   - https://api-docs.deepseek.com/api/create-chat-completion/
   - https://api-docs.deepseek.com/guides/thinking_mode
+- Hugging Face:
+  - https://huggingface.co/docs/api-inference/tasks/chat-completion
 - Zhipu GLM:
   - https://docs.bigmodel.cn/cn/api/introduction
   - https://docs.bigmodel.cn/cn/guide/models/text/glm-5
@@ -46,6 +48,13 @@ This audit covers the providers and model families exposed by the application an
 
 - `deepseek-chat` keeps the OpenAI-compatible surface and adds `thinking`.
 - `deepseek-reasoner` drops `temperature`, `top_p`, `presence_penalty`, `frequency_penalty`, `logprobs`, and `top_logprobs` per official thinking-mode guidance.
+
+### Hugging Face
+
+- The app uses the Hugging Face OpenAI-compatible router endpoint.
+- The initial catalog entry is `MiniMaxAI/MiniMax-M2.7`.
+- The alias `minimax-m2.7:cloud` is normalized to `MiniMaxAI/MiniMax-M2.7`.
+- The current app profile keeps the standard OpenAI-compatible surface but disables `response_format` and drops `presence_penalty`, `frequency_penalty`, `logit_bias`, and `n` for this model family.
 
 ### GLM
 
@@ -91,6 +100,7 @@ This audit covers the providers and model families exposed by the application an
 - `server/services/openai/apiClient.js`
 - `server/services/anthropic.service.js`
 - `server/services/deepseek.service.js`
+- `server/services/huggingface.service.js`
 - `server/services/glm.service.js`
 - `server/services/minimax.service.js`
 - `server/services/ollama.service.js`

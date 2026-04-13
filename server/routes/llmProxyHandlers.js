@@ -2,6 +2,7 @@ import axios from 'axios';
 import {
     ANTHROPIC_API_KEY,
     DEEPSEEK_API_KEY,
+    HUGGINGFACE_API_KEY,
     GEMINI_API_KEY,
     GLM_API_KEY,
     MAX_PROMPT_LENGTH,
@@ -16,6 +17,7 @@ import { callOllama } from '../services/ollama.service.js';
 import { callDeepSeekWithCircuitBreaker } from '../services/deepseek.service.js';
 import { callGemmaChat } from '../services/gemma.service.js';
 import { callGLMWithCircuitBreaker } from '../services/glm.service.js';
+import { callHuggingFaceWithCircuitBreaker } from '../services/huggingface.service.js';
 import { callMiniMaxOpenAICompatible, callMiniMaxAnthropicCompatible } from '../services/minimax.service.js';
 import {
     extractOpenAIResponsesText,
@@ -272,6 +274,32 @@ async function handleDeepSeekRequest(req, res, model, metadata) {
     return res.json(sanitizeOpenAICompatibleResponseBody(response));
 }
 
+async function handleHuggingFaceRequest(req, res, model, metadata) {
+    if (!HUGGINGFACE_API_KEY) {
+        return res.status(500).json({ error: 'Hugging Face API key not configured on server.' });
+    }
+
+    securityLog(LOG_LEVELS.INFO, SECURITY_EVENTS.LLM_REQUEST, {
+        ...metadata,
+        message: 'Hugging Face API request',
+        metadata: {
+            model,
+            messageCount: req.body.messages?.length || 0
+        }
+    });
+
+    const response = await callHuggingFaceWithCircuitBreaker({
+        model,
+        messages: req.body.messages || [],
+        ...req.body,
+        maxTokens: getRequestedMaxTokens(req.body),
+        timeout: 120000,
+        operationType: `Hugging Face ${model} request`
+    });
+
+    return res.json(sanitizeOpenAICompatibleResponseBody(response));
+}
+
 async function handleGemmaRequest(req, res, model, metadata) {
     if (!GEMINI_API_KEY) {
         return res.status(500).json({ error: 'Gemini API key not configured on server.' });
@@ -344,6 +372,11 @@ async function maybeHandleCompatibleProviderRequest(req, res, settings, response
     if (provider === 'deepseek' && responseShape === 'openai') {
         safeLog('info', 'Routing openai-compatible request through DeepSeek', { model, provider });
         return handleDeepSeekRequest(req, res, model, metadata);
+    }
+
+    if (provider === 'huggingface' && responseShape === 'openai') {
+        safeLog('info', 'Routing openai-compatible request through Hugging Face', { model, provider });
+        return handleHuggingFaceRequest(req, res, model, metadata);
     }
 
     if (provider === 'gemma' && responseShape === 'openai') {

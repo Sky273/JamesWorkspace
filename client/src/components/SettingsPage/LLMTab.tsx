@@ -41,6 +41,7 @@ const LLMTab = ({
     () => [
       { value: 'openai', label: 'OpenAI' },
       { value: 'anthropic', label: 'Anthropic' },
+      { value: 'huggingface', label: 'Hugging Face' },
       { value: 'gemma', label: 'Gemma Cloud' },
       { value: 'deepseek', label: 'DeepSeek' },
       { value: 'glm', label: 'GLM (Z.AI)' },

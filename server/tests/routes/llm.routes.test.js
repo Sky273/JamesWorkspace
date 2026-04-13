@@ -20,6 +20,7 @@ const rateLimitMocks = vi.hoisted(() => {
 vi.mock('../../config/constants.js', () => ({
     OPENAI_API_KEY: 'test-openai-key',
     ANTHROPIC_API_KEY: 'test-anthropic-key',
+    HUGGINGFACE_API_KEY: 'test-huggingface-key',
     GEMINI_API_KEY: 'test-gemini-key',
     DEEPSEEK_API_KEY: 'test-deepseek-key',
     GLM_API_KEY: 'test-glm-key',
@@ -133,6 +134,11 @@ vi.mock('../../services/deepseek.service.js', () => ({
     callDeepSeekWithCircuitBreaker: (...args) => mockCallDeepSeekWithCircuitBreaker(...args)
 }));
 
+const mockCallHuggingFaceWithCircuitBreaker = vi.fn();
+vi.mock('../../services/huggingface.service.js', () => ({
+    callHuggingFaceWithCircuitBreaker: (...args) => mockCallHuggingFaceWithCircuitBreaker(...args)
+}));
+
 const mockCallGemmaChat = vi.fn();
 vi.mock('../../services/gemma.service.js', () => ({
     callGemmaChat: (...args) => mockCallGemmaChat(...args)
@@ -229,7 +235,7 @@ describe('LLM Routes', () => {
             expect(res.body.choices[0].message.content).toBe('Hi from Ollama');
         });
 
-        it('routes through DeepSeek when configured', async () => {
+    it('routes through DeepSeek when configured', async () => {
             mockGetLLMSettings.mockResolvedValueOnce({ llmProvider: 'deepseek', llmModel: 'deepseek-chat' });
             mockCallDeepSeekWithCircuitBreaker.mockResolvedValueOnce({
                 model: 'deepseek-chat',
@@ -367,6 +373,27 @@ describe('LLM Routes', () => {
             expect(res.status).toBe(400);
             expect(res.body.error).toContain('maximum length');
         });
+    });
+
+    it('routes through Hugging Face when configured', async () => {
+        mockGetLLMSettings.mockResolvedValueOnce({ llmProvider: 'huggingface', llmModel: 'MiniMaxAI/MiniMax-M2.7' });
+        mockCallHuggingFaceWithCircuitBreaker.mockResolvedValueOnce({
+            model: 'MiniMaxAI/MiniMax-M2.7',
+            choices: [{ message: { content: 'Hi from Hugging Face' } }],
+            usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
+        });
+
+        const res = await request(app)
+            .post('/api/llm/openai')
+            .set(AUTH)
+            .send({ messages: [{ role: 'user', content: 'Hello' }] });
+
+        expect(res.status).toBe(200);
+        expect(res.body.choices[0].message.content).toBe('Hi from Hugging Face');
+        expect(mockCallHuggingFaceWithCircuitBreaker).toHaveBeenCalledWith(expect.objectContaining({
+            model: 'MiniMaxAI/MiniMax-M2.7',
+            messages: [{ role: 'user', content: 'Hello' }]
+        }));
     });
 
     describe('POST /anthropic', () => {
@@ -600,6 +627,7 @@ describe('LLM Routes', () => {
             expect(res.body).toEqual({
                 openai: { provider: 'openai', supported: true, configured: true, state: 'CLOSED', failures: 0, lastFailureTime: null },
                 anthropic: { provider: 'anthropic', supported: true, configured: true, state: 'CLOSED', failures: 0, lastFailureTime: null },
+                huggingface: { provider: 'huggingface', supported: true, configured: true, state: 'UNKNOWN', failures: 0, lastFailureTime: null },
                 gemma: { provider: 'gemma', supported: true, configured: true, state: 'UNKNOWN', failures: 0, lastFailureTime: null },
                 deepseek: { provider: 'deepseek', supported: true, configured: true, state: 'CLOSED', failures: 1, lastFailureTime: 12345 },
                 glm: { provider: 'glm', supported: true, configured: true, state: 'CLOSED', failures: 0, lastFailureTime: null },

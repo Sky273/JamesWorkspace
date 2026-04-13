@@ -244,6 +244,7 @@ export function getInitialHealthChecks() {
         database: { status: 'unknown' },
         openai: { status: 'unknown' },
         anthropic: { status: 'unknown' },
+        huggingface: { status: 'unknown' },
         deepseek: { status: 'unknown' },
         glm: { status: 'unknown' },
         minimax: { status: 'unknown' },

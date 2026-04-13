@@ -595,7 +595,7 @@ CREATE TABLE public.llm_settings (
     CONSTRAINT llm_settings_profile_matching_local_title_exact_weight_check CHECK (((profile_matching_local_title_exact_weight >= 0) AND (profile_matching_local_title_exact_weight <= 100))),
     CONSTRAINT llm_settings_profile_matching_local_title_token_weight_check CHECK (((profile_matching_local_title_token_weight >= 0) AND (profile_matching_local_title_token_weight <= 100))),
     CONSTRAINT llm_settings_profile_matching_local_tool_weight_check CHECK (((profile_matching_local_tool_weight >= 0) AND (profile_matching_local_tool_weight <= 100))),
-    CONSTRAINT llm_settings_llm_provider_check CHECK (((llm_provider)::text = ANY (ARRAY[('openai'::character varying)::text, ('anthropic'::character varying)::text, ('deepseek'::character varying)::text, ('glm'::character varying)::text, ('minimax'::character varying)::text, ('ollama'::character varying)::text]))),
+CONSTRAINT llm_settings_llm_provider_check CHECK (((llm_provider)::text = ANY (ARRAY[('openai'::character varying)::text, ('anthropic'::character varying)::text, ('huggingface'::character varying)::text, ('deepseek'::character varying)::text, ('glm'::character varying)::text, ('minimax'::character varying)::text, ('ollama'::character varying)::text]))),
     CONSTRAINT llm_settings_skills_weight_check CHECK (((skills_weight >= 0) AND (skills_weight <= 100))),
     CONSTRAINT llm_settings_status_check CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('inactive'::character varying)::text])))
 );

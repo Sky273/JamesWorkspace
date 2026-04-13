@@ -5,7 +5,7 @@ import { safeLog } from '../utils/logger.backend.js';
 const runtimeUnavailableModels = new Map();
 let availabilityStateInitialized = false;
 let availabilityStateInitializationPromise = null;
-const PROVIDERS_WITH_RUNTIME_AVAILABILITY = ['minimax', 'glm', 'deepseek', 'gemma', 'openai', 'anthropic', 'ollama'];
+const PROVIDERS_WITH_RUNTIME_AVAILABILITY = ['minimax', 'glm', 'deepseek', 'gemma', 'huggingface', 'openai', 'anthropic', 'ollama'];
 const CANONICAL_LLM_SETTINGS_KEY = 'default';
 
 function buildAvailabilityKey(provider, model) {

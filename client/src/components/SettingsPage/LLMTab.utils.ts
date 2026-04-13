@@ -7,6 +7,12 @@ export function fallbackText(t: (key: string) => string, key: string, fallback: 
 
 export function getProviderDescription(provider: FormData['llmProvider'], t: (key: string) => string): string {
   if (provider === 'ollama') return t('settings.llm.ollamaDescription');
+  if (provider === 'huggingface') {
+    const description = t('settings.llm.huggingfaceDescription');
+    return description === 'settings.llm.huggingfaceDescription'
+      ? 'Select a hosted Hugging Face model exposed through the Hugging Face OpenAI-compatible router.'
+      : description;
+  }
   if (provider === 'gemma') {
     const description = t('settings.llm.gemmaDescription');
     return description === 'settings.llm.gemmaDescription'
