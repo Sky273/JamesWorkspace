@@ -6,7 +6,7 @@ import { analyzeImprovedResumeWithLLM, improveResumeWithLLM } from '../llmIntegr
 import { getLLMSettings } from '../../settings.service.js';
 import { extractSummaryText, stringifyJsonField } from './shared.js';
 import { updateResume } from '../../resumes.service.js';
-import { runAiActionWithCredits } from '../../aiCredits.service.js';
+import { getConfiguredAiActionRuntimeConfig, runAiActionWithCredits } from '../../aiCredits.service.js';
 
 export async function processImprovement(item, resumeId, text, analysis, job) {
     safeLog('info', 'Improving CV with LLM', { itemId: item.id, resumeId });
@@ -44,11 +44,12 @@ export async function processImprovement(item, resumeId, text, analysis, job) {
                     itemId: item.id,
                     resumeId
                 }
-            }, () => improveResumeWithLLM(
+            }, (actionConfig = {}) => improveResumeWithLLM(
                 textForImprovement,
                 analysis,
                 job.firm_id,
-                item.file_name
+                item.file_name,
+                { maxTokens: actionConfig.maxTokens }
             ));
             break;
         } catch (improveError) {
@@ -79,7 +80,10 @@ export async function processImprovement(item, resumeId, text, analysis, job) {
     if (improvedResult && improvedResult.text && improvedResult.text.trim().length > 0) {
         safeLog('info', 'Starting post-improvement analysis', { itemId: item.id, resumeId });
         await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 80 });
-        const improvedAnalysis = await analyzeImprovedResumeWithLLM(improvedResult.text, job.firm_id, item.file_name);
+        const { maxTokens } = await getConfiguredAiActionRuntimeConfig('resume.improvement');
+        const improvedAnalysis = await analyzeImprovedResumeWithLLM(improvedResult.text, job.firm_id, item.file_name, {
+            maxTokens
+        });
         await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 90 });
         await saveImprovedData(item, resumeId, {
             ...improvedResult,
@@ -252,7 +256,7 @@ export async function processImproveItem(item, job) {
                     itemId: item.id,
                     resumeId: item.resume_id
                 }
-            }, () => improveResumeWithLLM(text, analysis, job.firm_id, item.file_name));
+            }, (actionConfig = {}) => improveResumeWithLLM(text, analysis, job.firm_id, item.file_name, { maxTokens: actionConfig.maxTokens }));
             break;
         } catch (improveError) {
             lastImproveError = improveError;
@@ -293,7 +297,10 @@ export async function processImproveItem(item, job) {
     safeLog('info', 'Starting post-improvement analysis (improve job)', { itemId: item.id, resumeId: item.resume_id });
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 80 });
 
-    const improvedAnalysis = await analyzeImprovedResumeWithLLM(improvedResult.text, job.firm_id, item.file_name);
+    const { maxTokens } = await getConfiguredAiActionRuntimeConfig('resume.improvement');
+    const improvedAnalysis = await analyzeImprovedResumeWithLLM(improvedResult.text, job.firm_id, item.file_name, {
+        maxTokens
+    });
 
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 90 });
 

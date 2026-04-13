@@ -226,7 +226,8 @@ export async function processImportItem(item, job, options) {
                     resumeId,
                     fileName: item.file_name
                 }
-            }, () => analyzeResumeWithLLM(analysisInputText, job.firm_id, item.file_name, {
+            }, (actionConfig = {}) => analyzeResumeWithLLM(analysisInputText, job.firm_id, item.file_name, {
+                maxTokens: actionConfig.maxTokens,
                 ocrUsed: !!extractionResult?.ocrUsed
             }));
             metrics.trackBatchImportActivity({

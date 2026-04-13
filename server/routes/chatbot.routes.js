@@ -158,12 +158,13 @@ Réponds toujours en français, sauf si l'utilisateur pose sa question en anglai
                 messageLength: message.length,
                 historyLength: normalizedHistory.length
             }
-        }, async () => {
+        }, async (actionConfig = {}) => {
+            const { maxTokens } = actionConfig;
             for (let attempt = 1; attempt <= 2; attempt++) {
                 try {
                     const response = await callLLM(messages, {
                         temperature: 0.7,
-                        max_tokens: 4000 // Increase max tokens for better responses with larger context
+                        max_tokens: maxTokens
                     });
 
                     if (response && response.content) {

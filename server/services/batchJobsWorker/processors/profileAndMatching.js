@@ -86,7 +86,7 @@ export async function processMatchItem(item, job, options) {
             resumeId: item.resume_id,
             missionId
         }
-    }, () => matchResumeWithMission(
+    }, (actionConfig = {}) => matchResumeWithMission(
         resumeText,
         missionRecord.title || '',
         missionRecord.content || '',
@@ -96,7 +96,8 @@ export async function processMatchItem(item, job, options) {
             source: 'batch-job',
             jobId: job.id,
             itemId: item.id
-        }
+        },
+        { maxTokens: actionConfig.maxTokens }
     ));
 
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, {
@@ -134,13 +135,14 @@ export async function processProfileSearchItem(item, job, options) {
             itemId: item.id,
             missionId
         }
-    }, () => findMatchingProfiles(missionId, {
+    }, (actionConfig = {}) => findMatchingProfiles(missionId, {
         limit: options?.limit ?? 0,
         minScore: options?.minScore ?? 0,
         status: options?.status ?? null,
         firm: options?.searchFirmId ?? job.firm_id ?? null,
         weights: options?.weights,
         dealId: options?.dealId ?? null,
+        maxTokens: actionConfig.maxTokens,
         progressCallback: (details) => updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, {
             progress: details.progress,
             result_data: {
@@ -201,7 +203,7 @@ export async function processProfileAnalysisItem(item, job, options) {
             resumeId: item.resume_id,
             missionId
         }
-    }, () => analyzeProfileForMission(missionId, item.resume_id, {
+    }, (actionConfig = {}) => analyzeProfileForMission(missionId, item.resume_id, {
         source: 'batch-job',
         jobId: job.id,
         itemId: item.id,
@@ -213,7 +215,7 @@ export async function processProfileAnalysisItem(item, job, options) {
                 progressDetails: details
             }
         })
-    }));
+    }, { maxTokens: actionConfig.maxTokens }));
 
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, {
         progress: 90,

@@ -55,7 +55,7 @@ async function getPdfJsDataUrls() {
     return cachedPdfJsDataUrls;
 }
 
-async function extractFromDOCX(buffer, fileName) {
+async function extractFromDOCX(buffer, fileName, options = {}) {
     const JSZip = (await import('jszip')).default;
     const mammoth = (await import('mammoth')).default;
     const startTime = Date.now();
@@ -132,7 +132,7 @@ async function extractFromDOCX(buffer, fileName) {
         throw new Error('Could not extract sufficient content from the Word document.');
     }
 
-    const result = await extractTemplateFromHTML(htmlContent, extractedImages, fileName, extractedStyles);
+    const result = await extractTemplateFromHTML(htmlContent, extractedImages, fileName, extractedStyles, options);
     result.extractionMethod = 'docx-html';
     injectDocxExtractedImages(result.template, extractedImages);
 
@@ -212,7 +212,7 @@ async function extractPdfText(buffer, fileName) {
     }
 }
 
-async function extractFromPDF(buffer, fileName) {
+async function extractFromPDF(buffer, fileName, options = {}) {
     let browser = null;
     try {
         let textContent = '';
@@ -323,7 +323,7 @@ async function extractFromPDF(buffer, fileName) {
         await browser.close();
         browser = null;
 
-        const result = await extractTemplateFromImage(imageBase64, textContent, fileName, extractedImages);
+        const result = await extractTemplateFromImage(imageBase64, textContent, fileName, extractedImages, options);
         result.extractionMethod = 'pdf-vision';
 
         if (extractedImages.length > 0 && injectPdfExtractedLogo(result.template, extractedImages[0])) {
@@ -340,7 +340,7 @@ async function extractFromPDF(buffer, fileName) {
         try {
             const fallbackText = await extractPdfText(buffer, fileName);
             if (fallbackText && fallbackText.trim().length > 50) {
-                const result = await extractTemplateFromCV(fallbackText, fileName);
+                const result = await extractTemplateFromCV(fallbackText, fileName, options);
                 result.extractionMethod = 'pdf-text-fallback';
                 return result;
             }

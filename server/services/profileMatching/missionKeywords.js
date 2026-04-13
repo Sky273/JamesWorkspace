@@ -7,7 +7,7 @@ import { buildPromptExecutionMetadata } from '../../config/llmGovernance.js';
 import { normalizeUtf8Text, parseJsonFromLlmResponse } from '../openai/textUtils.js';
 import { validateMissionKeywordsPayload } from './contracts.js';
 
-async function extractMissionKeywords(missionTitle, missionContent, model, userMetadata = null) {
+async function extractMissionKeywords(missionTitle, missionContent, model, userMetadata = null, options = {}) {
     const promptMeta = buildPromptExecutionMetadata('MISSION_KEYWORDS_EXTRACTION_PROMPT');
     const prompt = MISSION_KEYWORDS_EXTRACTION_PROMPT
         .replace('{MISSION_TITLE}', missionTitle || '')
@@ -21,7 +21,7 @@ async function extractMissionKeywords(missionTitle, missionContent, model, userM
             { role: 'system', content: 'You are a JSON-only keyword extraction API. Respond with valid JSON only.' },
             { role: 'user', content: prompt }
         ],
-        maxTokens: 1024,
+        maxTokens: options.maxTokens ?? 1024,
         temperature: 0.2,
         userMetadata,
         operationType: 'Mission Keywords Extraction'
@@ -40,7 +40,7 @@ async function extractMissionKeywords(missionTitle, missionContent, model, userM
     }
 }
 
-async function getMissionKeywords(missionId, missionRecord, userMetadata = null) {
+async function getMissionKeywords(missionId, missionRecord, userMetadata = null, options = {}) {
     const cachedKeywords = missionRecord.keywords;
     if (cachedKeywords) {
         try {
@@ -64,7 +64,8 @@ async function getMissionKeywords(missionId, missionRecord, userMetadata = null)
         missionRecord.title,
         missionRecord.content,
         model,
-        userMetadata
+        userMetadata,
+        options
     );
 
     try {

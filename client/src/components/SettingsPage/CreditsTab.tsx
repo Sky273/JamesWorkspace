@@ -7,15 +7,15 @@ interface CreditsTabProps {
 }
 
 const CREDIT_ACTION_FIELDS = [
-  { key: 'aiCreditResumeAnalysis', labelKey: 'settings.credits.actions.resumeAnalysis', fallback: 'Upload / analyse de CV' },
-  { key: 'aiCreditResumeImprovement', labelKey: 'settings.credits.actions.resumeImprovement', fallback: 'Amelioration / analyse post-amelioration' },
-  { key: 'aiCreditResumeAdaptation', labelKey: 'settings.credits.actions.resumeAdaptation', fallback: 'Adaptation a une mission' },
-  { key: 'aiCreditProfileAnalysis', labelKey: 'settings.credits.actions.profileAnalysis', fallback: 'Market radar : analyse detaillee de profil' },
-  { key: 'aiCreditProfileSearch', labelKey: 'settings.credits.actions.profileSearch', fallback: 'Market radar : recherche de profils' },
-  { key: 'aiCreditResumeMatch', labelKey: 'settings.credits.actions.resumeMatch', fallback: 'Matching CV / mission' },
-  { key: 'aiCreditResumeAiModify', labelKey: 'settings.credits.actions.resumeAiModify', fallback: 'Edition IA de CV' },
-  { key: 'aiCreditTemplateExtract', labelKey: 'settings.credits.actions.templateExtract', fallback: 'Extraction de modele depuis CV' },
-  { key: 'aiCreditChatbotMessage', labelKey: 'settings.credits.actions.chatbotMessage', fallback: 'Message du chatbot' }
+  { creditKey: 'aiCreditResumeAnalysis', maxTokensKey: 'aiMaxTokensResumeAnalysis', labelKey: 'settings.credits.actions.resumeAnalysis', fallback: 'Upload / analyse de CV' },
+  { creditKey: 'aiCreditResumeImprovement', maxTokensKey: 'aiMaxTokensResumeImprovement', labelKey: 'settings.credits.actions.resumeImprovement', fallback: 'Amelioration / analyse post-amelioration' },
+  { creditKey: 'aiCreditResumeAdaptation', maxTokensKey: 'aiMaxTokensResumeAdaptation', labelKey: 'settings.credits.actions.resumeAdaptation', fallback: 'Adaptation a une mission' },
+  { creditKey: 'aiCreditProfileAnalysis', maxTokensKey: 'aiMaxTokensProfileAnalysis', labelKey: 'settings.credits.actions.profileAnalysis', fallback: 'Market radar : analyse detaillee de profil' },
+  { creditKey: 'aiCreditProfileSearch', maxTokensKey: 'aiMaxTokensProfileSearch', labelKey: 'settings.credits.actions.profileSearch', fallback: 'Market radar : recherche de profils' },
+  { creditKey: 'aiCreditResumeMatch', maxTokensKey: 'aiMaxTokensResumeMatch', labelKey: 'settings.credits.actions.resumeMatch', fallback: 'Matching CV / mission' },
+  { creditKey: 'aiCreditResumeAiModify', maxTokensKey: 'aiMaxTokensResumeAiModify', labelKey: 'settings.credits.actions.resumeAiModify', fallback: 'Edition IA de CV' },
+  { creditKey: 'aiCreditTemplateExtract', maxTokensKey: 'aiMaxTokensTemplateExtract', labelKey: 'settings.credits.actions.templateExtract', fallback: 'Extraction de modele depuis CV' },
+  { creditKey: 'aiCreditChatbotMessage', maxTokensKey: 'aiMaxTokensChatbotMessage', labelKey: 'settings.credits.actions.chatbotMessage', fallback: 'Message du chatbot' }
 ];
 
 function NumericInput({
@@ -106,13 +106,25 @@ export default function CreditsTab({
 
         <div className="grid gap-4 md:grid-cols-2">
           {CREDIT_ACTION_FIELDS.map((field) => (
-            <NumericInput
-              key={field.key}
-              label={tx(field.labelKey, field.fallback)}
-              value={Number(formData[field.key] || 0)}
-              onChange={(value) => onInputChange(field.key, value)}
-              testId={field.key}
-            />
+            <div key={field.creditKey} className="rounded-xl border border-slate-200 bg-white/70 p-4 dark:border-slate-700 dark:bg-slate-950/40">
+              <div className="mb-3 text-sm font-medium text-slate-800 dark:text-slate-100">
+                {tx(field.labelKey, field.fallback)}
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <NumericInput
+                  label={tx('settings.credits.costField', 'Cout en credits')}
+                  value={Number(formData[field.creditKey] || 0)}
+                  onChange={(value) => onInputChange(field.creditKey, value)}
+                  testId={field.creditKey}
+                />
+                <NumericInput
+                  label={tx('settings.credits.maxTokensField', 'Max tokens')}
+                  value={Number(formData[field.maxTokensKey] || 0)}
+                  onChange={(value) => onInputChange(field.maxTokensKey, value)}
+                  testId={field.maxTokensKey}
+                />
+              </div>
+            </div>
           ))}
         </div>
       </div>

@@ -42,7 +42,7 @@ function isRecoverableMatchingJsonError(error) {
  * @param {string} matchAnalysisPrompt - Match analysis prompt template
  * @returns {Promise<Object>} - Parsed match analysis result (normalized for frontend compatibility)
  */
-export async function matchResumeWithMission(resumeText, missionTitle, missionContent, model, matchAnalysisPrompt, userMetadata = null) {
+export async function matchResumeWithMission(resumeText, missionTitle, missionContent, model, matchAnalysisPrompt, userMetadata = null, options = {}) {
     const prompt = matchAnalysisPrompt
         .replace('{RESUME_TEXT}', resumeText)
         .replace('{MISSION_TITLE}', missionTitle)
@@ -61,7 +61,7 @@ export async function matchResumeWithMission(resumeText, missionTitle, missionCo
                         : prompt
                 }
             ],
-            maxTokens: 4096,
+            maxTokens: options.maxTokens ?? 4096,
             temperature: 0.3,
             responseFormat: { type: "json_object" },
             userMetadata,
@@ -168,7 +168,8 @@ export async function adaptResumeToMission({
     matchAnalysis,
     model,
     adaptationPrompt,
-    userMetadata = null
+    userMetadata = null,
+    maxTokens = null
 }) {
     const matchAnalysisStr = JSON.stringify(matchAnalysis, null, 2);
     const prompt = adaptationPrompt
@@ -195,7 +196,7 @@ Respond in the same language as the resume.`;
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: prompt }
             ],
-            maxTokens: 8192,
+            maxTokens: maxTokens ?? 8192,
             temperature: 0.4,
             timeout: 120000,
             responseFormat: { type: "json_object" },

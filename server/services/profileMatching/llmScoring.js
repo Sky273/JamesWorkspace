@@ -34,7 +34,7 @@ export function isRecoverableJsonOutputError(error) {
     return isRecoverableBatchScoringError(error);
 }
 
-export async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userMetadata = null) {
+export async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord, userMetadata = null, options = {}) {
     if (!profiles || profiles.length === 0) {
         return { scores: {}, success: true };
     }
@@ -59,7 +59,9 @@ export async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord
     const maxConcurrency = PROFILE_MATCHING_LLM_MAX_CONCURRENCY > 0
         ? Math.min(PROFILE_MATCHING_LLM_MAX_CONCURRENCY, 100)
         : providerDefaultConcurrency;
-    const scoringMaxTokens = isDeepSeekReasoner ? 8192 : (isDeepSeekProvider ? 4096 : 2048);
+    const scoringMaxTokens = Number.isInteger(options.maxTokens) && options.maxTokens > 0
+        ? options.maxTokens
+        : (isDeepSeekReasoner ? 8192 : (isDeepSeekProvider ? 4096 : 2048));
     const batches = chunkArray(profiles, batchSize);
     const allScores = {};
     let hasErrors = false;
@@ -224,7 +226,7 @@ export async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord
     };
 }
 
-export async function explainTopProfilesWithLLM(profiles, missionKeywords, missionRecord, userMetadata = null) {
+export async function explainTopProfilesWithLLM(profiles, missionKeywords, missionRecord, userMetadata = null, options = {}) {
     if (!profiles || profiles.length === 0) {
         return {};
     }
@@ -234,7 +236,9 @@ export async function explainTopProfilesWithLLM(profiles, missionKeywords, missi
     const provider = settings.llmProvider || 'unknown';
     const supportsStructuredJsonResponse = provider === 'deepseek';
     const isDeepSeekReasoner = provider === 'deepseek' && model === 'deepseek-reasoner';
-    const explanationMaxTokens = isDeepSeekReasoner ? 3072 : (provider === 'deepseek' ? 2048 : 1536);
+    const explanationMaxTokens = Number.isInteger(options.maxTokens) && options.maxTokens > 0
+        ? options.maxTokens
+        : (isDeepSeekReasoner ? 3072 : (provider === 'deepseek' ? 2048 : 1536));
     const maxConcurrency = PROFILE_MATCHING_LLM_MAX_CONCURRENCY > 0
         ? Math.min(PROFILE_MATCHING_LLM_MAX_CONCURRENCY, PROFILE_MATCHING_EXPLANATION_MAX_CONCURRENCY)
         : Math.min(PROFILE_MATCHING_EXPLANATION_MAX_CONCURRENCY, provider === 'deepseek' ? 3 : 5);

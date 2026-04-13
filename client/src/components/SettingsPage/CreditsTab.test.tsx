@@ -19,6 +19,15 @@ describe('CreditsTab', () => {
           aiCreditResumeMatch: 8,
           aiCreditProfileSearch: 12,
           aiCreditProfileAnalysis: 25,
+          aiMaxTokensChatbotMessage: 4000,
+          aiMaxTokensResumeAiModify: 8192,
+          aiMaxTokensTemplateExtract: 32000,
+          aiMaxTokensResumeAnalysis: 16000,
+          aiMaxTokensResumeImprovement: 16384,
+          aiMaxTokensResumeAdaptation: 8192,
+          aiMaxTokensResumeMatch: 4096,
+          aiMaxTokensProfileSearch: 2048,
+          aiMaxTokensProfileAnalysis: 3072,
         }}
         onInputChange={onInputChange}
         t={(key) => key}
@@ -35,6 +44,10 @@ describe('CreditsTab', () => {
     expect(screen.getByTestId('aiCreditResumeAiModify')).toHaveValue(5);
     expect(screen.getByTestId('aiCreditTemplateExtract')).toHaveValue(15);
     expect(screen.getByTestId('aiCreditChatbotMessage')).toHaveValue(1);
+    expect(screen.getByTestId('aiMaxTokensResumeAnalysis')).toHaveValue(16000);
+    expect(screen.getByTestId('aiMaxTokensResumeImprovement')).toHaveValue(16384);
+    expect(screen.getByTestId('aiMaxTokensResumeAdaptation')).toHaveValue(8192);
+    expect(screen.getByTestId('aiMaxTokensProfileAnalysis')).toHaveValue(3072);
   });
 
   it('propagates numeric changes through onInputChange', () => {
@@ -53,6 +66,15 @@ describe('CreditsTab', () => {
           aiCreditResumeMatch: 8,
           aiCreditProfileSearch: 12,
           aiCreditProfileAnalysis: 25,
+          aiMaxTokensChatbotMessage: 4000,
+          aiMaxTokensResumeAiModify: 8192,
+          aiMaxTokensTemplateExtract: 32000,
+          aiMaxTokensResumeAnalysis: 16000,
+          aiMaxTokensResumeImprovement: 16384,
+          aiMaxTokensResumeAdaptation: 8192,
+          aiMaxTokensResumeMatch: 4096,
+          aiMaxTokensProfileSearch: 2048,
+          aiMaxTokensProfileAnalysis: 3072,
         }}
         onInputChange={onInputChange}
         t={(key) => key}
@@ -61,8 +83,10 @@ describe('CreditsTab', () => {
 
     fireEvent.change(screen.getByTestId('firm-initial-credits'), { target: { value: '1500' } });
     fireEvent.change(screen.getByTestId('aiCreditResumeAnalysis'), { target: { value: '30' } });
+    fireEvent.change(screen.getByTestId('aiMaxTokensResumeAnalysis'), { target: { value: '12000' } });
 
     expect(onInputChange).toHaveBeenCalledWith('firmInitialCredits', 1500);
     expect(onInputChange).toHaveBeenCalledWith('aiCreditResumeAnalysis', 30);
+    expect(onInputChange).toHaveBeenCalledWith('aiMaxTokensResumeAnalysis', 12000);
   });
 });

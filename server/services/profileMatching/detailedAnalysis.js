@@ -10,7 +10,7 @@ import { validateDetailedProfileAnalysisPayload } from './contracts.js';
 import { isRecoverableJsonOutputError } from './llmScoring.js';
 import { getMissionKeywords } from './missionKeywords.js';
 
-async function analyzeProfileForMission(missionId, resumeId, emitProgress, userMetadata = null) {
+async function analyzeProfileForMission(missionId, resumeId, emitProgress, userMetadata = null, options = {}) {
     safeLog('info', 'Starting detailed profile analysis', { resumeId, missionId });
     const progressCallback = userMetadata?.progressCallback || null;
 
@@ -29,7 +29,7 @@ async function analyzeProfileForMission(missionId, resumeId, emitProgress, userM
         throw new Error('Mission not found');
     }
 
-    const missionKeywords = await getMissionKeywords(missionId, missionRecord, userMetadata);
+    const missionKeywords = await getMissionKeywords(missionId, missionRecord, userMetadata, options);
     await emitProgress(progressCallback, {
         progress: 60,
         stage: 'analysis-keywords-ready',
@@ -41,7 +41,9 @@ async function analyzeProfileForMission(missionId, resumeId, emitProgress, userM
     const isDeepSeekProvider = settings.llmProvider === 'deepseek';
     const isDeepSeekReasoner = isDeepSeekProvider && model === 'deepseek-reasoner';
     const supportsStructuredJsonResponse = isDeepSeekProvider;
-    const detailedAnalysisMaxTokens = isDeepSeekReasoner ? 8192 : (isDeepSeekProvider ? 4096 : 3072);
+    const detailedAnalysisMaxTokens = Number.isInteger(options.maxTokens) && options.maxTokens > 0
+        ? options.maxTokens
+        : (isDeepSeekReasoner ? 8192 : (isDeepSeekProvider ? 4096 : 3072));
 
     if (!model && settings.llmProvider !== 'ollama') {
         throw new Error('LLM model not configured in Settings.');

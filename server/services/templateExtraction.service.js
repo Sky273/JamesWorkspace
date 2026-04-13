@@ -113,7 +113,7 @@ const VISION_EXTRACTION_PROMPT = [
  * @param {Object} extractedStyles - Colors and fonts extracted from styles.xml
  * @returns {Promise<Object>} - Extracted template
  */
-export async function extractTemplateFromHTML(htmlContent, images = [], fileName = 'cv.docx', extractedStyles = {}) {
+export async function extractTemplateFromHTML(htmlContent, images = [], fileName = 'cv.docx', extractedStyles = {}, options = {}) {
     try {
         safeLog('info', 'Starting HTML-based template extraction', {
             htmlLength: htmlContent?.length,
@@ -167,7 +167,7 @@ Retourne le JSON du template avec tous les champs requis (name, description, hea
 
         const response = await callLLM(messages, {
             temperature: 0.1,
-            max_tokens: 32000 // Large for base64 images
+            max_tokens: options.maxTokens ?? 32000
         });
 
         return processLLMResponse(response, fileName, images);
@@ -186,7 +186,7 @@ Retourne le JSON du template avec tous les champs requis (name, description, hea
  * @param {Array} extractedImages - Images extracted from the PDF
  * @returns {Promise<Object>} - Extracted template
  */
-export async function extractTemplateFromImage(imageBase64, textContent = '', fileName = 'cv.pdf', extractedImages = []) {
+export async function extractTemplateFromImage(imageBase64, textContent = '', fileName = 'cv.pdf', extractedImages = [], options = {}) {
     try {
         safeLog('info', 'Starting vision-based template extraction', {
             imageSize: Math.round(imageBase64.length / 1024) + 'KB',
@@ -231,7 +231,7 @@ export async function extractTemplateFromImage(imageBase64, textContent = '', fi
             userContent,
             {
                 temperature: 0.2,
-                max_tokens: 20000
+                max_tokens: options.maxTokens ?? 20000
             }
         );
 
@@ -387,9 +387,9 @@ h1, h2, h3 { color: #1e40af; }
  * Legacy function for backward compatibility
  * @deprecated Use extractTemplateFromHTML or extractTemplateFromImage instead
  */
-export async function extractTemplateFromCV(cvText, fileName = 'cv.pdf') {
+export async function extractTemplateFromCV(cvText, fileName = 'cv.pdf', options = {}) {
     safeLog('warn', 'Using legacy text-only extraction - results may be limited');
     
     // Fall back to HTML extraction with text content
-    return extractTemplateFromHTML(cvText, [], fileName);
+    return extractTemplateFromHTML(cvText, [], fileName, {}, options);
 }

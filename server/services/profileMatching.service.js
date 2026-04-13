@@ -92,6 +92,7 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         firm = undefined,
         weights = DEFAULT_WEIGHTS,
         dealId = null,
+        maxTokens = null,
         progressCallback = null
     } = options;
 
@@ -108,7 +109,7 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         stageLabel: 'Mission chargée'
     });
 
-    const missionKeywords = await getMissionKeywords(missionId, missionRecord, userMetadata);
+    const missionKeywords = await getMissionKeywords(missionId, missionRecord, userMetadata, { maxTokens });
     const currentSettings = await getLLMSettings();
     const localRankingWeights = getProfileMatchingLocalRankingWeights(currentSettings);
     const metricsProvider = buildLLMMetricLabel(currentSettings.llmProvider || 'unknown', currentSettings.llmModel || '');
@@ -230,7 +231,8 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         profilesToScore,
         missionKeywords,
         missionRecord,
-        userMetadata
+        userMetadata,
+        { maxTokens }
     );
     await emitProgress(progressCallback, {
         progress: 85,
@@ -294,7 +296,7 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         && profilesToExplain.length > 0
         && (profilesToScore.length > profilesToExplain.length || filteredProfiles.length > profilesToExplain.length);
     const explanationMap = shouldRunExplanationPass
-        ? await explainTopProfilesWithLLM(profilesToExplain, missionKeywords, missionRecord, userMetadata)
+        ? await explainTopProfilesWithLLM(profilesToExplain, missionKeywords, missionRecord, userMetadata, { maxTokens })
         : {};
     const enrichedProfiles = filteredProfiles.map((profile) => {
         const explanation = explanationMap[profile.resumeId];
@@ -353,6 +355,6 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
     };
 }
 
-export async function analyzeProfileForMission(missionId, resumeId, userMetadata = null) {
-    return runDetailedProfileAnalysis(missionId, resumeId, emitProgress, userMetadata);
+export async function analyzeProfileForMission(missionId, resumeId, userMetadata = null, options = {}) {
+    return runDetailedProfileAnalysis(missionId, resumeId, emitProgress, userMetadata, options);
 }

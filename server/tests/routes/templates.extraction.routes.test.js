@@ -267,7 +267,11 @@ describe('Templates Extraction Routes', () => {
                 .set({ ...AUTH, 'x-test-mimetype': 'application/pdf' });
 
             expect(res.status).toBe(200);
-            expect(mockExtractFromPDF).toHaveBeenCalledWith(expect.any(Buffer), 'template.pdf');
+            expect(mockExtractFromPDF).toHaveBeenCalledWith(
+                expect.any(Buffer),
+                'template.pdf',
+                { maxTokens: undefined }
+            );
             expect(res.body.extractionMethod).toBe('pdf-text-fallback');
         });
 

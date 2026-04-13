@@ -171,7 +171,9 @@ export async function analyzeResumeWithLLM(text, _firmId, originalFileName = nul
     try {
         // Analyze with original filename for name extraction hint
         safeLog('debug', 'Batch analysis using governed prompt', { ...analysisPromptMeta, originalFileName });
-        analysis = await analyzeResume(cleanedText, model, `${analysisPrompt}${ocrHint}`, { promptMetadata: analysisPromptMeta }, false, originalFileName);
+        analysis = await analyzeResume(cleanedText, model, `${analysisPrompt}${ocrHint}`, { promptMetadata: analysisPromptMeta }, false, originalFileName, {
+            maxTokens: options.maxTokens
+        });
     } finally {
         releaseLLMSlot();
     }
@@ -218,7 +220,7 @@ export async function preAnalyzeResumeWithLLM(text, _firmId, originalFileName = 
  * @param {string} _firmId - Firm ID (unused but kept for API consistency)
  * @param {string} originalFileName - Original file name for name extraction hint
  */
-export async function improveResumeWithLLM(text, analysis, _firmId, originalFileName = null) {
+export async function improveResumeWithLLM(text, analysis, _firmId, originalFileName = null, options = {}) {
     if (isExternalLlmDisabledForE2E()) {
         safeLog('info', 'Using mocked batch resume improvement for E2E', { originalFileName });
         return {
@@ -257,7 +259,9 @@ export async function improveResumeWithLLM(text, analysis, _firmId, originalFile
     let improveResult;
     try {
         safeLog('debug', 'Batch improvement using governed prompt', { ...improvementPromptMeta, originalFileName });
-        improveResult = await improveResume(improvementInput, analysis, model, improvementPrompt, originalFileName, { promptMetadata: improvementPromptMeta });
+        improveResult = await improveResume(improvementInput, analysis, model, improvementPrompt, originalFileName, { promptMetadata: improvementPromptMeta }, {
+            maxTokens: options.maxTokens
+        });
     } finally {
         releaseLLMSlot();
     }
@@ -287,7 +291,7 @@ export async function improveResumeWithLLM(text, analysis, _firmId, originalFile
     };
 }
 
-export async function analyzeImprovedResumeWithLLM(text, _firmId, originalFileName = null) {
+export async function analyzeImprovedResumeWithLLM(text, _firmId, originalFileName = null, options = {}) {
     if (isExternalLlmDisabledForE2E()) {
         safeLog('info', 'Using mocked post-improvement analysis for E2E', { originalFileName });
         return buildMockAnalysis(text, originalFileName, { improved: true });
@@ -323,7 +327,9 @@ export async function analyzeImprovedResumeWithLLM(text, _firmId, originalFileNa
     let improvedAnalysis;
     try {
         safeLog('debug', 'Batch post-improvement analysis using governed prompt', { ...analysisPromptMeta, originalFileName });
-        improvedAnalysis = await analyzeResume(text, model, analysisPrompt, { promptMetadata: analysisPromptMeta }, true);
+        improvedAnalysis = await analyzeResume(text, model, analysisPrompt, { promptMetadata: analysisPromptMeta }, true, originalFileName, {
+            maxTokens: options.maxTokens
+        });
     } finally {
         releaseLLMSlot();
     }

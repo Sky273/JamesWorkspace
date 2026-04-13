@@ -37,12 +37,12 @@ function createExtractFromCvHandler() {
                         fileName: originalname,
                         mimeType: resolvedMimeType
                     }
-                }, async () => {
+                }, async (actionConfig = {}) => {
                     if (resolvedMimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-                        return extractFromDOCX(buffer, originalname);
+                        return extractFromDOCX(buffer, originalname, { maxTokens: actionConfig.maxTokens });
                     }
                     if (resolvedMimeType === 'application/pdf') {
-                        return extractFromPDF(buffer, originalname);
+                        return extractFromPDF(buffer, originalname, { maxTokens: actionConfig.maxTokens });
                     }
                     if (resolvedMimeType === 'application/msword') {
                         throw Object.assign(new Error('Old .doc format is not supported. Please convert to .docx or PDF.'), { statusCode: 400 });

@@ -90,7 +90,8 @@ export async function executeResumeAdaptation({
             missionId: missionRecord.id,
             source: userMetadata?.source || 'direct'
         }
-    }, async () => {
+    }, async (actionConfig = {}) => {
+        const { maxTokens } = actionConfig;
         const matchAnalysisResult = isExternalLlmDisabledForE2E()
             ? buildMockMatchAnalysis(missionTitle)
             : await matchResumeWithMission(
@@ -99,7 +100,8 @@ export async function executeResumeAdaptation({
                 missionContent,
                 model,
                 matchPrompt,
-                matchUserMetadata
+                matchUserMetadata,
+                { maxTokens }
             );
 
         const adaptationResultValue = isExternalLlmDisabledForE2E()
@@ -117,7 +119,8 @@ export async function executeResumeAdaptation({
                 matchAnalysis: matchAnalysisResult,
                 model,
                 adaptationPrompt,
-                userMetadata: adaptationUserMetadata
+                userMetadata: adaptationUserMetadata,
+                maxTokens
             });
 
         return {

@@ -34,7 +34,7 @@ import {
     runAiActionWithCredits,
     addFirmCreditsTransaction
 } from '../../services/aiCredits.service.js';
-import { getAiCreditCost } from '../../config/aiCredits.js';
+import { getAiCreditCost, getAiActionMaxTokens } from '../../config/aiCredits.js';
 
 function createDbClient(sequence) {
     return {
@@ -176,6 +176,13 @@ describe('aiCredits.service', () => {
         expect(getAiCreditCost('profile.analysis')).toBe(25);
     });
 
+    it('exposes the configured default max token budgets for key AI actions', () => {
+        expect(getAiActionMaxTokens('resume.analysis')).toBe(16000);
+        expect(getAiActionMaxTokens('resume.improvement')).toBe(16384);
+        expect(getAiActionMaxTokens('resume.adaptation')).toBe(8192);
+        expect(getAiActionMaxTokens('profile.analysis')).toBe(3072);
+    });
+
     it('uses the configured settings overrides for AI credit costs', async () => {
         getLLMSettingsMock.mockResolvedValueOnce({
             aiCreditResumeAnalysis: 40
@@ -197,5 +204,13 @@ describe('aiCredits.service', () => {
         });
 
         expect(result.credits_delta).toBe(-40);
+    });
+
+    it('uses the configured settings overrides for AI max token budgets', async () => {
+        getLLMSettingsMock.mockResolvedValueOnce({
+            aiMaxTokensResumeAnalysis: 12000
+        });
+
+        expect(getAiActionMaxTokens('resume.analysis', await getLLMSettingsMock())).toBe(12000);
     });
 });

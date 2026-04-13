@@ -38,7 +38,7 @@ function isRecoverableStructuredJsonError(error) {
         || message.includes('response truncated due to token limit');
 }
 
-export async function analyzeResume(resumeText, model, analysisPrompt, userMetadata = null, isImprovedCV = false, originalFileName = null) {
+export async function analyzeResume(resumeText, model, analysisPrompt, userMetadata = null, isImprovedCV = false, originalFileName = null, options = {}) {
     let prompt = analysisPrompt.replace('{TEXT}', resumeText);
     
     if (originalFileName) {
@@ -62,7 +62,7 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
                         : prompt
                 }
             ],
-            maxTokens: 16000,
+            maxTokens: options.maxTokens ?? 16000,
             temperature: 0.3,
             responseFormat: { type: "json_object" },
             maxPromptLength: 120000,
@@ -120,7 +120,7 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
     return normalized;
 }
 
-export async function preAnalyzeResumeText(text, model, preAnalysisPrompt, userMetadata = null, originalFileName = null) {
+export async function preAnalyzeResumeText(text, model, preAnalysisPrompt, userMetadata = null, originalFileName = null, options = {}) {
     const prompt = preAnalysisPrompt
         .replace(/{TEXT}/g, text)
         .replace(/{FILENAME}/g, originalFileName || 'Non disponible');
@@ -137,7 +137,7 @@ export async function preAnalyzeResumeText(text, model, preAnalysisPrompt, userM
                 content: prompt
             }
         ],
-        maxTokens: 12000,
+        maxTokens: options.maxTokens ?? 12000,
         temperature: 0,
         timeout: 20 * 60 * 1000,
         maxPromptLength: 120000,
@@ -149,7 +149,7 @@ export async function preAnalyzeResumeText(text, model, preAnalysisPrompt, userM
     return content.trim();
 }
 
-export async function improveResume(text, analysis, model, improvementPromptTemplate, originalFileName = null, userMetadata = null) {
+export async function improveResume(text, analysis, model, improvementPromptTemplate, originalFileName = null, userMetadata = null, options = {}) {
     const analysisJson = JSON.stringify(analysis, null, 2);
     const fileNameValue = originalFileName || 'Non disponible';
     const improvementPrompt = improvementPromptTemplate
@@ -190,7 +190,7 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
                         : improvementPrompt
                 }
             ],
-            maxTokens: 16384,
+            maxTokens: options.maxTokens ?? 16384,
             temperature: 0.3,
             responseFormat: { type: "json_object" },
             timeout: 300000,

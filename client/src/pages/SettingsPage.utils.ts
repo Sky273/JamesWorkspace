@@ -107,6 +107,15 @@ export interface Settings {
   aiCreditResumeMatch?: number;
   aiCreditProfileSearch?: number;
   aiCreditProfileAnalysis?: number;
+  aiMaxTokensChatbotMessage?: number;
+  aiMaxTokensResumeAiModify?: number;
+  aiMaxTokensTemplateExtract?: number;
+  aiMaxTokensResumeAnalysis?: number;
+  aiMaxTokensResumeImprovement?: number;
+  aiMaxTokensResumeAdaptation?: number;
+  aiMaxTokensResumeMatch?: number;
+  aiMaxTokensProfileSearch?: number;
+  aiMaxTokensProfileAnalysis?: number;
   'DPO Name'?: string;
   'DPO Email'?: string;
   'DPO Phone'?: string;
@@ -154,6 +163,15 @@ export interface SettingsFormData {
   aiCreditResumeMatch: number;
   aiCreditProfileSearch: number;
   aiCreditProfileAnalysis: number;
+  aiMaxTokensChatbotMessage: number;
+  aiMaxTokensResumeAiModify: number;
+  aiMaxTokensTemplateExtract: number;
+  aiMaxTokensResumeAnalysis: number;
+  aiMaxTokensResumeImprovement: number;
+  aiMaxTokensResumeAdaptation: number;
+  aiMaxTokensResumeMatch: number;
+  aiMaxTokensProfileSearch: number;
+  aiMaxTokensProfileAnalysis: number;
   'DPO Name': string;
   'DPO Email': string;
   'DPO Phone': string;
@@ -219,6 +237,15 @@ export const defaultFormData: SettingsFormData = {
   aiCreditResumeMatch: 8,
   aiCreditProfileSearch: 12,
   aiCreditProfileAnalysis: 25,
+  aiMaxTokensChatbotMessage: 4000,
+  aiMaxTokensResumeAiModify: 8192,
+  aiMaxTokensTemplateExtract: 32000,
+  aiMaxTokensResumeAnalysis: 16000,
+  aiMaxTokensResumeImprovement: 16384,
+  aiMaxTokensResumeAdaptation: 8192,
+  aiMaxTokensResumeMatch: 4096,
+  aiMaxTokensProfileSearch: 2048,
+  aiMaxTokensProfileAnalysis: 3072,
   'DPO Name': '',
   'DPO Email': '',
   'DPO Phone': '',
@@ -275,6 +302,15 @@ export const toFormData = (settings?: Settings | null): SettingsFormData => ({
   aiCreditResumeMatch: settings?.aiCreditResumeMatch ?? 8,
   aiCreditProfileSearch: settings?.aiCreditProfileSearch ?? 12,
   aiCreditProfileAnalysis: settings?.aiCreditProfileAnalysis ?? 25,
+  aiMaxTokensChatbotMessage: settings?.aiMaxTokensChatbotMessage ?? 4000,
+  aiMaxTokensResumeAiModify: settings?.aiMaxTokensResumeAiModify ?? 8192,
+  aiMaxTokensTemplateExtract: settings?.aiMaxTokensTemplateExtract ?? 32000,
+  aiMaxTokensResumeAnalysis: settings?.aiMaxTokensResumeAnalysis ?? 16000,
+  aiMaxTokensResumeImprovement: settings?.aiMaxTokensResumeImprovement ?? 16384,
+  aiMaxTokensResumeAdaptation: settings?.aiMaxTokensResumeAdaptation ?? 8192,
+  aiMaxTokensResumeMatch: settings?.aiMaxTokensResumeMatch ?? 4096,
+  aiMaxTokensProfileSearch: settings?.aiMaxTokensProfileSearch ?? 2048,
+  aiMaxTokensProfileAnalysis: settings?.aiMaxTokensProfileAnalysis ?? 3072,
   'DPO Name': settings?.['DPO Name'] || '',
   'DPO Email': settings?.['DPO Email'] || '',
   'DPO Phone': settings?.['DPO Phone'] || '',
@@ -312,6 +348,15 @@ export const createSavePayload = (
     aiCreditResumeMatch: Number(formData.aiCreditResumeMatch),
     aiCreditProfileSearch: Number(formData.aiCreditProfileSearch),
     aiCreditProfileAnalysis: Number(formData.aiCreditProfileAnalysis),
+    aiMaxTokensChatbotMessage: Number(formData.aiMaxTokensChatbotMessage),
+    aiMaxTokensResumeAiModify: Number(formData.aiMaxTokensResumeAiModify),
+    aiMaxTokensTemplateExtract: Number(formData.aiMaxTokensTemplateExtract),
+    aiMaxTokensResumeAnalysis: Number(formData.aiMaxTokensResumeAnalysis),
+    aiMaxTokensResumeImprovement: Number(formData.aiMaxTokensResumeImprovement),
+    aiMaxTokensResumeAdaptation: Number(formData.aiMaxTokensResumeAdaptation),
+    aiMaxTokensResumeMatch: Number(formData.aiMaxTokensResumeMatch),
+    aiMaxTokensProfileSearch: Number(formData.aiMaxTokensProfileSearch),
+    aiMaxTokensProfileAnalysis: Number(formData.aiMaxTokensProfileAnalysis),
   };
   delete dataToSave.llmModelParametersJson;
 

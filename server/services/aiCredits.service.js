@@ -1,5 +1,10 @@
 import { getClient, query } from '../config/database.js';
-import { DEFAULT_FIRM_CREDITS, getAiCreditCost, getInitialFirmCredits } from '../config/aiCredits.js';
+import {
+    DEFAULT_FIRM_CREDITS,
+    getAiActionRuntimeConfig,
+    getAiCreditCost,
+    getInitialFirmCredits
+} from '../config/aiCredits.js';
 import { escapeLike } from '../utils/postgresHelpers.js';
 import {
     invalidateClientsCaches,
@@ -116,6 +121,14 @@ export async function getConfiguredAiCreditCost(actionType) {
     }
 }
 
+export async function getConfiguredAiActionRuntimeConfig(actionType) {
+    try {
+        return getAiActionRuntimeConfig(actionType, await getLLMSettings());
+    } catch (_error) {
+        return getAiActionRuntimeConfig(actionType);
+    }
+}
+
 export async function addFirmCreditsTransaction({
     firmId,
     amount,
@@ -182,7 +195,7 @@ export async function reserveAiCredits({
     actionType,
     metadata = {}
 }) {
-    const cost = await getConfiguredAiCreditCost(actionType);
+    const { cost } = await getConfiguredAiActionRuntimeConfig(actionType);
     if (!cost) {
         return null;
     }
@@ -304,9 +317,10 @@ export async function runAiActionWithCredits({
     actionType,
     metadata = {}
 }, action) {
-    const cost = await getConfiguredAiCreditCost(actionType);
+    const actionConfig = await getConfiguredAiActionRuntimeConfig(actionType);
+    const { cost } = actionConfig;
     if (!cost) {
-        return action();
+        return action(actionConfig);
     }
 
     if (!firmId) {
@@ -314,7 +328,7 @@ export async function runAiActionWithCredits({
             actionType,
             userId
         });
-        return action();
+        return action(actionConfig);
     }
 
     const reservation = await reserveAiCredits({
@@ -325,7 +339,7 @@ export async function runAiActionWithCredits({
     });
 
     try {
-        return await action();
+        return await action(actionConfig);
     } catch (error) {
         try {
             await refundAiCredits(reservation, {

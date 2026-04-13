@@ -105,7 +105,7 @@ IMPORTANT : Retourne UNIQUEMENT ce JSON, sans texte avant ou après.`);
                     resumeId: req.params?.id,
                     hasSelection
                 }
-            }, () => callBusinessChatCompletion({
+            }, (actionConfig = {}) => callBusinessChatCompletion({
                 model,
                 messages: [
                     {
@@ -143,7 +143,7 @@ If the user's instructions are not related to resume editing, refuse politely an
                     },
                     { role: 'user', content: modificationPrompt }
                 ],
-                maxTokens: 8192,
+                maxTokens: actionConfig.maxTokens,
                 temperature: 0.3,
                 timeout: 90000,
                 userMetadata,

@@ -90,7 +90,16 @@ function buildDefaultSettingsPayload() {
         aiCreditResumeAdaptation: aiCreditDefaults.aiCreditResumeAdaptation,
         aiCreditResumeMatch: aiCreditDefaults.aiCreditResumeMatch,
         aiCreditProfileSearch: aiCreditDefaults.aiCreditProfileSearch,
-        aiCreditProfileAnalysis: aiCreditDefaults.aiCreditProfileAnalysis
+        aiCreditProfileAnalysis: aiCreditDefaults.aiCreditProfileAnalysis,
+        aiMaxTokensChatbotMessage: aiCreditDefaults.aiMaxTokensChatbotMessage,
+        aiMaxTokensResumeAiModify: aiCreditDefaults.aiMaxTokensResumeAiModify,
+        aiMaxTokensTemplateExtract: aiCreditDefaults.aiMaxTokensTemplateExtract,
+        aiMaxTokensResumeAnalysis: aiCreditDefaults.aiMaxTokensResumeAnalysis,
+        aiMaxTokensResumeImprovement: aiCreditDefaults.aiMaxTokensResumeImprovement,
+        aiMaxTokensResumeAdaptation: aiCreditDefaults.aiMaxTokensResumeAdaptation,
+        aiMaxTokensResumeMatch: aiCreditDefaults.aiMaxTokensResumeMatch,
+        aiMaxTokensProfileSearch: aiCreditDefaults.aiMaxTokensProfileSearch,
+        aiMaxTokensProfileAnalysis: aiCreditDefaults.aiMaxTokensProfileAnalysis
     };
 }
 
