@@ -47,6 +47,24 @@ export const authLimiter = rateLimit({
     }
 });
 
+export const registrationLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: () => isE2ERateLimitRelaxed(),
+    handler: (req, res) => {
+        safeLog('warn', 'Registration rate limit exceeded', {
+            ip: getClientIP(req),
+            email: req.body?.email || null
+        });
+        res.status(429).json({
+            error: 'Too many registration attempts, please try again later.',
+            retryAfter: Math.ceil(req.rateLimit.resetTime / 1000)
+        });
+    }
+});
+
 // Per-user rate limiting store (by User ID)
 const userRateLimitStore = new Map();
 

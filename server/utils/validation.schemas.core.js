@@ -40,8 +40,12 @@ export const signInSchema = z.object({
 export const registerSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
-  name: nameSchema
-});
+  name: nameSchema,
+  website: z.string().max(255).optional().default(''),
+  formRenderedAt: z.number().int().positive(),
+  captchaToken: z.string().max(4096).optional(),
+  captchaProvider: z.enum(['turnstile', 'hcaptcha']).optional()
+}).strip();
 
 export const forgotPasswordSchema = z.object({
   email: emailSchema

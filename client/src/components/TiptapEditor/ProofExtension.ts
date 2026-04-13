@@ -15,6 +15,7 @@ import {
   formatProofScore,
   getProofDetailRows,
 } from './proof.presentation';
+import { attachFloatingDropdown } from './floatingDropdown';
 
 interface ProofStorage {
   visible: boolean;
@@ -37,26 +38,6 @@ function getProofTone(level: string | undefined): 'high' | 'medium' | 'low' {
   if (normalized === 'high') return 'high';
   if (normalized === 'medium') return 'medium';
   return 'low';
-}
-
-function updateDropdownPosition(wrapper: HTMLElement, dropdown: HTMLElement): void {
-  dropdown.classList.remove('is-align-right', 'is-above');
-
-  const wrapperRect = wrapper.getBoundingClientRect();
-  const dropdownRect = dropdown.getBoundingClientRect();
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-
-  if (wrapperRect.left + dropdownRect.width > viewportWidth - 16) {
-    dropdown.classList.add('is-align-right');
-  }
-
-  if (
-    wrapperRect.bottom + 10 + dropdownRect.height > viewportHeight - 16
-    && wrapperRect.top - 10 - dropdownRect.height > 16
-  ) {
-    dropdown.classList.add('is-above');
-  }
 }
 
 function appendDetailRows(
@@ -271,37 +252,18 @@ function createProofWidget(proof: SkillProofEntry): HTMLElement {
       'Justification',
     ].includes(row.label)),
   );
-
-  wrapper.appendChild(dropdown);
+  const floatingDropdown = attachFloatingDropdown(wrapper, dropdown);
 
   pill.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();
-    const willOpen = !dropdown.classList.contains('is-open');
-
-    document
-      .querySelectorAll('.proof-deco-dropdown.is-open')
-      .forEach((element) => element.classList.remove('is-open'));
-
-    if (willOpen) {
-      dropdown.classList.add('is-open');
-      updateDropdownPosition(wrapper, dropdown);
-      window.setTimeout(() => {
-        document.addEventListener(
-          'click',
-          () => {
-            dropdown.classList.remove('is-open');
-          },
-          { once: true },
-        );
-      }, 0);
-    }
+    floatingDropdown.toggle();
   });
 
   closeBtn.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();
-    dropdown.classList.remove('is-open');
+    floatingDropdown.close();
   });
 
   return wrapper;

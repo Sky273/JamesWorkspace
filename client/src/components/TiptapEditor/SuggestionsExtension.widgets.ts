@@ -3,6 +3,7 @@ import {
   SUGGESTION_SECTION_ORDER,
   type SuggestionsBySection,
 } from './suggestions.shared';
+import { attachFloatingDropdown } from './floatingDropdown';
 
 export function createBadgeWidget(
   sectionKey: string,
@@ -50,23 +51,19 @@ export function createBadgeWidget(
     list.appendChild(li);
   });
   dropdown.appendChild(list);
-  wrapper.appendChild(dropdown);
+
+  const floatingDropdown = attachFloatingDropdown(wrapper, dropdown);
 
   pill.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();
-    document
-      .querySelectorAll('.suggestion-deco-dropdown.is-open')
-      .forEach((element) => {
-        if (element !== dropdown) element.classList.remove('is-open');
-      });
-    dropdown.classList.toggle('is-open');
+    floatingDropdown.toggle();
   });
 
   closeBtn.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();
-    dropdown.classList.remove('is-open');
+    floatingDropdown.close();
   });
 
   return wrapper;

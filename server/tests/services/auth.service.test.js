@@ -225,6 +225,7 @@ describe('Auth Service', () => {
                 .mockResolvedValueOnce({ rows: [{ id: 'firm-test-1', name: 'Cabinet test' }] })
                 .mockResolvedValueOnce(undefined)
                 .mockResolvedValueOnce({ rows: [{ id: 'u-auto', email: 'active@test.com', status: 'active', firm_name: 'Cabinet test' }] })
+                .mockResolvedValueOnce(undefined)
                 .mockResolvedValueOnce(undefined);
 
             const result = await registerSelfServiceUser({
@@ -239,6 +240,16 @@ describe('Auth Service', () => {
             expect(mockClient.query).toHaveBeenCalledWith(
                 expect.stringContaining('INSERT INTO users'),
                 ['active@test.com', 'hash', 'Active User', null, null, null, 'firm-test-1', 'Cabinet test']
+            );
+            expect(mockClient.query).toHaveBeenCalledWith(
+                expect.stringContaining('INSERT INTO templates'),
+                [
+                    'Modele CV Cabinet test firm-tes',
+                    'Modele de CV cree automatiquement pour le cabinet.',
+                    '<header>-name--title-</header>',
+                    '<main>-content-</main>',
+                    'firm-test-1'
+                ]
             );
             expect(mockClient.release).toHaveBeenCalled();
         });
@@ -266,6 +277,7 @@ describe('Auth Service', () => {
                 .mockResolvedValueOnce({ rows: [{ id: 'firm-test-2', name: 'Cabinet test 2' }] })
                 .mockResolvedValueOnce(undefined)
                 .mockResolvedValueOnce({ rows: [{ id: 'u-auto-2', email: 'retry@test.com', status: 'active', firm_name: 'Cabinet test 2' }] })
+                .mockResolvedValueOnce(undefined)
                 .mockResolvedValueOnce(undefined);
 
             const result = await registerSelfServiceUser({
@@ -282,6 +294,16 @@ describe('Auth Service', () => {
             expect(mockClient.query).toHaveBeenCalledWith(
                 expect.stringContaining('INSERT INTO users'),
                 ['retry@test.com', 'hash', 'Retry User', null, null, null, 'firm-test-2', 'Cabinet test 2']
+            );
+            expect(mockClient.query).toHaveBeenCalledWith(
+                expect.stringContaining('INSERT INTO templates'),
+                [
+                    'Modele CV Cabinet test 2 firm-tes',
+                    'Modele de CV cree automatiquement pour le cabinet.',
+                    '<header>-name--title-</header>',
+                    '<main>-content-</main>',
+                    'firm-test-2'
+                ]
             );
             expect(mockClient.release).toHaveBeenCalled();
         });

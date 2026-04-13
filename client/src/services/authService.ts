@@ -45,6 +45,10 @@ export interface RegisterData {
   email: string;
   password: string;
   name: string;
+  website?: string;
+  formRenderedAt: number;
+  captchaToken?: string;
+  captchaProvider?: 'turnstile' | 'hcaptcha';
 }
 
 export interface RegisterResponse {
@@ -180,7 +184,11 @@ export const authService = {
         body: JSON.stringify({
           email: userData.email,
           password: userData.password,
-          name: userData.name
+          name: userData.name,
+          website: userData.website || '',
+          formRenderedAt: userData.formRenderedAt,
+          captchaToken: userData.captchaToken,
+          captchaProvider: userData.captchaProvider,
         })
       });
 

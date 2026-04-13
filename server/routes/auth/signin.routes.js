@@ -5,7 +5,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import { authenticateToken } from '../../middleware/auth.middleware.js';
-import { authLimiter } from '../../middleware/rateLimit.middleware.js';
+import { authLimiter, registrationLimiter } from '../../middleware/rateLimit.middleware.js';
 import { validateBody, signInSchema, registerSchema, isValidEmail } from '../../utils/validation.js';
 import { consumeRefreshToken, generateAccessToken, generateRefreshToken, verifyRefreshToken, verifyToken, revokeToken } from '../../services/jwt.service.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../services/security.service.js';
@@ -13,6 +13,7 @@ import { safeLog } from '../../utils/logger.backend.js';
 import { is2FAEnabled, verifyTotpCode } from '../../services/totp.service.js';
 import * as authService from '../../services/auth.service.js';
 import { sendRegistrationConfirmationEmail } from '../../services/registrationEmail.service.js';
+import { enforceRegistrationProtection } from '../../services/registrationProtection.service.js';
 import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, CLEAR_ACCESS_TOKEN, CLEAR_REFRESH_TOKEN } from './config.js';
 
 const router = express.Router();
@@ -249,7 +250,7 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
 });
 
 // POST /api/auth/register - User registration
-router.post('/register', authLimiter, validateBody(registerSchema), async (req, res) => {
+router.post('/register', authLimiter, registrationLimiter, validateBody(registerSchema), enforceRegistrationProtection, async (req, res) => {
     try {
         const { email, password, name } = req.body;
         const normalizedEmail = email.toLowerCase();

@@ -13,6 +13,7 @@ import { getInitialFirmCredits } from '../config/aiCredits.js';
 const DEFAULT_SELF_SERVICE_FIRM_NAME = 'Public Registration';
 const AUTO_APPROVED_SELF_SERVICE_FIRM_NAME = 'Cabinet test';
 const MAX_AUTO_APPROVED_FIRM_NAME_ATTEMPTS = 100;
+const DEFAULT_DIRECT_TEMPLATE_DESCRIPTION = 'Modele de CV cree automatiquement pour le cabinet.';
 
 /**
  * Find user with firm logo by email (case-insensitive)
@@ -200,6 +201,7 @@ async function createAutoApprovedSelfServiceUser({ email, password, name, google
              RETURNING *`,
             [email, password, name, googleId, googleEmail, googleId ? new Date() : null, firm.id, firm.name]
         );
+        await createDefaultFirmTemplate(client, firm);
 
         await client.query('COMMIT');
         return userResult.rows[0];
@@ -248,6 +250,36 @@ async function createDedicatedAutoApprovedFirm(client, credits) {
     }
 
     throw new Error('Unable to allocate a dedicated test firm name');
+}
+
+async function createDefaultFirmTemplate(client, firm) {
+    const firmIdPrefix = typeof firm?.id === 'string' ? firm.id.slice(0, 8) : 'default';
+    const templateName = `Modele CV ${firm?.name || 'cabinet'} ${firmIdPrefix}`;
+
+    await client.query(
+        `INSERT INTO templates (
+            name,
+            description,
+            status,
+            header_content,
+            template_content,
+            firm_id
+        ) VALUES (
+            $1,
+            $2,
+            'active',
+            $3,
+            $4,
+            $5
+        )`,
+        [
+            templateName,
+            DEFAULT_DIRECT_TEMPLATE_DESCRIPTION,
+            '<header>-name--title-</header>',
+            '<main>-content-</main>',
+            firm.id
+        ]
+    );
 }
 
 async function resolveFirmAssignment(userData) {

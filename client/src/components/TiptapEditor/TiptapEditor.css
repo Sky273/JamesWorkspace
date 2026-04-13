@@ -1090,8 +1090,8 @@
 /* --- Dropdown (click-to-toggle) --- */
 .suggestion-deco-dropdown {
   display: none;
-  position: absolute;
-  top: calc(100% + 8px);
+  position: fixed;
+  top: 0;
   left: 0;
   min-width: 300px;
   max-width: 420px;
@@ -1111,6 +1111,30 @@
 
 .suggestion-deco-dropdown.is-open {
   display: block;
+}
+
+.suggestion-deco-dropdown.is-align-right::before {
+  left: auto;
+  right: 14px;
+}
+
+.suggestion-deco-dropdown.is-align-right::after {
+  left: auto;
+  right: 15px;
+}
+
+.suggestion-deco-dropdown.is-above::before {
+  bottom: auto;
+  top: 100%;
+  border-bottom-color: transparent;
+  border-top-color: #374151;
+}
+
+.suggestion-deco-dropdown.is-above::after {
+  bottom: auto;
+  top: 100%;
+  border-bottom-color: transparent;
+  border-top-color: #1f2937;
 }
 
 /* Arrow pointing up toward the pill */
@@ -1442,8 +1466,8 @@
 
 .proof-deco-dropdown {
   display: none;
-  position: absolute;
-  top: calc(100% + 8px);
+  position: fixed;
+  top: 0;
   left: 0;
   min-width: 340px;
   max-width: 430px;
@@ -1463,13 +1487,13 @@
 }
 
 .proof-deco-dropdown.is-align-right {
-  left: auto;
-  right: 0;
+  left: 0;
+  right: auto;
 }
 
 .proof-deco-dropdown.is-above {
-  top: auto;
-  bottom: calc(100% + 8px);
+  top: 0;
+  bottom: auto;
 }
 
 .proof-deco-dropdown::before {
