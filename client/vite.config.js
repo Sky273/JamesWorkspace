@@ -57,6 +57,11 @@ export default defineConfig(({ mode }) => {
     ...clientEnv,
     ...process.env,
   };
+  const defineViteEnv = Object.fromEntries(
+    Object.entries(env)
+      .filter(([key]) => key.startsWith('VITE_'))
+      .map(([key, value]) => [`import.meta.env.${key}`, JSON.stringify(value ?? '')])
+  );
   const httpsEnabled = env.VITE_HTTPS_ENABLED === 'true';
   const httpsPort = env.VITE_HTTPS_PORT || '3443';
   const devServerPort = Number.parseInt(env.VITE_DEV_SERVER_PORT || '5173', 10);
@@ -94,6 +99,7 @@ export default defineConfig(({ mode }) => {
             ]
       ),
     ],
+    define: defineViteEnv,
     server: {
       host: '0.0.0.0',
       port: Number.isFinite(devServerPort) ? devServerPort : 5173,
