@@ -162,14 +162,14 @@ describe('healthRouteHelpers', () => {
         };
 
         expect(getApplicationCacheDiagnosticSummary({ cacheRegistry: registry, caches })).toEqual({
-            backend: 'memory',
+            backend: 'mixed',
             configuredBackend: 'redis',
-            effectiveBackend: 'memory',
+            effectiveBackend: 'mixed',
             cacheLayer: 'application',
             applicationCacheActive: true,
             connected: true,
             fallbackReason: null,
-            message: 'Application cache active in memory mode. Redis is configured and reachable, but the active cache paths are currently using in-process memory storage.',
+            message: 'Application cache active across Redis and in-process memory. Redis is connected and used by the versioned application caches, while some historical cache paths remain process-local.',
             backendBreakdown: {
                 memory: { caches: 2, activityScore: 14, size: 14 },
                 redis: { caches: 1, activityScore: 2, size: 1 }

@@ -156,16 +156,22 @@ export function getApplicationCacheDiagnosticSummary({ cacheRegistry = {}, cache
     const configuredBackend = configuredBackends.length === 1
         ? configuredBackends[0]
         : configuredBackends.join(',') || fallbackDiagnostics.configuredBackend;
-    const effectiveBackend = rankedBackends[0]?.[0] || fallbackDiagnostics.effectiveBackend;
     const connected = connectedFlags.length > 0 ? connectedFlags.some(Boolean) : fallbackDiagnostics.connected;
     const applicationCacheActive = applicationEntries.some((stats) => stats?.applicationCacheActive === true);
     const fallbackReason = disabledReasons.length === 0 ? null : disabledReasons.join(',');
+    const hasMemoryBackend = Boolean(backendBreakdown.memory);
+    const hasRedisBackend = Boolean(backendBreakdown.redis);
+    const effectiveBackend = configuredBackend === 'redis' && connected && hasMemoryBackend && hasRedisBackend
+        ? 'mixed'
+        : rankedBackends[0]?.[0] || fallbackDiagnostics.effectiveBackend;
 
     let message = applicationEntries
         .map((stats) => stats?.message)
         .find(Boolean) || fallbackDiagnostics.message;
 
-    if (configuredBackend === 'redis' && effectiveBackend === 'memory' && connected) {
+    if (configuredBackend === 'redis' && effectiveBackend === 'mixed' && connected) {
+        message = 'Application cache active across Redis and in-process memory. Redis is connected and used by the versioned application caches, while some historical cache paths remain process-local.';
+    } else if (configuredBackend === 'redis' && effectiveBackend === 'memory' && connected) {
         message = 'Application cache active in memory mode. Redis is configured and reachable, but the active cache paths are currently using in-process memory storage.';
     } else if (configuredBackend === 'redis' && effectiveBackend === 'memory' && !connected) {
         message = 'Application cache active in memory mode. Redis is configured but not currently available to serve the active cache paths.';
