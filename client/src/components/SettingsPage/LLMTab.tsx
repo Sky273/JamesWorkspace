@@ -224,14 +224,24 @@ const LLMTab = ({
       />
 
       <section className="rounded-3xl border border-white/10 bg-slate-950/10 p-5">
-        <div className="flex items-start justify-between gap-4">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={formData.allowUserRegistrationWithoutApproval === true}
+            aria-label={getFallbackText(
+              'settings.llm.allowUserRegistrationWithoutApprovalLabel',
+              "Autoriser l'enregistrement des utilisateurs sans validation préalable"
+            )}
+            onChange={handleRegistrationApprovalToggle}
+            className="mt-1 h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-2 cursor-pointer"
+          />
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-white">
+            <span className="block text-sm font-semibold text-white">
               {getFallbackText(
                 'settings.llm.allowUserRegistrationWithoutApprovalLabel',
                 "Autoriser l'enregistrement des utilisateurs sans validation préalable"
               )}
-            </h3>
+            </span>
             <p className="max-w-3xl text-sm text-slate-300">
               {getFallbackText(
                 'settings.llm.allowUserRegistrationWithoutApprovalDescription',
@@ -239,28 +249,7 @@ const LLMTab = ({
               )}
             </p>
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={formData.allowUserRegistrationWithoutApproval === true}
-            aria-label={getFallbackText(
-              'settings.llm.allowUserRegistrationWithoutApprovalLabel',
-              "Autoriser l'enregistrement des utilisateurs sans validation préalable"
-            )}
-            onClick={handleRegistrationApprovalToggle}
-            className={`relative inline-flex h-7 w-14 shrink-0 items-center rounded-full border transition-colors ${
-              formData.allowUserRegistrationWithoutApproval === true
-                ? 'border-primary-400 bg-primary-500/40'
-                : 'border-white/10 bg-slate-900/80'
-            }`}
-          >
-            <span
-              className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                formData.allowUserRegistrationWithoutApproval === true ? 'translate-x-8' : 'translate-x-1'
-              }`}
-            />
-          </button>
-        </div>
+        </label>
       </section>
     </div>
   );

@@ -254,7 +254,7 @@ describe('LLMTab', () => {
     expect(screen.getByRole('button', { name: 'Tester le modele' })).toBeInTheDocument();
   });
 
-  it('exposes the self-service registration approval toggle', () => {
+  it('exposes the self-service registration approval checkbox', () => {
     const onInputChange = vi.fn();
 
     render(
@@ -275,7 +275,7 @@ describe('LLMTab', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('switch', { name: "Autoriser l'enregistrement des utilisateurs sans validation préalable" }));
+    fireEvent.click(screen.getByRole('checkbox', { name: "Autoriser l'enregistrement des utilisateurs sans validation préalable" }));
 
     expect(onInputChange).toHaveBeenCalledWith('allowUserRegistrationWithoutApproval', true);
   });
