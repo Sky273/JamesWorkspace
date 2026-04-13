@@ -25,13 +25,7 @@ if (!CSRF_SECRET || CSRF_SECRET.length < 32) {
 // Refresh Token Secret - Separate from JWT_SECRET for enhanced security
 // If not set, falls back to JWT_SECRET (less secure but backward compatible)
 export const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || JWT_SECRET;
-if (REFRESH_TOKEN_SECRET === JWT_SECRET) {
-    console.warn(
-        'WARNING: REFRESH_TOKEN_SECRET is not set. Using JWT_SECRET as fallback.\n' +
-        'For enhanced security, set a separate REFRESH_TOKEN_SECRET in your environment variables.\n' +
-        'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
-    );
-}
+export const REFRESH_TOKEN_SECRET_FALLBACK_ACTIVE = REFRESH_TOKEN_SECRET === JWT_SECRET;
 
 export const JWT_EXPIRES_IN = '1h';
 export const REFRESH_TOKEN_EXPIRES_IN = '7d';
