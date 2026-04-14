@@ -30,6 +30,7 @@ const mockGetResumeFileForDownload = vi.fn();
 const mockUpdateResume = vi.fn();
 const mockDeleteResume = vi.fn();
 const mockGetResumeForAccessCheck = vi.fn();
+const mockExtractTextFromWordBuffer = vi.fn();
 vi.mock('../../services/resumes.service.js', () => ({
     countResumes: (...args) => mockCountResumes(...args),
     listResumes: (...args) => mockListResumes(...args),
@@ -39,6 +40,16 @@ vi.mock('../../services/resumes.service.js', () => ({
     deleteResume: (...args) => mockDeleteResume(...args),
     getResumeForAccessCheck: (...args) => mockGetResumeForAccessCheck(...args),
     RESUME_SELECT_COLUMNS: 'id, name, title, status, firm_id, created_at'
+}));
+
+vi.mock('../../services/wordTextExtraction.service.js', () => ({
+    extractTextFromWordBuffer: (...args) => mockExtractTextFromWordBuffer(...args),
+    DOCX_MIME_TYPE: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    DOC_MIME_TYPE: 'application/msword'
+}));
+
+vi.mock('mammoth', () => ({
+    convertToHtml: vi.fn(async () => ({ value: '<p>Converted DOCX</p>' }))
 }));
 
 // Mock firmHelpers
@@ -504,6 +515,80 @@ describe('Resume Routes - GET /api/resumes/:id/download', () => {
         expect(res.headers['content-disposition']).toContain('resume.pdf');
         expect(res.headers['x-content-type-options']).toBe('nosniff');
         expect(res.headers['cache-control']).toBe('private, no-store, max-age=0');
+    });
+});
+
+describe('Resume Routes - GET /api/resumes/:id/preview', () => {
+    let app;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        app = createTestApp();
+    });
+
+    it('should preview PDF inline for authorized user', async () => {
+        const fileContent = Buffer.from('PDF content here');
+        mockGetResumeFileForDownload.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            file_name: 'resume.pdf',
+            resume_file_data: fileContent,
+            resume_file_type: 'application/pdf',
+            resume_file_size: fileContent.length,
+            firm_id: 'firm-123',
+            firm_name: 'Test Firm'
+        });
+
+        const res = await request(app)
+            .get('/api/resumes/123e4567-e89b-12d3-a456-426614174000/preview')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(res.headers['content-type']).toBe('application/pdf');
+        expect(res.headers['content-disposition']).toContain('inline;');
+    });
+
+    it('should preview DOCX as HTML', async () => {
+        const fileContent = Buffer.from('docx');
+        mockGetResumeFileForDownload.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            file_name: 'resume.docx',
+            resume_file_data: fileContent,
+            resume_file_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            resume_file_size: fileContent.length,
+            firm_id: 'firm-123',
+            firm_name: 'Test Firm'
+        });
+
+        const res = await request(app)
+            .get('/api/resumes/123e4567-e89b-12d3-a456-426614174000/preview')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(res.headers['content-type']).toContain('text/html');
+        expect(res.text).toContain('Converted DOCX');
+    });
+
+    it('should preview DOC as HTML using extracted text', async () => {
+        const fileContent = Buffer.from('doc');
+        mockExtractTextFromWordBuffer.mockResolvedValueOnce({ text: 'Legacy DOC body' });
+        mockGetResumeFileForDownload.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            file_name: 'resume.doc',
+            resume_file_data: fileContent,
+            resume_file_type: 'application/msword',
+            resume_file_size: fileContent.length,
+            firm_id: 'firm-123',
+            firm_name: 'Test Firm'
+        });
+
+        const res = await request(app)
+            .get('/api/resumes/123e4567-e89b-12d3-a456-426614174000/preview')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(res.headers['content-type']).toContain('text/html');
+        expect(res.text).toContain('Legacy DOC body');
+        expect(mockExtractTextFromWordBuffer).toHaveBeenCalled();
     });
 });
 

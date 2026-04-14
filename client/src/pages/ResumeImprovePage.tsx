@@ -23,6 +23,7 @@ import ResumeImproveEmptyState from '../components/ResumeImprove/ResumeImproveEm
 import CompareTab from '../components/ResumeAnalysis/CompareTab';
 import OverviewTab from '../components/ResumeAnalysis/OverviewTab';
 import PipelineTab from '../components/ResumeAnalysis/PipelineTab';
+import OriginalSourcePreview from '../components/ResumeAnalysis/OriginalSourcePreview';
 import ResumeComments from '../components/ResumeComments';
 import PageHeader from '../components/page/PageHeader';
 import { fetchWithAuth, fetchWithCsrfRetry, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
@@ -47,7 +48,7 @@ const ResumeImprovePage = (): JSX.Element => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isImproving, setIsImproving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'improved' | 'compare' | 'analysis' | 'pipeline'>('improved');
+  const [activeTab, setActiveTab] = useState<'improved' | 'original' | 'compare' | 'analysis' | 'pipeline'>('improved');
   const [localResume, setLocalResume] = useState<Resume | null>(null);
   const [editorReady, setEditorReady] = useState(false);
   const editorRef = useRef<TiptapEditorRef | null>(null);
@@ -406,6 +407,16 @@ const ResumeImprovePage = (): JSX.Element => {
                     {t('resume.analysis.tabs.improved')}
                   </button>
                   <button
+                    onClick={() => setActiveTab('original')}
+                    className={`rounded-t-2xl px-5 py-3 text-sm font-medium transition-colors ${
+                      activeTab === 'original'
+                        ? 'bg-[color:color-mix(in_srgb,var(--cv-primary)_12%,transparent)] text-[var(--cv-primary)]'
+                        : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    {t('resume.analysis.tabs.original')}
+                  </button>
+                  <button
                     onClick={() => setActiveTab('compare')}
                     className={`rounded-t-2xl px-5 py-3 text-sm font-medium transition-colors ${
                       activeTab === 'compare'
@@ -461,6 +472,13 @@ const ResumeImprovePage = (): JSX.Element => {
                         skillProofs={extractImprovedSkillProofs(localResume)}
                       />
                     }
+                  />
+                )}
+                {activeTab === 'original' && (
+                  <OriginalSourcePreview
+                    resume={localResume}
+                    title={t('resume.analysis.tabs.original')}
+                    description="Le document importé est affiché ici dans son rendu source, indépendamment du texte extrait."
                   />
                 )}
                 {activeTab === 'compare' && <CompareTab resume={localResume} />}

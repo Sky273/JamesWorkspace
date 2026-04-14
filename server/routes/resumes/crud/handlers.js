@@ -15,6 +15,7 @@ import {
 import { setSafeFileResponseHeaders } from '../../../utils/fileResponseSecurity.js';
 import { persistResumeSkillEvidence } from '../../../services/skillEvidence.service.js';
 import { shouldBypassCache } from '../../../utils/requestCacheControl.js';
+import { extractTextFromWordBuffer, DOCX_MIME_TYPE, DOC_MIME_TYPE } from '../../../services/wordTextExtraction.service.js';
 import {
     buildDeferredPostAnalysisDecision,
     buildResumeUpdateData,
@@ -25,6 +26,164 @@ import {
     resolveResumeChangeReason,
     shouldInvalidateResumeTagsCache
 } from './updateResumeFlow.js';
+
+function escapeHtml(value = '') {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function renderWordTextPreviewDocument({ title, text }) {
+    const safeTitle = escapeHtml(title || 'Document source');
+    const paragraphs = String(text || '')
+        .split(/\n{2,}/)
+        .map((paragraph) => paragraph.trim())
+        .filter(Boolean)
+        .map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, '<br />')}</p>`)
+        .join('\n');
+
+    return `<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${safeTitle}</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f7fb;
+        --surface: #ffffff;
+        --text: #142033;
+        --muted: #66758c;
+        --border: #d8e1ef;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: linear-gradient(180deg, #f7f9fc 0%, #eef3fa 100%);
+        color: var(--text);
+        font: 15px/1.7 "Segoe UI", Arial, sans-serif;
+      }
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 32px;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+      }
+      header {
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border);
+      }
+      h1 {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1.2;
+      }
+      p {
+        margin: 0 0 16px;
+        white-space: normal;
+      }
+      .empty {
+        color: var(--muted);
+        font-style: italic;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>${safeTitle}</h1>
+      </header>
+      ${paragraphs || '<p class="empty">Aucun contenu prévisualisable disponible pour ce document.</p>'}
+    </main>
+  </body>
+</html>`;
+}
+
+async function buildResumePreviewPayload(resume) {
+    const mimeType = resume.resume_file_type || 'application/octet-stream';
+
+    if (mimeType === 'application/pdf') {
+        return {
+            kind: 'binary',
+            contentType: mimeType,
+            body: resume.resume_file_data,
+            contentLength: resume.resume_file_size || resume.resume_file_data.length
+        };
+    }
+
+    if (mimeType === DOCX_MIME_TYPE) {
+        const mammoth = await import('mammoth');
+        const result = await mammoth.convertToHtml({
+            buffer: resume.resume_file_data
+        });
+
+        return {
+            kind: 'html',
+            body: `<!doctype html><html lang="fr"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>${escapeHtml(resume.file_name || 'Document source')}</title></head><body>${result.value || '<p>Aucun contenu prévisualisable disponible pour ce document.</p>'}</body></html>`
+        };
+    }
+
+    if (mimeType === DOC_MIME_TYPE) {
+        const extraction = await extractTextFromWordBuffer(resume.resume_file_data, {
+            fileName: resume.file_name || 'resume.doc',
+            mimeType,
+            minTextLength: 1
+        });
+
+        return {
+            kind: 'html',
+            body: renderWordTextPreviewDocument({
+                title: resume.file_name || 'Document source',
+                text: extraction.text
+            })
+        };
+    }
+
+    return {
+        kind: 'html',
+        body: renderWordTextPreviewDocument({
+            title: resume.file_name || 'Document source',
+            text: ''
+        })
+    };
+}
+
+async function loadAccessibleResumeFile(req, id) {
+    const isAdmin = isUserAdmin(req);
+    const resume = await resumesService.getResumeFileForDownload(id);
+
+    if (!resume) {
+        return { error: 'Resume not found', statusCode: 404, resume: null };
+    }
+
+    if (!isAdmin) {
+        const userFirmId = await getUserFirmId(req);
+        if (!userFirmId || resume.firm_id !== userFirmId) {
+            safeLog('warn', 'Access denied: user tried to access resume file from different firm', {
+                userId: req.user?.id,
+                userFirmId,
+                resumeFirmId: resume.firm_id,
+                resumeId: id
+            });
+            return { error: 'Access denied', statusCode: 403, resume };
+        }
+    }
+
+    if (!resume.resume_file_data) {
+        return { error: 'File not found in database', statusCode: 404, resume };
+    }
+
+    return { error: null, statusCode: 200, resume };
+}
 
 function createListResumesHandler() {
     return async (req, res) => {
@@ -109,28 +268,9 @@ function createDownloadResumeHandler() {
     return async (req, res) => {
         try {
             const { id } = req.params;
-            const isAdmin = isUserAdmin(req);
-            const resume = await resumesService.getResumeFileForDownload(id);
-
-            if (!resume) {
-                return res.status(404).json({ error: 'Resume not found' });
-            }
-
-            if (!isAdmin) {
-                const userFirmId = await getUserFirmId(req);
-                if (!userFirmId || resume.firm_id !== userFirmId) {
-                    safeLog('warn', 'Access denied: user tried to download resume from different firm', {
-                        userId: req.user?.id,
-                        userFirmId,
-                        resumeFirmId: resume.firm_id,
-                        resumeId: id
-                    });
-                    return res.status(403).json({ error: 'Access denied' });
-                }
-            }
-
-            if (!resume.resume_file_data) {
-                return res.status(404).json({ error: 'File not found in database' });
+            const { resume, error, statusCode } = await loadAccessibleResumeFile(req, id);
+            if (error) {
+                return res.status(statusCode).json({ error });
             }
 
             setSafeFileResponseHeaders(res, {
@@ -142,6 +282,41 @@ function createDownloadResumeHandler() {
         } catch (error) {
             safeLog('error', 'Error downloading resume file', { id: req.params.id, error: error.message });
             return res.status(500).json({ error: 'Failed to download file' });
+        }
+    };
+}
+
+function createPreviewResumeHandler() {
+    return async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { resume, error, statusCode } = await loadAccessibleResumeFile(req, id);
+            if (error) {
+                return res.status(statusCode).json({ error });
+            }
+
+            const preview = await buildResumePreviewPayload(resume);
+
+            if (preview.kind === 'binary') {
+                setSafeFileResponseHeaders(res, {
+                    contentType: preview.contentType,
+                    filename: resume.file_name,
+                    contentLength: preview.contentLength,
+                    inline: true
+                });
+                return res.send(preview.body);
+            }
+
+            res.set({
+                'Content-Type': 'text/html; charset=utf-8',
+                'Cache-Control': 'private, no-store, max-age=0',
+                'X-Content-Type-Options': 'nosniff',
+                'Content-Security-Policy': "default-src 'none'; img-src data: blob: https:; style-src 'unsafe-inline'; font-src data: https:;"
+            });
+            return res.send(preview.body);
+        } catch (error) {
+            safeLog('error', 'Error previewing resume file', { id: req.params.id, error: error.message });
+            return res.status(500).json({ error: 'Failed to preview file' });
         }
     };
 }
@@ -338,5 +513,6 @@ export {
     createDownloadResumeHandler,
     createGetResumeHandler,
     createListResumesHandler,
+    createPreviewResumeHandler,
     createUpdateResumeHandler
 };

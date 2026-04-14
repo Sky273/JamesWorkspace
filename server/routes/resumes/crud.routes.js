@@ -11,6 +11,7 @@ import {
     createDownloadResumeHandler,
     createGetResumeHandler,
     createListResumesHandler,
+    createPreviewResumeHandler,
     createUpdateResumeHandler
 } from './crud/handlers.js';
 
@@ -26,6 +27,7 @@ const applyResumeReadHeaders = (_req, res, next) => {
 
 router.get('/', applyResumeReadHeaders, authenticateToken, createListResumesHandler());
 router.get('/:id/download', authenticateToken, validateParams('id'), createDownloadResumeHandler());
+router.get('/:id/preview', authenticateToken, validateParams('id'), createPreviewResumeHandler());
 router.get('/:id', applyResumeReadHeaders, authenticateToken, validateParams('id'), createGetResumeHandler());
 router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateResumeSchema), createUpdateResumeHandler());
 router.delete('/:id', authenticateToken, validateParams('id'), createDeleteResumeHandler());

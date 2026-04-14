@@ -112,6 +112,10 @@ vi.mock('../components/ResumeAnalysis/CompareTab', () => ({
   default: () => <div>compare-tab</div>,
 }));
 
+vi.mock('../components/ResumeAnalysis/OriginalSourcePreview', () => ({
+  default: () => <div>original-source-preview</div>,
+}));
+
 vi.mock('../components/ResumeAnalysis/OverviewTab', () => ({
   default: () => <div>overview-tab</div>,
 }));
@@ -180,6 +184,7 @@ vi.mock('react-i18next', () => ({
         'resume.improveError': 'Erreur amélioration',
         'errors.loadResume': 'Erreur chargement CV',
       };
+      map['resume.analysis.tabs.original'] = 'Original';
       return map[key] ?? key;
     },
   }),
@@ -245,6 +250,9 @@ describe('ResumeImprovePage', () => {
     expect(await screen.findByText('header-improved')).toBeInTheDocument();
     expect(screen.getByText('improved-tab')).toBeInTheDocument();
     expect(screen.getByText('editor:Contenu amélioré:Docker,Java')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Original'));
+    expect(screen.getByText('original-source-preview')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Comparer'));
     expect(screen.getByText('compare-tab')).toBeInTheDocument();

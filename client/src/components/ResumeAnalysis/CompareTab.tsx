@@ -5,12 +5,20 @@
 
 import { useTranslation } from 'react-i18next';
 import { createSafeHtml } from '../../utils/sanitizer.frontend';
+import OriginalSourcePreview from './OriginalSourcePreview';
 
 interface Resume {
+  id: string;
   'Global Rating'?: string | number;
   'Improved Global Rating'?: string | number;
   'Original Text'?: string;
   'Improved Text'?: string;
+  'File Name'?: string;
+  'Resume File'?: Array<{
+    filename?: string;
+    type?: string;
+    url?: string;
+  }>;
   [key: string]: unknown;
 }
 
@@ -45,13 +53,12 @@ const CompareTab = ({ resume }: CompareTabProps): JSX.Element => {
               Score : {parseScoreValue(resume['Global Rating'])}%
             </span>
           </div>
-          <div className="prose prose-sm max-w-none dark:prose-invert max-h-[600px] overflow-y-auto">
-            <div 
-              dangerouslySetInnerHTML={createSafeHtml(
-                resume['Original Text'] || ''
-              )} 
-            />
-          </div>
+          <OriginalSourcePreview
+            resume={resume}
+            title=""
+            description="Comparaison visuelle avec le fichier source original importé."
+            frameHeightClassName="h-[600px]"
+          />
         </div>
 
         <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">

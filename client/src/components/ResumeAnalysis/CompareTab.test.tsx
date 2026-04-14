@@ -11,6 +11,10 @@ vi.mock('../../utils/sanitizer.frontend', () => ({
   createSafeHtml: (html: string) => ({ __html: html }),
 }));
 
+vi.mock('./OriginalSourcePreview', () => ({
+  default: () => <div>source-preview</div>,
+}));
+
 import CompareTab from './CompareTab';
 
 describe('CompareTab', () => {
@@ -18,6 +22,7 @@ describe('CompareTab', () => {
     render(
       <CompareTab
         resume={{
+          id: 'resume-1',
           'Global Rating': '75%',
           'Improved Global Rating': 91,
           'Original Text': '<p>Original CV</p>',
@@ -30,7 +35,7 @@ describe('CompareTab', () => {
     expect(screen.getByText('resume.analysis.improvedResume')).toBeInTheDocument();
     expect(screen.getByText('Score : 75%')).toBeInTheDocument();
     expect(screen.getByText('Score : 91%')).toBeInTheDocument();
-    expect(screen.getByText('Original CV')).toBeInTheDocument();
+    expect(screen.getByText('source-preview')).toBeInTheDocument();
     expect(screen.getByText('Improved CV')).toBeInTheDocument();
   });
 
@@ -38,6 +43,7 @@ describe('CompareTab', () => {
     render(
       <CompareTab
         resume={{
+          id: 'resume-1',
           'Global Rating': 'n/a',
           'Improved Global Rating': undefined,
           'Original Text': '',
