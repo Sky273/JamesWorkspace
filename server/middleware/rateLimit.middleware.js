@@ -10,6 +10,22 @@ function shouldQuietExpectedE2EWarnings() {
     return process.env.E2E_QUIET_EXPECTED_WARNINGS === 'true';
 }
 
+function isAuthRoute(req) {
+    return typeof req?.path === 'string' && req.path.startsWith('/auth/');
+}
+
+function hasAuthenticatedSessionCookie(req) {
+    return Boolean(req?.cookies?.accessToken || req?.cookies?.refreshToken);
+}
+
+function getGlobalRateLimitMax(req) {
+    if (hasAuthenticatedSessionCookie(req)) {
+        return RATE_LIMIT.GLOBAL.max * 10;
+    }
+
+    return RATE_LIMIT.GLOBAL.max;
+}
+
 // ============================================
 // RATE LIMITING MIDDLEWARE
 // ============================================
@@ -17,10 +33,10 @@ function shouldQuietExpectedE2EWarnings() {
 // Global rate limiter
 export const globalLimiter = rateLimit({
     windowMs: RATE_LIMIT.GLOBAL.windowMs,
-    max: RATE_LIMIT.GLOBAL.max,
+    max: (req) => getGlobalRateLimitMax(req),
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) => req.path === '/health' || isE2ERateLimitRelaxed(),
+    skip: (req) => req.path === '/health' || isAuthRoute(req) || isE2ERateLimitRelaxed(),
     handler: (req, res) => {
         safeLog('warn', 'Rate limit exceeded', { ip: req.ip, method: req.method, path: req.path });
         res.status(429).json({
@@ -316,4 +332,10 @@ export const cleanupRateLimitStore = () => {
     userRateLimitStore.clear();
     combinedRateLimitStore.clear();
     safeLog('info', 'Rate limit stores cleaned up');
+};
+
+export const __rateLimitTestUtils = {
+    getGlobalRateLimitMax,
+    hasAuthenticatedSessionCookie,
+    isAuthRoute
 };

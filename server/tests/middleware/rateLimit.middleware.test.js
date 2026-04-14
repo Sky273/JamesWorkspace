@@ -27,10 +27,12 @@ vi.mock('../../config/constants.js', () => ({
 }));
 
 import {
+    globalLimiter,
     authLimiter,
     userRateLimit,
     combinedRateLimit,
-    cleanupRateLimitStore
+    cleanupRateLimitStore,
+    __rateLimitTestUtils
 } from '../../middleware/rateLimit.middleware.js';
 
 function mockReqRes(userOverrides = {}, reqOverrides = {}) {
@@ -69,6 +71,32 @@ describe('Rate Limit Middleware', () => {
 
             expect(safeLog).not.toHaveBeenCalledWith('warn', 'Auth rate limit exceeded', expect.anything());
             expect(res.status).toHaveBeenCalledWith(429);
+        });
+    });
+
+    describe('globalLimiter', () => {
+        it('should skip auth routes because they have a dedicated auth limiter', () => {
+            const { req } = mockReqRes({}, { path: '/auth/signin' });
+
+            expect(globalLimiter._options.skip(req)).toBe(true);
+        });
+
+        it('should give authenticated sessions a much higher global allowance', () => {
+            const { req } = mockReqRes({}, {
+                cookies: {
+                    accessToken: 'access-token'
+                }
+            });
+
+            expect(__rateLimitTestUtils.getGlobalRateLimitMax(req)).toBe(2000);
+            expect(globalLimiter._options.max(req)).toBe(2000);
+        });
+
+        it('should keep the baseline global allowance for anonymous traffic', () => {
+            const { req } = mockReqRes({}, { cookies: {} });
+
+            expect(__rateLimitTestUtils.getGlobalRateLimitMax(req)).toBe(200);
+            expect(globalLimiter._options.max(req)).toBe(200);
         });
     });
 

@@ -7,6 +7,7 @@ import { ChangeEvent, FormEvent, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 
 import AdminFirmSelector from '../components/AdminFirmSelector';
 
@@ -194,9 +195,17 @@ export default function MissionFormModal({
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {t('missions.client', 'Client / Prospect')}
-                  </label>
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                      {t('missions.client', 'Client / Prospect')}
+                    </label>
+                    <Link
+                      to="/clients"
+                      className="text-sm font-medium text-[var(--cv-primary)] underline-offset-4 transition hover:underline"
+                    >
+                      {t('common.manage', 'Gérer')}
+                    </Link>
+                  </div>
                   <select
                     value={formData['Client ID']}
                     onChange={(e: ChangeEvent<HTMLSelectElement>) => {
