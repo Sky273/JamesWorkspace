@@ -50,6 +50,7 @@ vi.mock('./pages/MissionsPage', () => ({ default: renderPage('missions-page') })
 vi.mock('./pages/AdaptationsPage', () => ({ default: renderPage('adaptations-page') }));
 vi.mock('./pages/ProfileMatchingPage', () => ({ default: renderPage('profile-matching-page') }));
 vi.mock('./pages/ResumeAnalysisPage', () => ({ default: renderPage('resume-analysis-page') }));
+vi.mock('./pages/ResumeEntryPage', () => ({ default: renderPage('resume-entry-page') }));
 vi.mock('./pages/ResumeImprovePage', () => ({ default: renderPage('resume-improve-page') }));
 vi.mock('./pages/ResumeExportPage', () => ({ default: renderPage('resume-export-page') }));
 vi.mock('./pages/ResumeAdaptPage', () => ({ default: renderPage('resume-adapt-page') }));
@@ -139,5 +140,17 @@ describe('App routing', () => {
     expect(screen.queryByTestId('auth-provider')).not.toBeInTheDocument();
     expect(screen.queryByTestId('resume-provider')).not.toBeInTheDocument();
     expect(screen.queryByTestId('chatbot-provider')).not.toBeInTheDocument();
+  });
+
+  it('routes resume detail entry points through the unified resume entry page', async () => {
+    authState = {
+      isAuthenticated: true,
+      user: { role: 'user' },
+    };
+    window.history.replaceState({}, '', '/resumes/resume-1');
+
+    render(<App />);
+
+    expect(await screen.findByText('resume-entry-page')).toBeInTheDocument();
   });
 });

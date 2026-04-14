@@ -27,6 +27,7 @@ export const MissionsPage = lazyWithCss(() => import('../pages/MissionsPage'), e
 export const AdaptationsPage = lazyWithCss(() => import('../pages/AdaptationsPage'), editorialCssLoaders);
 export const ProfileMatchingPage = lazyWithCss(() => import('../pages/ProfileMatchingPage'), editorialCssLoaders);
 export const ResumeAnalysisPage = lazyWithCss(() => import('../pages/ResumeAnalysisPage'), editorialCssLoaders);
+export const ResumeEntryPage = lazyWithCss(() => import('../pages/ResumeEntryPage'), editorialCssLoaders);
 export const ResumeImprovePage = lazyWithCss(() => import('../pages/ResumeImprovePage'), editorialCssLoaders);
 export const ResumeExportPage = lazyWithCss(() => import('../pages/ResumeExportPage'), editorialCssLoaders);
 export const ResumeAdaptPage = lazyWithCss(() => import('../pages/ResumeAdaptPage'), editorialCssLoaders);

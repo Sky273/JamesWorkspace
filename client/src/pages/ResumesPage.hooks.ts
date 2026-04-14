@@ -258,7 +258,7 @@ export function useResumesDashboard() {
   }, []);
 
   const handleResumeClick = useCallback((resume: Resume) => {
-    navigate(`/resumes/${resume.id}/analysis`);
+    navigate(`/resumes/${resume.id}`);
   }, [navigate]);
 
   const openDeleteConfirm = useCallback((resume: Resume, event: MouseEvent) => {

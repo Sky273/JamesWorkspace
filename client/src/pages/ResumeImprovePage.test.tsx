@@ -141,21 +141,31 @@ vi.mock('../components/TiptapEditor', () => ({
   removeSuggestionMarkers: (value: string) => value,
 }));
 
-vi.mock('../components/TiptapEditor/DeferredTiptapEditor', () => ({
-  default: ({
-    content,
-    onReady,
-    skillProofs,
-  }: {
-    content: string;
-    onReady: () => void;
-    skillProofs?: Array<{ name?: string; tool?: string }>;
-  }) => {
-    onReady();
-    const labels = (skillProofs || []).map((proof) => proof.name || proof.tool).filter(Boolean).join(',');
-    return <div>editor:{content}:{labels || 'none'}</div>;
-  },
-}));
+vi.mock('../components/TiptapEditor/DeferredTiptapEditor', async () => {
+  const React = await import('react');
+
+  return {
+    default: React.forwardRef(({
+      content,
+      onReady,
+      skillProofs,
+    }: {
+      content: string;
+      onReady: () => void;
+      skillProofs?: Array<{ name?: string; tool?: string }>;
+    }, ref) => {
+      const [currentContent, setCurrentContent] = React.useState(content);
+      React.useImperativeHandle(ref, () => ({
+        getContent: () => currentContent,
+        setContent: (nextContent: string) => setCurrentContent(nextContent),
+        getEditor: () => null,
+      }), [currentContent]);
+      onReady();
+      const labels = (skillProofs || []).map((proof) => proof.name || proof.tool).filter(Boolean).join(',');
+      return <div>editor:{currentContent}:{labels || 'none'}</div>;
+    }),
+  };
+});
 
 vi.mock('../components/TiptapEditor/suggestions.shared', () => ({
   parseSuggestions: () => [],
@@ -208,6 +218,7 @@ describe('ResumeImprovePage', () => {
       'Original Text': 'Texte original',
     });
     mockImproveCurrentResume.mockResolvedValue(undefined);
+    resumeContextState.updateImprovedContent.mockResolvedValue({ success: true, currentVersion: 5 });
   });
 
   it('charge le CV et lance l’amélioration depuis l’état vide', async () => {
@@ -266,6 +277,47 @@ describe('ResumeImprovePage', () => {
     fireEvent.click(screen.getByText('adapt-resume'));
     expect(mockNavigate).toHaveBeenCalledWith('/resumes/resume-1/adapt');
   });
+  it('does not navigate back to analysis when save is clicked on an improved resume', async () => {
+    const improvedResume = {
+      id: 'resume-1',
+      Name: 'Ada Lovelace',
+      'Improved Text': 'Contenu amÃ©liorÃ©',
+    };
+    resumeContextState.currentResume = improvedResume;
+    resumeContextState.resumes = [improvedResume];
+
+    render(<ResumeImprovePage />);
+
+    expect(await screen.findByText('header-improved')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('save-improved'));
+
+    expect(mockNavigate).not.toHaveBeenCalledWith('/resumes/resume-1/analysis');
+  });
+
+  it('keeps the saved improved content visible after save', async () => {
+    const improvedResume = {
+      id: 'resume-1',
+      Name: 'Ada Lovelace',
+      'Improved Text': '<p>Contenu sauvegarde</p>',
+    };
+    resumeContextState.currentResume = improvedResume;
+    resumeContextState.resumes = [improvedResume];
+    resumeContextState.updateImprovedContent.mockResolvedValueOnce({ success: true, currentVersion: 6 });
+
+    render(<ResumeImprovePage />);
+
+    expect(await screen.findByText('header-improved')).toBeInTheDocument();
+    expect(screen.getByText('editor:<p>Contenu sauvegarde</p>:none')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('save-improved'));
+
+    await waitFor(() => {
+      expect(resumeContextState.updateImprovedContent).toHaveBeenCalledWith('resume-1', '<p>Contenu sauvegarde</p>');
+    });
+    expect(screen.getByText('editor:<p>Contenu sauvegarde</p>:none')).toBeInTheDocument();
+  });
+
   it('surfaces a load error when the resume cannot be fetched', async () => {
     resumeContextState.currentResume = null;
     resumeContextState.resumes = [];

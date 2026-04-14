@@ -87,7 +87,7 @@ describe('DealDetailView', () => {
       });
   });
 
-  it('loads deal details, displays budget, and navigates to the resume analysis with return context', async () => {
+  it('loads deal details, displays budget, and navigates to the unified resume entry with return context', async () => {
     render(<DealDetailView dealId="deal-1" onBack={vi.fn()} onEdit={vi.fn()} />);
 
     await waitFor(() => {
@@ -100,7 +100,7 @@ describe('DealDetailView', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'resumes.view' }));
 
-    expect(navigateMock).toHaveBeenCalledWith('/resumes/resume-1/analysis', {
+    expect(navigateMock).toHaveBeenCalledWith('/resumes/resume-1', {
       state: {
         from: 'dealDetailView',
         dealReturnContext: {

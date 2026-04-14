@@ -100,6 +100,17 @@ export function useResumeAnalysisPage() {
     void loadResume();
   }, [currentResumeForPage, id, resumes, setCurrentResume, t]);
 
+  useEffect(() => {
+    if (!id || loading || !currentResume || currentResume.id !== id || !hasImprovedText) {
+      return;
+    }
+
+    navigate(`/resumes/${id}/improve`, {
+      replace: true,
+      state: location.state,
+    });
+  }, [currentResume, hasImprovedText, id, loading, location.state, navigate]);
+
   const handleImprove = useCallback(async () => {
     logger.info('[ResumeAnalysisPage] handleImprove called', {
       hasCurrentResume: !!currentResume,

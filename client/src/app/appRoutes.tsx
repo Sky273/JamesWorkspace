@@ -13,6 +13,7 @@ import {
   AdaptationsPage,
   ProfileMatchingPage,
   ResumeAnalysisPage,
+  ResumeEntryPage,
   ResumeImprovePage,
   ResumeExportPage,
   ResumeAdaptPage,
@@ -61,7 +62,7 @@ export function AppRoutes(): JSX.Element {
       >
         <Route index element={<HomePage />} />
         <Route path="resumes" element={<ResumesPage />} />
-        <Route path="resumes/:id" element={<Navigate to="analysis" replace />} />
+        <Route path="resumes/:id" element={<ResumeEntryPage />} />
         <Route path="resumes/:id/analysis" element={<ResumeAnalysisPage />} />
         <Route path="resumes/:id/improve" element={<ResumeImprovePage />} />
         <Route path="resumes/:id/export" element={<ResumeExportPage />} />

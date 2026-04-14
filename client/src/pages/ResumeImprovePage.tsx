@@ -49,12 +49,13 @@ import { parseSuggestions } from '../components/TiptapEditor/suggestions.shared'
 import { removeSuggestionMarkers } from '../components/TiptapEditor/suggestionsHtml';
 import type { TiptapEditorRef } from '../components/TiptapEditor/TiptapEditor';
 import { extractImprovedSkillProofs } from '../components/ResumeAnalysis/skillProofs';
+import { applyResumeUpdate, normalizeResume } from '../utils/resumeNormalization';
 
 const ResumeImprovePage = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { currentResume, setCurrentResume, resumes, improveCurrentResume, updateImprovedContent, loading: contextLoading, processingStep } = useResume();
+  const { currentResume, setCurrentResume, improveCurrentResume, updateImprovedContent, loading: contextLoading, processingStep } = useResume();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isImproving, setIsImproving] = useState(false);
@@ -83,14 +84,6 @@ const ResumeImprovePage = (): JSX.Element => {
         return;
       }
 
-      const existingResume = resumes.find(r => r.id === id);
-      if (existingResume) {
-        setCurrentResume(existingResume);
-        setLocalResume(existingResume);
-        setLoading(false);
-        return;
-      }
-
       try {
         const resume = await resumeService.getResume(id);
         if (resume) {
@@ -109,7 +102,7 @@ const ResumeImprovePage = (): JSX.Element => {
     };
 
     loadResume();
-  }, [id, resumes, setCurrentResume, t]);
+  }, [id, setCurrentResume, t]);
 
   useEffect(() => {
     if (currentResume) {
@@ -144,11 +137,12 @@ const ResumeImprovePage = (): JSX.Element => {
       // Update editor with cleaned content
       editorRef.current.setContent(content);
       // Update localResume to keep it in sync with saved content
-      setLocalResume(prev => prev ? {
-        ...prev,
-        'Improved Text': content,
-        'Current Version': result.currentVersion || prev['Current Version']
-      } : null);
+      setLocalResume(prev => prev
+        ? applyResumeUpdate(prev, {
+            'Improved Text': content,
+            'Current Version': result.currentVersion || prev['Current Version']
+          })
+        : null);
       toast.success(t('resume.saveSuccess'));
     } catch (err) {
       logger.error('Error saving improved content:', err);
@@ -191,7 +185,11 @@ const ResumeImprovePage = (): JSX.Element => {
     try {
       const updatedResumeData = await resumeService.getResume(currentResume.id) as Record<string, unknown>;
       if (updatedResumeData) {
-        const updatedResume = { ...localResume, ...updatedResumeData, 'Current Version': newVersion };
+        const updatedResume = normalizeResume({
+          ...(localResume || {}),
+          ...updatedResumeData,
+          'Current Version': newVersion
+        } as Resume);
         setLocalResume(updatedResume as Resume);
         setCurrentResume(updatedResume as Resume);
         
@@ -211,7 +209,7 @@ const ResumeImprovePage = (): JSX.Element => {
     if (!currentResume) return;
     try {
       await resumeService.updateResume(currentResume.id, { [field]: value });
-      const updated = { ...currentResume, [field]: value };
+      const updated = normalizeResume({ ...currentResume, [field]: value });
       setCurrentResume(updated);
       setLocalResume(updated);
     } catch (err) {

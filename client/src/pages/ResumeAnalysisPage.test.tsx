@@ -304,6 +304,33 @@ describe('ResumeAnalysisPage', () => {
     expect(navigateMock).toHaveBeenCalledWith('/resumes/resume-1/improve');
   });
 
+  it('redirects improved resumes from analysis to the improve page', async () => {
+    resumeContextValue = {
+      ...resumeContextValue,
+      currentResume: {
+        id: 'resume-1',
+        Name: 'Jane Doe',
+        'Original Text': 'Original content',
+        'Improved Text': 'Improved content',
+      },
+    };
+
+    render(
+      <MemoryRouter>
+        <ResumeAnalysisPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByTestId('analysis-header');
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith('/resumes/resume-1/improve', {
+        replace: true,
+        state: null,
+      });
+    });
+  });
+
   it('generates a share link for improved content using the template pipeline', async () => {
     resumeContextValue = {
       ...resumeContextValue,

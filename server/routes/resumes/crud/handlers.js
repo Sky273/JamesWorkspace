@@ -14,7 +14,6 @@ import {
 } from './improvementHelpers.js';
 import { setSafeFileResponseHeaders } from '../../../utils/fileResponseSecurity.js';
 import { persistResumeSkillEvidence } from '../../../services/skillEvidence.service.js';
-import { shouldBypassCache } from '../../../utils/requestCacheControl.js';
 import {
     extractTextFromWordBuffer,
     convertWordBufferToPdfBuffer,
@@ -361,7 +360,8 @@ function createGetResumeHandler() {
     return async (req, res) => {
         try {
             const { id } = req.params;
-    const bypassCache = shouldBypassCache(req);
+            // Resume detail pages are edited inline and must always reflect the latest persisted value.
+            const bypassCache = true;
             const resume = await resumesService.getResumeById(id, { bypassCache });
             if (!resume) {
                 return res.status(404).json({ error: 'Resume not found' });

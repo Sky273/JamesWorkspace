@@ -96,7 +96,7 @@ const DealsGroupedView = ({ allTags, refreshToken, stats }: DealsGroupedViewProp
 
   const handleResumeClick = (resumeId: string) => {
     saveViewState();
-    navigate(`/resumes/${resumeId}/analysis`, { state: { from: 'dealsGroupedView' } });
+    navigate(`/resumes/${resumeId}`, { state: { from: 'dealsGroupedView' } });
   };
 
   const openDeleteConfirm = (resume: ResumeBasic, e: React.MouseEvent): void => {

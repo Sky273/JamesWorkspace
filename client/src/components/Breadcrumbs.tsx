@@ -46,7 +46,7 @@ const Breadcrumbs = ({ items, className = '', tone = 'default' }: BreadcrumbsPro
   const getDynamicLabel = (segment: string, previousSegment?: string): BreadcrumbItem | null => {
     if (previousSegment === 'resumes') {
       const resumeName = currentResume?.Name || currentResume?.['File Name'] || t('common.loading');
-      return { label: resumeName, href: `/resumes/${segment}/analysis`, current: false };
+      return { label: resumeName, href: `/resumes/${segment}`, current: false };
     }
 
     if (previousSegment === 'missions') {

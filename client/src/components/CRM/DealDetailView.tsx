@@ -470,7 +470,7 @@ export default function DealDetailView({ dealId, onBack, onEdit, restoreScrollY 
 
                           <div className="flex flex-wrap gap-2">
                             <button
-                              onClick={() => navigate(`/resumes/${resume.id}/analysis`, {
+                              onClick={() => navigate(`/resumes/${resume.id}`, {
                                 state: {
                                   from: 'dealDetailView',
                                   dealReturnContext: {
