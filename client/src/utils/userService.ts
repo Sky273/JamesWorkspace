@@ -39,6 +39,15 @@ export interface Firm {
   updated_at?: string;
 }
 
+export interface StripeCreditPack {
+  id: string;
+  name: string;
+  credits: number;
+  priceCents: number;
+  description: string;
+  currency: string;
+}
+
 interface User {
   id: string;
   name: string;
@@ -94,6 +103,12 @@ interface UploadLogoResponse {
   success: boolean;
   logo_url: string;
   message: string;
+}
+
+interface StripeCreditPacksResponse {
+  enabled: boolean;
+  currency: string;
+  packs: StripeCreditPack[];
 }
 
 // ============================================
@@ -374,6 +389,34 @@ const userService = {
       return await response.json();
     } catch (error) {
       logger.error('Error adding firm credits:', error);
+      throw error;
+    }
+  },
+
+  async getStripeCreditPacks(): Promise<StripeCreditPacksResponse> {
+    try {
+      const response = await fetchWithAuth('/api/billing/stripe/credit-packs', createAuthOptions());
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch Stripe credit packs');
+      }
+      return await response.json();
+    } catch (error) {
+      logger.error('Error fetching Stripe credit packs:', error);
+      throw error;
+    }
+  },
+
+  async createStripeCheckoutSession(packId: string): Promise<{ id: string; url: string }> {
+    try {
+      const response = await authPost('/api/billing/stripe/checkout-session', { packId });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create Stripe checkout session');
+      }
+      return await response.json();
+    } catch (error) {
+      logger.error('Error creating Stripe checkout session:', error);
       throw error;
     }
   },

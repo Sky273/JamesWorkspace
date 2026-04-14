@@ -1,5 +1,4 @@
 import {
-  markAllViewScopesDirty,
   markViewScopesDirty,
   type ViewRefreshScope,
 } from './viewRefresh';
@@ -13,7 +12,7 @@ export function markUsersViewDirty(): void {
 }
 
 export function markFirmViewsDirty(): void {
-  markAllViewScopesDirty();
+  markScopes(['firms', 'users', 'administration']);
 }
 
 export function markClientsViewDirty(): void {

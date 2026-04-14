@@ -13,7 +13,7 @@ import SearchField from '../components/page/SearchField';
 import StatCardsGrid from '../components/page/StatCardsGrid';
 import { useAuth } from '../context/AuthContext';
 import { useScopedViewRefresh } from '../hooks/useScopedViewRefresh';
-import userService, { type Firm } from '../utils/userService';
+import userService, { type Firm, type StripeCreditPack } from '../utils/userService';
 import logger from '../utils/logger.frontend';
 import { markFirmViewsDirty } from '../utils/viewRefreshScopes';
 
@@ -39,6 +39,13 @@ function formatDateTime(value?: string | null): string {
   }).format(new Date(value));
 }
 
+function formatCurrency(valueCents: number, currency: string): string {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+  }).format(valueCents / 100);
+}
+
 const FirmCreditsPage = ({ embedded = false }: { embedded?: boolean } = {}): JSX.Element => {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -52,6 +59,10 @@ const FirmCreditsPage = ({ embedded = false }: { embedded?: boolean } = {}): JSX
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [selectedFirm, setSelectedFirm] = useState<Firm | null>(null);
   const [creditsAmount, setCreditsAmount] = useState('100');
+  const [creditPacks, setCreditPacks] = useState<StripeCreditPack[]>([]);
+  const [stripeEnabled, setStripeEnabled] = useState(false);
+  const [loadingCreditPacks, setLoadingCreditPacks] = useState(false);
+  const [checkoutLoadingPackId, setCheckoutLoadingPackId] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -85,6 +96,49 @@ const FirmCreditsPage = ({ embedded = false }: { embedded?: boolean } = {}): JSX
   useEffect(() => {
     void fetchCredits();
   }, [fetchCredits]);
+
+  useEffect(() => {
+    if (isSuperAdmin) {
+      return;
+    }
+
+    const loadCreditPacks = async () => {
+      try {
+        setLoadingCreditPacks(true);
+        const response = await userService.getStripeCreditPacks();
+        setStripeEnabled(Boolean(response.enabled));
+        setCreditPacks(response.packs || []);
+      } catch (error) {
+        logger.error('Error loading Stripe credit packs:', error);
+        setStripeEnabled(false);
+        setCreditPacks([]);
+      } finally {
+        setLoadingCreditPacks(false);
+      }
+    };
+
+    void loadCreditPacks();
+  }, [isSuperAdmin]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const stripeStatus = params.get('stripe');
+
+    if (!stripeStatus) {
+      return;
+    }
+
+    if (stripeStatus === 'success') {
+      toast.success(t('firmCredits.purchase.processing'));
+    } else if (stripeStatus === 'cancel') {
+      toast.error(t('common.cancel'));
+    }
+
+    params.delete('stripe');
+    const nextSearch = params.toString();
+    const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`;
+    window.history.replaceState({}, '', nextUrl);
+  }, [t]);
 
   useScopedViewRefresh({
     consumerId: embedded ? 'admin-workspace:firm-credits-page' : 'firm-credits-page',
@@ -144,6 +198,22 @@ const FirmCreditsPage = ({ embedded = false }: { embedded?: boolean } = {}): JSX
       setSaving(false);
     }
   }, [creditsAmount, fetchCredits, page, selectedFirm, t]);
+
+  const handleStartCheckout = useCallback(async (pack: StripeCreditPack) => {
+    try {
+      setCheckoutLoadingPackId(pack.id);
+      const session = await userService.createStripeCheckoutSession(pack.id);
+      if (!session?.url) {
+        throw new Error('Missing Stripe checkout URL');
+      }
+      window.location.assign(session.url);
+    } catch (error) {
+      logger.error('Error starting Stripe checkout:', error);
+      toast.error(t('firmCredits.messages.errorAddingCredits'));
+    } finally {
+      setCheckoutLoadingPackId(null);
+    }
+  }, [t]);
 
   return (
     <motion.div
@@ -223,6 +293,60 @@ const FirmCreditsPage = ({ embedded = false }: { embedded?: boolean } = {}): JSX
             <p className="text-sm leading-6 text-slate-600 dark:text-[var(--cv-muted)]">
               {isSuperAdmin ? t('firmCredits.access.superAdminDescription') : t('firmCredits.access.localAdminDescription')}
             </p>
+
+            {!isSuperAdmin ? (
+              <div className="mt-4 rounded-[1.25rem] border border-emerald-200/70 bg-white p-4 dark:border-emerald-500/20 dark:bg-slate-950/30">
+                <div className="mb-1 text-sm font-semibold text-slate-900 dark:text-white">
+                  {t('firmCredits.purchase.title')}
+                </div>
+                <p className="mb-4 text-sm leading-6 text-slate-600 dark:text-[var(--cv-muted)]">
+                  {stripeEnabled ? t('firmCredits.purchase.description') : t('firmCredits.purchase.disabledDescription')}
+                </p>
+
+                {loadingCreditPacks ? (
+                  <div className="text-sm text-slate-500 dark:text-slate-400">{t('common.loading')}</div>
+                ) : stripeEnabled ? (
+                  <div className="space-y-3">
+                    {creditPacks.map((pack) => (
+                      <div key={pack.id} className="rounded-[1.25rem] border border-[var(--cv-outline)] bg-slate-50/70 p-3 dark:bg-white/[0.03]">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="font-semibold text-slate-900 dark:text-white">{pack.name}</div>
+                            <div className="mt-1 text-sm text-slate-600 dark:text-slate-400">{pack.description}</div>
+                          </div>
+                          <div className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                            +{formatCredits(pack.credits)}
+                          </div>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between gap-3">
+                          <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                            {t('firmCredits.purchase.price', {
+                              price: formatCurrency(pack.priceCents, pack.currency),
+                              currency: pack.currency.toUpperCase(),
+                            })}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => void handleStartCheckout(pack)}
+                            disabled={checkoutLoadingPackId === pack.id}
+                            className="app-button-primary rounded-2xl px-4 py-2 text-sm"
+                          >
+                            {checkoutLoadingPackId === pack.id
+                              ? t('firmCredits.purchase.processing')
+                              : t('firmCredits.purchase.cta', { credits: formatCredits(pack.credits) })}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="text-xs text-slate-500 dark:text-slate-400">{t('firmCredits.purchase.secureNote')}</div>
+                  </div>
+                ) : (
+                  <div className="rounded-[1.25rem] border border-dashed border-[var(--cv-outline)] px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
+                    {t('firmCredits.purchase.disabledTitle')}
+                  </div>
+                )}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

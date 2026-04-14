@@ -12,7 +12,17 @@
       "superAdminTitle": "Pilotage global",
       "superAdminDescription": "Vous pouvez consulter tous les cabinets et réallouer des crédits immédiatement selon les besoins opérationnels.",
       "localAdminTitle": "Consultation de votre cabinet",
-      "localAdminDescription": "Vous consultez le solde de votre cabinet. L'ajout de crédits reste réservé au super administrateur."
+      "localAdminDescription": "Vous consultez le solde de votre cabinet. Vous pouvez acheter des crédits via Stripe, tandis que l'ajout manuel reste réservé au super administrateur."
+    },
+    "purchase": {
+      "title": "Acheter des crédits",
+      "description": "Choisissez un pack et réglez en ligne via Stripe. Les crédits sont ajoutés automatiquement après confirmation du paiement.",
+      "cta": "Acheter {{credits}} crédits",
+      "price": "{{price}}",
+      "disabledTitle": "Stripe non configuré",
+      "disabledDescription": "Renseignez les secrets Stripe côté serveur pour activer l'achat de crédits pour les administrateurs locaux.",
+      "processing": "Redirection vers Stripe...",
+      "secureNote": "Paiement hébergé et sécurisé par Stripe."
     },
     "card": {
       "consumed": "Crédits consommés",
@@ -64,6 +74,7 @@
       "resume.match": "Matching CV",
       "profile.search": "Recherche profils",
       "profile.analysis": "Analyse profil",
+      "firm.credit_purchase": "Achat Stripe",
       "default": "Action IA"
     }
   }

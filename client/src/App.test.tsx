@@ -74,6 +74,7 @@ vi.mock('./pages/SharedFilePage', () => ({ default: renderPage('shared-file-page
 vi.mock('./pages/BackupPage', () => ({ default: renderPage('backup-page') }));
 vi.mock('./pages/BatchUploadPage', () => ({ default: renderPage('batch-upload-page') }));
 vi.mock('./pages/BatchJobsPage', () => ({ default: renderPage('batch-jobs-page') }));
+vi.mock('./pages/AdminWorkspacePage', () => ({ default: renderPage('admin-workspace-page') }));
 vi.mock('./components/AppToaster', () => ({ default: () => <div data-testid="app-toaster" /> }));
 
 describe('App routing', () => {
@@ -117,28 +118,16 @@ describe('App routing', () => {
     expect(await screen.findByText('settings-page')).toBeInTheDocument();
   });
 
-  it('renders the email templates admin page on the direct route for admin users', async () => {
+  it('renders the admin workspace on the consolidated administration route for admin users', async () => {
     authState = {
       isAuthenticated: true,
       user: { role: 'admin' },
     };
-    window.history.replaceState({}, '', '/email-templates');
+    window.history.replaceState({}, '', '/admin?tab=emailTemplates');
 
     render(<App />);
 
-    expect(await screen.findByText('email-templates-page')).toBeInTheDocument();
-  });
-
-  it('redirects the legacy email templates route to the new direct route', async () => {
-    authState = {
-      isAuthenticated: true,
-      user: { role: 'admin' },
-    };
-    window.history.replaceState({}, '', '/dashboard/email-templates');
-
-    render(<App />);
-
-    expect(await screen.findByText('email-templates-page')).toBeInTheDocument();
+    expect(await screen.findByText('admin-workspace-page')).toBeInTheDocument();
   });
 
   it('renders public share pages without auth and app providers', async () => {

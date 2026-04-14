@@ -6,6 +6,8 @@ import FirmCreditsPage from './FirmCreditsPage';
 const useAuthMock = vi.fn();
 const getFirmCreditsPaginatedMock = vi.fn();
 const addFirmCreditsMock = vi.fn();
+const getStripeCreditPacksMock = vi.fn();
+const createStripeCheckoutSessionMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
 
@@ -61,12 +63,24 @@ vi.mock('../utils/userService', () => ({
   default: {
     getFirmCreditsPaginated: (...args: unknown[]) => getFirmCreditsPaginatedMock(...args),
     addFirmCredits: (...args: unknown[]) => addFirmCreditsMock(...args),
+    getStripeCreditPacks: (...args: unknown[]) => getStripeCreditPacksMock(...args),
+    createStripeCheckoutSession: (...args: unknown[]) => createStripeCheckoutSessionMock(...args),
   },
 }));
 
 describe('FirmCreditsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        ...window.location,
+        search: '',
+        pathname: '/admin',
+        hash: '',
+        assign: vi.fn(),
+      },
+    });
     getFirmCreditsPaginatedMock.mockResolvedValue({
       firms: [{
         id: 'firm-1',
@@ -79,6 +93,11 @@ describe('FirmCreditsPage', () => {
         recent_credit_transactions: [{ id: 'tx-1', user_name: 'Alice', action_type: 'resume.analysis', credits_delta: -20, balance_after: 980, created_at: '2026-04-13T10:00:00.000Z' }]
       }],
       pagination: { totalCount: 1, hasMore: false, page: 1, limit: 12 },
+    });
+    getStripeCreditPacksMock.mockResolvedValue({
+      enabled: true,
+      currency: 'eur',
+      packs: [{ id: 'starter', name: 'Starter', credits: 250, priceCents: 2900, description: 'Pack test', currency: 'eur' }],
     });
   });
 
@@ -110,6 +129,24 @@ describe('FirmCreditsPage', () => {
 
     await screen.findByText('Acme');
     expect(screen.queryByRole('button', { name: 'firmCredits.addCredits' })).not.toBeInTheDocument();
+    expect(screen.getByText('firmCredits.purchase.title')).toBeInTheDocument();
+  });
+
+  it('starts a Stripe checkout for local admins', async () => {
+    useAuthMock.mockReturnValue({
+      user: { role: 'localAdmin', firmId: 'firm-1', firmName: 'Acme', email: 'admin@acme.test' },
+    });
+    createStripeCheckoutSessionMock.mockResolvedValue({ id: 'purchase-1', url: 'https://checkout.stripe.test/session' });
+
+    render(<FirmCreditsPage />);
+
+    await screen.findByText('Acme');
+    fireEvent.click(screen.getByRole('button', { name: 'firmCredits.purchase.cta' }));
+
+    await waitFor(() => {
+      expect(createStripeCheckoutSessionMock).toHaveBeenCalledWith('starter');
+    });
+    expect(window.location.assign).toHaveBeenCalledWith('https://checkout.stripe.test/session');
   });
 
   it('renders consumption details by user', async () => {

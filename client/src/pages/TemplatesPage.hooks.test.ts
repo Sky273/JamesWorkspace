@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 
+import { markViewScopesDirty } from '../utils/viewRefresh';
 import { useTemplatesDashboard } from './TemplatesPage.hooks';
 
 const {
@@ -46,6 +47,7 @@ vi.mock('../utils/templateService', () => ({
 describe('useTemplatesDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.sessionStorage.clear();
     useLocationMock.mockReturnValue({
       pathname: '/templates',
       search: '',
@@ -184,5 +186,22 @@ describe('useTemplatesDashboard', () => {
     });
 
     expect(navigateMock).toHaveBeenCalledWith('/admin?tab=templates', { replace: true, state: null });
+  });
+
+  it('forces a refresh for the embedded admin templates tab when the templates scope is dirty', async () => {
+    useLocationMock.mockReturnValue({
+      pathname: '/admin',
+      search: '?tab=templates',
+      state: null,
+    });
+    markViewScopesDirty(['templates']);
+
+    renderHook(() => useTemplatesDashboard({ embedded: true }));
+
+    await waitFor(() => {
+      expect(getTemplatesPaginatedMock).toHaveBeenCalledWith(
+        expect.objectContaining({ forceRefresh: true }),
+      );
+    });
   });
 });

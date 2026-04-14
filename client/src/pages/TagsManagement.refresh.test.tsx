@@ -73,7 +73,7 @@ describe('TagsManagement refresh wiring', () => {
   it('forces tags refresh on mount when the tags scope is dirty', async () => {
     markViewScopesDirty(['tags']);
 
-    render(<TagsManagement />);
+    render(<TagsManagement embedded />);
 
     await waitFor(() => {
       expect(getAllTagsMock).toHaveBeenCalledWith(true);
@@ -83,7 +83,7 @@ describe('TagsManagement refresh wiring', () => {
   });
 
   it('forces tags refresh on runtime tags dirty events', async () => {
-    render(<TagsManagement />);
+    render(<TagsManagement embedded />);
 
     await waitFor(() => {
       expect(getAllTagsMock).toHaveBeenCalled();

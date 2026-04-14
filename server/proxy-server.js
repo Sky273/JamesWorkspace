@@ -63,6 +63,7 @@ import { configureHelmet, configureCors, configureCsrf } from './config/security
 import { registerSwaggerRoutes, registerCacheControl, registerApiRoutes, registerProxyRoutes } from './config/routeRegistry.js';
 import { configureStaticFiles } from './config/staticFiles.js';
 import { startServer } from './config/lifecycle.js';
+import stripeWebhookRoutes from './routes/stripeWebhook.routes.js';
 
 // Import middleware
 import metricsMiddleware from './middleware/metrics.middleware.js';
@@ -235,6 +236,9 @@ app.use((req, res, next) => {
 
     next();
 });
+
+// Stripe requires the exact raw request body to verify webhook signatures.
+app.use('/api/billing/stripe', stripeWebhookRoutes);
 
 // Body parsing middleware
 app.use(express.json({ limit: `${JSON_BODY_LIMIT_BYTES}b` }));

@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { markViewScopesDirty } from '../../utils/viewRefresh';
 import EmailTemplatesPage from './EmailTemplatesPage';
 
 const useAuthMock = vi.fn();
@@ -57,6 +58,8 @@ vi.mock('../../components/EmailTemplates', () => ({
 
 describe('EmailTemplatesPage', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
+    window.sessionStorage.clear();
     useAuthMock.mockReturnValue({ user: { role: 'admin' } });
     getKeywordsMock.mockResolvedValue(null);
     getTemplatesMock.mockResolvedValue(
@@ -81,5 +84,15 @@ describe('EmailTemplatesPage', () => {
 
     expect(screen.getAllByText(/common\.page 1 \/ 2/i)).toHaveLength(2);
     expect(screen.queryByText('Template 10')).not.toBeInTheDocument();
+  });
+
+  it('forces a refresh for the embedded admin email templates tab when the scope is dirty', async () => {
+    markViewScopesDirty(['emailTemplates']);
+
+    render(<EmailTemplatesPage embedded />);
+
+    await waitFor(() => {
+      expect(getTemplatesMock).toHaveBeenCalledWith({ forceRefresh: true });
+    });
   });
 });

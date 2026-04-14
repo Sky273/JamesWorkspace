@@ -133,7 +133,9 @@ export async function addFirmCreditsTransaction({
     firmId,
     amount,
     userId = null,
-    metadata = {}
+    metadata = {},
+    actionType = 'firm.credit_grant',
+    client: existingClient = null
 }) {
     const numericAmount = Number(amount);
     if (!Number.isInteger(numericAmount) || numericAmount <= 0) {
@@ -142,9 +144,12 @@ export async function addFirmCreditsTransaction({
         throw error;
     }
 
-    const client = await getClient();
+    const client = existingClient || await getClient();
+    const shouldManageTransaction = !existingClient;
     try {
-        await client.query('BEGIN');
+        if (shouldManageTransaction) {
+            await client.query('BEGIN');
+        }
 
         const firmResult = await client.query('SELECT id, credits FROM firms WHERE id = $1 FOR UPDATE', [firmId]);
         if (firmResult.rows.length === 0) {
@@ -168,24 +173,30 @@ export async function addFirmCreditsTransaction({
         const transaction = await insertTransaction(client, {
             firmId,
             userId,
-            actionType: 'firm.credit_grant',
+            actionType,
             creditsDelta: numericAmount,
             balanceAfter,
             metadata
         });
 
-        await client.query('COMMIT');
-        await invalidateCreditDependentCaches();
+        if (shouldManageTransaction) {
+            await client.query('COMMIT');
+            await invalidateCreditDependentCaches();
+        }
 
         return {
             firm: updateResult.rows[0],
             transaction
         };
     } catch (error) {
-        await client.query('ROLLBACK');
+        if (shouldManageTransaction) {
+            await client.query('ROLLBACK');
+        }
         throw error;
     } finally {
-        client.release();
+        if (shouldManageTransaction) {
+            client.release();
+        }
     }
 }
 

@@ -21,12 +21,12 @@ describe('viewRefreshScopes', () => {
     expect(mockMarkViewScopesDirty).toHaveBeenCalledWith(['clients', 'deals', 'missions']);
   });
 
-  it('marks all scopes for firm mutations', async () => {
+  it('marks the expected scopes for firm mutations', async () => {
     const { markFirmViewsDirty } = await import('./viewRefreshScopes');
 
     markFirmViewsDirty();
 
-    expect(mockMarkAllViewScopesDirty).toHaveBeenCalledTimes(1);
+    expect(mockMarkViewScopesDirty).toHaveBeenCalledWith(['firms', 'users', 'administration']);
   });
 
   it('marks the expected scopes for resume/deal relations', async () => {

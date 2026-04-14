@@ -42,6 +42,9 @@ Application professionnelle de gestion et d'analyse de CVs avec intelligence art
 - **Multi-modèles** : Support OpenAI (GPT-5.4 / GPT-5.4-pro / GPT-5.2 / GPT-5.1 / GPT-5 / GPT-4.1 / GPT-4o), Anthropic (Claude Opus 4.x / Sonnet 4 / Claude 3.7 / Claude 3.5), DeepSeek (DeepSeek-V3.2 via `deepseek-chat` et `deepseek-reasoner`), Gemma Cloud via Gemini, GLM (`glm-5.1`, `glm-5`), MiniMax et Ollama distant
 - **Contexte CV** : Réponses personnalisées basées sur le profil
 
+### Configuration Stripe
+- Documentation pas Ã  pas : [docs/STRIPE_CONFIGURATION.md](C:/Users/mail/CascadeProjects/ResumeConverter/docs/STRIPE_CONFIGURATION.md)
+
 ### Administration
 - **Gestion utilisateurs** : CRUD complet avec rôles (admin, user)
 ### Métriques LLM

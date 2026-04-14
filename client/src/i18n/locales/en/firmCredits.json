@@ -12,7 +12,17 @@
       "superAdminTitle": "Global control",
       "superAdminDescription": "You can review every firm and top up credits immediately when operations require it.",
       "localAdminTitle": "Your firm overview",
-      "localAdminDescription": "You can review your firm balance. Credit top-ups remain restricted to the super administrator."
+      "localAdminDescription": "You can review your firm balance. You can buy credits through Stripe, while manual top-ups remain restricted to the super administrator."
+    },
+    "purchase": {
+      "title": "Buy credits",
+      "description": "Choose a pack and pay online through Stripe. Credits are added automatically once the payment is confirmed.",
+      "cta": "Buy {{credits}} credits",
+      "price": "{{price}}",
+      "disabledTitle": "Stripe not configured",
+      "disabledDescription": "Configure Stripe server secrets to enable credit purchases for local admins.",
+      "processing": "Redirecting to Stripe...",
+      "secureNote": "Secure checkout powered by Stripe."
     },
     "card": {
       "consumed": "Consumed credits",
@@ -64,6 +74,7 @@
       "resume.match": "Resume matching",
       "profile.search": "Profile search",
       "profile.analysis": "Profile analysis",
+      "firm.credit_purchase": "Stripe purchase",
       "default": "AI action"
     }
   }
