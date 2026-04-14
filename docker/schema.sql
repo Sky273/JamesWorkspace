@@ -601,6 +601,7 @@ CREATE TABLE public.llm_settings (
     dpo_email character varying(255) DEFAULT ''::character varying,
     dpo_phone character varying(50) DEFAULT ''::character varying,
     webgl_enabled character varying(3) DEFAULT 'on'::character varying,
+    public_home_enabled boolean,
     allow_user_registration_without_approval boolean DEFAULT false NOT NULL,
     firm_initial_credits integer DEFAULT 1000 NOT NULL,
     ai_credit_chatbot_message integer DEFAULT 1 NOT NULL,

@@ -18,7 +18,12 @@ import {
     sendVerificationEmail,
     verifyEmailToken
 } from '../../services/emailVerification.service.js';
-import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, CLEAR_ACCESS_TOKEN, CLEAR_REFRESH_TOKEN } from './config.js';
+import {
+    getAccessTokenCookieOptions,
+    getRefreshTokenCookieOptions,
+    getClearAccessTokenOptions,
+    getClearRefreshTokenOptions
+} from './config.js';
 
 const router = express.Router();
 const AUTH_REVALIDATE_CACHE_HEADERS = {
@@ -69,12 +74,17 @@ function hasFirmAssignment(user) {
 
 function blockUnassignedUser(res) {
     return res.status(403).json({
-        error: 'Account is not assigned to a firm. Contact an administrator.'
+        error: 'Account is not assigned to a firm. Contact an administrator.',
+        code: 'firm_assignment_required'
     });
 }
 
 function isEmailVerified(user) {
     return Boolean(user?.email_verified_at);
+}
+
+function requiresEmailVerification(user) {
+    return authService.isSelfServiceRegistrationUser(user);
 }
 
 // ============================================
@@ -145,10 +155,13 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
                 message: 'Login attempt on inactive account',
                 metadata: { reason: 'account_inactive' }
             });
-            return res.status(403).json({ error: 'Account is inactive. Please contact administrator.' });
+            return res.status(403).json({
+                error: 'Account is inactive. Please contact administrator.',
+                code: 'account_inactive'
+            });
         }
 
-        if (!isEmailVerified(user)) {
+        if (requiresEmailVerification(user) && !isEmailVerified(user)) {
             securityLog(LOG_LEVELS.WARNING, SECURITY_EVENTS.AUTH_BLOCKED, {
                 ...metadata,
                 email: normalizedEmail,
@@ -245,8 +258,8 @@ router.post('/signin', authLimiter, validateBody(signInSchema), async (req, res)
         const accessToken = generateAccessToken(userData);
         const refreshToken = generateRefreshToken(userData);
 
-        res.cookie('accessToken', accessToken, ACCESS_TOKEN_COOKIE);
-        res.cookie('refreshToken', refreshToken, REFRESH_TOKEN_COOKIE);
+        res.cookie('accessToken', accessToken, getAccessTokenCookieOptions(req));
+        res.cookie('refreshToken', refreshToken, getRefreshTokenCookieOptions(req));
 
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.AUTH_SUCCESS, {
             ...metadata,
@@ -391,8 +404,8 @@ router.post('/refresh', authLimiter, async (req, res) => {
         const newAccessToken = generateAccessToken(userData);
         const newRefreshToken = generateRefreshToken(userData);
 
-        res.cookie('accessToken', newAccessToken, ACCESS_TOKEN_COOKIE);
-        res.cookie('refreshToken', newRefreshToken, REFRESH_TOKEN_COOKIE);
+        res.cookie('accessToken', newAccessToken, getAccessTokenCookieOptions(req));
+        res.cookie('refreshToken', newRefreshToken, getRefreshTokenCookieOptions(req));
 
         res.json({ user: userData });
     } catch (error) {
@@ -439,8 +452,8 @@ const logoutHandler = async (req, res) => {
             message: 'User signed out'
         });
 
-        res.clearCookie('accessToken', CLEAR_ACCESS_TOKEN);
-        res.clearCookie('refreshToken', CLEAR_REFRESH_TOKEN);
+        res.clearCookie('accessToken', getClearAccessTokenOptions(req));
+        res.clearCookie('refreshToken', getClearRefreshTokenOptions(req));
         res.json({ message: 'Signed out successfully' });
     } catch (error) {
         safeLog('error', 'Sign out error', { error: error.message });

@@ -9,6 +9,7 @@ import { doubleCsrf } from 'csrf-csrf';
 import { ALLOWED_ORIGINS } from './constants.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { normalizeOrigin } from '../utils/originUtils.js';
+import { shouldUseSecureCookies } from '../routes/auth/config.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const cspScriptSources = [
@@ -200,16 +201,21 @@ export function configureCors(app) {
 // ============================================
 
 export function configureCsrf(app) {
-    // Determine if HTTPS is enabled (for secure cookies)
-    const useSecureCookies = isProduction || process.env.HTTPS_ENABLED === 'true';
-    const csrfCookieOptions = {
+    const baseCsrfCookieOptions = {
         httpOnly: true,
         sameSite: isProduction ? 'strict' : 'lax',
-        secure: useSecureCookies,
         path: '/',
         // Allow cookie to work with resumeconverter.net domain in development
         domain: process.env.COOKIE_DOMAIN || undefined
     };
+    const defaultCsrfCookieOptions = {
+        ...baseCsrfCookieOptions,
+        secure: shouldUseSecureCookies()
+    };
+    const getCsrfCookieOptions = (req) => ({
+        ...baseCsrfCookieOptions,
+        secure: shouldUseSecureCookies(req)
+    });
 
     // Configure CSRF protection
     const csrfProtection = doubleCsrf({
@@ -220,7 +226,7 @@ export function configureCsrf(app) {
             return process.env.CSRF_SECRET;
         },
         cookieName: 'x-csrf-token',
-        cookieOptions: csrfCookieOptions,
+        cookieOptions: defaultCsrfCookieOptions,
         size: 64,
         ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
         getTokenFromRequest: (req) => {
@@ -238,12 +244,14 @@ export function configureCsrf(app) {
     app.get('/api/csrf-token', (req, res) => {
         try {
             safeLog('debug', 'CSRF token request', { 
-                useSecureCookies,
+                useSecureCookies: shouldUseSecureCookies(req),
                 protocol: req.protocol,
                 secure: req.secure,
                 headers: { host: req.headers.host, origin: req.headers.origin }
             });
-            const csrfToken = generateCsrfToken(req, res);
+            const csrfToken = generateCsrfToken(req, res, {
+                cookieOptions: getCsrfCookieOptions(req)
+            });
             res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
             res.set('Pragma', 'no-cache');
             res.json({ csrfToken });
@@ -315,7 +323,7 @@ export function configureCsrf(app) {
                 hasCsrfHeader: !!req.headers['x-csrf-token']
             });
             // Clear the corrupted CSRF cookie to allow fresh token generation
-            res.clearCookie('x-csrf-token', csrfCookieOptions);
+            res.clearCookie('x-csrf-token', getCsrfCookieOptions(req));
             return res.status(403).json({ 
                 error: 'Invalid CSRF token',
                 message: 'Please refresh the page and try again'

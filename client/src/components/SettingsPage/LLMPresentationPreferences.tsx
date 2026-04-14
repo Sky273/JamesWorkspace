@@ -1,8 +1,10 @@
 interface LLMPresentationPreferencesProps {
   cvMode?: 'nominative' | 'anonymous';
   webglEnabled?: 'on' | 'off';
+  publicHomeEnabled?: boolean;
   onCvModeChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
   onWebglToggle: () => void;
+  onPublicHomeToggle: () => void;
   t: (key: string) => string;
   fallbackText: (key: string, fallback: string) => string;
 }
@@ -10,50 +12,72 @@ interface LLMPresentationPreferencesProps {
 export default function LLMPresentationPreferences({
   cvMode,
   webglEnabled,
+  publicHomeEnabled,
   onCvModeChange,
   onWebglToggle,
+  onPublicHomeToggle,
   t,
   fallbackText
 }: LLMPresentationPreferencesProps): JSX.Element {
   return (
-    <>
-      <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          {t('settings.llm.cvMode')}
-        </label>
-        <select
-          value={cvMode || 'nominative'}
-          onChange={onCvModeChange}
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="nominative">{fallbackText('settings.llm.cvModeNominative', 'Nominatif')}</option>
-          <option value="anonymous">{fallbackText('settings.llm.cvModeAnonymous', 'Anonyme')}</option>
-        </select>
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          {cvMode === 'anonymous'
-            ? fallbackText('settings.llm.cvModeAnonymousDescription', 'Le CV amélioré sera anonymisé.')
-            : fallbackText('settings.llm.cvModeNominativeDescription', 'Le CV amélioré conserve les informations nominatives.')}
-        </p>
-      </div>
+    <section className="rounded-3xl border border-white/10 bg-slate-950/10 p-5">
+      <div className="space-y-5">
+        <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+          <label className="mb-2 block text-sm font-semibold text-white">
+            {t('settings.llm.cvMode')}
+          </label>
+          <select
+            value={cvMode || 'nominative'}
+            onChange={onCvModeChange}
+            className="w-full rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-3 text-sm text-slate-100 focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="nominative">{fallbackText('settings.llm.cvModeNominative', 'Nominatif')}</option>
+            <option value="anonymous">{fallbackText('settings.llm.cvModeAnonymous', 'Anonyme')}</option>
+          </select>
+          <p className="mt-3 text-sm text-slate-300">
+            {cvMode === 'anonymous'
+              ? fallbackText('settings.llm.cvModeAnonymousDescription', 'Le CV améliore sera anonymisé.')
+              : fallbackText('settings.llm.cvModeNominativeDescription', 'Le CV améliore conserve les informations nominatives.')}
+          </p>
+        </div>
 
-      <div className="pt-6 pb-2 border-t border-gray-200 dark:border-gray-700">
-        <label className="flex items-start gap-3 cursor-pointer">
+        <label className="grid cursor-pointer grid-cols-[1.25rem_minmax(0,1fr)] items-start gap-x-4 gap-y-1 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
           <input
             type="checkbox"
             checked={webglEnabled === 'on'}
             onChange={onWebglToggle}
-            className="mt-1 h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-2 cursor-pointer"
+            className="mt-0.5 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-600"
           />
-          <div>
-            <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <div className="min-w-0">
+            <span className="block text-sm font-semibold text-white">
               {t('settings.llm.webglEnabled')}
             </span>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-sm text-slate-300">
               {t('settings.llm.webglEnabledDescription')}
             </p>
           </div>
         </label>
+
+        <label className="grid cursor-pointer grid-cols-[1.25rem_minmax(0,1fr)] items-start gap-x-4 gap-y-1 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+          <input
+            type="checkbox"
+            checked={publicHomeEnabled === true}
+            onChange={onPublicHomeToggle}
+            className="mt-0.5 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-600"
+          />
+          <div className="min-w-0">
+            <span className="block text-sm font-semibold text-white">
+              {fallbackText('settings.chatbot.publicHomeTitle', "Activer la page d'accueil publique")}
+            </span>
+            <p className="mt-1 text-sm text-slate-300">
+              {fallbackText(
+                'settings.chatbot.publicHomeDescription',
+                'Affiche la page /welcome aux visiteurs non connectés au lieu de les rediriger vers la connexion.'
+              )}
+            </p>
+          </div>
+        </label>
       </div>
-    </>
+    </section>
   );
 }

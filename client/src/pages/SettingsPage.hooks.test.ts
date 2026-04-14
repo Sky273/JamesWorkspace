@@ -6,6 +6,7 @@ import {
   getTotalWeight,
   toFormData,
 } from './SettingsPage.hooks';
+import { getDefaultPublicHomeEnabled } from '../app/publicHomeSetting';
 
 describe('SettingsPage helpers', () => {
   it('derives the default model for each supported provider', () => {
@@ -22,6 +23,7 @@ describe('SettingsPage helpers', () => {
     expect(toFormData({
       llmProvider: 'anthropic',
       chatbotEnabled: 'off',
+      publicHomeEnabled: getDefaultPublicHomeEnabled(),
       'Executive Summary Weight': 30,
     })).toEqual(expect.objectContaining({
       llmProvider: 'anthropic',
@@ -43,6 +45,7 @@ describe('SettingsPage helpers', () => {
 
     expect(payload).toEqual(expect.objectContaining({
       chatbotEnabled: 'off',
+      publicHomeEnabled: getDefaultPublicHomeEnabled(),
       llmModelParameters: {},
       'Executive Summary Weight': 25,
       'Skills Weight': 15,
@@ -92,5 +95,12 @@ describe('SettingsPage helpers', () => {
 
   it('computes the current total weight', () => {
     expect(getTotalWeight(defaultFormData)).toBe(100);
+  });
+
+  it('defaults the public home toggle from the vite flag', () => {
+    expect(defaultFormData.publicHomeEnabled).toBe(getDefaultPublicHomeEnabled());
+    expect(toFormData({})).toEqual(expect.objectContaining({
+      publicHomeEnabled: getDefaultPublicHomeEnabled(),
+    }));
   });
 });

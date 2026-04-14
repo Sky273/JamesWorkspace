@@ -102,6 +102,7 @@ describe('Settings Service', () => {
                 llm_model: 'gpt-4o',
                 llm_provider: 'openai',
                 cv_mode: 'nominative',
+                public_home_enabled: true,
                 pre_analysis_enabled: true,
                 pre_analysis_prompt: 'Pre analyze this CV',
                 analysis_prompt: 'Analyze this CV',
@@ -123,6 +124,7 @@ describe('Settings Service', () => {
             
             expect(result.llmModel).toBe('gpt-4o');
             expect(result.llmProvider).toBe('openai');
+            expect(result.publicHomeEnabled).toBe(true);
             expect(result.preAnalysisEnabled).toBe(true);
             expect(result['Pre Analysis Prompt']).toBe('Pre analyze this CV');
             expect(result['Profile Matching Local Skill Weight']).toBe(9);

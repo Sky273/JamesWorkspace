@@ -82,6 +82,10 @@ const LLMTab = ({
     onInputChange('webglEnabled', formData.webglEnabled === 'on' ? 'off' : 'on');
   };
 
+  const handlePublicHomeToggle = (): void => {
+    onInputChange('publicHomeEnabled', formData.publicHomeEnabled !== true);
+  };
+
   const handleRegistrationApprovalToggle = (): void => {
     onInputChange(
       'allowUserRegistrationWithoutApproval',
@@ -217,14 +221,16 @@ const LLMTab = ({
       <LLMPresentationPreferences
         cvMode={formData.cvMode}
         webglEnabled={formData.webglEnabled}
+        publicHomeEnabled={formData.publicHomeEnabled}
         onCvModeChange={handleCvModeChange}
         onWebglToggle={handleWebglToggle}
+        onPublicHomeToggle={handlePublicHomeToggle}
         t={t}
         fallbackText={getFallbackText}
       />
 
       <section className="rounded-3xl border border-white/10 bg-slate-950/10 p-5">
-        <label className="flex items-start gap-3 cursor-pointer">
+        <label className="grid cursor-pointer grid-cols-[1.25rem_minmax(0,1fr)] items-start gap-x-4 gap-y-1 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
           <input
             type="checkbox"
             checked={formData.allowUserRegistrationWithoutApproval === true}
@@ -233,9 +239,9 @@ const LLMTab = ({
               "Autoriser l'enregistrement des utilisateurs sans validation préalable"
             )}
             onChange={handleRegistrationApprovalToggle}
-            className="mt-1 h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-2 cursor-pointer"
+            className="mt-0.5 h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-2 cursor-pointer"
           />
-          <div className="space-y-2">
+          <div className="min-w-0 space-y-2">
             <span className="block text-sm font-semibold text-white">
               {getFallbackText(
                 'settings.llm.allowUserRegistrationWithoutApprovalLabel',

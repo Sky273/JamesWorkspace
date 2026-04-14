@@ -279,4 +279,30 @@ describe('LLMTab', () => {
 
     expect(onInputChange).toHaveBeenCalledWith('allowUserRegistrationWithoutApproval', true);
   });
+
+  it('exposes the public home checkbox in the first tab', () => {
+    const onInputChange = vi.fn();
+
+    render(
+      <LLMTab
+        formData={{
+          llmProvider: 'openai',
+          llmModel: 'gpt-4o',
+          llmModelParametersJson: '{}',
+          cvMode: 'nominative',
+          webglEnabled: 'on',
+          publicHomeEnabled: false,
+          ollamaBaseUrl: '',
+        }}
+        onInputChange={onInputChange}
+        onTestConnection={vi.fn()}
+        t={(key) => key}
+        llmModelCatalog={{ openai: [{ value: 'gpt-4o', label: 'gpt-4o' }] }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /Activer la page d'accueil publique/i }));
+
+    expect(onInputChange).toHaveBeenCalledWith('publicHomeEnabled', true);
+  });
 });

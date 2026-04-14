@@ -39,12 +39,17 @@ const mockFindUserWithFirmById = vi.fn();
 const mockUpdateLastLogin = vi.fn();
 const mockFindExistingUserByEmail = vi.fn();
 const mockRegisterSelfServiceUser = vi.fn();
+const mockIsSelfServiceRegistrationUser = vi.fn((user) => {
+    const firmName = String(user?.firm_name || '').trim().toLowerCase();
+    return firmName === 'public registration' || firmName === 'cabinet test';
+});
 vi.mock('../../services/auth.service.js', () => ({
     findUserWithFirmByEmail: (...args) => mockFindUserWithFirmByEmail(...args),
     findUserWithFirmById: (...args) => mockFindUserWithFirmById(...args),
     updateLastLogin: (...args) => mockUpdateLastLogin(...args),
     findExistingUserByEmail: (...args) => mockFindExistingUserByEmail(...args),
-    registerSelfServiceUser: (...args) => mockRegisterSelfServiceUser(...args)
+    registerSelfServiceUser: (...args) => mockRegisterSelfServiceUser(...args),
+    isSelfServiceRegistrationUser: (...args) => mockIsSelfServiceRegistrationUser(...args)
 }));
 
 const mockSendVerificationEmail = vi.fn();
@@ -264,7 +269,7 @@ describe('Auth Routes - POST /api/auth/signin', () => {
                 status: 'active',
                 role: 'user',
                 firm_id: 'firm-123',
-                firm_name: 'Test Firm',
+                firm_name: 'Public Registration',
                 email_verified_at: null
             });
             mockBcryptCompare.mockResolvedValueOnce(true);
@@ -275,6 +280,29 @@ describe('Auth Routes - POST /api/auth/signin', () => {
 
             expect(res.status).toBe(403);
             expect(res.body.code).toBe('email_verification_required');
+        });
+
+        it('should allow sign in without email verification for non self-service accounts', async () => {
+            mockFindUserWithFirmByEmail.mockResolvedValueOnce({
+                id: 'user-123',
+                email: 'test@example.com',
+                password: '$2a$10$hashedpassword',
+                name: 'Test User',
+                status: 'active',
+                role: 'user',
+                firm_id: 'firm-123',
+                firm_name: 'Client Firm',
+                email_verified_at: null
+            });
+            mockBcryptCompare.mockResolvedValueOnce(true);
+            mockUpdateLastLogin.mockResolvedValueOnce();
+
+            const res = await request(app)
+                .post('/api/auth/signin')
+                .send({ email: 'test@example.com', password: 'password123' });
+
+            expect(res.status).toBe(200);
+            expect(res.body.user.email).toBe('test@example.com');
         });
 
         it('should return 403 for active user without firm assignment', async () => {

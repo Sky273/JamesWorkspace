@@ -1,7 +1,7 @@
 /**
  * Tests for authService
- * After refactoring: authService uses apiInterceptor functions (fetchWithAuth,
- * fetchWithCsrfRetry, getCsrfToken, createAuthOptionsWithCsrf) instead of raw fetch.
+ * Public auth endpoints use fetch + CSRF token, while authenticated mutations still
+ * rely on the shared interceptor helpers.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -14,6 +14,7 @@ const mockCreateAuthOptionsWithCsrf = vi.fn();
 const mockClearCsrfToken = vi.fn();
 const mockResetSessionState = vi.fn();
 const mockIsSessionRedirectError = vi.fn((_err: unknown) => false);
+const mockFetch = vi.fn();
 
 // Mock apiInterceptor
 vi.mock('../utils/apiInterceptor', () => ({
@@ -50,6 +51,7 @@ const mockResponse = (ok: boolean, data: unknown, status = ok ? 200 : 400): Resp
 describe('authService', () => {
     beforeEach(() => {
         vi.resetAllMocks();
+        vi.stubGlobal('fetch', mockFetch);
         authService.setCurrentUser(null);
         mockGetCsrfToken.mockResolvedValue('csrf-123');
         mockCreateAuthOptionsWithCsrf.mockImplementation(async (opts) => ({
@@ -63,7 +65,7 @@ describe('authService', () => {
         it('should sign in successfully and return user', async () => {
             const mockUser = { id: '1', name: 'Test User', email: 'test@test.com', role: 'user', status: 'active' };
 
-            mockFetchWithAuth.mockResolvedValueOnce(
+            mockFetch.mockResolvedValueOnce(
                 mockResponse(true, { user: mockUser })
             );
 
@@ -75,7 +77,7 @@ describe('authService', () => {
         });
 
         it('should return 2FA response when required', async () => {
-            mockFetchWithAuth.mockResolvedValueOnce(
+            mockFetch.mockResolvedValueOnce(
                 mockResponse(true, {
                     requires2FA: true,
                     userId: 'user-1',
@@ -91,7 +93,7 @@ describe('authService', () => {
         });
 
         it('should throw on failed sign in', async () => {
-            mockFetchWithAuth.mockResolvedValueOnce(
+            mockFetch.mockResolvedValueOnce(
                 mockResponse(false, { error: 'Invalid credentials' })
             );
 
@@ -100,17 +102,29 @@ describe('authService', () => {
 
         it('should check !response.ok before requires2FA', async () => {
             // Even if requires2FA is present, a non-ok response should throw
-            mockFetchWithAuth.mockResolvedValueOnce(
+            mockFetch.mockResolvedValueOnce(
                 mockResponse(false, { requires2FA: true, error: 'Rate limited' }, 429)
             );
 
             await expect(authService.signIn('test@test.com', 'pass')).rejects.toThrow('Rate limited');
         });
+
+        it('should preserve backend auth codes on sign in failures', async () => {
+            mockFetch.mockResolvedValueOnce(
+                mockResponse(false, { error: 'Account is inactive. Please contact administrator.', code: 'account_inactive' }, 403)
+            );
+
+            await expect(authService.signIn('test@test.com', 'password123')).rejects.toMatchObject({
+                message: 'Account is inactive. Please contact administrator.',
+                code: 'account_inactive',
+                status: 403,
+            });
+        });
     });
 
     describe('register', () => {
         it('should register successfully', async () => {
-            mockFetchWithAuth.mockResolvedValueOnce(
+            mockFetch.mockResolvedValueOnce(
                 mockResponse(true, { message: 'Registration successful' })
             );
 
@@ -127,7 +141,7 @@ describe('authService', () => {
         });
 
         it('should preserve the registration mode returned by the backend', async () => {
-            mockFetchWithAuth.mockResolvedValueOnce(
+            mockFetch.mockResolvedValueOnce(
                 mockResponse(true, { message: 'Registration successful', registrationStatus: 'active', autoApproved: true })
             );
 
@@ -144,7 +158,7 @@ describe('authService', () => {
         });
 
         it('should throw on registration failure', async () => {
-            mockFetchWithAuth.mockResolvedValueOnce(
+            mockFetch.mockResolvedValueOnce(
                 mockResponse(false, { error: 'Email already exists' })
             );
 
@@ -154,7 +168,7 @@ describe('authService', () => {
         });
 
         it('should include anti-bot registration metadata in the payload', async () => {
-            mockFetchWithAuth.mockResolvedValueOnce(
+            mockFetch.mockResolvedValueOnce(
                 mockResponse(true, { message: 'Registration successful' })
             );
 
@@ -168,7 +182,7 @@ describe('authService', () => {
                 captchaProvider: 'turnstile',
             });
 
-            const [, options] = mockFetchWithAuth.mock.calls[0];
+            const [, options] = mockFetch.mock.calls[0];
             expect(JSON.parse((options as RequestInit).body as string)).toMatchObject({
                 email: 'new@test.com',
                 password: 'password123',

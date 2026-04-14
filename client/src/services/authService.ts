@@ -90,11 +90,30 @@ export interface UpdateUserData {
 // ============================================
 
 class AuthenticationError extends Error {
-  constructor(message: string) {
+  code?: string;
+  status?: number;
+
+  constructor(message: string, options: { code?: string; status?: number } = {}) {
     super(message);
     this.name = 'AuthenticationError';
+    this.code = options.code;
+    this.status = options.status;
   }
 }
+
+const fetchPublicAuth = (url: string, options: RequestInit = {}): Promise<Response> => {
+  const headers = new Headers(options.headers || {});
+  if (!headers.has('Accept')) {
+    headers.set('Accept', 'application/json');
+  }
+
+  return fetch(url, {
+    ...options,
+    headers,
+    credentials: 'include',
+    cache: 'no-store',
+  });
+};
 
 // ============================================
 // AUTH SERVICE
@@ -125,7 +144,7 @@ export const authService = {
     try {
       const csrfToken = await getCsrfToken();
 
-      const response = await fetchWithAuth('/api/auth/signin', {
+      const response = await fetchPublicAuth('/api/auth/signin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -146,7 +165,10 @@ export const authService = {
       }
 
       if (!response.ok) {
-        throw new AuthenticationError(data.error || 'Failed to sign in');
+        throw new AuthenticationError(data.error || 'Failed to sign in', {
+          code: data.code,
+          status: response.status,
+        });
       }
 
       const signedInUser = data.user as User;
@@ -175,7 +197,7 @@ export const authService = {
     try {
       const csrfToken = await getCsrfToken();
 
-      const response = await fetchWithAuth('/api/auth/register', {
+      const response = await fetchPublicAuth('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -195,7 +217,10 @@ export const authService = {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new AuthenticationError(data.error || 'Failed to register');
+        throw new AuthenticationError(data.error || 'Failed to register', {
+          code: data.code,
+          status: response.status,
+        });
       }
 
       return {
@@ -405,7 +430,7 @@ export const authService = {
   async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
     try {
       const csrfToken = await getCsrfToken();
-      const response = await fetchWithAuth('/api/auth/forgot-password', {
+      const response = await fetchPublicAuth('/api/auth/forgot-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -429,7 +454,7 @@ export const authService = {
   async resetPassword(token: string, password: string): Promise<{ success: boolean; message: string; code?: string }> {
     try {
       const csrfToken = await getCsrfToken();
-      const response = await fetchWithAuth('/api/auth/reset-password', {
+      const response = await fetchPublicAuth('/api/auth/reset-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

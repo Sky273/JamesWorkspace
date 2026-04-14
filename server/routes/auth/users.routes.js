@@ -98,7 +98,8 @@ router.post('/users', authenticateToken, requireUserManager, validateBody(create
             phone: phone || null,
             role: managedRole.role,
             status: (status || 'active').toLowerCase(),
-            must_change_password: true
+            must_change_password: true,
+            email_verified_at: new Date()
         };
 
         if (!requestedFirmId) {

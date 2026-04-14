@@ -14,6 +14,41 @@ import logger from '../utils/logger.frontend';
 import TwoFactorVerify from './TwoFactorVerify';
 import AuthPageShell from './AuthPageShell';
 
+type AuthErrorLike = Error & { code?: string; status?: number };
+
+const resolveSignInErrorMessage = (error: unknown, t: ReturnType<typeof useTranslation>['t']): string => {
+  const authError = error as AuthErrorLike | null;
+  const rawMessage = authError?.message || '';
+  const errorCode = authError?.code || '';
+
+  const messageByCode: Record<string, string> = {
+    password_change_required: rawMessage,
+    email_verification_required: rawMessage,
+    account_inactive:
+      rawMessage || t('auth.signIn.accountInactive'),
+    firm_assignment_required:
+      rawMessage || "Ce compte n'est associe a aucun cabinet. Contactez un administrateur.",
+    service_unavailable:
+      rawMessage || "Le service d'authentification est temporairement indisponible. Reessayez dans quelques instants.",
+  };
+
+  if (errorCode && messageByCode[errorCode]) {
+    return messageByCode[errorCode];
+  }
+
+  if (
+    rawMessage.includes('Password replacement required') ||
+    rawMessage.includes('Email verification required') ||
+    rawMessage.includes('Account is inactive') ||
+    rawMessage.includes('not assigned to a firm') ||
+    rawMessage.includes('temporarily unavailable')
+  ) {
+    return rawMessage;
+  }
+
+  return t('errors.unauthorized');
+};
+
 const SignIn = (): JSX.Element => {
   const { signIn } = useAuth();
   const navigate = useNavigate();
@@ -76,6 +111,12 @@ const SignIn = (): JSX.Element => {
     } else if (googleError === 'account_inactive') {
       setError(t('auth.signIn.accountInactive'));
       navigate('/signin', { replace: true });
+    } else if (googleError === 'firm_assignment_required') {
+      setError("Ce compte n'est associe a aucun cabinet. Contactez un administrateur.");
+      navigate('/signin', { replace: true });
+    } else if (googleError === 'service_unavailable') {
+      setError("Le service d'authentification est temporairement indisponible. Reessayez dans quelques instants.");
+      navigate('/signin', { replace: true });
     } else if (
       googleError === 'invalid_token' ||
       googleError === 'token_expired' ||
@@ -118,12 +159,7 @@ const SignIn = (): JSX.Element => {
       navigate('/');
     } catch (authError) {
       logger.error('Sign in failed:', authError);
-      const rawMessage = authError instanceof Error ? authError.message : '';
-      setError(
-        rawMessage.includes('Password replacement required') || rawMessage.includes('Email verification required')
-          ? rawMessage
-          : t('errors.unauthorized')
-      );
+      setError(resolveSignInErrorMessage(authError, t));
     } finally {
       setLoading(false);
     }

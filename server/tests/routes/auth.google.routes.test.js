@@ -66,11 +66,8 @@ vi.mock('../../services/auth.service.js', () => ({
 
 // Mock auth config
 vi.mock('../../routes/auth/config.js', () => ({
-    useSecureCookies: false,
-    ACCESS_TOKEN_COOKIE: { httpOnly: true, secure: false, sameSite: 'lax', path: '/', maxAge: 3600000 },
-    REFRESH_TOKEN_COOKIE: { httpOnly: true, secure: false, sameSite: 'lax', path: '/api/auth', maxAge: 604800000 },
-    CLEAR_ACCESS_TOKEN: { httpOnly: true, secure: false, sameSite: 'lax', path: '/' },
-    CLEAR_REFRESH_TOKEN: { httpOnly: true, secure: false, sameSite: 'lax', path: '/api/auth' }
+    getAccessTokenCookieOptions: () => ({ httpOnly: true, secure: false, sameSite: 'lax', path: '/', maxAge: 3600000 }),
+    getRefreshTokenCookieOptions: () => ({ httpOnly: true, secure: false, sameSite: 'lax', path: '/api/auth', maxAge: 604800000 })
 }));
 
 // Mock rate limit
@@ -454,6 +451,7 @@ describe('Google OAuth Routes', () => {
                 .send({ idToken: 'valid-token' });
 
             expect(res.status).toBe(403);
+            expect(res.body.code).toBe('account_inactive');
         });
 
         it('should return 403 for user without firm assignment', async () => {
@@ -476,6 +474,7 @@ describe('Google OAuth Routes', () => {
 
             expect(res.status).toBe(403);
             expect(res.body.error).toContain('firm');
+            expect(res.body.code).toBe('firm_assignment_required');
         });
 
         it('should return 401 on invalid token', async () => {

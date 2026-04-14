@@ -34,7 +34,8 @@ import {
     findExistingUserByEmail,
     createUser,
     registerGoogleUser,
-    registerSelfServiceUser
+    registerSelfServiceUser,
+    isSelfServiceRegistrationUser
 } from '../../services/auth.service.js';
 
 describe('Auth Service', () => {
@@ -306,6 +307,20 @@ describe('Auth Service', () => {
                 ]
             );
             expect(mockClient.release).toHaveBeenCalled();
+        });
+    });
+
+    describe('isSelfServiceRegistrationUser', () => {
+        it('returns true for Public Registration users', () => {
+            expect(isSelfServiceRegistrationUser({ firm_name: 'Public Registration' })).toBe(true);
+        });
+
+        it('returns true for Cabinet test users', () => {
+            expect(isSelfServiceRegistrationUser({ firm_name: 'Cabinet test' })).toBe(true);
+        });
+
+        it('returns false for non self-service firms', () => {
+            expect(isSelfServiceRegistrationUser({ firm_name: 'Client Firm' })).toBe(false);
         });
     });
 });

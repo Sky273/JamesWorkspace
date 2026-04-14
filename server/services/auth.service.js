@@ -15,6 +15,16 @@ const AUTO_APPROVED_SELF_SERVICE_FIRM_NAME = 'Cabinet test';
 const MAX_AUTO_APPROVED_FIRM_NAME_ATTEMPTS = 100;
 const DEFAULT_DIRECT_TEMPLATE_DESCRIPTION = 'Modele de CV cree automatiquement pour le cabinet.';
 
+export const SELF_SERVICE_FIRM_NAMES = [
+    DEFAULT_SELF_SERVICE_FIRM_NAME.toLowerCase(),
+    AUTO_APPROVED_SELF_SERVICE_FIRM_NAME.toLowerCase()
+];
+
+export function isSelfServiceRegistrationUser(user) {
+    const firmName = String(user?.firm_name || '').trim().toLowerCase();
+    return Boolean(firmName && SELF_SERVICE_FIRM_NAMES.includes(firmName));
+}
+
 /**
  * Find user with firm logo by email (case-insensitive)
  * @param {string} normalizedEmail - Lowercase email

@@ -215,6 +215,7 @@ vi.mock('../../utils/mappers.js', () => ({
         cvMode: settings.cv_mode ?? settings.cvMode ?? 'nominative',
         chatbotEnabled: settings.chatbot_enabled ?? settings.chatbotEnabled ?? 'on',
         webglEnabled: settings.webgl_enabled ?? settings.webglEnabled ?? 'on',
+        publicHomeEnabled: settings.public_home_enabled ?? settings.publicHomeEnabled ?? undefined,
         preAnalysisEnabled: settings.pre_analysis_enabled ?? settings.preAnalysisEnabled ?? false,
         'Pre Analysis Prompt': settings.pre_analysis_prompt ?? settings['Pre Analysis Prompt'] ?? '',
         'Analysis Prompt': settings.analysis_prompt ?? settings['Analysis Prompt'] ?? '',
@@ -311,6 +312,7 @@ describe('Settings Routes', () => {
                 llm_model: 'gpt-4',
                 cv_mode: 'nominative',
                 chatbot_enabled: 'on',
+                public_home_enabled: true,
                 analysis_prompt: 'Analyze this',
                 improvement_prompt: 'Improve this',
                 match_analysis_prompt: 'Match this',
@@ -331,6 +333,7 @@ describe('Settings Routes', () => {
             expect(res.status).toBe(200);
             expect(res.body.llmModel).toBe('gpt-4');
             expect(res.body.cvMode).toBe('nominative');
+            expect(res.body.publicHomeEnabled).toBe(true);
             expect(res.body['Analysis Prompt']).toBe('Analyze this');
             expect(res.body['DPO Name']).toBe('John');
             expect(res.body.promptGovernance['Analysis Prompt']).toEqual(expect.objectContaining({
@@ -544,6 +547,7 @@ describe('Settings Routes', () => {
                 education_weight: 15,
                 ats_weight: 10,
                 hobbies_languages_weight: 10,
+                public_home_enabled: true,
                 firm_initial_credits: 1500,
                 ai_credit_resume_analysis: 30,
                 dpo_name: '',
@@ -555,12 +559,14 @@ describe('Settings Routes', () => {
             const res = await request(app)
                 .put('/api/settings/set-1')
                 .set(authHeader)
-                .send({ llmModel: 'gpt-4-turbo', cvMode: 'anonymous', allowUserRegistrationWithoutApproval: true, firmInitialCredits: 1500, aiCreditResumeAnalysis: 30 });
+                .send({ llmModel: 'gpt-4-turbo', cvMode: 'anonymous', publicHomeEnabled: true, allowUserRegistrationWithoutApproval: true, firmInitialCredits: 1500, aiCreditResumeAnalysis: 30 });
 
             expect(res.status).toBe(200);
             expect(res.body.llmModel).toBe('gpt-4-turbo');
             expect(res.body.cvMode).toBe('anonymous');
+            expect(res.body.publicHomeEnabled).toBe(true);
             expect(mockUpsertSettings).toHaveBeenCalledWith('set-1', expect.objectContaining({
+                publicHomeEnabled: true,
                 allowUserRegistrationWithoutApproval: true,
                 firmInitialCredits: 1500,
                 aiCreditResumeAnalysis: 30,
@@ -690,6 +696,32 @@ describe('Settings Routes', () => {
                 llmProvider: 'huggingface',
                 llmModel: 'meta-llama/Llama-3.3-70B-Instruct'
             }));
+        });
+    });
+
+    describe('GET /api/settings/public-home', () => {
+        it('returns the persisted public home flag without authentication', async () => {
+            mockGetSettings.mockResolvedValueOnce({
+                public_home_enabled: true
+            });
+
+            const res = await request(app).get('/api/settings/public-home');
+
+            expect(res.status).toBe(200);
+            expect(res.body).toEqual({
+                publicHomeEnabled: true
+            });
+        });
+
+        it('returns null when the public home flag is not configured', async () => {
+            mockGetSettings.mockResolvedValueOnce(null);
+
+            const res = await request(app).get('/api/settings/public-home');
+
+            expect(res.status).toBe(200);
+            expect(res.body).toEqual({
+                publicHomeEnabled: null
+            });
         });
     });
 

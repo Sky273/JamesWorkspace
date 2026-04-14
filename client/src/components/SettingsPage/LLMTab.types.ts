@@ -5,6 +5,7 @@ export interface FormData {
   llmModelParametersJson?: string;
   cvMode?: 'nominative' | 'anonymous';
   webglEnabled?: 'on' | 'off';
+  publicHomeEnabled?: boolean;
   allowUserRegistrationWithoutApproval?: boolean;
 }
 

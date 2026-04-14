@@ -3,13 +3,17 @@
  * Cookie configuration constants
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 import {
     ACCESS_TOKEN_COOKIE,
     REFRESH_TOKEN_COOKIE,
     CLEAR_ACCESS_TOKEN,
-    CLEAR_REFRESH_TOKEN
+    CLEAR_REFRESH_TOKEN,
+    getAccessTokenCookieOptions,
+    getRefreshTokenCookieOptions,
+    getClearAccessTokenOptions,
+    getClearRefreshTokenOptions
 } from '../../routes/auth/config.js';
 
 describe('Auth Cookie Config', () => {
@@ -44,5 +48,42 @@ describe('Auth Cookie Config', () => {
     it('secure flag should be consistent across set/clear pairs', () => {
         expect(ACCESS_TOKEN_COOKIE.secure).toBe(CLEAR_ACCESS_TOKEN.secure);
         expect(REFRESH_TOKEN_COOKIE.secure).toBe(CLEAR_REFRESH_TOKEN.secure);
+    });
+
+    it('should emit secure cookies when request is HTTPS via proxy in secure deployments', async () => {
+        vi.resetModules();
+        process.env.HTTPS_ENABLED = 'true';
+        const {
+            getAccessTokenCookieOptions: getProdAccessTokenCookieOptions,
+            getRefreshTokenCookieOptions: getProdRefreshTokenCookieOptions,
+            getClearAccessTokenOptions: getProdClearAccessTokenOptions,
+            getClearRefreshTokenOptions: getProdClearRefreshTokenOptions
+        } = await import('../../routes/auth/config.js');
+        const req = {
+            secure: false,
+            headers: {
+                'x-forwarded-proto': 'https',
+                host: 'resumeconverter.net'
+            }
+        };
+
+        expect(getProdAccessTokenCookieOptions(req).secure).toBe(true);
+        expect(getProdRefreshTokenCookieOptions(req).secure).toBe(true);
+        expect(getProdClearAccessTokenOptions(req).secure).toBe(true);
+        expect(getProdClearRefreshTokenOptions(req).secure).toBe(true);
+        delete process.env.HTTPS_ENABLED;
+        vi.resetModules();
+    });
+
+    it('should fall back to non-secure cookies when request is plain HTTP', () => {
+        const req = {
+            secure: false,
+            headers: {
+                host: 'localhost:3001'
+            }
+        };
+
+        expect(getAccessTokenCookieOptions(req).secure).toBe(false);
+        expect(getRefreshTokenCookieOptions(req).secure).toBe(false);
     });
 });

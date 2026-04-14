@@ -232,4 +232,25 @@ describe('SignIn', () => {
 
     expect(await screen.findByText('Email verification required. Check your inbox before signing in.')).toBeInTheDocument();
   });
+
+  it('shows firm assignment error when backend provides the code', async () => {
+    const error = new Error("Ce compte n'est associe a aucun cabinet. Contactez un administrateur.") as Error & { code?: string };
+    error.code = 'firm_assignment_required';
+    mockSignIn.mockRejectedValue(error);
+    renderSignIn();
+
+    fireEvent.change(screen.getByPlaceholderText('auth.signIn.emailPlaceholder'), { target: { value: 'john@example.com' } });
+    fireEvent.change(screen.getByPlaceholderText('auth.signIn.passwordPlaceholder'), { target: { value: 'secret' } });
+    fireEvent.submit(screen.getByRole('button', { name: 'auth.signIn.signInButton' }).closest('form') as HTMLFormElement);
+
+    expect(await screen.findByText("Ce compte n'est associe a aucun cabinet. Contactez un administrateur.")).toBeInTheDocument();
+  });
+
+  it('shows Google service unavailable error from query params', async () => {
+    mockSearchParams = new URLSearchParams('error=service_unavailable');
+    renderSignIn();
+
+    expect(await screen.findByText("Le service d'authentification est temporairement indisponible. Reessayez dans quelques instants.")).toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith('/signin', { replace: true });
+  });
 });

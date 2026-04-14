@@ -27,6 +27,10 @@ vi.mock('./context/ChatbotContext', () => ({
   ChatbotProvider: ({ children }: { children: React.ReactNode }) => <div data-testid="chatbot-provider">{children}</div>,
 }));
 
+vi.mock('./app/publicHomeSetting', () => ({
+  usePublicHomeEnabled: () => true,
+}));
+
 vi.mock('./components/ErrorBoundary', () => ({
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));

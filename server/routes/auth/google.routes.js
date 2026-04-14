@@ -17,7 +17,7 @@ import {
     hasAuthOauthState,
     takeAuthOauthState
 } from '../../services/authOauthState.service.js';
-import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from './config.js';
+import { getAccessTokenCookieOptions, getRefreshTokenCookieOptions } from './config.js';
 
 const router = express.Router();
 
@@ -242,8 +242,8 @@ router.get('/google/callback', async (req, res) => {
         const accessToken = generateAccessToken(userData);
         const refreshToken = generateRefreshToken(userData);
         
-        res.cookie('accessToken', accessToken, ACCESS_TOKEN_COOKIE);
-        res.cookie('refreshToken', refreshToken, REFRESH_TOKEN_COOKIE);
+        res.cookie('accessToken', accessToken, getAccessTokenCookieOptions(req));
+        res.cookie('refreshToken', refreshToken, getRefreshTokenCookieOptions(req));
         
         if (googleUser.accessToken) {
             await googleAuthService.saveGmailTokens(
@@ -315,12 +315,16 @@ router.post('/google/token', authLimiter, validateBody(googleTokenSchema), async
         }
         
         if (user.status === 'inactive') {
-            return res.status(403).json({ error: 'Account is inactive' });
+            return res.status(403).json({
+                error: 'Account is inactive',
+                code: 'account_inactive'
+            });
         }
 
         if (!hasFirmAssignment(user)) {
             return res.status(403).json({
-                error: 'Account is not assigned to a firm. Contact an administrator.'
+                error: 'Account is not assigned to a firm. Contact an administrator.',
+                code: 'firm_assignment_required'
             });
         }
         
@@ -347,8 +351,8 @@ router.post('/google/token', authLimiter, validateBody(googleTokenSchema), async
         const accessToken = generateAccessToken(userData);
         const refreshToken = generateRefreshToken(userData);
         
-        res.cookie('accessToken', accessToken, ACCESS_TOKEN_COOKIE);
-        res.cookie('refreshToken', refreshToken, REFRESH_TOKEN_COOKIE);
+        res.cookie('accessToken', accessToken, getAccessTokenCookieOptions(req));
+        res.cookie('refreshToken', refreshToken, getRefreshTokenCookieOptions(req));
         
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.AUTH_SUCCESS, {
             ...metadata,

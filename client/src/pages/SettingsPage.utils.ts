@@ -1,3 +1,5 @@
+import { getDefaultPublicHomeEnabled } from '../app/publicHomeSetting';
+
 type LLMProvider = 'openai' | 'anthropic' | 'huggingface' | 'gemma' | 'deepseek' | 'glm' | 'minimax' | 'ollama';
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 type LLMModelParameters = Record<string, Record<string, Record<string, JsonValue>>>;
@@ -78,6 +80,7 @@ export interface Settings {
   cvMode?: 'nominative' | 'anonymous';
   chatbotEnabled?: 'on' | 'off';
   webglEnabled?: 'on' | 'off';
+  publicHomeEnabled?: boolean;
   preAnalysisEnabled?: boolean;
   'Pre Analysis Prompt'?: string;
   'Analysis Prompt'?: string;
@@ -135,6 +138,7 @@ export interface SettingsFormData {
   cvMode: 'nominative' | 'anonymous';
   chatbotEnabled: 'on' | 'off';
   webglEnabled: 'on' | 'off';
+  publicHomeEnabled: boolean;
   preAnalysisEnabled: boolean;
   'Pre Analysis Prompt': string;
   'Analysis Prompt': string;
@@ -210,6 +214,7 @@ export const defaultFormData: SettingsFormData = {
   cvMode: 'nominative',
   chatbotEnabled: 'on',
   webglEnabled: 'on',
+  publicHomeEnabled: getDefaultPublicHomeEnabled(),
   preAnalysisEnabled: false,
   'Pre Analysis Prompt': '',
   'Analysis Prompt': '',
@@ -276,6 +281,7 @@ export const toFormData = (settings?: Settings | null): SettingsFormData => ({
   cvMode: settings?.cvMode || 'nominative',
   chatbotEnabled: settings?.chatbotEnabled || 'on',
   webglEnabled: settings?.webglEnabled || 'on',
+  publicHomeEnabled: settings?.publicHomeEnabled ?? getDefaultPublicHomeEnabled(),
   preAnalysisEnabled: settings?.preAnalysisEnabled || false,
   'Pre Analysis Prompt': settings?.['Pre Analysis Prompt'] || '',
   'Analysis Prompt': settings?.['Analysis Prompt'] || '',
@@ -329,6 +335,7 @@ export const createSavePayload = (
     ...formData,
     llmModelParameters,
     chatbotEnabled: chatbotValue === 'on' || (chatbotValue as unknown) === true ? 'on' : 'off',
+    publicHomeEnabled: Boolean(formData.publicHomeEnabled),
     'Executive Summary Weight': Number(formData['Executive Summary Weight']),
     'Skills Weight': Number(formData['Skills Weight']),
     'Experience Weight': Number(formData['Experience Weight']),

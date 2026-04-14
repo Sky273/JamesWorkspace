@@ -45,6 +45,7 @@ export interface Settings {
   cvMode?: 'nominative' | 'anonymous';
   chatbotEnabled?: 'on' | 'off';
   webglEnabled?: 'on' | 'off';
+  publicHomeEnabled?: boolean;
   preAnalysisEnabled?: boolean;
   'Pre Analysis Prompt'?: string;
   'Analysis Prompt'?: string;

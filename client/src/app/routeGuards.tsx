@@ -2,16 +2,16 @@ import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { PublicHomePage } from './lazyPages';
+import { usePublicHomeEnabled } from './publicHomeSetting';
 
 interface RouteProps {
   children: ReactNode;
 }
 
-const publicHomeEnabled = import.meta.env.VITE_PUBLIC_HOME === 'true';
-const unauthenticatedRedirectPath = publicHomeEnabled ? '/welcome' : '/signin';
-
 export const ProtectedRoute = ({ children }: RouteProps): JSX.Element => {
   const { isAuthenticated } = useAuth();
+  const publicHomeEnabled = usePublicHomeEnabled();
+  const unauthenticatedRedirectPath = publicHomeEnabled ? '/welcome' : '/signin';
 
   if (!isAuthenticated) {
     return <Navigate to={unauthenticatedRedirectPath} replace />;
@@ -50,6 +50,7 @@ export const ManagerRoute = ({ children }: RouteProps): JSX.Element => {
 
 export const PublicHomeRoute = (): JSX.Element => {
   const { isAuthenticated } = useAuth();
+  const publicHomeEnabled = usePublicHomeEnabled();
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />;

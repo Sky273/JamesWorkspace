@@ -46,6 +46,7 @@ export function buildMappedLlmSettings(dbSettings) {
         cvMode: dbSettings.cv_mode,
         chatbotEnabled: dbSettings.chatbot_enabled,
         webglEnabled: dbSettings.webgl_enabled,
+        publicHomeEnabled: dbSettings.public_home_enabled,
         preAnalysisEnabled: dbSettings.pre_analysis_enabled ?? false,
         'Pre Analysis Prompt': dbSettings.pre_analysis_prompt,
         'Analysis Prompt': dbSettings.analysis_prompt,

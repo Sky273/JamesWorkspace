@@ -24,6 +24,7 @@ import {
   type Settings,
   type SettingsFormData,
 } from './SettingsPage.utils';
+import { setPublicHomeEnabledRuntimeValue } from '../app/publicHomeSetting';
 import {
   applyDiscoveredOllamaModel,
   buildSettingsSavePayload,
@@ -167,6 +168,11 @@ export function useSettingsPage() {
       setSettings(data);
       setFormData(toFormData(data));
       setChatbotEnabled(dataToSave.chatbotEnabled === 'on');
+      if (typeof data.publicHomeEnabled === 'boolean') {
+        setPublicHomeEnabledRuntimeValue(data.publicHomeEnabled);
+      } else {
+        setPublicHomeEnabledRuntimeValue(Boolean(formData.publicHomeEnabled));
+      }
       toast.success(t('settings.saveSuccess'));
     } catch (error) {
       logger.error('Error saving settings:', error);

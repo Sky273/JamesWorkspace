@@ -352,6 +352,7 @@ export const updateSettingsSchema = z.object({
   cvMode: z.enum(['nominative', 'anonymous']).optional(),
   chatbotEnabled: z.enum(['on', 'off']).optional(),
   webglEnabled: z.enum(['on', 'off']).optional(),
+  publicHomeEnabled: z.boolean().optional(),
   preAnalysisEnabled: z.boolean().optional(),
   'Pre Analysis Prompt': z.string().optional(),
   'Analysis Prompt': z.string().optional(),

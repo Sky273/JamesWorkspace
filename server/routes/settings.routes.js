@@ -174,6 +174,21 @@ router.get('/presentation', authenticateToken, createSettingsRouteHandler('Error
         });
     }));
 
+router.get('/public-home', createSettingsRouteHandler('Error fetching public home setting', 'Failed to fetch public home setting', async (_req, res) => {
+    const settings = await getSettings();
+
+    if (!settings) {
+        return res.json({
+            publicHomeEnabled: null
+        });
+    }
+
+    const mapped = mapSettingsToFrontend(settings);
+    return res.json({
+        publicHomeEnabled: typeof mapped.publicHomeEnabled === 'boolean' ? mapped.publicHomeEnabled : null
+    });
+}));
+
 // GET /api/settings/defaults - Get default prompts and weights
 router.get('/defaults', authenticateToken, requireAdmin, createSettingsRouteHandler('Error building defaults', 'Failed to build defaults', async (req, res) => {
     const payload = await decorateSettingsResponse({
