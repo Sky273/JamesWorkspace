@@ -29,6 +29,7 @@ const DEFAULT_ADMIN_NAME = process.env.DEFAULT_ADMIN_NAME || 'Default Administra
 const DEFAULT_ADMIN_ROLE = 'admin';
 const DEFAULT_ADMIN_STATUS = 'active';
 const DEFAULT_ADMIN_SALT_ROUNDS = 10;
+const DEFAULT_ADMIN_FIRM_NAME = process.env.DEFAULT_ADMIN_FIRM_NAME || 'Default Firm';
 
 const [{ query, closePool }, { safeLog }] = await Promise.all([
     import('../config/database.js'),
@@ -37,10 +38,11 @@ const [{ query, closePool }, { safeLog }] = await Promise.all([
 
 export async function ensureDefaultAdminAccount() {
     const normalizedEmail = DEFAULT_ADMIN_EMAIL.toLowerCase();
+    const firmAssignment = await resolveDefaultAdminFirmAssignment();
 
     const existingUser = await query(
         `
-            SELECT id, email
+            SELECT id, email, role, status, firm_id, firm_name, email_verified_at, registration_source
             FROM users
             WHERE LOWER(email) = $1
             LIMIT 1
@@ -49,21 +51,63 @@ export async function ensureDefaultAdminAccount() {
     );
 
     if (existingUser.rows[0]) {
+        const user = existingUser.rows[0];
+        const needsRepair =
+            user.role !== DEFAULT_ADMIN_ROLE
+            || user.status !== DEFAULT_ADMIN_STATUS
+            || !user.firm_id
+            || !user.firm_name
+            || !user.email_verified_at
+            || user.registration_source !== 'system_seed';
+
+        if (needsRepair) {
+            await query(
+                `
+                    UPDATE users
+                    SET
+                        role = $2,
+                        status = $3,
+                        firm_id = COALESCE(firm_id, $4),
+                        firm_name = COALESCE(firm_name, $5),
+                        email_verified_at = COALESCE(email_verified_at, CURRENT_TIMESTAMP),
+                        registration_source = 'system_seed',
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $1
+                `,
+                [
+                    user.id,
+                    DEFAULT_ADMIN_ROLE,
+                    DEFAULT_ADMIN_STATUS,
+                    firmAssignment.id,
+                    firmAssignment.name
+                ]
+            );
+        }
+
         safeLog('info', 'Default administrator already exists', {
             email: normalizedEmail,
-            userId: existingUser.rows[0].id
+            userId: user.id,
+            repaired: needsRepair
         });
-        return { created: false, userId: existingUser.rows[0].id };
+        return { created: false, userId: user.id, repaired: needsRepair };
     }
 
     const hashedPassword = await bcrypt.hash(DEFAULT_ADMIN_PASSWORD, DEFAULT_ADMIN_SALT_ROUNDS);
     const insertResult = await query(
         `
-            INSERT INTO users (email, password, name, role, status)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO users (email, password, name, role, status, firm_id, firm_name, email_verified_at, registration_source)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, 'system_seed')
             RETURNING id, email
         `,
-        [normalizedEmail, hashedPassword, DEFAULT_ADMIN_NAME, DEFAULT_ADMIN_ROLE, DEFAULT_ADMIN_STATUS]
+        [
+            normalizedEmail,
+            hashedPassword,
+            DEFAULT_ADMIN_NAME,
+            DEFAULT_ADMIN_ROLE,
+            DEFAULT_ADMIN_STATUS,
+            firmAssignment.id,
+            firmAssignment.name
+        ]
     );
 
     safeLog('info', 'Default administrator created', {
@@ -72,6 +116,32 @@ export async function ensureDefaultAdminAccount() {
     });
 
     return { created: true, userId: insertResult.rows[0].id };
+}
+
+async function resolveDefaultAdminFirmAssignment() {
+    const existingFirm = await query(
+        `
+            SELECT id, name
+            FROM firms
+            ORDER BY created_at ASC NULLS LAST, id ASC
+            LIMIT 1
+        `
+    );
+
+    if (existingFirm.rows[0]) {
+        return existingFirm.rows[0];
+    }
+
+    const createdFirm = await query(
+        `
+            INSERT INTO firms (name, status)
+            VALUES ($1, 'active')
+            RETURNING id, name
+        `,
+        [DEFAULT_ADMIN_FIRM_NAME]
+    );
+
+    return createdFirm.rows[0];
 }
 
 const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === __filename;

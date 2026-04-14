@@ -1,9 +1,13 @@
 import { test, expect } from '@playwright/test';
 import {
   deleteUserAndOrphanFirmByEmailForE2E,
+  ensureDefaultAdminCanSignInForE2E,
   findUserByEmailForE2E,
   setSelfServiceRegistrationAutoApproval,
 } from './helpers/auth';
+
+const DEFAULT_ADMIN_EMAIL = process.env.DEFAULT_ADMIN_EMAIL || 'admin@resumeconverter.local';
+const DEFAULT_ADMIN_PASSWORD = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
 
 /**
  * Authentication E2E Tests
@@ -49,6 +53,37 @@ test.describe('Authentication', () => {
     await expect(page).toHaveURL(/\/signin(\?.*)?$/);
   });
 
+  test('should allow the default administrator to sign in through the real login form', async ({ page }) => {
+    await ensureDefaultAdminCanSignInForE2E();
+    await page.goto('/signin');
+    await page.locator('#email-address').fill(DEFAULT_ADMIN_EMAIL);
+    await page.locator('#password').fill(DEFAULT_ADMIN_PASSWORD);
+
+    const signInResponsePromise = page.waitForResponse((response) =>
+      response.url().includes('/api/auth/signin') && response.request().method() === 'POST'
+    );
+
+    await page.locator('button[type="submit"]').click();
+
+    const signInResponse = await signInResponsePromise;
+    expect(signInResponse.status()).toBe(200);
+
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.evaluate(async () => {
+      const response = await fetch('/api/auth/me', { credentials: 'include' });
+      const payload = await response.json();
+      return {
+        status: response.status,
+        email: payload?.user?.email || null,
+        role: payload?.user?.role || null,
+      };
+    })).resolves.toEqual({
+      status: 200,
+      email: DEFAULT_ADMIN_EMAIL,
+      role: 'admin',
+    });
+  });
+
   test('should redirect unauthenticated users away from protected shell routes', async ({ page }) => {
     const protectedRoutes = ['/resumes', '/settings', '/facts', '/admin'];
 
@@ -85,7 +120,8 @@ test.describe('Authentication', () => {
       await page.locator('#password').fill(password);
       await page.locator('button[type="submit"]').click();
 
-      await expect(page).toHaveURL(/\/$/);
+      await expect(page).toHaveURL(/\/signin(\?.*)?$/);
+      await expect(page.getByText(/email verification required|verifiez votre email/i)).toBeVisible();
     } finally {
       await deleteUserAndOrphanFirmByEmailForE2E(email);
       await setSelfServiceRegistrationAutoApproval(false);

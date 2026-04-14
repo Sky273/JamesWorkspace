@@ -21,6 +21,11 @@ export const SELF_SERVICE_FIRM_NAMES = [
 ];
 
 export function isSelfServiceRegistrationUser(user) {
+    const registrationSource = String(user?.registration_source || '').trim().toLowerCase();
+    if (registrationSource) {
+        return registrationSource === 'self_service';
+    }
+
     const firmName = String(user?.firm_name || '').trim().toLowerCase();
     return Boolean(firmName && SELF_SERVICE_FIRM_NAMES.includes(firmName));
 }
@@ -102,6 +107,7 @@ export async function createUser(userData) {
     const records = await createWithTimeout('users', [{
         fields: {
             ...userData,
+            registration_source: userData.registration_source || 'admin_created',
             firm_id: firmAssignment.firm_id,
             firm_name: firmAssignment.firm_name
         }
@@ -147,7 +153,8 @@ export async function registerSelfServiceUser({ email, password = '', name, goog
         password,
         name,
         role: 'user',
-        status: 'pending'
+        status: 'pending',
+        registration_source: 'self_service'
     });
 
     return {
@@ -179,11 +186,12 @@ export async function registerGoogleUser({ email, name, googleId, googleEmail, f
             google_linked_at,
             firm_id,
             firm_name,
-            email_verified_at
+            email_verified_at,
+            registration_source
         )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, $8, $9, CURRENT_TIMESTAMP)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, $8, $9, CURRENT_TIMESTAMP, $10)
          RETURNING *`,
-        [email, '', name, 'user', 'pending', googleId, googleEmail, firmAssignment.firm_id, firmAssignment.firm_name]
+        [email, '', name, 'user', 'pending', googleId, googleEmail, firmAssignment.firm_id, firmAssignment.firm_name, 'self_service']
     );
     return result.rows[0];
 }
@@ -216,12 +224,12 @@ async function createAutoApprovedSelfServiceUser({ email, password, name, google
         const firm = await createDedicatedAutoApprovedFirm(client, credits);
         const userResult = await client.query(
             `INSERT INTO users (
-                email, password, name, role, status, google_id, google_email, google_linked_at, firm_id, firm_name, email_verified_at
+                email, password, name, role, status, google_id, google_email, google_linked_at, firm_id, firm_name, email_verified_at, registration_source
              ) VALUES (
-                $1, $2, $3, 'user', 'active', $4, $5, $6, $7, $8, $9
+                $1, $2, $3, 'user', 'active', $4, $5, $6, $7, $8, $9, $10
              )
              RETURNING *`,
-            [email, password, name, googleId, googleEmail, googleId ? new Date() : null, firm.id, firm.name, googleId ? new Date() : null]
+            [email, password, name, googleId, googleEmail, googleId ? new Date() : null, firm.id, firm.name, googleId ? new Date() : null, 'self_service']
         );
         await createDefaultFirmTemplate(client, firm);
 

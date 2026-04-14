@@ -25,6 +25,10 @@ process.env.E2E_DISABLE_BACKUP_SCHEDULER = 'true';
 process.env.E2E_DISABLE_EXTERNAL_LLM = 'true';
 process.env.E2E_RELAX_RATE_LIMITING = 'true';
 process.env.E2E_QUIET_EXPECTED_WARNINGS = 'true';
+process.env.VITE_TURNSTILE_SITE_KEY = '';
+process.env.CLOUDFLARE_TURNSTILE_SITE_KEY = '';
+process.env.TURNSTILE_SECRET_KEY = '';
+process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY = '';
 
 function spawnChecked(command, args, label) {
   return new Promise((resolve, reject) => {

@@ -11,6 +11,10 @@ const DEFAULT_USER_EMAIL = 'playwright.user@resumeconverter.local';
 const DEFAULT_USER_PASSWORD = 'Playwright123!';
 const DEFAULT_ADMIN_EMAIL = 'playwright.admin@resumeconverter.local';
 const DEFAULT_ADMIN_PASSWORD = 'PlaywrightAdmin123!';
+const DEFAULT_APP_ADMIN_EMAIL = 'admin@resumeconverter.local';
+const DEFAULT_APP_ADMIN_PASSWORD = 'admin123';
+const DEFAULT_APP_ADMIN_NAME = 'Default Administrator';
+const DEFAULT_APP_ADMIN_FIRM_NAME = 'Default Firm';
 const E2E_TEMPLATE_NAME = '000 Playwright Export Template';
 const E2E_TEMPLATE_CONTENT = '<section><h1>-name-</h1><h2>-title-</h2><div>-content-</div></section>';
 const E2E_TEMPLATE_STYLESHEET = 'body { font-family: Arial, sans-serif; } h1 { font-size: 20px; } h2 { font-size: 14px; color: #555; }';
@@ -23,6 +27,8 @@ export const E2E_USER_EMAIL = process.env.E2E_USER_EMAIL || DEFAULT_USER_EMAIL;
 export const E2E_USER_PASSWORD = process.env.E2E_USER_PASSWORD || DEFAULT_USER_PASSWORD;
 export const E2E_ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || DEFAULT_ADMIN_EMAIL;
 export const E2E_ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD;
+export const APP_DEFAULT_ADMIN_EMAIL = process.env.DEFAULT_ADMIN_EMAIL || DEFAULT_APP_ADMIN_EMAIL;
+export const APP_DEFAULT_ADMIN_PASSWORD = process.env.DEFAULT_ADMIN_PASSWORD || DEFAULT_APP_ADMIN_PASSWORD;
 
 let bootstrapPromise: Promise<void> | null = null;
 let bootstrappedUser: {
@@ -202,6 +208,78 @@ export async function deleteUserAndOrphanFirmByEmailForE2E(email: string): Promi
     if ((remainingUsers.rows[0]?.count as number) === 0) {
       await pool.query('DELETE FROM firms WHERE id = $1', [firmId]);
     }
+  } finally {
+    await pool.end();
+  }
+}
+
+export async function ensureDefaultAdminCanSignInForE2E(): Promise<void> {
+  const pool = createPool();
+
+  try {
+    const firmResult = await pool.query(
+      `
+        SELECT id, name
+        FROM firms
+        ORDER BY created_at ASC NULLS LAST, id ASC
+        LIMIT 1
+      `
+    );
+
+    let firmId = firmResult.rows[0]?.id as string | undefined;
+    let firmName = (firmResult.rows[0]?.name as string | undefined) || undefined;
+
+    if (!firmId || !firmName) {
+      const createdFirm = await pool.query(
+        `
+          INSERT INTO firms (name, status)
+          VALUES ($1, 'active')
+          RETURNING id, name
+        `,
+        [DEFAULT_APP_ADMIN_FIRM_NAME]
+      );
+
+      firmId = createdFirm.rows[0].id as string;
+      firmName = createdFirm.rows[0].name as string;
+    }
+
+    const passwordHash = await bcrypt.hash(APP_DEFAULT_ADMIN_PASSWORD, 10);
+    await pool.query(
+      `
+        INSERT INTO users (
+          email,
+          password,
+          name,
+          role,
+          status,
+          firm_id,
+          firm_name,
+          email_verified_at,
+          must_change_password,
+          registration_source
+        )
+        VALUES ($1, $2, $3, 'admin', 'active', $4, $5, CURRENT_TIMESTAMP, false, 'system_seed')
+        ON CONFLICT (email)
+        DO UPDATE SET
+          password = EXCLUDED.password,
+          name = EXCLUDED.name,
+          role = 'admin',
+          status = 'active',
+          firm_id = EXCLUDED.firm_id,
+          firm_name = EXCLUDED.firm_name,
+          email_verified_at = COALESCE(users.email_verified_at, CURRENT_TIMESTAMP),
+          must_change_password = false,
+          registration_source = 'system_seed',
+          updated_at = CURRENT_TIMESTAMP
+      `,
+      [
+        APP_DEFAULT_ADMIN_EMAIL.toLowerCase(),
+        passwordHash,
+        DEFAULT_APP_ADMIN_NAME,
+        firmId,
+        firmName,
+      ]
+    );
   } finally {
     await pool.end();
   }

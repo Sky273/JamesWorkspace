@@ -275,6 +275,7 @@ describe('Users Routes', () => {
                 status: 'active',
                 must_change_password: true,
                 email_verified_at: expect.any(Date),
+                registration_source: 'admin_created',
                 firm_id: 'f-1',
                 firm_name: 'Acme Corp'
             }));

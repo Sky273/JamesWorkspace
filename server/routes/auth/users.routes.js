@@ -99,7 +99,8 @@ router.post('/users', authenticateToken, requireUserManager, validateBody(create
             role: managedRole.role,
             status: (status || 'active').toLowerCase(),
             must_change_password: true,
-            email_verified_at: new Date()
+            email_verified_at: new Date(),
+            registration_source: 'admin_created'
         };
 
         if (!requestedFirmId) {

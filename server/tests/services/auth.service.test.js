@@ -123,6 +123,7 @@ describe('Auth Service', () => {
                     email: 'new@test.com',
                     name: 'New',
                     password: 'hash',
+                    registration_source: 'admin_created',
                     firm_id: 'firm-1',
                     firm_name: 'Acme'
                 }
@@ -140,6 +141,7 @@ describe('Auth Service', () => {
             expect(query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO firms'), ['Public Registration']);
             expect(createWithTimeout).toHaveBeenCalledWith('users', [{
                 fields: expect.objectContaining({
+                    registration_source: 'admin_created',
                     firm_id: 'firm-default',
                     firm_name: 'Public Registration'
                 })
@@ -164,6 +166,7 @@ describe('Auth Service', () => {
             expect(query.mock.calls[0][0]).toContain('INSERT INTO users');
             expect(query.mock.calls[0][1]).toContain('g123');
             expect(query.mock.calls[0][1]).toContain('firm-1');
+            expect(query.mock.calls[0][1]).toContain('self_service');
         });
 
         it('should auto-assign default firm for Google registration when missing', async () => {
@@ -205,6 +208,7 @@ describe('Auth Service', () => {
                     email: 'new@test.com',
                     password: 'hash',
                     status: 'pending',
+                    registration_source: 'self_service',
                     firm_name: 'Public Registration'
                 })
             }]);
@@ -240,7 +244,7 @@ describe('Auth Service', () => {
             expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO firms'), ['Cabinet test', 1800]);
             expect(mockClient.query).toHaveBeenCalledWith(
                 expect.stringContaining('INSERT INTO users'),
-                ['active@test.com', 'hash', 'Active User', null, null, null, 'firm-test-1', 'Cabinet test', null]
+                ['active@test.com', 'hash', 'Active User', null, null, null, 'firm-test-1', 'Cabinet test', null, 'self_service']
             );
             expect(mockClient.query).toHaveBeenCalledWith(
                 expect.stringContaining('INSERT INTO templates'),
@@ -294,7 +298,7 @@ describe('Auth Service', () => {
             expect(mockClient.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO firms'), ['Cabinet test 2', 1000]);
             expect(mockClient.query).toHaveBeenCalledWith(
                 expect.stringContaining('INSERT INTO users'),
-                ['retry@test.com', 'hash', 'Retry User', null, null, null, 'firm-test-2', 'Cabinet test 2', null]
+                ['retry@test.com', 'hash', 'Retry User', null, null, null, 'firm-test-2', 'Cabinet test 2', null, 'self_service']
             );
             expect(mockClient.query).toHaveBeenCalledWith(
                 expect.stringContaining('INSERT INTO templates'),
@@ -311,11 +315,19 @@ describe('Auth Service', () => {
     });
 
     describe('isSelfServiceRegistrationUser', () => {
-        it('returns true for Public Registration users', () => {
+        it('returns true for explicit self_service users', () => {
+            expect(isSelfServiceRegistrationUser({ registration_source: 'self_service', firm_name: 'Client Firm' })).toBe(true);
+        });
+
+        it('returns false for explicit admin_created users even on a self-service firm', () => {
+            expect(isSelfServiceRegistrationUser({ registration_source: 'admin_created', firm_name: 'Public Registration' })).toBe(false);
+        });
+
+        it('falls back to Public Registration when source is missing', () => {
             expect(isSelfServiceRegistrationUser({ firm_name: 'Public Registration' })).toBe(true);
         });
 
-        it('returns true for Cabinet test users', () => {
+        it('falls back to Cabinet test users when source is missing', () => {
             expect(isSelfServiceRegistrationUser({ firm_name: 'Cabinet test' })).toBe(true);
         });
 

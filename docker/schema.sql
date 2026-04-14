@@ -1449,8 +1449,10 @@ CREATE TABLE public.users (
     totp_enabled_at timestamp with time zone,
     email_verified_at timestamp with time zone,
     must_change_password boolean DEFAULT false NOT NULL,
+    registration_source character varying(50) DEFAULT 'admin_created'::character varying NOT NULL,
     CONSTRAINT users_role_check CHECK (((role)::text = ANY (ARRAY[('admin'::character varying)::text, ('localAdmin'::character varying)::text, ('user'::character varying)::text]))),
-    CONSTRAINT users_status_check CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('inactive'::character varying)::text, ('pending'::character varying)::text])))
+    CONSTRAINT users_status_check CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('inactive'::character varying)::text, ('pending'::character varying)::text]))),
+    CONSTRAINT users_registration_source_check CHECK (((registration_source)::text = ANY (ARRAY[('self_service'::character varying)::text, ('admin_created'::character varying)::text, ('system_seed'::character varying)::text])))
 );
 
 
@@ -1487,6 +1489,13 @@ COMMENT ON COLUMN public.users.google_linked_at IS 'Timestamp when Google accoun
 --
 
 COMMENT ON COLUMN public.users.email_verified_at IS 'Timestamp when the user confirmed ownership of the login email';
+
+
+--
+-- Name: COLUMN users.registration_source; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.users.registration_source IS 'Origin of the account lifecycle: self_service, admin_created, or system_seed';
 
 
 --

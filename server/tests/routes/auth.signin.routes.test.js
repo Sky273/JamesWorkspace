@@ -40,6 +40,11 @@ const mockUpdateLastLogin = vi.fn();
 const mockFindExistingUserByEmail = vi.fn();
 const mockRegisterSelfServiceUser = vi.fn();
 const mockIsSelfServiceRegistrationUser = vi.fn((user) => {
+    const registrationSource = String(user?.registration_source || '').trim().toLowerCase();
+    if (registrationSource) {
+        return registrationSource === 'self_service';
+    }
+
     const firmName = String(user?.firm_name || '').trim().toLowerCase();
     return firmName === 'public registration' || firmName === 'cabinet test';
 });
@@ -270,6 +275,7 @@ describe('Auth Routes - POST /api/auth/signin', () => {
                 role: 'user',
                 firm_id: 'firm-123',
                 firm_name: 'Public Registration',
+                registration_source: 'self_service',
                 email_verified_at: null
             });
             mockBcryptCompare.mockResolvedValueOnce(true);
@@ -292,6 +298,7 @@ describe('Auth Routes - POST /api/auth/signin', () => {
                 role: 'user',
                 firm_id: 'firm-123',
                 firm_name: 'Client Firm',
+                registration_source: 'admin_created',
                 email_verified_at: null
             });
             mockBcryptCompare.mockResolvedValueOnce(true);
