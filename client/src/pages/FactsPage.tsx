@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import PageHeader from '../components/page/PageHeader';
 import { useAuth } from '../context/AuthContext';
 
-import { FactsCollectionOverlay, FactsDataTab, FactsTabs, TabLoader } from './FactsPage.components';
+import { DEFAULT_FACTS_TAB, FactsCollectionOverlay, FactsDataTab, FactsTabs, TabLoader } from './FactsPage.components';
 import { type TabType, useFactsDashboard } from './FactsPage.hooks';
 
 const FranceMapTab = lazy(() => import('../components/market/FranceMapTab'));
@@ -22,7 +22,7 @@ export default function FactsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
-  const [activeTab, setActiveTab] = useState<TabType>('data');
+  const [activeTab, setActiveTab] = useState<TabType>(DEFAULT_FACTS_TAB);
   const factsDashboard = useFactsDashboard({ navigate });
 
   return (

@@ -20,7 +20,9 @@ import { useTranslation } from 'react-i18next';
 import type { Client, ClientType } from '../types/entities';
 import Pagination from '../components/Pagination';
 import PageHeader from '../components/page/PageHeader';
+import ResponsivePageTabs from '../components/page/ResponsivePageTabs';
 import SearchField from '../components/page/SearchField';
+import ViewModeToggle from '../components/page/ViewModeToggle';
 import { SkeletonClientList } from '../components/ui/Skeleton';
 import type { CRMTab, ClientFilter, ClientsStats } from './ClientsPage.hooks';
 import { CLIENTS_PAGE_SIZE } from './ClientsPage.hooks';
@@ -51,20 +53,21 @@ export function CRMMainTabs({
   const { t } = useTranslation();
 
   return (
-    <div className="app-tab-strip mb-6">
-      <button onClick={onClientsClick} className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition-colors ${crmTab === 'clients' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}>
-        <BuildingOfficeIcon className="w-5 h-5" />
-        {t('crm.tabs.clients')}
-      </button>
-      <button onClick={onDealsClick} className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition-colors ${crmTab === 'deals' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}>
-        <FolderIcon className="w-5 h-5" />
-        {t('crm.tabs.deals')}
-      </button>
-      <button onClick={onInterviewsClick} className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition-colors ${crmTab === 'interviews' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}>
-        <CalendarDaysIcon className="w-5 h-5" />
-        {t('crm.tabs.interviews')}
-      </button>
-    </div>
+    <ResponsivePageTabs
+      label={t('crm.sections.title', 'Sections')}
+      minItemWidthRem={9.5}
+      onChange={(nextTab) => {
+        if (nextTab === 'clients') onClientsClick();
+        if (nextTab === 'deals') onDealsClick();
+        if (nextTab === 'interviews') onInterviewsClick();
+      }}
+      options={[
+        { value: 'clients', label: t('crm.tabs.clients'), icon: BuildingOfficeIcon },
+        { value: 'deals', label: t('crm.tabs.deals'), icon: FolderIcon },
+        { value: 'interviews', label: t('crm.tabs.interviews'), icon: CalendarDaysIcon },
+      ]}
+      value={crmTab}
+    />
   );
 }
 
@@ -113,10 +116,18 @@ export function ClientsToolbar({
   return (
     <div className="section-shell mb-6 rounded-[2rem]">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--cv-outline)] p-4">
-        <div className="flex items-center gap-2">
-          <button onClick={() => onSetActiveTab('all')} className={`app-tab-button ${activeTab === 'all' ? 'app-tab-button-active' : ''}`}>{t('clients.tabs.all')}</button>
-          <button onClick={() => onSetActiveTab('client')} className={`app-tab-button ${activeTab === 'client' ? 'app-tab-button-active' : ''}`}><BuildingOfficeIcon className="w-5 h-5" />{t('clients.tabs.clients')}</button>
-          <button onClick={() => onSetActiveTab('prospect')} className={`app-tab-button ${activeTab === 'prospect' ? 'app-tab-button-active' : ''}`}><BriefcaseIcon className="w-5 h-5" />{t('clients.tabs.prospects')}</button>
+        <div className="min-w-0 flex-1">
+          <ViewModeToggle
+            className="mb-0"
+            label={t('clients.filters.type', 'Type')}
+            onChange={onSetActiveTab}
+            options={[
+              { value: 'all', label: t('clients.tabs.all'), icon: UserGroupIcon },
+              { value: 'client', label: t('clients.tabs.clients'), icon: BuildingOfficeIcon },
+              { value: 'prospect', label: t('clients.tabs.prospects'), icon: BriefcaseIcon },
+            ]}
+            value={activeTab}
+          />
         </div>
         <div className="flex gap-2">
           <button

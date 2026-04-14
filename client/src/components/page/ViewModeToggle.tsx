@@ -7,6 +7,7 @@ interface ViewModeOption<T extends string> {
 }
 
 interface ViewModeToggleProps<T extends string> {
+  className?: string;
   label: string;
   onChange: (value: T) => void;
   options: ViewModeOption<T>[];
@@ -14,13 +15,14 @@ interface ViewModeToggleProps<T extends string> {
 }
 
 export default function ViewModeToggle<T extends string>({
+  className,
   label,
   onChange,
   options,
   value,
 }: ViewModeToggleProps<T>) {
   return (
-    <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div className={`mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between ${className || ''}`.trim()}>
       <span className="cv-kicker">{label}</span>
       <div className="w-full overflow-x-auto pb-1 sm:w-auto sm:overflow-visible">
         <div className="segmented-control inline-flex min-w-max rounded-2xl p-1">

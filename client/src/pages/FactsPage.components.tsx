@@ -1,6 +1,7 @@
 import { ArrowPathIcon, BriefcaseIcon, ChartBarIcon, CheckCircleIcon, MapIcon, TableCellsIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 
+import ResponsivePageTabs from '../components/page/ResponsivePageTabs';
 import type { MarketFact } from '../services/marketRadarService';
 import type { FactsStats, TabType } from './FactsPage.hooks';
 import {
@@ -51,6 +52,15 @@ interface FactsDataTabProps {
   onClearFilters: () => void;
 }
 
+export const FACTS_TAB_OPTIONS = [
+  { value: 'map', labelKey: 'marketRadar.tabs.map', icon: MapIcon },
+  { value: 'trends', labelKey: 'marketRadar.tabs.trends', icon: ChartBarIcon },
+  { value: 'data', labelKey: 'marketRadar.tabs.facts', icon: TableCellsIcon },
+  { value: 'metiers', labelKey: 'marketRadar.tabs.metiers', icon: BriefcaseIcon },
+] as const satisfies ReadonlyArray<{ value: TabType; labelKey: string; icon: typeof MapIcon }>;
+
+export const DEFAULT_FACTS_TAB: TabType = FACTS_TAB_OPTIONS[0].value;
+
 export const TabLoader = () => (
   <div className="flex items-center justify-center py-12">
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
@@ -71,7 +81,7 @@ export const FactsCollectionOverlay = ({ collecting, collectingSuccess }: FactsC
           <>
             <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto mb-4 animate-bounce" />
             <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-              {t('marketRadar.collection.launched', 'Collecte lancee !')}
+              {t('marketRadar.collection.launched', 'Collecte lancée !')}
             </h3>
             <p className="text-gray-600 dark:text-gray-400">
               {t('marketRadar.collection.redirecting', 'Redirection vers les jobs...')}
@@ -93,36 +103,20 @@ export const FactsCollectionOverlay = ({ collecting, collectingSuccess }: FactsC
 export const FactsTabs = ({ activeTab, onChange }: FactsTabsProps): JSX.Element => {
   const { t } = useTranslation();
 
-  const tabs: Array<{ id: TabType; label: string; icon: typeof MapIcon }> = [
-    { id: 'map', label: t('marketRadar.tabs.map'), icon: MapIcon },
-    { id: 'trends', label: t('marketRadar.tabs.trends'), icon: ChartBarIcon },
-    { id: 'data', label: t('marketRadar.tabs.facts'), icon: TableCellsIcon },
-    { id: 'metiers', label: t('marketRadar.tabs.metiers'), icon: BriefcaseIcon },
-  ];
+  const tabs = FACTS_TAB_OPTIONS.map(({ value, labelKey, icon }) => ({
+    value,
+    label: t(labelKey),
+    icon,
+  })) satisfies Array<{ value: TabType; label: string; icon: typeof MapIcon }>;
 
   return (
-    <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
-      <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => onChange(tab.id)}
-              className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                isActive
-                  ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-              }`}
-            >
-              <Icon className="h-5 w-5" />
-              {tab.label}
-            </button>
-          );
-        })}
-      </nav>
-    </div>
+    <ResponsivePageTabs
+      label={t('marketRadar.sections.title', 'Sections')}
+      minItemWidthRem={10}
+      onChange={onChange}
+      options={tabs}
+      value={activeTab}
+    />
   );
 };
 
@@ -143,16 +137,16 @@ export const FactsMapPlaceholder = ({ onEnable }: FactsMapPlaceholderProps): JSX
         </p>
         <div className="mt-6 grid w-full gap-3 text-left text-sm text-gray-600 dark:text-gray-400 md:grid-cols-3">
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/40">
-            <div className="font-medium text-gray-900 dark:text-gray-100">Chargement differe</div>
-            <div className="mt-1">La carte interactive n'est chargee qu'a la demande.</div>
+            <div className="font-medium text-gray-900 dark:text-gray-100">Chargement différé</div>
+            <div className="mt-1">La carte interactive n'est chargée qu'à la demande.</div>
           </div>
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/40">
-            <div className="font-medium text-gray-900 dark:text-gray-100">Vue data d'abord</div>
-            <div className="mt-1">Le radar demarre sur les donnees tabulaires pour reduire le cout initial.</div>
+            <div className="font-medium text-gray-900 dark:text-gray-100">Carte par défaut</div>
+            <div className="mt-1">Le radar s'ouvre directement sur la carte de France pour donner la vue d'ensemble immédiatement.</div>
           </div>
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/40">
-            <div className="font-medium text-gray-900 dark:text-gray-100">Interaction complete</div>
-            <div className="mt-1">Le rendu interactif reste disponible quand vous en avez reellement besoin.</div>
+            <div className="font-medium text-gray-900 dark:text-gray-100">Interaction complète</div>
+            <div className="mt-1">Le rendu interactif reste disponible quand vous en avez réellement besoin.</div>
           </div>
         </div>
         <button

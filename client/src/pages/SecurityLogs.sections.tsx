@@ -1,8 +1,9 @@
 import { motion } from 'framer-motion';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { ClipboardDocumentListIcon, CommandLineIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import type { ChangeEvent } from 'react';
 import type { TFunction } from 'i18next';
 import Pagination from '../components/Pagination';
+import ResponsivePageTabs from '../components/page/ResponsivePageTabs';
 import type {
   ObservabilityCheckSummary,
   ObservabilityHealthResponse,
@@ -134,26 +135,17 @@ export function SecurityTabs({
   onTabChange: (tab: SecurityLogsTab) => void;
   t: TFunction;
 }): JSX.Element {
-  const tabs: Array<{ id: SecurityLogsTab; label: string }> = [
-    { id: 'logs', label: t('security.tabs.logs', { defaultValue: 'Logs' }) },
-    { id: 'observability', label: t('security.tabs.observability', { defaultValue: 'Observabilité' }) },
-  ];
-
   return (
-    <div className="mb-6 flex flex-wrap gap-3">
-      {tabs.map((tab) => (
-        <button
-          key={tab.id}
-          type="button"
-          onClick={() => onTabChange(tab.id)}
-          className={activeTab === tab.id
-            ? 'cv-gradient-button inline-flex min-h-11 items-center px-5 py-2 text-sm font-semibold'
-            : 'cv-ghost-button inline-flex min-h-11 items-center px-5 py-2 text-sm font-medium'}
-        >
-          {tab.label}
-        </button>
-      ))}
-    </div>
+    <ResponsivePageTabs
+      label={t('security.sections.title', { defaultValue: 'Sections' })}
+      minItemWidthRem={11}
+      onChange={onTabChange}
+      options={[
+        { value: 'logs', label: t('security.tabs.logs', { defaultValue: 'Logs' }), icon: ClipboardDocumentListIcon },
+        { value: 'observability', label: t('security.tabs.observability', { defaultValue: 'Observabilité' }), icon: CommandLineIcon },
+      ]}
+      value={activeTab}
+    />
   );
 }
 

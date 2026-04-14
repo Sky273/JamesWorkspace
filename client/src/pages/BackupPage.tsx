@@ -8,8 +8,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { ArrowPathIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon, ArrowUturnLeftIcon, ClockIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 import PageHeader from '../components/page/PageHeader';
+import ResponsivePageTabs from '../components/page/ResponsivePageTabs';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import logger from '../utils/logger.frontend';
 import type { BackupSettings, BackupHistoryItem, RemoteFile } from './backupPage.types';
@@ -349,43 +350,24 @@ const BackupPage = (): JSX.Element => {
         >
             <PageHeader title={t('backup.pageTitle')} subtitle={t('backup.pageDescription')} />
 
-            <div className="section-shell mb-6 rounded-[2rem] p-3">
-                <div className="flex flex-wrap gap-2">
-                    <button
-                        onClick={() => setActiveSection('config')}
-                        className={`inline-flex min-h-11 items-center rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                            activeSection === 'config'
-                                ? 'bg-[color:color-mix(in_srgb,var(--cv-primary)_16%,transparent)] text-primary-700 dark:text-primary-300'
-                                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700/70 dark:hover:text-gray-200'
-                        }`}
-                    >
-                        {t('backup.configTab')}
-                    </button>
-                    <button
-                        onClick={() => setActiveSection('history')}
-                        className={`inline-flex min-h-11 items-center rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                            activeSection === 'history'
-                                ? 'bg-[color:color-mix(in_srgb,var(--cv-primary)_16%,transparent)] text-primary-700 dark:text-primary-300'
-                                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700/70 dark:hover:text-gray-200'
-                        }`}
-                    >
-                        {t('backup.historyTab')}
-                    </button>
-                    <button
-                        onClick={() => {
-                            setActiveSection('restore');
-                            void fetchRemoteFiles({ silent: true });
-                        }}
-                        className={`inline-flex min-h-11 items-center rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                            activeSection === 'restore'
-                                ? 'bg-[color:color-mix(in_srgb,var(--cv-primary)_16%,transparent)] text-primary-700 dark:text-primary-300'
-                                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700/70 dark:hover:text-gray-200'
-                        }`}
-                    >
-                        {t('backup.restoreTab')}
-                    </button>
-                </div>
-            </div>
+            <ResponsivePageTabs
+                label={t('backup.sections.title', 'Sections')}
+                minItemWidthRem={10}
+                onChange={(nextSection) => {
+                    if (nextSection === 'restore') {
+                        setActiveSection('restore');
+                        void fetchRemoteFiles({ silent: true });
+                        return;
+                    }
+                    setActiveSection(nextSection);
+                }}
+                options={[
+                    { value: 'config', label: t('backup.configTab'), icon: Cog6ToothIcon },
+                    { value: 'history', label: t('backup.historyTab'), icon: ClockIcon },
+                    { value: 'restore', label: t('backup.restoreTab'), icon: ArrowUturnLeftIcon },
+                ]}
+                value={activeSection}
+            />
 
             <div className="section-shell rounded-[2rem] p-6">
                 {activeSection === 'config' && (
