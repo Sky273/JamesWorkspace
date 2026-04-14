@@ -15,7 +15,7 @@ import { useAuthFetch } from '../hooks/useAuthFetch';
 import { useChatbot } from '../context/ChatbotContext';
 import logger from '../utils/logger.frontend';
 import { getResponseErrorMessage } from '../utils/apiInterceptor';
-import type { SettingsTabItem } from '../components/SettingsPage/SettingsTabsNav';
+import type { ResponsivePageTabOption } from '../components/page/ResponsivePageTabs';
 import {
   defaultFormData,
   getTotalWeight as getSettingsTotalWeight,
@@ -233,15 +233,15 @@ export function useSettingsPage() {
 
   const totalWeight = useMemo(() => getSettingsTotalWeight(formData), [formData]);
 
-  const tabs = useMemo<SettingsTabItem[]>(() => ([
-    { id: 'llm', name: getFallbackText('settings.tabs.llm', 'Modele LLM'), icon: SparklesIcon },
-    { id: 'prompts', name: getFallbackText('settings.tabs.prompts', 'Prompts'), icon: Cog6ToothIcon },
-    { id: 'weights', name: getFallbackText('settings.tabs.weights', 'Poids'), icon: ScaleIcon },
-    { id: 'credits', name: getFallbackText('settings.tabs.credits', 'Credits IA'), icon: BanknotesIcon },
-    { id: 'chatbot', name: getFallbackText('settings.tabs.chatbot', 'Chatbot'), icon: ChatBubbleLeftRightIcon },
-    { id: 'gdpr', name: getFallbackText('settings.tabs.gdpr', 'RGPD'), icon: ShieldCheckIcon },
-    { id: 'dpo', name: getFallbackText('settings.tabs.dpo', 'Contact DPO'), icon: UserCircleIcon },
-    { id: 'swagger', name: getFallbackText('settings.tabs.apiDocs', 'Documentation API'), icon: DocumentTextIcon }
+  const tabs = useMemo<ResponsivePageTabOption<string>[]>(() => ([
+    { value: 'llm', label: getFallbackText('settings.tabs.llm', 'Modele LLM'), icon: SparklesIcon },
+    { value: 'prompts', label: getFallbackText('settings.tabs.prompts', 'Prompts'), icon: Cog6ToothIcon },
+    { value: 'weights', label: getFallbackText('settings.tabs.weights', 'Poids'), icon: ScaleIcon },
+    { value: 'credits', label: getFallbackText('settings.tabs.credits', 'Credits IA'), icon: BanknotesIcon },
+    { value: 'chatbot', label: getFallbackText('settings.tabs.chatbot', 'Chatbot'), icon: ChatBubbleLeftRightIcon },
+    { value: 'gdpr', label: getFallbackText('settings.tabs.gdpr', 'RGPD'), icon: ShieldCheckIcon },
+    { value: 'dpo', label: getFallbackText('settings.tabs.dpo', 'Contact DPO'), icon: UserCircleIcon },
+    { value: 'swagger', label: getFallbackText('settings.tabs.apiDocs', 'Documentation API'), icon: DocumentTextIcon }
   ]), [getFallbackText]);
 
   return {

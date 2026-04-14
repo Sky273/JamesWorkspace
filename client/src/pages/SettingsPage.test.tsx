@@ -19,7 +19,11 @@ const hookState = vi.hoisted((): { value: any } => ({
     activeTab: 'llm',
     setActiveTab: vi.fn(),
     formData: {},
-    tabs: [{ id: 'llm', label: 'LLM' }, { id: 'credits', label: 'Credits' }, { id: 'swagger', label: 'Swagger' }],
+    tabs: [
+      { value: 'llm', label: 'LLM', icon: () => null },
+      { value: 'credits', label: 'Credits', icon: () => null },
+      { value: 'swagger', label: 'Swagger', icon: () => null },
+    ],
     totalWeight: 100,
     handleSave: vi.fn(),
     handleTestConnection: vi.fn(),
@@ -32,6 +36,12 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: string) => fallback || key,
   }),
+}));
+
+const setSearchParamsMock = vi.fn();
+
+vi.mock('react-router-dom', () => ({
+  useSearchParams: () => [new URLSearchParams('tab=llm'), setSearchParamsMock],
 }));
 
 vi.mock('framer-motion', () => ({
@@ -58,11 +68,11 @@ vi.mock('../components/SettingsPage/SettingsHeader', () => ({
   default: () => <div>settings-header</div>,
 }));
 
-vi.mock('../components/SettingsPage/SettingsTabsNav', () => ({
-  default: ({ onTabChange }: { onTabChange: (tab: string) => void }) => (
+vi.mock('../components/page/ResponsivePageTabs', () => ({
+  default: ({ onChange }: { onChange: (tab: string) => void }) => (
     <div>
-      <button onClick={() => onTabChange('llm')}>open-llm</button>
-      <button onClick={() => onTabChange('swagger')}>open-swagger</button>
+      <button onClick={() => onChange('llm')}>open-llm</button>
+      <button onClick={() => onChange('swagger')}>open-swagger</button>
     </div>
   ),
 }));
@@ -101,7 +111,11 @@ describe('SettingsPage', () => {
       activeTab: 'llm',
       setActiveTab: vi.fn(),
       formData: {},
-      tabs: [{ id: 'llm', label: 'LLM' }, { id: 'credits', label: 'Credits' }, { id: 'swagger', label: 'Swagger' }],
+      tabs: [
+        { value: 'llm', label: 'LLM', icon: () => null },
+        { value: 'credits', label: 'Credits', icon: () => null },
+        { value: 'swagger', label: 'Swagger', icon: () => null },
+      ],
       totalWeight: 100,
       handleSave: vi.fn(),
       handleTestConnection: vi.fn(),
@@ -142,7 +156,7 @@ describe('SettingsPage', () => {
     fireEvent.click(screen.getByText('save-settings'));
     fireEvent.click(screen.getByText('reset-settings'));
 
-    expect(hookState.value.setActiveTab).toHaveBeenCalledWith('swagger');
+    expect(setSearchParamsMock).toHaveBeenCalled();
     expect(hookState.value.handleSave).toHaveBeenCalled();
     expect(hookState.value.resetToDefaults).toHaveBeenCalled();
   });

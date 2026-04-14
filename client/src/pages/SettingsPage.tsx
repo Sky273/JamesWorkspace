@@ -6,11 +6,12 @@
 import { motion } from 'framer-motion';
 import { ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { LLMTab, PromptsTab, WeightsTab, CreditsTab, ChatbotTab, GdprTab, DpoTab } from '../components/SettingsPage';
 import SettingsHeader from '../components/SettingsPage/SettingsHeader';
-import SettingsTabsNav from '../components/SettingsPage/SettingsTabsNav';
 import SettingsApiDocsPanel from '../components/SettingsPage/SettingsApiDocsPanel';
 import SettingsActionsFooter from '../components/SettingsPage/SettingsActionsFooter';
+import ResponsivePageTabs from '../components/page/ResponsivePageTabs';
 import { useSettingsPage } from './SettingsPage.hooks';
 
 const SettingsPage = (): JSX.Element => {
@@ -23,8 +24,6 @@ const SettingsPage = (): JSX.Element => {
     ollamaDiscoveryLoading,
     ollamaModelCatalog,
     ollamaModelCapabilities,
-    activeTab,
-    setActiveTab,
     formData,
     tabs,
     totalWeight,
@@ -33,6 +32,17 @@ const SettingsPage = (): JSX.Element => {
     handleInputChange,
     resetToDefaults,
   } = useSettingsPage();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const availableTabIds = tabs.map((tab) => tab.value);
+  const requestedTab = searchParams.get('tab') || '';
+  const activeTab = availableTabIds.includes(requestedTab) ? requestedTab : tabs[0]?.value || 'llm';
+
+  const setActiveTab = (nextTab: string) => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('tab', nextTab);
+    setSearchParams(nextParams, { replace: true });
+  };
 
   if (loading) {
     return (
@@ -106,13 +116,13 @@ const SettingsPage = (): JSX.Element => {
     >
       <SettingsHeader t={t} />
 
-      <div className="section-shell rounded-[2rem] p-4 mb-6">
-        <SettingsTabsNav
-          tabs={tabs}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-        />
-      </div>
+      <ResponsivePageTabs
+        label={t('settings.sections.title', 'Sections')}
+        minItemWidthRem={11.5}
+        value={activeTab}
+        onChange={setActiveTab}
+        options={tabs}
+      />
 
       <div className="section-shell rounded-[2rem] p-6 overflow-visible">
         {activeTab === 'llm' && (

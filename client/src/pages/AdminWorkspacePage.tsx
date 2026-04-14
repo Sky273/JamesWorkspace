@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import PageHeader from '../components/page/PageHeader';
-import ViewModeToggle from '../components/page/ViewModeToggle';
+import ResponsivePageTabs from '../components/page/ResponsivePageTabs';
 import { useAuth } from '../context/AuthContext';
 import EmailTemplatesPage from './admin/EmailTemplatesPage';
 import FirmCreditsPage from './FirmCreditsPage';
@@ -76,8 +76,9 @@ export default function AdminWorkspacePage(): JSX.Element {
     >
       <PageHeader title={t('adminWorkspace.title')} subtitle={t('adminWorkspace.subtitle')} />
 
-      <ViewModeToggle
+      <ResponsivePageTabs
         label={t('adminWorkspace.tabLabel')}
+        minItemWidthRem={9.5}
         value={activeTab}
         onChange={setActiveTab}
         options={availableTabs}
