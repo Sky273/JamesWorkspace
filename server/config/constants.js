@@ -149,14 +149,14 @@ export const CONSENT_CONFIG = {
 export const RATE_LIMIT = {
     GLOBAL: {
         windowMs: 15 * 60 * 1000,
-        max: 1000
+        max: 10000
     },
     AUTH: {
         windowMs: 15 * 60 * 1000,
-        max: 20
+        max: 200
     },
     USER: {
         windowMs: 15 * 60 * 1000,
-        max: 50
+        max: 500
     }
 };

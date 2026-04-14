@@ -65,7 +65,7 @@ export const authLimiter = rateLimit({
 
 export const registrationLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
-    max: 5,
+    max: 50,
     standardHeaders: true,
     legacyHeaders: false,
     skip: () => isE2ERateLimitRelaxed(),
@@ -187,7 +187,7 @@ export function userRateLimit(maxRequests = RATE_LIMIT.USER.max, windowMs = RATE
  * - Same IP with different users: limited by IP quota
  * - Same user + same IP: limited by combined quota (strictest)
  */
-export function combinedRateLimit(maxRequests = 30, windowMs = 60 * 1000) {
+export function combinedRateLimit(maxRequests = 300, windowMs = 60 * 1000) {
     return (req, res, next) => {
         if (isE2ERateLimitRelaxed()) {
             return next();
@@ -255,7 +255,7 @@ export function combinedRateLimit(maxRequests = 30, windowMs = 60 * 1000) {
 // Upload rate limiter
 export const uploadLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 50,
+    max: 500,
     message: 'Too many file uploads, please try again later.',
     skip: () => isE2ERateLimitRelaxed(),
     handler: (req, res) => {
@@ -270,7 +270,7 @@ export const uploadLimiter = rateLimit({
 // LLM rate limiter
 export const llmLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
-    max: 100,
+    max: 1000,
     message: 'Too many LLM requests, please try again later.',
     skip: () => isE2ERateLimitRelaxed(),
     handler: (req, res) => {
