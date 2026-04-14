@@ -31,6 +31,8 @@ const mockUpdateResume = vi.fn();
 const mockDeleteResume = vi.fn();
 const mockGetResumeForAccessCheck = vi.fn();
 const mockExtractTextFromWordBuffer = vi.fn();
+const mockConvertWordBufferToPdfBuffer = vi.fn();
+const mockHasSofficeCli = vi.fn();
 vi.mock('../../services/resumes.service.js', () => ({
     countResumes: (...args) => mockCountResumes(...args),
     listResumes: (...args) => mockListResumes(...args),
@@ -44,12 +46,10 @@ vi.mock('../../services/resumes.service.js', () => ({
 
 vi.mock('../../services/wordTextExtraction.service.js', () => ({
     extractTextFromWordBuffer: (...args) => mockExtractTextFromWordBuffer(...args),
+    convertWordBufferToPdfBuffer: (...args) => mockConvertWordBufferToPdfBuffer(...args),
+    hasSofficeCli: (...args) => mockHasSofficeCli(...args),
     DOCX_MIME_TYPE: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     DOC_MIME_TYPE: 'application/msword'
-}));
-
-vi.mock('mammoth', () => ({
-    convertToHtml: vi.fn(async () => ({ value: '<p>Converted DOCX</p>' }))
 }));
 
 // Mock firmHelpers
@@ -524,6 +524,7 @@ describe('Resume Routes - GET /api/resumes/:id/preview', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         app = createTestApp();
+        mockHasSofficeCli.mockResolvedValue(true);
     });
 
     it('should preview PDF inline for authorized user', async () => {
@@ -547,8 +548,10 @@ describe('Resume Routes - GET /api/resumes/:id/preview', () => {
         expect(res.headers['content-disposition']).toContain('inline;');
     });
 
-    it('should preview DOCX as HTML', async () => {
+    it('should preview DOCX as PDF via LibreOffice', async () => {
         const fileContent = Buffer.from('docx');
+        const pdfBuffer = Buffer.from('%PDF-docx');
+        mockConvertWordBufferToPdfBuffer.mockResolvedValueOnce(pdfBuffer);
         mockGetResumeFileForDownload.mockResolvedValueOnce({
             id: '123e4567-e89b-12d3-a456-426614174000',
             file_name: 'resume.docx',
@@ -564,12 +567,43 @@ describe('Resume Routes - GET /api/resumes/:id/preview', () => {
             .set('Authorization', 'Bearer valid-token');
 
         expect(res.status).toBe(200);
-        expect(res.headers['content-type']).toContain('text/html');
-        expect(res.text).toContain('Converted DOCX');
+        expect(res.headers['content-type']).toBe('application/pdf');
+        expect(res.headers['content-disposition']).toContain('inline;');
+        expect(mockConvertWordBufferToPdfBuffer).toHaveBeenCalledWith(fileContent, {
+            fileName: 'resume.docx',
+            mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        });
     });
 
-    it('should preview DOC as HTML using extracted text', async () => {
+    it('should preview DOC as PDF via LibreOffice', async () => {
         const fileContent = Buffer.from('doc');
+        const pdfBuffer = Buffer.from('%PDF-doc');
+        mockConvertWordBufferToPdfBuffer.mockResolvedValueOnce(pdfBuffer);
+        mockGetResumeFileForDownload.mockResolvedValueOnce({
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            file_name: 'resume.doc',
+            resume_file_data: fileContent,
+            resume_file_type: 'application/msword',
+            resume_file_size: fileContent.length,
+            firm_id: 'firm-123',
+            firm_name: 'Test Firm'
+        });
+
+        const res = await request(app)
+            .get('/api/resumes/123e4567-e89b-12d3-a456-426614174000/preview')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(res.headers['content-type']).toBe('application/pdf');
+        expect(mockConvertWordBufferToPdfBuffer).toHaveBeenCalledWith(fileContent, {
+            fileName: 'resume.doc',
+            mimeType: 'application/msword'
+        });
+    });
+
+    it('should fall back to extracted HTML when LibreOffice is unavailable', async () => {
+        const fileContent = Buffer.from('doc');
+        mockHasSofficeCli.mockResolvedValueOnce(false);
         mockExtractTextFromWordBuffer.mockResolvedValueOnce({ text: 'Legacy DOC body' });
         mockGetResumeFileForDownload.mockResolvedValueOnce({
             id: '123e4567-e89b-12d3-a456-426614174000',

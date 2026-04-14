@@ -15,7 +15,13 @@ import {
 import { setSafeFileResponseHeaders } from '../../../utils/fileResponseSecurity.js';
 import { persistResumeSkillEvidence } from '../../../services/skillEvidence.service.js';
 import { shouldBypassCache } from '../../../utils/requestCacheControl.js';
-import { extractTextFromWordBuffer, DOCX_MIME_TYPE, DOC_MIME_TYPE } from '../../../services/wordTextExtraction.service.js';
+import {
+    extractTextFromWordBuffer,
+    convertWordBufferToPdfBuffer,
+    hasSofficeCli,
+    DOCX_MIME_TYPE,
+    DOC_MIME_TYPE
+} from '../../../services/wordTextExtraction.service.js';
 import {
     buildDeferredPostAnalysisDecision,
     buildResumeUpdateData,
@@ -120,7 +126,37 @@ async function buildResumePreviewPayload(resume) {
         };
     }
 
-    if (mimeType === DOCX_MIME_TYPE) {
+    if (mimeType === DOCX_MIME_TYPE || mimeType === DOC_MIME_TYPE) {
+        if (await hasSofficeCli()) {
+            const pdfBuffer = await convertWordBufferToPdfBuffer(resume.resume_file_data, {
+                fileName: resume.file_name || (mimeType === DOC_MIME_TYPE ? 'resume.doc' : 'resume.docx'),
+                mimeType
+            });
+
+            return {
+                kind: 'binary',
+                contentType: 'application/pdf',
+                body: pdfBuffer,
+                contentLength: pdfBuffer.length
+            };
+        }
+
+        if (mimeType === DOC_MIME_TYPE) {
+            const extraction = await extractTextFromWordBuffer(resume.resume_file_data, {
+                fileName: resume.file_name || 'resume.doc',
+                mimeType,
+                minTextLength: 1
+            });
+
+            return {
+                kind: 'html',
+                body: renderWordTextPreviewDocument({
+                    title: resume.file_name || 'Document source',
+                    text: extraction.text
+                })
+            };
+        }
+
         const mammoth = await import('mammoth');
         const result = await mammoth.convertToHtml({
             buffer: resume.resume_file_data

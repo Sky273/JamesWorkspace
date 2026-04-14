@@ -85,7 +85,7 @@ function resolveWordExtension(fileName, mimeType) {
     return '.doc';
 }
 
-async function convertWordBufferToPdfBuffer(buffer, { fileName, mimeType }) {
+export async function convertWordBufferToPdfBuffer(buffer, { fileName, mimeType }) {
     const extension = resolveWordExtension(fileName, mimeType);
     const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'resume-word-ocr-'));
     const inputPath = path.join(tempDir, `source${extension}`);
