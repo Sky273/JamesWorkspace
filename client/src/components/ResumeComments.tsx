@@ -16,7 +16,7 @@ import {
   CheckIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
-import { fetchWithAuth, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
+import { fetchWithAuth, fetchWithCsrfRetry, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
 
 interface Comment {
@@ -92,7 +92,7 @@ const ResumeComments = ({ resumeId, className = '' }: ResumeCommentsProps): JSX.
       const options = await createAuthOptionsWithCsrf({
         headers: { 'Content-Type': 'application/json' }
       });
-      const response = await fetchWithAuth(`/api/resumes/${resumeId}/comments`, {
+      const response = await fetchWithCsrfRetry(`/api/resumes/${resumeId}/comments`, {
         ...options,
         method: 'POST',
         body: JSON.stringify({
@@ -123,7 +123,7 @@ const ResumeComments = ({ resumeId, className = '' }: ResumeCommentsProps): JSX.
       const options = await createAuthOptionsWithCsrf({
         headers: { 'Content-Type': 'application/json' }
       });
-      const response = await fetchWithAuth(`/api/resumes/${resumeId}/comments/${commentId}`, {
+      const response = await fetchWithCsrfRetry(`/api/resumes/${resumeId}/comments/${commentId}`, {
         ...options,
         method: 'PUT',
         body: JSON.stringify({
@@ -153,7 +153,7 @@ const ResumeComments = ({ resumeId, className = '' }: ResumeCommentsProps): JSX.
 
     try {
       const options = await createAuthOptionsWithCsrf();
-      const response = await fetchWithAuth(`/api/resumes/${resumeId}/comments/${commentId}`, {
+      const response = await fetchWithCsrfRetry(`/api/resumes/${resumeId}/comments/${commentId}`, {
         ...options,
         method: 'DELETE'
       });
