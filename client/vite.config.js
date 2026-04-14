@@ -57,10 +57,11 @@ export default defineConfig(({ mode }) => {
     ...clientEnv,
     ...process.env,
   };
+  const publicClientEnvKeys = new Set(
+    Object.keys(env).filter((key) => key.startsWith('VITE_') || key === 'CLOUDFLARE_TURNSTILE_SITE_KEY')
+  );
   const defineViteEnv = Object.fromEntries(
-    Object.entries(env)
-      .filter(([key]) => key.startsWith('VITE_'))
-      .map(([key, value]) => [`import.meta.env.${key}`, JSON.stringify(value ?? '')])
+    Array.from(publicClientEnvKeys).map((key) => [`import.meta.env.${key}`, JSON.stringify(env[key] ?? '')])
   );
   const httpsEnabled = env.VITE_HTTPS_ENABLED === 'true';
   const httpsPort = env.VITE_HTTPS_PORT || '3443';

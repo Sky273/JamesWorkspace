@@ -36,7 +36,11 @@ interface FormData {
   website: string;
 }
 
-const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim() || '';
+const TURNSTILE_SITE_KEY = (
+  import.meta.env.CLOUDFLARE_TURNSTILE_SITE_KEY
+  || import.meta.env.VITE_TURNSTILE_SITE_KEY
+  || ''
+).trim();
 const TURNSTILE_SCRIPT_ID = 'cf-turnstile-script';
 
 const Register = (): JSX.Element => {

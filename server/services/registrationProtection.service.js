@@ -35,10 +35,14 @@ function isE2EProtectionRelaxed() {
 }
 
 function getRegistrationCaptchaConfig() {
-  if (process.env.TURNSTILE_SECRET_KEY) {
+  const turnstileSecret =
+    process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY
+    || process.env.TURNSTILE_SECRET_KEY;
+
+  if (turnstileSecret) {
     return {
       provider: 'turnstile',
-      secret: process.env.TURNSTILE_SECRET_KEY,
+      secret: turnstileSecret,
       verifyUrl: 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
       responseField: 'response',
     };
