@@ -11,7 +11,7 @@ import logger from '../utils/logger.frontend';
 import { buildSharePayload } from './resumeDocumentPayload';
 import { resolveResumeForPage } from './resumeLoader';
 
-type AnalysisTab = 'overview' | 'skills' | 'original' | 'pipeline';
+type AnalysisTab = 'overview' | 'skills' | 'original' | 'extracted' | 'pipeline';
 type ResumeAnalysisLocationState = {
   from?: string;
   refreshResumesView?: boolean;

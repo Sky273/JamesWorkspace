@@ -1,19 +1,48 @@
 import { Link } from 'react-router-dom';
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowLeftIcon,
+  ChartBarIcon,
+  CircleStackIcon,
+  DocumentMagnifyingGlassIcon,
+  FunnelIcon,
+  QueueListIcon,
+} from '@heroicons/react/24/outline';
+import type { TFunction } from 'i18next';
 import ShareQRCodeModal from '../components/ShareQRCodeModal';
 import { SkeletonCard } from '../components/ui/Skeleton';
 import ImprovementAnimation from '../components/ImprovementAnimation';
+import ResponsivePageTabs, { type ResponsivePageTabOption } from '../components/page/ResponsivePageTabs';
 import OverviewTab from '../components/ResumeAnalysis/OverviewTab';
 import SkillsTagsTab from '../components/ResumeAnalysis/SkillsTagsTab';
 import OriginalTextTab from '../components/ResumeAnalysis/OriginalTextTab';
+import OriginalSourcePreview from '../components/ResumeAnalysis/OriginalSourcePreview';
 import PipelineTab from '../components/ResumeAnalysis/PipelineTab';
 import ResumeComments from '../components/ResumeComments';
 import ResumeAnalysisHeader from '../components/ResumeAnalysisPage/ResumeAnalysisHeader';
 import ResumeAnalysisStepIndicator from '../components/ResumeAnalysisPage/ResumeAnalysisStepIndicator';
 import { useResumeAnalysisPage } from './ResumeAnalysisPage.hooks';
 
-const ANALYSIS_TABS = ['overview', 'skills', 'original', 'pipeline'] as const;
+const ANALYSIS_TABS = ['overview', 'skills', 'original', 'extracted', 'pipeline'] as const;
 type AnalysisTabKey = (typeof ANALYSIS_TABS)[number];
+
+const getAnalysisTabLabel = (tab: AnalysisTabKey, t: TFunction): string => {
+  switch (tab) {
+    case 'original':
+      return t('resume.analysis.tabs.original', { defaultValue: 'Original' });
+    case 'extracted':
+      return t('resume.analysis.tabs.extracted', { defaultValue: 'Contenu extrait' });
+    default:
+      return t(`resume.analysis.tabs.${tab}`);
+  }
+};
+
+const getAnalysisTabOptions = (t: TFunction): ResponsivePageTabOption<AnalysisTabKey>[] => ([
+  { value: 'overview', label: getAnalysisTabLabel('overview', t), icon: ChartBarIcon },
+  { value: 'skills', label: getAnalysisTabLabel('skills', t), icon: FunnelIcon },
+  { value: 'original', label: getAnalysisTabLabel('original', t), icon: DocumentMagnifyingGlassIcon },
+  { value: 'extracted', label: getAnalysisTabLabel('extracted', t), icon: CircleStackIcon },
+  { value: 'pipeline', label: getAnalysisTabLabel('pipeline', t), icon: QueueListIcon },
+]);
 
 const ResumeAnalysisPage = (): JSX.Element => {
   const {
@@ -111,35 +140,30 @@ const ResumeAnalysisPage = (): JSX.Element => {
         <section className="cv-panel overflow-hidden rounded-[2rem]">
           <div className="border-b border-slate-200/70 px-4 py-4 dark:border-white/10 sm:px-6">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <span className="cv-kicker">{t('resume.analysis.title')}</span>
               <span className="text-xs font-medium text-slate-500 dark:text-[var(--cv-muted)]">
-                {t(`resume.analysis.tabs.${activeTab}`)}
+                {getAnalysisTabLabel(activeTab, t)}
               </span>
             </div>
-            <nav className="flex flex-wrap gap-2" aria-label={t('resume.analysis.title')}>
-              {ANALYSIS_TABS.map((tab) => {
-                const isActive = activeTab === tab;
-                return (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab as AnalysisTabKey)}
-                    className={`inline-flex min-h-11 items-center rounded-full px-4 py-2.5 text-sm font-semibold transition-all ${
-                      isActive
-                        ? 'bg-[var(--cv-primary-soft)] text-[var(--cv-primary)] ring-1 ring-[color:color-mix(in_srgb,var(--cv-primary)_16%,transparent)]'
-                        : 'bg-white/70 text-slate-500 ring-1 ring-slate-200/80 hover:bg-slate-50 hover:text-slate-900 dark:bg-white/[0.03] dark:text-[var(--cv-muted)] dark:ring-white/10 dark:hover:bg-white/[0.06] dark:hover:text-[var(--cv-text)]'
-                    }`}
-                  >
-                    {t(`resume.analysis.tabs.${tab}`)}
-                  </button>
-                );
-              })}
-            </nav>
+            <ResponsivePageTabs
+              label={t('resume.analysis.title')}
+              minItemWidthRem={10}
+              value={activeTab}
+              onChange={(value) => setActiveTab(value)}
+              options={getAnalysisTabOptions(t)}
+            />
           </div>
 
           <div className="p-5 sm:p-6">
             {activeTab === 'overview' && <OverviewTab resume={currentResume} t={t} />}
             {activeTab === 'skills' && <SkillsTagsTab resume={currentResume} />}
-            {activeTab === 'original' && <OriginalTextTab resume={currentResume} />}
+            {activeTab === 'original' && (
+              <OriginalSourcePreview
+                resume={currentResume}
+                title={t('resume.analysis.tabs.original', { defaultValue: 'Original' })}
+                description="Prévisualisation visuelle du CV source importé."
+              />
+            )}
+            {activeTab === 'extracted' && <OriginalTextTab resume={currentResume} />}
             {activeTab === 'pipeline' && id && (
               <PipelineTab
                 resumeId={id}

@@ -125,6 +125,10 @@ vi.mock('../components/ResumeAnalysis/OriginalTextTab', () => ({
   default: () => <div data-testid="original-tab">original</div>,
 }));
 
+vi.mock('../components/ResumeAnalysis/OriginalSourcePreview', () => ({
+  default: () => <div data-testid="source-preview">source-preview</div>,
+}));
+
 vi.mock('../components/ResumeAnalysis/PipelineTab', () => ({
   default: ({ resumeId }: { resumeId: string }) => <div data-testid="pipeline-tab">pipeline:{resumeId}</div>,
 }));
@@ -246,6 +250,31 @@ describe('ResumeAnalysisPage', () => {
     expect(await screen.findByTestId('analysis-header')).toHaveTextContent('Jane Doe');
     expect(screen.getByTestId('overview-tab')).toHaveTextContent('overview:resume-1');
     expect(screen.getByTestId('resume-comments')).toHaveTextContent('comments:resume-1');
+  });
+
+  it('shows the source preview in Original and the editor in Contenu extrait', async () => {
+    resumeContextValue = {
+      ...resumeContextValue,
+      currentResume: {
+        id: 'resume-1',
+        Name: 'Jane Doe',
+        'Original Text': 'Original content',
+      },
+    };
+
+    render(
+      <MemoryRouter>
+        <ResumeAnalysisPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByTestId('analysis-header');
+
+    fireEvent.click(screen.getByRole('button', { name: 'resume.analysis.tabs.original' }));
+    expect(screen.getByTestId('source-preview')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'resume.analysis.tabs.extracted' }));
+    expect(screen.getByTestId('original-tab')).toBeInTheDocument();
   });
 
   it('improves the current resume and redirects to the improve page', async () => {

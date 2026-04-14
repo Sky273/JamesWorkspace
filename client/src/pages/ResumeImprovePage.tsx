@@ -8,7 +8,16 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useResume } from '../context/ResumeContext';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { ArrowLeftIcon, ArrowPathIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowLeftIcon,
+  ArrowPathIcon,
+  ArrowsRightLeftIcon,
+  ChartBarIcon,
+  DocumentMagnifyingGlassIcon,
+  DocumentTextIcon,
+  PencilSquareIcon,
+  QueueListIcon,
+} from '@heroicons/react/24/outline';
 import ShareQRCodeModal from '../components/ShareQRCodeModal';
 import { templateService } from '../utils/templateService';
 import { Resume } from '../types/entities';
@@ -26,6 +35,7 @@ import PipelineTab from '../components/ResumeAnalysis/PipelineTab';
 import OriginalSourcePreview from '../components/ResumeAnalysis/OriginalSourcePreview';
 import ResumeComments from '../components/ResumeComments';
 import PageHeader from '../components/page/PageHeader';
+import ResponsivePageTabs, { type ResponsivePageTabOption } from '../components/page/ResponsivePageTabs';
 import { fetchWithAuth, fetchWithCsrfRetry, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
 import { FRONTEND_LLM_AI_MODIFICATION_TIMEOUT_MS } from '../constants/llmTimeouts';
 import {
@@ -56,6 +66,14 @@ const ResumeImprovePage = (): JSX.Element => {
   const [shareUrl, setShareUrl] = useState<string>('');
   const [shareLoading, setShareLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  const improveTabOptions: ResponsivePageTabOption<'improved' | 'original' | 'compare' | 'analysis' | 'pipeline'>[] = [
+    { value: 'improved', label: t('resume.analysis.tabs.improved'), icon: PencilSquareIcon },
+    { value: 'original', label: t('resume.analysis.tabs.original'), icon: DocumentMagnifyingGlassIcon },
+    { value: 'compare', label: t('resume.analysis.tabs.compare'), icon: ArrowsRightLeftIcon },
+    { value: 'analysis', label: t('resume.analysis.tabs.overview'), icon: ChartBarIcon },
+    { value: 'pipeline', label: t('resume.analysis.tabs.pipeline'), icon: QueueListIcon },
+  ];
 
   useEffect(() => {
     const loadResume = async () => {
@@ -395,58 +413,13 @@ const ResumeImprovePage = (): JSX.Element => {
           <>
             <div className="section-shell overflow-hidden rounded-[2rem] p-0">
               <div className="border-b border-gray-200 dark:border-gray-700 px-2 pt-2">
-                <nav className="flex flex-wrap gap-1">
-                  <button
-                    onClick={() => setActiveTab('improved')}
-                    className={`rounded-t-2xl px-5 py-3 text-sm font-medium transition-colors ${
-                      activeTab === 'improved'
-                        ? 'bg-[color:color-mix(in_srgb,var(--cv-primary)_12%,transparent)] text-[var(--cv-primary)]'
-                        : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
-                    }`}
-                  >
-                    {t('resume.analysis.tabs.improved')}
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('original')}
-                    className={`rounded-t-2xl px-5 py-3 text-sm font-medium transition-colors ${
-                      activeTab === 'original'
-                        ? 'bg-[color:color-mix(in_srgb,var(--cv-primary)_12%,transparent)] text-[var(--cv-primary)]'
-                        : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
-                    }`}
-                  >
-                    {t('resume.analysis.tabs.original')}
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('compare')}
-                    className={`rounded-t-2xl px-5 py-3 text-sm font-medium transition-colors ${
-                      activeTab === 'compare'
-                        ? 'bg-[color:color-mix(in_srgb,var(--cv-primary)_12%,transparent)] text-[var(--cv-primary)]'
-                        : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
-                    }`}
-                  >
-                    {t('resume.analysis.tabs.compare')}
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('analysis')}
-                    className={`rounded-t-2xl px-5 py-3 text-sm font-medium transition-colors ${
-                      activeTab === 'analysis'
-                        ? 'bg-[color:color-mix(in_srgb,var(--cv-primary)_12%,transparent)] text-[var(--cv-primary)]'
-                        : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
-                    }`}
-                  >
-                    {t('resume.analysis.tabs.overview')}
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('pipeline')}
-                    className={`rounded-t-2xl px-5 py-3 text-sm font-medium transition-colors ${
-                      activeTab === 'pipeline'
-                        ? 'bg-[color:color-mix(in_srgb,var(--cv-primary)_12%,transparent)] text-[var(--cv-primary)]'
-                        : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-300'
-                    }`}
-                  >
-                    {t('resume.analysis.tabs.pipeline')}
-                  </button>
-                </nav>
+                <ResponsivePageTabs
+                  label={t('resume.improve.title')}
+                  minItemWidthRem={10}
+                  value={activeTab}
+                  onChange={setActiveTab}
+                  options={improveTabOptions}
+                />
               </div>
 
               <div className="p-6">
