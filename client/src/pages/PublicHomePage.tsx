@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SparklesIcon } from '@heroicons/react/24/outline';
 import Footer from '../components/Footer';
+import PublicWorkflowCarousel from '../components/public/PublicWorkflowCarousel';
 
 
 const fadeInUp = {
@@ -254,6 +255,8 @@ function PublicHomePage(): JSX.Element {
             </div>
           </div>
         </section>
+
+        <PublicWorkflowCarousel />
 
         {/* Footer */}
         <Footer />
