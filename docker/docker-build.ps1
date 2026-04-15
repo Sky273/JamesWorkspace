@@ -46,16 +46,24 @@ function Build-Image {
     if (-not (Test-Path $EnvFile)) {
         Write-Host ""
         Write-Host "Missing .env.docker file." -ForegroundColor Red
-        Write-Host "Create it from .env.example with Docker-specific values before building." -ForegroundColor Yellow
+        Write-Host "Create it from .env.example before building." -ForegroundColor Yellow
         exit 1
     }
+
+    $envLines = Get-Content $EnvFile
+    $viteTurnstileSiteKey = (($envLines | Where-Object { $_ -match '^VITE_TURNSTILE_SITE_KEY=' } | Select-Object -First 1) -replace '^VITE_TURNSTILE_SITE_KEY=', '')
+    $cloudflareTurnstileSiteKey = (($envLines | Where-Object { $_ -match '^CLOUDFLARE_TURNSTILE_SITE_KEY=' } | Select-Object -First 1) -replace '^CLOUDFLARE_TURNSTILE_SITE_KEY=', '')
 
     Write-Host ""
     Write-Host "Building Docker image: ${ImageName}:${Tag}" -ForegroundColor Green
     Write-Host "This may take several minutes on first build..." -ForegroundColor Yellow
     Write-Host ""
 
-    docker build -t "${ImageName}:${Tag}" -f Dockerfile .
+    docker build `
+        --build-arg "VITE_TURNSTILE_SITE_KEY=$viteTurnstileSiteKey" `
+        --build-arg "CLOUDFLARE_TURNSTILE_SITE_KEY=$cloudflareTurnstileSiteKey" `
+        -t "${ImageName}:${Tag}" `
+        -f Dockerfile .
 
     if ($LASTEXITCODE -eq 0) {
         Write-Host ""
@@ -98,7 +106,7 @@ function Run-Container {
     if (-not (Test-Path $EnvFile)) {
         Write-Host ""
         Write-Host "Missing .env.docker file." -ForegroundColor Red
-        Write-Host "Create it from .env.example with Docker-specific values before running the container." -ForegroundColor Yellow
+        Write-Host "Create it from .env.example before running the container." -ForegroundColor Yellow
         exit 1
     }
 
@@ -123,7 +131,7 @@ function Run-Container {
         Write-Host "============================================" -ForegroundColor Cyan
         Write-Host "  Application URLs: https://localhost and https://localhost:3443" -ForegroundColor White
         Write-Host "  Database: ./data/postgresql (persistent local directory)" -ForegroundColor White
-        Write-Host "  Config source:  .env.docker (runtime only, not baked into image)" -ForegroundColor White
+        Write-Host "  Config source:  .env.docker" -ForegroundColor White
         Write-Host "  Admin bootstrap credentials: configured via DEFAULT_ADMIN_* in .env.docker" -ForegroundColor White
         Write-Host "============================================" -ForegroundColor Cyan
         Write-Host ""

@@ -1,585 +1,297 @@
 # ResumeConverter - Docker Deployment
 
-## 🐳 Overview
+## Overview
 
-This Docker setup creates a **single, fully autonomous container** that includes:
+This Docker setup starts the application stack with:
 
-- **PostgreSQL 18** - Database server
-- **Redis** - Shared application cache
-- **Node.js 20** - Runtime environment
-- **Google Chrome** - For PDF generation (Puppeteer)
-- **Tesseract OCR + Poppler** - For scanned/image PDF OCR (`tesseract` + `pdftoppm`)
-- **Proxy Server** (port 3443 HTTPS) - Main application server
-- **PDF Server** (port 3002) - PDF generation service
-- **Frontend** - Pre-built React application
+- PostgreSQL 18
+- Redis
+- Node.js 20
+- Google Chrome for PDF generation
+- Tesseract OCR, Poppler, PaddleOCR fallback
+- Proxy server on `3443`
+- PDF server on `3002`
+- Pre-built React frontend
 
-## 📋 Prerequisites
+## Environment Files
 
-- Docker installed and running
-- **`.env.docker` file** at the project root (required — see below)
-- (Optional) OpenAI API key for AI features
-- (Optional) Anthropic API key for Claude integration
-- (Optional) MiniMax API key for MiniMax models
-- (Optional) URL of a remote Ollama instance
+There are three environment files at the project root:
 
-### ⚠️ Required: `.env.docker` file
+- `/.env.docker`: Docker build and Docker runtime
+- `/.env`: local non-Docker execution
+- `/.env.example`: sanitized template
 
-The `.env.docker` file must be present at the project root **before building or running** the Docker stack. It is injected at runtime and is **not** copied into the image.
+For Docker, `/.env.docker` is the only reference file.
 
-This file must contain environment-specific secrets and must be reviewed before use. The sanitized repository copy is only a template.
+Important:
+
+- Docker helper scripts read `/.env.docker`
+- `docker-compose.redis.yml` loads `/.env.docker`
+- the React frontend reads public variables at image build time
+- changing a frontend public variable requires rebuilding the image
+
+## Required File
+
+The file `/.env.docker` must exist before building or starting the Docker stack.
+
+Minimum expected categories:
+
+- PostgreSQL connection and password
+- JWT, refresh, and CSRF secrets
+- default admin credentials
+- optional LLM provider keys
+- optional OAuth keys
+- optional Turnstile keys
+
+Example variables:
 
 ```env
-# Docker-specific values (database is local to container)
 POSTGRES_HOST=127.0.0.1
 POSTGRES_PORT=5432
 POSTGRES_DB=resumeconverter
 POSTGRES_USER=resumeconverter
-POSTGRES_PASSWORD=your_password
+POSTGRES_PASSWORD=replace-with-a-strong-postgres-password
 
-# Shared application cache
 CACHE_BACKEND=redis
-CACHE_REDIS_URL=redis://127.0.0.1:6379
+CACHE_REDIS_URL=redis://redis:6379
 CACHE_KEY_PREFIX=resumeconverter
 
-# Security (minimum 32 characters each)
-JWT_SECRET=your-jwt-secret-min-32-chars
-REFRESH_TOKEN_SECRET=your-refresh-secret-min-32-chars
-CSRF_SECRET=your-csrf-secret-min-32-chars
+JWT_SECRET=replace-with-a-long-random-secret
+REFRESH_TOKEN_SECRET=replace-with-a-long-random-secret
+CSRF_SECRET=replace-with-a-long-random-secret
+MAIL_TOKEN_ENCRYPTION_KEY=replace-with-a-64-hex-key
 
-# Production mode
+DEFAULT_ADMIN_EMAIL=admin@example.com
+DEFAULT_ADMIN_PASSWORD=replace-with-a-strong-admin-password
+
 NODE_ENV=production
 HTTPS_ENABLED=true
 HTTPS_PORT=3443
-
-# Batch export safeguards
-# Default: 300 operations maximum per export job
-# Hard cap: 300 even if a higher value is configured
-BATCH_EXPORT_MAX_OPERATIONS=300
-# Default batch slice when unset: 100 files
-BATCH_EXPORT_BATCH_SIZE=100
-
-# LLM APIs (optional)
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
-MINIMAX_API_KEY=sk-api-...
-MINIMAX_OPENAI_BASE_URL=https://api.minimax.io/v1
-MINIMAX_ANTHROPIC_BASE_URL=https://api.minimax.io/anthropic
-# Remote Ollama only
-OLLAMA_BASE_URL=http://192.168.1.20:11434
-OLLAMA_REQUEST_TIMEOUT_MS=300000
-
-# Google OAuth (optional)
-GOOGLE_CLIENT_ID=your-client-id
-GOOGLE_CLIENT_SECRET=your-client-secret
-MAIL_TOKEN_ENCRYPTION_KEY=your-64-hex-key
 ```
 
-> **Without this file, Docker helper scripts fail early** before build or run.
+Without `/.env.docker`, Docker helper scripts fail early.
 
-## 🚀 Quick Start
+## Turnstile
 
-> **Important**: The active development branch is `develop`. After cloning, run `git checkout develop`.
+Turnstile uses:
 
-### Windows - .bat scripts (recommended)
+- frontend public key:
+  - `VITE_TURNSTILE_SITE_KEY`
+  - or `CLOUDFLARE_TURNSTILE_SITE_KEY`
+- backend secret key:
+  - `TURNSTILE_SECRET_KEY`
+  - or `CLOUDFLARE_TURNSTILE_SECRET_KEY`
 
-Simple batch scripts are available at the project root:
+Recommended configuration in `/.env.docker`:
 
-```batch
+```env
+VITE_TURNSTILE_SITE_KEY=your-site-key
+CLOUDFLARE_TURNSTILE_SITE_KEY=your-site-key
+
+TURNSTILE_SECRET_KEY=your-secret-key
+CLOUDFLARE_TURNSTILE_SECRET_KEY=your-secret-key
+```
+
+Important:
+
+- the site key is embedded in the frontend bundle at `docker build` time
+- changing the site key requires a Docker rebuild
+- changing only the secret key usually only requires a container restart
+
+## Quick Start
+
+### Windows
+
+```bat
 git clone https://github.com/votre-repo/ResumeConverter.git
 cd ResumeConverter
 git checkout develop
 
-docker-build.bat   # Build the Docker image (⚠️ requires .env.docker)
-docker-run.bat     # Start the stack (⚠️ requires Administrator terminal)
+docker-build.bat
+docker-run.bat
 ```
 
-> ⚠️ **Administrator terminal required**: `docker-run.bat` automatically configures a port forwarding rule (`netsh interface portproxy`) for external access via Cloudflare (port 443 → localhost:3443). This `netsh` command requires Administrator privileges.
->
-> **To open an Administrator terminal:**
-> - Right-click **CMD** or **PowerShell** → **Run as administrator**
-> - Or: Windows key → type `cmd` → `Ctrl+Shift+Enter`
->
-> If run without admin rights, the container will start normally but port forwarding for external access (internet/Cloudflare) will not be configured. Local access via `https://localhost:3443` will work regardless.
+`docker-run.bat` should be started from an Administrator terminal if you need the `netsh interface portproxy` rule for external exposure on port `443`.
 
-### Windows (PowerShell - advanced)
+### PowerShell
 
 ```powershell
-# Navigate to project root
 cd C:\path\to\ResumeConverter
 git checkout develop
 
-# Build and run
-.\docker\docker-build.ps1 -Run
-
-# Or step by step:
 .\docker\docker-build.ps1 -Build
 .\docker\docker-build.ps1 -Run
 ```
 
-### Linux/Mac
+### Linux / macOS
 
 ```bash
-# Navigate to project root
 cd /path/to/ResumeConverter
 git checkout develop
 
-# Make script executable
 chmod +x docker/docker-build.sh
-
-# Build and run
-./docker/docker-build.sh run
-
-# Or step by step:
 ./docker/docker-build.sh build
 ./docker/docker-build.sh run
 ```
 
-## 🔑 Default Credentials
+## Available Commands
 
-After starting the container:
+### Windows helper scripts
 
-- **URL**: https://localhost:3443
-- **Email**: value of `DEFAULT_ADMIN_EMAIL`
-- **Password**: value of `DEFAULT_ADMIN_PASSWORD`
+- `docker-build.bat`: build image, then start the stack
+- `docker-run.bat`: start the stack
+- `docker-stop.bat`: stop the stack
+- `docker-logs.bat`: proxy server logs
+- `docker-logs-pdf.bat`: PDF server logs
+- `docker-shell.bat`: shell in the container
 
-If this account does not exist yet, Docker initialization now creates it automatically if missing.
+### PowerShell
 
-⚠️ **Use a strong `DEFAULT_ADMIN_PASSWORD` in production. Startup now fails if it is missing, too short, or left as `admin123`.**
+- `.\docker\docker-build.ps1 -Build`
+- `.\docker\docker-build.ps1 -Run`
+- `.\docker\docker-build.ps1 -Stop`
+- `.\docker\docker-build.ps1 -Logs`
+- `.\docker\docker-build.ps1 -Shell`
+- `.\docker\docker-build.ps1 -Clean`
 
-## 📝 Available Commands
+### Linux / macOS
 
-### Windows - .bat scripts (simple)
+- `./docker/docker-build.sh build`
+- `./docker/docker-build.sh run`
+- `./docker/docker-build.sh stop`
+- `./docker/docker-build.sh logs`
+- `./docker/docker-build.sh shell`
+- `./docker/docker-build.sh clean`
 
-| Script | Description |
-|--------|-------------|
-| `docker-build.bat` | Build the Docker image |
-| `docker-run.bat` | Start the stack (⚠️ Admin terminal) |
-| `docker-stop.bat` | Stop and remove the stack |
-| `docker-logs.bat` | View logs in real-time |
-| `docker-shell.bat` | Open a shell in the container |
+## Default Credentials
 
-### Windows (PowerShell - advanced)
+After startup:
 
-| Command | Description |
-|---------|-------------|
-| `.\docker\docker-build.ps1 -Build` | Build the Docker image |
-| `.\docker\docker-build.ps1 -Run` | Start the container |
-| `.\docker\docker-build.ps1 -Stop` | Stop the container |
-| `.\docker\docker-build.ps1 -Logs` | View container logs |
-| `.\docker\docker-build.ps1 -Shell` | Open bash shell in container |
-| `.\docker\docker-build.ps1 -Clean` | Remove container and image |
+- URL: `https://localhost:3443`
+- email: value of `DEFAULT_ADMIN_EMAIL`
+- password: value of `DEFAULT_ADMIN_PASSWORD`
 
-### Linux/Mac
+If the admin account does not exist yet, Docker initialization creates it automatically.
 
-| Command | Description |
-|---------|-------------|
-| `./docker/docker-build.sh build` | Build the Docker image |
-| `./docker/docker-build.sh run` | Start the container |
-| `./docker/docker-build.sh stop` | Stop the container |
-| `./docker/docker-build.sh logs` | View container logs |
-| `./docker/docker-build.sh shell` | Open bash shell in container |
-| `./docker/docker-build.sh clean` | Remove container and image |
-
-## 🔧 Configuration
+Use a strong `DEFAULT_ADMIN_PASSWORD`. Startup fails if it is missing, too short, or left on an obvious placeholder.
 
 ## OCR Pipeline
 
-For PDF uploads and batch imports, the server uses the following extraction strategy:
+For PDF uploads and batch imports, the extraction order is:
 
-1. native PDF text extraction when a real text layer exists
-2. OCR fallback for scanned/image pages
-3. preferred OCR engine in Docker:
-   - `pdftoppm` to render PDF pages as images
-   - `tesseract` CLI with `fra+eng`
-4. `tesseract.js` remains only as a fallback if the CLI toolchain is unavailable
+1. native PDF text extraction
+2. OCR fallback for scanned or image pages
+3. `pdftoppm` render
+4. `tesseract` CLI with `fra+eng`
+5. `PaddleOCR` fallback when needed
 
-This is the supported production path for scanned PDFs in Docker.
-
-### OCR-related packages included in the image
-
-The Docker image already installs:
+Included packages:
 
 - `tesseract-ocr`
 - `tesseract-ocr-fra`
 - `tesseract-ocr-eng`
 - `poppler-utils`
-- Python OCR stack for difficult scans:
-  - `python3`
-  - `python3-opencv`
-  - `python3-numpy`
-  - `paddlepaddle`
-  - `paddleocr`
+- `python3`
+- `python3-opencv`
+- `python3-numpy`
+- `paddlepaddle`
+- `paddleocr`
 
-No additional OCR setup is required on the Docker host.
-
-### Advanced OCR fallback
-
-For noisy, blurred, or low-quality scanned PDFs, the container now enables an advanced fallback by default:
-
-- `OCR_ADVANCED_BACKEND=paddleocr`
-
-Execution order:
-
-1. native PDF text extraction
-2. `pdftoppm` page render
-3. Python pre-processing variants (crop, denoise, threshold, dense-column crop)
-4. `tesseract` CLI on each variant
-5. `PaddleOCR` fallback when Tesseract output is still too weak
-
-### Verifying OCR inside the container
+Useful checks:
 
 ```bash
 docker exec -it resumeconverter-app tesseract --version
 docker exec -it resumeconverter-app pdftoppm -v
 ```
 
-### OCR limitations
+## Data and Ports
 
-- OCR is applied per PDF page
-- noisy, blurred, low-contrast, or very small text may still reduce analysis quality
-- image PDFs can now be processed, but results depend on source quality
+Published ports:
 
-### Environment Variables
+- `443 -> 3443`
+- `3443 -> 3443`
+- `5433 -> 5432`
+- `6379 -> 6379`
 
-Pass LLM configuration when running:
+Mounted directories:
 
-```powershell
-# Windows
-$env:OPENAI_API_KEY = "sk-..."
-$env:ANTHROPIC_API_KEY = "sk-ant-..."
-$env:MINIMAX_API_KEY = "sk-api-..."
-$env:OLLAMA_BASE_URL = "http://192.168.1.20:11434"
-.\docker\docker-build.ps1 -Run
-```
+- `./data/postgresql`
+- `./data/redis`
+- `./uploads`
+- `./logs`
 
-```bash
-# Linux/Mac
-export OPENAI_API_KEY="sk-..."
-export ANTHROPIC_API_KEY="sk-ant-..."
-export MINIMAX_API_KEY="sk-api-..."
-export OLLAMA_BASE_URL="http://192.168.1.20:11434"
-./docker/docker-build.sh run
-```
+PostgreSQL is exposed on host port `5433`.
 
-### Batch export settings
-
-The file export worker supports two environment variables:
-
-| Variable | Purpose | Default behavior |
-|---------|---------|------------------|
-| `BATCH_EXPORT_MAX_OPERATIONS` | Maximum number of export operations allowed for one job | `300`, with a hard cap at `300` |
-| `BATCH_EXPORT_BATCH_SIZE` | Number of files processed per batch slice during generation | `100` when unset |
-
-These values apply both in Docker and non-Docker installs.
-
-### Cache partagé Redis
-
-Le conteneur démarre maintenant aussi un service Redis interne pour le cache applicatif partagé.
-
-- backend par défaut dans `.env.docker` :
-  - `CACHE_BACKEND=redis`
-  - `CACHE_REDIS_URL=redis://127.0.0.1:6379`
-- persistance locale :
-  - `./data/redis` monté dans `/app/data/redis`
-- vérification runtime :
-- `GET /health` en admin
-- champ `checks.cache.backend`
-- champ `checks.cache.connected`
-- champ `checks.cache.fallbackReason`
-
-### Variante multi-service
-
-Le workflow standard Windows sort maintenant Redis du conteneur applicatif :
-
-- `docker-compose.redis.yml`
-- `docker-run.bat`
-- `docker-stop.bat`
-
-Dans ce mode :
-- Redis tourne dans un conteneur dédié `resumeconverter-redis`
-- l'application pointe vers `redis://redis:6379`
-- Redis interne est désactivé dans le conteneur applicatif (`DISABLE_INTERNAL_REDIS=true`)
-- les données Redis persistent toujours dans `./data/redis`
-
-Ce mode est préférable si vous voulez vous rapprocher d'un déploiement multi-instance sans refondre l'image applicative immédiatement.
-
-Scripts de compatibilité conservés :
-- `docker-run-compose.bat` -> alias vers `docker-run.bat`
-- `docker-stop-compose.bat` -> alias vers `docker-stop.bat`
-
-### Manual Docker Run
-
-For more control, run Docker directly:
+Example:
 
 ```bash
-docker run -d \
-    --name resumeconverter-app \
-    -p 3443:3443 \
-    -p 5433:5432 \
-    -e OPENAI_API_KEY="your-key" \
-    -e ANTHROPIC_API_KEY="your-key" \
-    -e MINIMAX_API_KEY="your-key" \
-    -e OLLAMA_BASE_URL="http://192.168.1.20:11434" \
-    -e JWT_SECRET="your-secret-min-32-chars" \
-    -e REFRESH_TOKEN_SECRET="your-refresh-secret-min-32-chars" \
-    -v ./uploads:/app/uploads \
-    -v ./logs:/app/logs \
-    --restart unless-stopped \
-    resumeconverter:latest
-```
-
-## 📁 Persistent Data
-
-All data is automatically persisted in **local directories** (not Docker volumes):
-
-| Local Path | Container Path | Purpose |
-|------------|----------------|---------|
-| `./data/postgresql` | `/var/lib/postgresql/18/main` | PostgreSQL 18 database |
-| `./uploads` | `/app/uploads` | Uploaded resume files |
-| `./logs` | `/app/logs` | Application logs |
-
-✅ **PostgreSQL data is persistent**: Data is stored in `./data/postgresql/` directory. Your data is preserved even if:
-- The container is deleted and recreated
-- The Docker image is rebuilt
-- Docker is restarted
-
-### Connecting to PostgreSQL
-
-#### From inside the container (shell)
-
-```bash
-# Open a shell in the container
-docker exec -it resumeconverter-app bash
-
-# Connect to PostgreSQL
-psql -U resumeconverter -d resumeconverter
-```
-
-#### Direct psql connection (one command)
-
-```bash
-# Windows (PowerShell/CMD)
-docker exec -it resumeconverter-app psql -U resumeconverter -d resumeconverter
-
-# Linux/Mac
-docker exec -it resumeconverter-app psql -U resumeconverter -d resumeconverter
-```
-
-#### From host machine (external connection)
-
-PostgreSQL is exposed on port **5433** (to avoid conflicts with local PostgreSQL):
-
-```bash
-# Using psql client installed on host
 psql -h localhost -p 5433 -U resumeconverter -d resumeconverter
-# Password: see POSTGRES_PASSWORD in Dockerfile
-
-# Using pgAdmin or DBeaver
-# Host: localhost
-# Port: 5433
-# Database: resumeconverter
-# User: resumeconverter
-# Password: see POSTGRES_PASSWORD in Dockerfile
 ```
 
-#### Common SQL commands
+## Logs
 
-```sql
--- List all tables
-\dt
-
--- Describe a table
-\d users
-
--- Count records
-SELECT COUNT(*) FROM users;
-SELECT COUNT(*) FROM resumes;
-
--- View current connections
-SELECT * FROM pg_stat_activity;
-
--- Exit psql
-\q
-```
-
-### Managing PostgreSQL Data
+Quick commands:
 
 ```bash
-# Backup database
-docker exec resumeconverter-app pg_dump -U resumeconverter resumeconverter > backup.sql
-
-# Restore database
-docker exec -i resumeconverter-app psql -U resumeconverter resumeconverter < backup.sql
-
-# View data directory size (Linux/Mac)
-du -sh ./data/postgresql
-
-# View data directory size (Windows PowerShell)
-(Get-ChildItem -Recurse ./data/postgresql | Measure-Object -Property Length -Sum).Sum / 1MB
-
-# ⚠️ Delete data (DATA LOSS!) - Linux/Mac
-rm -rf ./data/postgresql
-
-# ⚠️ Delete data (DATA LOSS!) - Windows
-rmdir /s /q data\postgresql
-```
-
-### Migrating from Docker Volume
-
-If you previously used a Docker volume (`resumeconverter-pgdata`), you can migrate:
-
-For a brand new database, the bootstrap now applies the canonical schema from `docker/schema.sql` before marking the existing SQL migrations as covered. `docker/init-db.sql` is kept only as a compatibility wrapper that includes this canonical schema.
-
-```bash
-# 1. Stop container
-docker stop resumeconverter-app
-
-# 2. Copy data from volume to local directory
-docker run --rm -v resumeconverter-pgdata:/source -v $(pwd)/data/postgresql:/dest alpine cp -a /source/. /dest/
-
-# 3. Remove old volume (optional)
-docker volume rm resumeconverter-pgdata
-
-# 4. Restart with new local mount
-docker-run.bat  # or ./docker/docker-build.sh run
-```
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                   Docker Container                       │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │                  Supervisor                      │   │
-│  │  ┌──────────────┐  ┌──────────────┐            │   │
-│  │  │ Proxy Server │  │  PDF Server  │            │   │
-│  │  │   :3443      │  │    :3002     │            │   │
-│  │  └──────────────┘  └──────────────┘            │   │
-│  └─────────────────────────────────────────────────┘   │
-│                          │                              │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │              PostgreSQL :5432                    │   │
-│  └─────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
-                           │
-                    Port 3443 (HTTPS) exposed
-                           │
-                    ┌──────▼──────┐
-                    │   Browser   │
-                    └─────────────┘
-```
-
-## 🔒 Security Notes
-
-1. **Change default credentials** after first login
-2. **Use strong JWT secrets** in production (auto-generated by scripts)
-3. **API keys** are passed as environment variables (not stored in image)
-4. **HTTPS** should be configured via reverse proxy (nginx, traefik) in production
-
-## 📜 Viewing Logs
-
-The container runs two services via Supervisor. Use these scripts to view logs:
-
-### Quick Scripts (from project root)
-
-| Script | Description |
-|--------|-------------|
-| `docker-logs.bat` | View **Proxy Server** logs (main backend) |
-| `docker-logs-pdf.bat` | View **PDF Server** logs |
-
-### Manual Log Commands
-
-```bash
-# Proxy Server logs (main application)
-docker exec -it resumeconverter-app tail -f /var/log/supervisor/proxy-server.out.log /var/log/supervisor/proxy-server.err.log
-
-# PDF Server logs
-docker exec -it resumeconverter-app tail -f /var/log/supervisor/pdf-server.out.log /var/log/supervisor/pdf-server.err.log
-
-# Supervisor logs (service manager)
-docker exec -it resumeconverter-app tail -f /var/log/supervisor/supervisord.log
-
-# All container output (less detailed)
 docker logs -f resumeconverter-app
+docker exec -it resumeconverter-app tail -f /var/log/supervisor/proxy-server.out.log /var/log/supervisor/proxy-server.err.log
+docker exec -it resumeconverter-app tail -f /var/log/supervisor/pdf-server.out.log /var/log/supervisor/pdf-server.err.log
 ```
 
-### Log File Locations (inside container)
+Log files inside the container:
 
-| Log File | Purpose |
-|----------|---------|
-| `/var/log/supervisor/proxy-server.out.log` | Proxy server stdout |
-| `/var/log/supervisor/proxy-server.err.log` | Proxy server stderr |
-| `/var/log/supervisor/pdf-server.out.log` | PDF server stdout |
-| `/var/log/supervisor/pdf-server.err.log` | PDF server stderr |
-| `/var/log/supervisor/supervisord.log` | Supervisor manager |
+- `/var/log/supervisor/proxy-server.out.log`
+- `/var/log/supervisor/proxy-server.err.log`
+- `/var/log/supervisor/pdf-server.out.log`
+- `/var/log/supervisor/pdf-server.err.log`
+- `/var/log/supervisor/supervisord.log`
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
-### Container won't start
+### Container will not start
 
 ```bash
-# Check container logs
 docker logs resumeconverter-app
-
-# Check if port is in use
-netstat -an | grep 3443
+docker ps
 ```
 
 ### Application errors
 
 ```bash
-# View proxy server logs (main backend)
 docker exec -it resumeconverter-app tail -100 /var/log/supervisor/proxy-server.err.log
-
-# Or use the quick script
-docker-logs.bat
 ```
 
 ### Database issues
 
 ```bash
-# Access container shell
 docker exec -it resumeconverter-app /bin/bash
-
-# Check PostgreSQL status
-service postgresql status
-
-# Access PostgreSQL
 psql -U resumeconverter -d resumeconverter
 ```
 
-### PDF generation fails
+### PDF generation issues
 
 ```bash
-# Check if Google Chrome is working
 docker exec -it resumeconverter-app google-chrome-stable --version
-
-# Check PDF server logs
 docker exec -it resumeconverter-app tail -100 /var/log/supervisor/pdf-server.err.log
-
-# Or use the quick script
-docker-logs-pdf.bat
 ```
 
-## 📊 Resource Requirements
+### Turnstile does not appear
 
-- **Disk**: ~2GB for image
-- **RAM**: Minimum 2GB, recommended 4GB
-- **CPU**: 2+ cores recommended
+Check in this order:
 
-## 🔄 Updating
+1. the correct keys are present in `/.env.docker`
+2. the image was rebuilt after changing the site key
+3. the browser cache was cleared or bypassed
+4. the page tested is `/register`
+
+## Update Workflow
 
 ```bash
-# Stop current container
-./docker/docker-build.sh stop
-
-# Rebuild with latest code
-./docker/docker-build.sh build
-
-# Start new container
-./docker/docker-build.sh run
+docker compose -f docker-compose.redis.yml down
+docker-build.bat
+docker-run.bat
 ```
 
-## 📜 License
+## License
 
-See main project LICENSE file.
+See the main project license file.

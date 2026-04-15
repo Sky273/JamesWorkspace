@@ -17,7 +17,6 @@ client/public/tinymce/
 
 # Environment files (secrets should be passed via docker run -e)
 .env
-.env.docker
 .env.local
 .env.development
 .env.production

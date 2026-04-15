@@ -38,7 +38,7 @@ if not exist "%cd%\logs" mkdir "%cd%\logs"
 if not exist "%cd%\.env.docker" (
     echo.
     echo Missing .env.docker file.
-    echo Create it from .env.example with Docker-specific values before starting the stack.
+    echo Create it from .env.example before starting the stack.
     pause
     exit /b 1
 )

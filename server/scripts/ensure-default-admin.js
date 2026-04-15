@@ -8,10 +8,7 @@ const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..', '..');
 
 function loadEnvironment() {
-    const envFiles = [
-        path.join(ROOT_DIR, '.env'),
-        path.join(ROOT_DIR, '.env.docker')
-    ];
+    const envFiles = [path.join(ROOT_DIR, '.env')];
 
     for (const envFile of envFiles) {
         dotenv.config({ path: envFile, override: false });

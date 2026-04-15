@@ -48,7 +48,6 @@ const { schemaPath: SCHEMA_PATH, migrationsDir: MIGRATIONS_DIR } = await resolve
 function loadEnvironment() {
     const envFiles = [
         path.join(ROOT_DIR, '.env'),
-        path.join(ROOT_DIR, '.env.docker')
     ];
 
     for (const envFile of envFiles) {

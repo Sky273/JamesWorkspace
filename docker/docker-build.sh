@@ -37,16 +37,24 @@ build_image() {
     if [ ! -f "$(pwd)/.env.docker" ]; then
         echo ""
         echo "Missing .env.docker file."
-        echo "Create it from .env.example with Docker-specific values before building."
+        echo "Create it from .env.example before building."
         exit 1
     fi
+
+    local vite_turnstile_site_key cloudflare_turnstile_site_key
+    vite_turnstile_site_key="$(grep -E '^VITE_TURNSTILE_SITE_KEY=' "$(pwd)/.env.docker" | sed 's/^VITE_TURNSTILE_SITE_KEY=//')"
+    cloudflare_turnstile_site_key="$(grep -E '^CLOUDFLARE_TURNSTILE_SITE_KEY=' "$(pwd)/.env.docker" | sed 's/^CLOUDFLARE_TURNSTILE_SITE_KEY=//')"
 
     echo ""
     echo "Building Docker image: ${IMAGE_NAME}:${TAG}"
     echo "This may take several minutes on first build..."
     echo ""
 
-    docker build -t "${IMAGE_NAME}:${TAG}" -f Dockerfile .
+    docker build \
+        --build-arg "VITE_TURNSTILE_SITE_KEY=${vite_turnstile_site_key}" \
+        --build-arg "CLOUDFLARE_TURNSTILE_SITE_KEY=${cloudflare_turnstile_site_key}" \
+        -t "${IMAGE_NAME}:${TAG}" \
+        -f Dockerfile .
 
     if [ $? -eq 0 ]; then
         echo ""
@@ -82,7 +90,7 @@ run_container() {
     if [ ! -f "$(pwd)/.env.docker" ]; then
         echo ""
         echo "Missing .env.docker file."
-        echo "Create it from .env.example with Docker-specific values before running the container."
+        echo "Create it from .env.example before running the container."
         exit 1
     fi
 
@@ -106,7 +114,7 @@ run_container() {
         echo "============================================"
         echo "  Application URLs: https://localhost and https://localhost:3443"
         echo "  Database: ./data/postgresql (persistent local directory)"
-        echo "  Config source:  .env.docker (runtime only, not baked into image)"
+        echo "  Config source:  .env.docker"
         echo "  Admin bootstrap credentials: configured via DEFAULT_ADMIN_* in .env.docker"
         echo "============================================"
         echo ""

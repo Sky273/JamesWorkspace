@@ -119,6 +119,12 @@ COPY CHANGELOG.md ./
 # Create certificates directory (certificates will be generated at runtime or mounted)
 RUN mkdir -p /app/certificates
 
+# Frontend build-time public env vars
+ARG VITE_TURNSTILE_SITE_KEY=""
+ARG CLOUDFLARE_TURNSTILE_SITE_KEY=""
+ENV VITE_TURNSTILE_SITE_KEY=${VITE_TURNSTILE_SITE_KEY}
+ENV CLOUDFLARE_TURNSTILE_SITE_KEY=${CLOUDFLARE_TURNSTILE_SITE_KEY}
+
 # Build frontend (creates client/dist with static assets)
 RUN npm run build
 
