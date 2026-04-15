@@ -32,16 +32,11 @@ function verifyRevocableToken(token) {
 
 function buildAccessTokenPayload(user) {
     const firmId = user?.firm_id || user?.firmId || null;
-    const firmName = user?.firm_name || user?.firmName || user?.firm || null;
 
     return {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        status: user.status,
+        sub: user.id,
         role: user.role || 'user',
-        firmId,
-        firmName
+        firmId
     };
 }
 
@@ -74,7 +69,7 @@ export function generateAccessToken(user) {
 export function generateRefreshToken(user) {
     const jti = crypto.randomBytes(16).toString('hex');
     return jwt.sign(
-        { id: user.id, email: user.email, type: 'refresh', jti },
+        { sub: user.id, type: 'refresh', jti },
         REFRESH_TOKEN_SECRET,
         { algorithm: JWT_ALGORITHM, expiresIn: REFRESH_TOKEN_EXPIRES_IN }
     );
@@ -88,6 +83,7 @@ export async function verifyToken(token) {
     try {
         // Security: Explicitly specify allowed algorithms to prevent algorithm confusion attacks
         const decoded = jwt.verify(token, JWT_SECRET, { algorithms: [JWT_ALGORITHM] });
+        decoded.id = decoded.id || decoded.sub || null;
         
         // Check if token or user is blacklisted
         if (await isTokenBlacklistedAsync(decoded.jti, decoded.id, decoded.iat)) {
@@ -118,6 +114,7 @@ export async function verifyToken(token) {
 export async function verifyRefreshToken(token) {
     try {
         const decoded = jwt.verify(token, REFRESH_TOKEN_SECRET, { algorithms: [JWT_ALGORITHM] });
+        decoded.id = decoded.id || decoded.sub || null;
         
         // Validate token type if present (for tokens generated after this update)
         if (decoded.type && decoded.type !== 'refresh') {
@@ -150,6 +147,7 @@ export async function verifyRefreshToken(token) {
 export async function consumeRefreshToken(token) {
     try {
         const decoded = jwt.verify(token, REFRESH_TOKEN_SECRET, { algorithms: [JWT_ALGORITHM] });
+        decoded.id = decoded.id || decoded.sub || null;
 
         if (decoded.type && decoded.type !== 'refresh') {
             safeLog('warn', 'Token type mismatch - expected refresh token', {

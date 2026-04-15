@@ -50,8 +50,9 @@ describe('JWT Service', () => {
       const decoded = await verifyToken(token);
       
       expect(decoded.id).toBe(mockUser.id);
-      expect(decoded.email).toBe(mockUser.email);
-      expect(decoded.name).toBe(mockUser.name);
+      expect(decoded.sub).toBe(mockUser.id);
+      expect(decoded.email).toBeUndefined();
+      expect(decoded.name).toBeUndefined();
       expect(decoded.role).toBe(mockUser.role);
     });
   });
@@ -70,7 +71,8 @@ describe('JWT Service', () => {
       const decoded = await verifyRefreshToken(token);
       
       expect(decoded.id).toBe(mockUser.id);
-      expect(decoded.email).toBe(mockUser.email);
+      expect(decoded.sub).toBe(mockUser.id);
+      expect(decoded.email).toBeUndefined();
       // Refresh token should not include full user data
       expect(decoded.name).toBeUndefined();
     });

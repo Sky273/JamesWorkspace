@@ -58,13 +58,13 @@ describe('JWT Service', () => {
             const token = generateAccessToken(testUser);
             return verifyToken(token).then((decoded) => {
                 expect(decoded.id).toBe('u1');
-                expect(decoded.email).toBe('test@test.com');
+                expect(decoded.sub).toBe('u1');
                 expect(decoded.role).toBe('user');
                 expect(decoded.firmId).toBe('f1');
-                expect(decoded.firmName).toBe('Acme');
-                expect(decoded.firm).toBeUndefined();
-                expect(decoded.customer).toBeUndefined();
-                expect(decoded.customerName).toBeUndefined();
+                expect(decoded.email).toBeUndefined();
+                expect(decoded.name).toBeUndefined();
+                expect(decoded.status).toBeUndefined();
+                expect(decoded.firmName).toBeUndefined();
                 expect(decoded.jti).toBeDefined();
             });
         });
@@ -82,6 +82,8 @@ describe('JWT Service', () => {
             return verifyRefreshToken(token).then((decoded) => {
                 expect(decoded.type).toBe('refresh');
                 expect(decoded.id).toBe('u1');
+                expect(decoded.sub).toBe('u1');
+                expect(decoded.email).toBeUndefined();
             });
         });
     });

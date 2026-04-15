@@ -150,14 +150,12 @@ export async function authenticateToken(req, res, next) {
     
     safeLog('debug', 'Token verified successfully', {
         userId: decoded.id,
-        email: decoded.email,
         role: decoded.role,
-        status: decoded.status,
         tokenExpiresIn: formatTimeRemaining(expiresIn)
     });
     
-    if (!decoded.id || !decoded.email) {
-        safeLog('warn', 'Token missing required fields (id, email)');
+    if (!decoded.id) {
+        safeLog('warn', 'Token missing required field (id/sub)');
         return res.status(403).json({ error: 'Invalid token payload' });
     }
     
@@ -176,7 +174,7 @@ export async function authenticateToken(req, res, next) {
 
     setCachedAuthenticatedUser(token, currentUser);
 
-    const userStatus = (currentUser.status || decoded.status || '').toLowerCase();
+    const userStatus = (currentUser.status || '').toLowerCase();
     if (userStatus === 'inactive') {
         safeLog('warn', 'User account is inactive', { userId: decoded.id });
         return res.status(403).json({ 

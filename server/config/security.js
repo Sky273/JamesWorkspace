@@ -12,31 +12,77 @@ import { normalizeOrigin } from '../utils/originUtils.js';
 import { shouldUseSecureCookies } from '../routes/auth/config.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
-const cspScriptSources = [
-    "'self'",
-    "blob:",            // Required: PDF.js worker scripts
-    "https://unpkg.com",                      // Swagger UI scripts
-    "https://basemaps.cartocdn.com",          // MapLibre GL scripts from style
-    "https://*.basemaps.cartocdn.com",        // MapLibre GL scripts from tiles
-    "https://challenges.cloudflare.com",      // Cloudflare Turnstile
+const unique = (values) => [...new Set(values)];
+
+const cspSwaggerSources = [
+    "https://unpkg.com"
+];
+
+const cspMapSources = [
+    "https://basemaps.cartocdn.com",
+    "https://*.basemaps.cartocdn.com"
+];
+
+const cspTurnstileSources = [
+    "https://challenges.cloudflare.com"
+];
+
+const cspFontSources = [
+    "https://fonts.googleapis.com",
+    "https://fonts.gstatic.com"
+];
+
+const cspCloudflareScriptHashes = [
     // Cloudflare injects inline scripts (Rocket Loader, Email Obfuscation, etc.)
     // These hashes allow the specific Cloudflare-injected scripts without 'unsafe-inline'.
     // Warning: Cloudflare can change these at any time. If new CSP violations appear for
     // inline scripts, add the hash from the browser error or disable Rocket Loader
     // and Email Obfuscation in the Cloudflare dashboard for a permanent fix.
-    "'sha256-A1+e72bQn7hPqkdKAAlQSbFpetfFWJBOj5vG34ZrAxU='",  // Cloudflare injected script
-    "'sha256-P5AT03Ewswrka26JysiPTKxr4GXeRKQKbPiV4tBCy2k='",  // Cloudflare injected script (variant)
-    "'sha256-yZlHOZ5xtWE8Evaf3HFDtJxWosKnkweYfd1MWFsufuI='",  // Cloudflare injected script (variant 2)
-    "'sha256-OJ/4e+qcd2xOGOLtsh+uuewAvle/9b2F/3/WwzgLXoE='",  // Cloudflare injected script (variant 3)
-    "'sha256-oR7U6/Q03fkV/ymCI4KGJsn1/qEg14weQX35BoNd6/8='",  // Cloudflare injected script (variant 4)
-    "'sha256-FID3c60H9c7lktAfbhJ+B/txDAbRaj0JQWM8iPEiRXk='",  // Cloudflare injected script (variant 5)
-    "'sha256-nileZXtiIiKtSt6FJjdZt1szHltIjlRss/RxLHOpD0U='",  // Cloudflare injected script (variant 6)
-    "'sha256-9/iGFMNY/CbhlXfMrWEY3i4mlcr9rSmQhnjr6XrXZ+Y='",  // Cloudflare injected script (variant 7)
-    "'sha256-UFeEB6QOsP3dj5nAthz/Vj+mBX8YsHKuWsej2r/bdtQ='",  // Cloudflare injected script (variant 8)
-    "'sha256-qaj05s9NhZOXkIoIZ+kerlMPfSrHx/V6d1npNfWzDPg='",  // Cloudflare injected script (variant 9)
-    "'sha256-rhg1WTVNH6IH7t21vpjRMtoTx/6b+Ehu0Ah6+2f5srg='",  // Cloudflare challenge platform inline bootstrap (variant 2)
-    "'sha256-xdWZbq58NNjYTvyvH8NKkmmavhR878q1602rldMTf1k='"   // Cloudflare challenge platform inline bootstrap
+    "'sha256-A1+e72bQn7hPqkdKAAlQSbFpetfFWJBOj5vG34ZrAxU='",
+    "'sha256-P5AT03Ewswrka26JysiPTKxr4GXeRKQKbPiV4tBCy2k='",
+    "'sha256-yZlHOZ5xtWE8Evaf3HFDtJxWosKnkweYfd1MWFsufuI='",
+    "'sha256-OJ/4e+qcd2xOGOLtsh+uuewAvle/9b2F/3/WwzgLXoE='",
+    "'sha256-oR7U6/Q03fkV/ymCI4KGJsn1/qEg14weQX35BoNd6/8='",
+    "'sha256-FID3c60H9c7lktAfbhJ+B/txDAbRaj0JQWM8iPEiRXk='",
+    "'sha256-nileZXtiIiKtSt6FJjdZt1szHltIjlRss/RxLHOpD0U='",
+    "'sha256-9/iGFMNY/CbhlXfMrWEY3i4mlcr9rSmQhnjr6XrXZ+Y='",
+    "'sha256-UFeEB6QOsP3dj5nAthz/Vj+mBX8YsHKuWsej2r/bdtQ='",
+    "'sha256-qaj05s9NhZOXkIoIZ+kerlMPfSrHx/V6d1npNfWzDPg='",
+    "'sha256-rhg1WTVNH6IH7t21vpjRMtoTx/6b+Ehu0Ah6+2f5srg='",
+    "'sha256-xdWZbq58NNjYTvyvH8NKkmmavhR878q1602rldMTf1k='"
 ];
+
+const cspScriptSources = unique([
+    "'self'",
+    "blob:",            // Required: PDF.js worker scripts
+    ...cspSwaggerSources,
+    ...cspMapSources,
+    ...cspTurnstileSources,
+    ...cspCloudflareScriptHashes
+]);
+
+const cspStyleSources = unique([
+    "'self'",
+    ...cspFontSources.filter((source) => source === 'https://fonts.googleapis.com'),
+    ...cspSwaggerSources,
+    ...cspMapSources,
+    ...cspTurnstileSources
+]);
+
+const cspStyleElementSources = unique([
+    ...cspStyleSources,
+    "'unsafe-inline'"
+]);
+
+const cspConnectSources = unique([
+    "'self'",
+    "blob:", // Required for MapLibre GL
+    "https://api.openai.com",
+    "https://api.anthropic.com",
+    ...cspTurnstileSources,
+    ...cspMapSources,
+    ...(isProduction ? [] : ["http://localhost:*", "ws://localhost:*"])
+]);
 
 // ============================================
 // CONTENT SECURITY POLICY
@@ -77,60 +123,32 @@ export function configureHelmet(app) {
                 // STRICT CSP: default-src 'none' requires explicit directives for all resource types
                 defaultSrc: ["'none'"],
                 scriptSrc: cspScriptSources,
-                scriptSrcElem: cspScriptSources,
                 scriptSrcAttr: ["'none'"], // No inline event handlers allowed
-                styleSrc: [
-                    "'self'",
-                    "https://fonts.googleapis.com",
-                    "https://unpkg.com",  // Swagger UI styles
-                    "https://basemaps.cartocdn.com", // MapLibre GL styles
-                    "https://*.basemaps.cartocdn.com", // MapLibre GL styles from subdomains
-                    "https://challenges.cloudflare.com" // Cloudflare Turnstile
-                ],
+                styleSrc: cspStyleSources,
                 // CSP Level 3: granular style directives replace broad 'unsafe-inline' in styleSrc
-                styleSrcElem: [
-                    "'self'",
-                    "'unsafe-inline'", // Required: UI libraries dynamically inject <style> elements
-                    "https://fonts.googleapis.com",
-                    "https://unpkg.com",
-                    "https://basemaps.cartocdn.com",
-                    "https://*.basemaps.cartocdn.com",
-                    "https://challenges.cloudflare.com"
-                ],
+                styleSrcElem: cspStyleElementSources,
                 styleSrcAttr: [
                     "'unsafe-inline'" // Required: Tiptap/ProseMirror sets inline style attributes
                 ],
-                fontSrc: [
+                fontSrc: unique([
                     "'self'",
                     "https://fonts.gstatic.com",
-                    "https://basemaps.cartocdn.com", // MapLibre GL fonts
-                    "https://*.basemaps.cartocdn.com", // MapLibre GL fonts from subdomains
+                    ...cspMapSources, // MapLibre GL fonts
                     "data:"
-                ],
-                imgSrc: [
+                ]),
+                imgSrc: unique([
                     "'self'",
                     "data:",
                     "blob:",
-                    "https://unpkg.com",                     // Swagger UI favicon
-                    "https://basemaps.cartocdn.com",         // MapLibre GL map tiles
-                    "https://*.basemaps.cartocdn.com"        // MapLibre GL map tiles from subdomains
-                ],
-                connectSrc: [
-                    "'self'",
-                    "blob:", // Required for MapLibre GL
-                    "https://api.openai.com",
-                    "https://api.anthropic.com",
-                    "https://challenges.cloudflare.com", // Cloudflare Turnstile verification assets
-                    "https://basemaps.cartocdn.com",     // MapLibre GL - base domain
-                    "https://*.basemaps.cartocdn.com",   // MapLibre GL - all subdomains (tiles, etc.)
-                    ...(isProduction ? [] : ["http://localhost:*", "ws://localhost:*"])
-                ],
-                workerSrc: [
+                    ...cspSwaggerSources, // Swagger UI favicon
+                    ...cspMapSources      // MapLibre GL tiles
+                ]),
+                connectSrc: cspConnectSources,
+                workerSrc: unique([
                     "'self'",
                     "blob:",
-                    "https://basemaps.cartocdn.com",     // MapLibre GL workers
-                    "https://*.basemaps.cartocdn.com"    // MapLibre GL workers from subdomains
-                ],
+                    ...cspMapSources
+                ]),
                 childSrc: ["'self'", "blob:", "https://challenges.cloudflare.com"], // For iframes and workers
                 frameSrc: ["'self'", "https://challenges.cloudflare.com"],
                 frameAncestors: ["'self'"], // Prevent clickjacking
