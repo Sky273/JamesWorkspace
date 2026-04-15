@@ -5,6 +5,7 @@
 
 import axios from 'axios';
 import {
+    LLM_OPERATION_TIMEOUT_MS,
     MAX_PROMPT_LENGTH,
     MINIMAX_API_KEY,
     MINIMAX_ANTHROPIC_BASE_URL,
@@ -179,7 +180,7 @@ export async function callMiniMaxOpenAICompatible({
     temperature = 0,
     topP = 1,
     responseFormat = null,
-    timeout = 90000,
+    timeout = LLM_OPERATION_TIMEOUT_MS,
     maxPromptLength = MAX_PROMPT_LENGTH,
     operationType = 'MiniMax OpenAI-compatible request',
     useRetry = true,
@@ -280,7 +281,7 @@ export async function callMiniMaxAnthropicCompatible({
     maxTokens = 4096,
     temperature = 0,
     topP = 1,
-    timeout = 90000,
+    timeout = LLM_OPERATION_TIMEOUT_MS,
     maxPromptLength = MAX_PROMPT_LENGTH,
     operationType = 'MiniMax Anthropic-compatible request',
     useRetry = true,

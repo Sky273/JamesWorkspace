@@ -4,6 +4,7 @@
  */
 
 import { safeLog } from '../../utils/logger.backend.js';
+import { LLM_OPERATION_TIMEOUT_MS } from '../../config/constants.js';
 import { callBusinessChatCompletion } from '../llmProvider.service.js';
 import { metrics, buildLLMMetricLabel } from '../metrics.service.js';
 import {
@@ -198,7 +199,7 @@ Respond in the same language as the resume.`;
             ],
             maxTokens: maxTokens ?? 8192,
             temperature: 0.4,
-            timeout: 120000,
+            timeout: LLM_OPERATION_TIMEOUT_MS,
             responseFormat: { type: "json_object" },
             userMetadata,
             operationType: 'Resume Adaptation'

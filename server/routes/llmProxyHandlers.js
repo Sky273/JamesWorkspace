@@ -5,6 +5,7 @@ import {
     HUGGINGFACE_API_KEY,
     GEMINI_API_KEY,
     GLM_API_KEY,
+    LLM_OPERATION_TIMEOUT_MS,
     MAX_PROMPT_LENGTH,
     OPENAI_API_KEY
 } from '../config/constants.js';
@@ -214,7 +215,7 @@ async function handleMiniMaxRequest(req, res, responseShape, model) {
                 messages: req.body.messages || [],
                 ...req.body,
                 maxTokens: getRequestedMaxTokens(req.body),
-                timeout: 120000,
+                timeout: LLM_OPERATION_TIMEOUT_MS,
                 operationType: `MiniMax ${model} anthropic-compatible request`,
                 useRetry: false
             });
@@ -225,7 +226,7 @@ async function handleMiniMaxRequest(req, res, responseShape, model) {
             messages: req.body.messages || [],
             ...req.body,
             maxTokens: getRequestedMaxTokens(req.body),
-            timeout: 120000,
+                timeout: LLM_OPERATION_TIMEOUT_MS,
             operationType: `MiniMax ${model} openai-compatible request`,
             useRetry: false
         });
@@ -267,7 +268,7 @@ async function handleDeepSeekRequest(req, res, model, metadata) {
         messages: req.body.messages || [],
         ...req.body,
         maxTokens: getRequestedMaxTokens(req.body),
-        timeout: 120000,
+        timeout: LLM_OPERATION_TIMEOUT_MS,
         operationType: `DeepSeek ${model} request`
     });
 
@@ -293,7 +294,7 @@ async function handleHuggingFaceRequest(req, res, model, metadata) {
         messages: req.body.messages || [],
         ...req.body,
         maxTokens: getRequestedMaxTokens(req.body),
-        timeout: 120000,
+        timeout: LLM_OPERATION_TIMEOUT_MS,
         operationType: `Hugging Face ${model} request`
     });
 
@@ -319,7 +320,7 @@ async function handleGemmaRequest(req, res, model, metadata) {
         messages: req.body.messages || [],
         ...req.body,
         maxTokens: getRequestedMaxTokens(req.body),
-        timeout: 120000,
+        timeout: LLM_OPERATION_TIMEOUT_MS,
         operationType: `Gemma ${model} request`
     });
 
@@ -345,7 +346,7 @@ async function handleGLMRequest(req, res, model, metadata) {
         messages: req.body.messages || [],
         ...req.body,
         maxTokens: getRequestedMaxTokens(req.body),
-        timeout: 120000,
+        timeout: LLM_OPERATION_TIMEOUT_MS,
         operationType: `GLM ${model} request`
     });
 
@@ -420,7 +421,7 @@ async function proxyOpenAIRequest(req, res, model, metadata, { allowResponsesApi
                 Authorization: `Bearer ${OPENAI_API_KEY}`,
                 'Content-Type': 'application/json'
             },
-            timeout: 120000,
+            timeout: LLM_OPERATION_TIMEOUT_MS,
             validateStatus: status => status < 500
         }),
         {
@@ -494,7 +495,7 @@ async function proxyAnthropicRequest(req, res, model, metadata, { useRetry = tru
             'anthropic-version': '2023-06-01',
             'Content-Type': 'application/json'
         },
-        timeout: 90000
+        timeout: LLM_OPERATION_TIMEOUT_MS
     });
 
     const response = useRetry

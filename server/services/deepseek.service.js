@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, MAX_PROMPT_LENGTH } from '../config/constants.js';
+import { DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, LLM_OPERATION_TIMEOUT_MS, MAX_PROMPT_LENGTH } from '../config/constants.js';
 import { buildCapabilityAwareOpenAICompatibleParams } from './llmPayloadCapabilities.service.js';
 import { extractDeepSeekContent, flattenLlmTextContent, sanitizeOpenAICompatibleResponseBody } from './llmContent.service.js';
 import { buildLLMMetricLabel, metrics } from './metrics.service.js';
@@ -32,7 +32,7 @@ export async function callDeepSeek({
     temperature = 0,
     topP = 1,
     responseFormat = null,
-    timeout = 120000,
+    timeout = LLM_OPERATION_TIMEOUT_MS,
     maxPromptLength = MAX_PROMPT_LENGTH,
     userMetadata = null,
     operationType = 'DeepSeek API request',
@@ -149,7 +149,7 @@ export async function callDeepSeekChat(messages, model, options = {}) {
         temperature: options.temperature,
         topP: options.top_p,
         responseFormat: options.response_format,
-        timeout: options.timeout || 120000,
+        timeout: options.timeout || LLM_OPERATION_TIMEOUT_MS,
         maxPromptLength: options.maxPromptLength,
         userMetadata: options.userMetadata,
         operationType: options.operationType || 'DeepSeek chat request'

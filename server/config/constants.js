@@ -48,7 +48,8 @@ export const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY;
 export const HUGGINGFACE_BASE_URL = process.env.HUGGINGFACE_BASE_URL || 'https://router.huggingface.co/v1';
 export const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || '';
 export const OLLAMA_AUTO_PULL = process.env.OLLAMA_AUTO_PULL !== 'false';
-export const OLLAMA_REQUEST_TIMEOUT_MS = parseInt(process.env.OLLAMA_REQUEST_TIMEOUT_MS || '300000', 10);
+export const LLM_OPERATION_TIMEOUT_MS = parseInt(process.env.LLM_OPERATION_TIMEOUT_MS || `${15 * 60 * 1000}`, 10);
+export const OLLAMA_REQUEST_TIMEOUT_MS = parseInt(process.env.OLLAMA_REQUEST_TIMEOUT_MS || `${LLM_OPERATION_TIMEOUT_MS}`, 10);
 export const PROFILE_MATCHING_LLM_MAX_CONCURRENCY = Math.min(
     Math.max(parseInt(process.env.PROFILE_MATCHING_LLM_MAX_CONCURRENCY || '0', 10) || 0, 0),
     100

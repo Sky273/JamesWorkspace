@@ -1,5 +1,6 @@
 import { createAuthOptionsWithCsrf, fetchWithAuth, getResponseErrorMessage } from './apiInterceptor';
 import { pollUntil } from './longRunningOperation';
+import { FRONTEND_LLM_OPERATION_TIMEOUT_MS } from '../constants/llmTimeouts';
 
 export interface ResumeAdaptationJobItem {
   id: string;
@@ -101,7 +102,7 @@ export const waitForResumeMatchJobCompletion = async ({
   jobId,
   resumeId,
   signal,
-  timeoutMs = 300000,
+  timeoutMs = FRONTEND_LLM_OPERATION_TIMEOUT_MS,
   onJobUpdate
 }: {
   jobId: string;
@@ -147,7 +148,7 @@ export const waitForResumeAdaptationJobCompletion = async ({
   jobId,
   resumeId,
   signal,
-  timeoutMs = 300000,
+  timeoutMs = FRONTEND_LLM_OPERATION_TIMEOUT_MS,
   onJobUpdate
 }: {
   jobId: string;

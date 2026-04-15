@@ -4,6 +4,7 @@
 
 import { fetchWithAuth, createAuthOptions, createAuthOptionsWithCsrf, authPost, authPut, authDelete, fetchWithCsrfRetry } from './apiInterceptor';
 import logger from './logger.frontend';
+import { FRONTEND_LLM_OPERATION_TIMEOUT_MS } from '../constants/llmTimeouts';
 
 export interface Template {
     id: string;
@@ -319,9 +320,7 @@ export const templateService = {
                 delete (authOptions.headers as Record<string, string>)['Content-Type'];
             }
 
-            // Use extended timeout for template extraction (5 minutes)
-            // This operation involves LLM processing which can take several minutes
-            const EXTRACTION_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+            const EXTRACTION_TIMEOUT = FRONTEND_LLM_OPERATION_TIMEOUT_MS;
             
             const response = await fetchWithCsrfRetry('/api/templates/extract-from-cv', authOptions, EXTRACTION_TIMEOUT);
             

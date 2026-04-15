@@ -1,6 +1,7 @@
 import { buildLLMMetricLabel, metrics } from './metrics.service.js';
 import { stripLlmThinkingContent } from './openai/textUtils.js';
 import { callOpenAIWithCircuitBreaker } from './openai/apiClient.js';
+import { LLM_OPERATION_TIMEOUT_MS } from '../config/constants.js';
 
 export async function callOpenAIChat(messages, model, options = {}) {
     const response = await callOpenAIWithCircuitBreaker({
@@ -10,7 +11,7 @@ export async function callOpenAIChat(messages, model, options = {}) {
         temperature: options.temperature,
         topP: options.top_p,
         responseFormat: options.response_format,
-        timeout: options.timeout || 300000,
+        timeout: options.timeout || LLM_OPERATION_TIMEOUT_MS,
         operationType: options.operationType || `OpenAI ${model} chat request`
     });
 
@@ -53,7 +54,7 @@ export async function callOpenAIVisionChat(systemPrompt, userContent, model, opt
         maxTokens: options.max_tokens || 4000,
         temperature: options.temperature,
         topP: options.top_p,
-        timeout: options.timeout || 600000,
+        timeout: options.timeout || LLM_OPERATION_TIMEOUT_MS,
         operationType: options.operationType || `OpenAI ${visionModel} vision request`
     });
 

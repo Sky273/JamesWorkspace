@@ -4,7 +4,7 @@
  */
 
 import axios from 'axios';
-import { OPENAI_API_KEY, MAX_PROMPT_LENGTH } from '../../config/constants.js';
+import { OPENAI_API_KEY, MAX_PROMPT_LENGTH, LLM_OPERATION_TIMEOUT_MS } from '../../config/constants.js';
 import { buildCapabilityAwareOpenAICompatibleParams } from '../llmPayloadCapabilities.service.js';
 import { buildLLMMetricLabel, metrics } from '../metrics.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
@@ -50,7 +50,7 @@ export async function callOpenAI({
     temperature = 0,
     topP = 1,
     responseFormat = null,
-    timeout = 90000,
+    timeout = LLM_OPERATION_TIMEOUT_MS,
     maxPromptLength = MAX_PROMPT_LENGTH,
     userMetadata = null,  // Optional: { email, ip, action } for security logging
     operationType = 'OpenAI Service API request',  // Description for logging
@@ -173,7 +173,7 @@ export async function callOpenAI({
                 'Authorization': `Bearer ${OPENAI_API_KEY}`,
                 'Content-Type': 'application/json'
             },
-            timeout: isGPT5Model ? Math.max(timeout, 180000) : timeout, // GPT-5 models need longer timeout
+            timeout: Math.max(timeout, LLM_OPERATION_TIMEOUT_MS),
             validateStatus: function (status) {
                 return status < 500; // Resolve for all non-5xx status codes to capture error details
             }

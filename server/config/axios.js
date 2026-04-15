@@ -1,6 +1,7 @@
 import axios from 'axios';
 import http from 'http';
 import https from 'https';
+import { LLM_OPERATION_TIMEOUT_MS } from './constants.js';
 
 // Configure HTTP agents with connection pooling to prevent socket leaks
 export const httpAgent = new http.Agent({
@@ -8,7 +9,7 @@ export const httpAgent = new http.Agent({
     keepAliveMsecs: 30000,
     maxSockets: 25,
     maxFreeSockets: 5,
-    timeout: 300000 // 5 minutes
+    timeout: LLM_OPERATION_TIMEOUT_MS
 });
 
 export const httpsAgent = new https.Agent({
@@ -16,11 +17,11 @@ export const httpsAgent = new https.Agent({
     keepAliveMsecs: 30000,
     maxSockets: 25,
     maxFreeSockets: 5,
-    timeout: 300000 // 5 minutes
+    timeout: LLM_OPERATION_TIMEOUT_MS
 });
 
 // Configure axios defaults to prevent memory leaks
-axios.defaults.timeout = 600000; // 10 minutes timeout
+axios.defaults.timeout = LLM_OPERATION_TIMEOUT_MS;
 axios.defaults.httpAgent = httpAgent;
 axios.defaults.httpsAgent = httpsAgent;
 axios.defaults.maxContentLength = 100 * 1024 * 1024; // 100MB max response size

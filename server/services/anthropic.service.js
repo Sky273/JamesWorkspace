@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { ANTHROPIC_API_KEY } from '../config/constants.js';
+import { ANTHROPIC_API_KEY, LLM_OPERATION_TIMEOUT_MS } from '../config/constants.js';
 import { buildLLMMetricLabel, metrics } from './metrics.service.js';
 import { extractTextFromContentBlocks } from './llmContent.service.js';
 import { normalizeAnthropicContent } from './llmProviderCommon.service.js';
@@ -67,7 +67,7 @@ export async function callAnthropicChat(messages, model, options = {}) {
                         'anthropic-version': '2023-06-01',
                         'Content-Type': 'application/json'
                     },
-                    timeout: options.timeout || 300000
+                    timeout: options.timeout || LLM_OPERATION_TIMEOUT_MS
                 }
             ),
             {
@@ -158,7 +158,7 @@ export async function callAnthropicVision(systemPrompt, userContent, model, opti
                         'anthropic-version': '2023-06-01',
                         'Content-Type': 'application/json'
                     },
-                    timeout: options.timeout || 600000
+                    timeout: options.timeout || LLM_OPERATION_TIMEOUT_MS
                 }
             ),
             {

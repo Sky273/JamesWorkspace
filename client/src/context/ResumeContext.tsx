@@ -17,6 +17,7 @@ import { markResumesViewDirty as markResumeViewsDirty } from '../utils/viewRefre
 
 import { Resume } from '../types/entities';
 import {
+  FRONTEND_LLM_OPERATION_TIMEOUT_MS,
   FRONTEND_SINGLE_UPLOAD_JOB_TIMEOUT_MS,
 } from '../constants/llmTimeouts';
 import {
@@ -94,7 +95,7 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
     });
   }, []);
 
-  const updateResumeAnalysis = useCallback(async (resumeId: string, analysisData: Partial<Resume>, timeoutMs: number = 120000): Promise<Resume> => {
+  const updateResumeAnalysis = useCallback(async (resumeId: string, analysisData: Partial<Resume>, timeoutMs: number = FRONTEND_LLM_OPERATION_TIMEOUT_MS): Promise<Resume> => {
     if (abortControllerRef.current.signal.aborted) throw new Error('Operation aborted');
 
     const updateOptions = await createAuthOptionsWithCsrf({

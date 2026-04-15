@@ -4,6 +4,7 @@
  */
 
 import { safeLog } from '../../utils/logger.backend.js';
+import { LLM_OPERATION_TIMEOUT_MS } from '../../config/constants.js';
 import { callBusinessChatCompletion } from '../llmProvider.service.js';
 import { metrics, buildLLMMetricLabel } from '../metrics.service.js';
 import {
@@ -203,7 +204,7 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
             maxTokens: options.maxTokens ?? 16384,
             temperature: 0.3,
             responseFormat: { type: "json_object" },
-            timeout: 300000,
+            timeout: LLM_OPERATION_TIMEOUT_MS,
             userMetadata,
             operationType: 'Resume Improvement'
         });

@@ -8,6 +8,7 @@ import { callHuggingFaceWithCircuitBreaker } from './huggingface.service.js';
 import { callOpenAI } from './openai/apiClient.js';
 import { callOpenAIVisionChat } from './openaiChat.service.js';
 import { buildLLMMetricLabel, metrics } from './metrics.service.js';
+import { LLM_OPERATION_TIMEOUT_MS } from '../config/constants.js';
 import { safeLog } from '../utils/logger.backend.js';
 
 function buildRequestOptions(options = {}) {
@@ -58,7 +59,7 @@ async function invokeOpenAIChat({ model, messages, options }) {
         temperature: options.temperature,
         topP: options.top_p,
         responseFormat: options.response_format,
-        timeout: options.timeout || 90000
+        timeout: options.timeout || LLM_OPERATION_TIMEOUT_MS
     });
 
     return unwrapOpenAICompatibleResponse(response, model);
@@ -73,7 +74,7 @@ async function invokeDeepSeekChat({ model, messages, options }) {
         temperature: options.temperature,
         topP: options.top_p,
         responseFormat: options.response_format,
-        timeout: options.timeout || 120000,
+        timeout: options.timeout || LLM_OPERATION_TIMEOUT_MS,
         operationType: options.operationType || 'DeepSeek chat request'
     }).then((response) => {
         const choices = response?.choices;
@@ -107,7 +108,7 @@ async function invokeHuggingFaceChat({ model, messages, options }) {
         temperature: options.temperature,
         topP: options.top_p,
         responseFormat: options.response_format,
-        timeout: options.timeout || 120000,
+        timeout: options.timeout || LLM_OPERATION_TIMEOUT_MS,
         operationType: options.operationType || 'Hugging Face chat request'
     }).then((response) => {
         const choices = response?.choices;
@@ -138,7 +139,7 @@ async function invokeGemmaChat({ model, messages, options }) {
         temperature: options.temperature,
         topP: options.top_p,
         responseFormat: options.response_format,
-        timeout: options.timeout || 120000,
+        timeout: options.timeout || LLM_OPERATION_TIMEOUT_MS,
         operationType: options.operationType || 'Gemma chat request'
     }).then((response) => {
         const choices = response?.choices;
@@ -169,7 +170,7 @@ async function invokeGLMChat({ model, messages, options }) {
         temperature: options.temperature,
         topP: options.top_p,
         responseFormat: options.response_format,
-        timeout: options.timeout || 120000,
+        timeout: options.timeout || LLM_OPERATION_TIMEOUT_MS,
         operationType: options.operationType || 'GLM chat request'
     }).then((response) => {
         const choices = response?.choices;
@@ -215,7 +216,7 @@ async function invokeMiniMaxChat({ model, messages, options }) {
         temperature: options.temperature,
         topP: options.top_p,
         responseFormat: options.response_format,
-        timeout: options.timeout || 300000,
+        timeout: options.timeout || LLM_OPERATION_TIMEOUT_MS,
         operationType: options.operationType || 'MiniMax OpenAI-compatible request'
     });
 }

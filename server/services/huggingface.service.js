@@ -2,6 +2,7 @@ import axios from 'axios';
 import {
     HUGGINGFACE_API_KEY,
     HUGGINGFACE_BASE_URL,
+    LLM_OPERATION_TIMEOUT_MS,
     MAX_PROMPT_LENGTH
 } from '../config/constants.js';
 import { buildLLMMetricLabel, metrics } from './metrics.service.js';
@@ -27,7 +28,7 @@ export async function callHuggingFace({
     temperature = 0,
     topP = 1,
     responseFormat = null,
-    timeout = 120000,
+    timeout = LLM_OPERATION_TIMEOUT_MS,
     maxPromptLength = MAX_PROMPT_LENGTH,
     operationType = 'Hugging Face API request',
     userMetadata = null,
@@ -142,4 +143,3 @@ export async function callHuggingFaceWithCircuitBreaker(params) {
         }
     );
 }
-

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { GEMINI_API_KEY, GEMINI_OPENAI_BASE_URL } from '../config/constants.js';
+import { GEMINI_API_KEY, GEMINI_OPENAI_BASE_URL, LLM_OPERATION_TIMEOUT_MS } from '../config/constants.js';
 import { buildCapabilityAwareOpenAICompatibleParams } from './llmPayloadCapabilities.service.js';
 import { buildLLMMetricLabel, metrics } from './metrics.service.js';
 import { safeLog } from '../utils/logger.backend.js';
@@ -118,7 +118,7 @@ export async function callGemmaChat({
     temperature = 0,
     topP = 1,
     responseFormat = null,
-    timeout = 90000,
+    timeout = LLM_OPERATION_TIMEOUT_MS,
     maxPromptLength,
     userMetadata = null,
     operationType = 'Gemma chat request',

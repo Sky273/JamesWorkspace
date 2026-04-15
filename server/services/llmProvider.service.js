@@ -10,21 +10,10 @@ import { toOpenAICompatibleResponse } from './llmProviderCommon.service.js';
 import { resolveEffectiveModelParameters } from './llmAdminParameters.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { normalizeUtf8Text } from './openai/textUtils.js';
-
-const BUSINESS_CV_OPERATION_TIMEOUTS_MS = {
-    'Resume Pre-Analysis': 20 * 60 * 1000,
-    'Resume Analysis': 20 * 60 * 1000,
-    'Improved Resume Analysis': 20 * 60 * 1000,
-    'Resume Improvement': 25 * 60 * 1000
-};
+import { LLM_OPERATION_TIMEOUT_MS } from '../config/constants.js';
 
 function resolveBusinessOperationTimeout(operationType, timeout) {
-    const operationTimeout = BUSINESS_CV_OPERATION_TIMEOUTS_MS[operationType];
-    if (operationTimeout) {
-        return Math.max(operationTimeout, Number(timeout) || 0);
-    }
-
-    return timeout;
+    return Math.max(LLM_OPERATION_TIMEOUT_MS, Number(timeout) || 0);
 }
 
 function normalizeMessagesContent(messages = []) {
@@ -50,7 +39,7 @@ export async function callBusinessChatCompletion({
     temperature = 0,
     topP = 1,
     responseFormat = null,
-    timeout = 90000,
+    timeout = LLM_OPERATION_TIMEOUT_MS,
     maxPromptLength,
     userMetadata = null,
     operationType = 'LLM business operation'
