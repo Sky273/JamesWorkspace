@@ -72,6 +72,7 @@ export {
     addJobExportItems,
     getJobItems,
     updateJobItemStatus,
+    mergeJobItemPendingData,
     getJobItem,
     resumeItemWithName,
     getItemsPendingName

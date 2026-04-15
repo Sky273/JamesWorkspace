@@ -10,7 +10,11 @@ import {
 } from '../config/prompts.backend.js';
 import { buildPromptExecutionMetadata } from '../config/llmGovernance.js';
 import { safeLog } from '../utils/logger.backend.js';
-import { runAiActionWithCredits } from './aiCredits.service.js';
+import {
+    executeAiWorkflowWithCredits,
+    runAiActionWithCredits,
+    workflowReservationCoversAction
+} from './aiCredits.service.js';
 
 function isExternalLlmDisabledForE2E() {
     return process.env.E2E_DISABLE_EXTERNAL_LLM === 'true';
@@ -38,8 +42,30 @@ function parseMatchScore(matchAnalysis) {
 export async function executeResumeAdaptation({
     resumeId,
     missionId,
-    userMetadata = null
+    userMetadata = null,
+    creditReservation = null,
+    onCreditConsumed = null
 }) {
+    if (!creditReservation) {
+        return executeAiWorkflowWithCredits({
+            firmId: userMetadata?.firmId || null,
+            userId: userMetadata?.userId || null,
+            workflowActionType: 'resume.adaptation',
+            steps: [{ actionType: 'resume.adaptation' }],
+            metadata: {
+                ...(userMetadata || {}),
+                resumeId,
+                missionId
+            }
+        }, ({ workflowReservation }) => executeResumeAdaptation({
+            resumeId,
+            missionId,
+            userMetadata,
+            creditReservation: workflowReservation,
+            onCreditConsumed
+        }));
+    }
+
     if (!missionId) {
         throw new Error('Mission ID is required');
     }
@@ -89,7 +115,11 @@ export async function executeResumeAdaptation({
             resumeId: resumeRecord.id,
             missionId: missionRecord.id,
             source: userMetadata?.source || 'direct'
-        }
+        },
+        reservation: workflowReservationCoversAction(creditReservation, 'resume.adaptation')
+            ? creditReservation
+            : null,
+        markReservedConsumption: onCreditConsumed
     }, async (actionConfig = {}) => {
         const { maxTokens } = actionConfig;
         const matchAnalysisResult = isExternalLlmDisabledForE2E()

@@ -24,6 +24,7 @@ import {
   FactsPage,
   MetiersPage,
   ClientsPage,
+  InsufficientCreditsPage,
   SignIn,
   Register,
   ForgotPasswordPage,
@@ -79,6 +80,7 @@ export function AppRoutes(): JSX.Element {
         <Route path="profile-matching" element={<ProfileMatchingPage />} />
         <Route path="guide" element={<UserGuidePage />} />
         <Route path="profile" element={<UserProfilePage />} />
+        <Route path="credits-required" element={<InsufficientCreditsPage />} />
         <Route path="admin" element={<ManagerRoute><AdminWorkspacePage /></ManagerRoute>} />
         <Route path="admin/templates/new" element={<ManagerRoute><NewTemplatePage /></ManagerRoute>} />
         <Route path="admin/templates/edit/:id" element={<ManagerRoute><NewTemplatePage /></ManagerRoute>} />

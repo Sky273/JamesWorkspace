@@ -18,6 +18,7 @@ import InputWithLeadingIcon from './form/InputWithLeadingIcon';
 import { useTranslation } from 'react-i18next';
 import logger from '../utils/logger.frontend';
 import { createAuthOptionsWithCsrf, fetchWithAuth } from '../utils/apiInterceptor';
+import { isInsufficientCreditsRedirectError } from '../utils/insufficientCreditsRedirect';
 
 interface CandidateInfo {
   profileType: 'employee' | 'external';
@@ -116,6 +117,9 @@ const FileUpload = (): JSX.Element => {
         // Pass candidate info along with the file
         await uploadResume(acceptedFiles[0], candidateInfo);
       } catch (error) {
+        if (isInsufficientCreditsRedirectError(error)) {
+          return;
+        }
         logger.error('[FileUpload] Error uploading file:', error);
       }
     }

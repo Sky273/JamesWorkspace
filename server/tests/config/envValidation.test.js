@@ -21,6 +21,9 @@ describe('envValidation', () => {
         process.env.POSTGRES_USER = 'user';
         process.env.POSTGRES_PASSWORD = 'pass';
         process.env.CSRF_SECRET = 'c'.repeat(32);
+        process.env.PDF_SERVER_INTERNAL_TOKEN = 'd'.repeat(32);
+        delete process.env.DEFAULT_ADMIN_EMAIL;
+        delete process.env.DEFAULT_ADMIN_PASSWORD;
     });
 
     afterEach(() => {
@@ -64,12 +67,43 @@ describe('envValidation', () => {
 
         it('should fail in production when PDF_SERVER_INTERNAL_TOKEN is missing', () => {
             process.env.NODE_ENV = 'production';
+            process.env.DEFAULT_ADMIN_PASSWORD = 'A-strong-admin-password';
             delete process.env.PDF_SERVER_INTERNAL_TOKEN;
 
             const result = validateEnvironment();
 
             expect(result.valid).toBe(false);
             expect(result.errors.some(e => e.includes('PDF_SERVER_INTERNAL_TOKEN'))).toBe(true);
+        });
+
+        it('should fail in production when DEFAULT_ADMIN_PASSWORD is missing', () => {
+            process.env.NODE_ENV = 'production';
+            delete process.env.DEFAULT_ADMIN_PASSWORD;
+
+            const result = validateEnvironment();
+
+            expect(result.valid).toBe(false);
+            expect(result.errors.some(e => e.includes('DEFAULT_ADMIN_PASSWORD'))).toBe(true);
+        });
+
+        it('should fail in production when DEFAULT_ADMIN_PASSWORD is still admin123', () => {
+            process.env.NODE_ENV = 'production';
+            process.env.DEFAULT_ADMIN_PASSWORD = 'admin123';
+
+            const result = validateEnvironment();
+
+            expect(result.valid).toBe(false);
+            expect(result.errors.some(e => e.includes('DEFAULT_ADMIN_PASSWORD'))).toBe(true);
+        });
+
+        it('should pass production validation with a strong DEFAULT_ADMIN_PASSWORD', () => {
+            process.env.NODE_ENV = 'production';
+            process.env.DEFAULT_ADMIN_PASSWORD = 'A-strong-admin-password';
+
+            const result = validateEnvironment();
+
+            expect(result.valid).toBe(true);
+            expect(result.errors).toHaveLength(0);
         });
 
         it('should warn in non-production when PDF_SERVER_INTERNAL_TOKEN is missing', () => {

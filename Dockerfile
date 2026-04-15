@@ -116,9 +116,6 @@ COPY USER_GUIDE.md ./
 COPY USER_GUIDE_EN.md ./
 COPY CHANGELOG.md ./
 
-# Copy Docker environment file as .env
-COPY .env.docker ./.env
-
 # Create certificates directory (certificates will be generated at runtime or mounted)
 RUN mkdir -p /app/certificates
 
@@ -127,24 +124,6 @@ RUN npm run build
 
 # Verify frontend build exists
 RUN ls -la /app/client/dist/ && echo "Frontend build successful!"
-
-# =============================================================================
-# PostgreSQL Configuration
-# =============================================================================
-USER postgres
-
-# Initialize PostgreSQL 18 cluster and create database
-RUN /etc/init.d/postgresql start && \
-    psql --command "CREATE USER resumeconverter WITH SUPERUSER PASSWORD 'RcV2026!PgSecure#Db';" && \
-    createdb -O resumeconverter resumeconverter && \
-    /etc/init.d/postgresql stop
-
-# Allow connections from localhost and external (for pgAdmin access)
-RUN echo "host all all 127.0.0.1/32 md5" >> /etc/postgresql/18/main/pg_hba.conf && \
-    echo "host all all 0.0.0.0/0 md5" >> /etc/postgresql/18/main/pg_hba.conf && \
-    echo "listen_addresses='*'" >> /etc/postgresql/18/main/postgresql.conf
-
-USER root
 
 # =============================================================================
 # Database Schema Initialization Script and Migrations
@@ -182,10 +161,8 @@ ENV CACHE_REDIS_URL=redis://127.0.0.1:6379
 ENV CACHE_KEY_PREFIX=resumeconverter
 ENV DISABLE_INTERNAL_REDIS=false
 ENV JWT_SECRET=docker-jwt-secret-change-in-production-min32chars
-ENV JWT_REFRESH_SECRET=docker-jwt-refresh-secret-change-in-production-min32chars
 ENV REFRESH_TOKEN_SECRET=docker-refresh-token-secret-change-in-production-min32chars
 ENV CSRF_SECRET=docker-csrf-secret-change-in-production-min32chars
-ENV SKIP_ENV_VALIDATION=true
 ENV OCR_ADVANCED_BACKEND=paddleocr
 
 # Create required directories

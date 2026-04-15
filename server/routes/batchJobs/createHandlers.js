@@ -21,6 +21,8 @@ import {
     stageImportJobItems,
     validateImportRequest
 } from './helpers.js';
+import { refundCreditsAmount } from '../../services/aiCredits.service.js';
+import { reserveBatchJobCredits, settleBatchJobCredits } from '../../services/batchJobCredits.service.js';
 import {
     createMissionTaskJob,
 } from './missionTaskHelpers.js';
@@ -58,6 +60,14 @@ function respondCreateJobError(res, errorLogMessage, error, responseMessage = DE
     res.status(500).json({ error: responseMessage });
 }
 
+function respondInsufficientCredits(res, error) {
+    return res.status(402).json({
+        code: 'INSUFFICIENT_CREDITS',
+        error: 'Insufficient credits for this AI action',
+        details: error.details || null
+    });
+}
+
 function createMissionResumeIdsJob(req, res, { jobType, logLabel, optionFlag }) {
     const missionId = getMissionIdOrRespond(req, res);
     if (!missionId) {
@@ -76,6 +86,7 @@ function createMissionResumeIdsJob(req, res, { jobType, logLabel, optionFlag }) 
 }
 
 export async function createImportJob(req, res) {
+    let reservedCredits = null;
     try {
         const importRequest = await validateImportRequest({
             req,
@@ -95,12 +106,43 @@ export async function createImportJob(req, res) {
             uploadedFiles
         } = importRequest;
 
-        const job = await createJob({
+        reservedCredits = await reserveBatchJobCredits({
             firmId,
             userId: userContext.userId,
             jobType: 'import',
-            options
+            itemCount: uploadedFiles.length,
+            options,
+            metadata: {
+                source: 'batch-job',
+                fileNames: uploadedFiles.map((file) => file.originalname || file.filename).slice(0, 25)
+            }
         });
+
+        const jobOptions = reservedCredits
+            ? { ...options, creditReservation: reservedCredits }
+            : options;
+
+        let job;
+        try {
+            job = await createJob({
+                firmId,
+                userId: userContext.userId,
+                jobType: 'import',
+                options: jobOptions
+            });
+        } catch (createJobError) {
+            if (reservedCredits?.id) {
+                await refundCreditsAmount({
+                    id: reservedCredits.id,
+                    firm_id: firmId,
+                    user_id: userContext.userId || null,
+                    action_type: reservedCredits.actionType || 'resume.upload'
+                }, reservedCredits.totalReserved, {
+                    reason: 'import_job_create_failed'
+                });
+            }
+            throw createJobError;
+        }
 
         const responsePayload = mapCreatedImportJobResponse(job, req.files?.length || 0);
 
@@ -127,15 +169,29 @@ export async function createImportJob(req, res) {
             uploadedFiles,
             relativePaths,
             addJobItemsFromUploadedFiles,
-            markJobFailed: (stagingError) => updateJobStatus(job.id, JOB_STATUS.FAILED, { error_message: stagingError.message })
+            markJobFailed: async (stagingError) => {
+                await updateJobStatus(job.id, JOB_STATUS.FAILED, { error_message: stagingError.message });
+                await settleBatchJobCredits({
+                    ...job,
+                    status: JOB_STATUS.FAILED,
+                    options: jobOptions
+                }, {
+                    reason: 'import_stage_failed',
+                    stagingError: stagingError.message
+                });
+            }
         });
     } catch (error) {
         await cleanupUploadedFiles(req.files);
+        if (error.code === 'INSUFFICIENT_CREDITS') {
+            return respondInsufficientCredits(res, error);
+        }
         respondCreateJobError(res, 'Failed to create batch job', error);
     }
 }
 
 async function createResumeIdsJob(req, res, { jobType, optionsBuilder, logLabel }) {
+    let reservedCredits = null;
     try {
         const jobRequest = await getResumeIdsJobRequestContext(req, res);
         if (!jobRequest) {
@@ -150,17 +206,57 @@ async function createResumeIdsJob(req, res, { jobType, optionsBuilder, logLabel 
             jobOptions
         } = jobRequest;
 
-        const { job, responsePayload: updatedJob } = await createJobAndFetchResponse({
-            createJobFn: createJob,
-            getJobFn: getJob,
-            createParams: {
+        const resolvedJobOptions = optionsBuilder({ normalizedPayload, jobOptions });
+        reservedCredits = await reserveBatchJobCredits({
+            firmId,
+            userId: userContext.userId,
+            jobType,
+            itemCount: resumeIds.length,
+            options: resolvedJobOptions,
+            metadata: {
+                source: 'batch-job',
+                resumeIds: resumeIds.slice(0, 50)
+            }
+        });
+
+        const finalJobOptions = reservedCredits
+            ? { ...resolvedJobOptions, creditReservation: reservedCredits }
+            : resolvedJobOptions;
+
+        let job;
+        try {
+            job = await createJob({
                 firmId,
                 userId: userContext.userId,
                 jobType,
-                options: optionsBuilder({ normalizedPayload, jobOptions })
-            },
-            stageItems: (createdJob) => addJobResumeIds(createdJob.id, resumeIds)
-        });
+                options: finalJobOptions
+            });
+            await addJobResumeIds(job.id, resumeIds);
+        } catch (createOrStageError) {
+            if (job?.id) {
+                await updateJobStatus(job.id, JOB_STATUS.FAILED, { error_message: createOrStageError.message });
+                await settleBatchJobCredits({
+                    ...job,
+                    status: JOB_STATUS.FAILED,
+                    options: finalJobOptions
+                }, {
+                    reason: 'batch_job_stage_failed',
+                    stagingError: createOrStageError.message
+                });
+            } else if (reservedCredits?.id) {
+                await refundCreditsAmount({
+                    id: reservedCredits.id,
+                    firm_id: firmId,
+                    user_id: userContext.userId || null,
+                    action_type: reservedCredits.actionType
+                }, reservedCredits.totalReserved, {
+                    reason: 'batch_job_create_failed'
+                });
+            }
+            throw createOrStageError;
+        }
+
+        const updatedJob = await getJob(job.id);
 
         safeLog('info', `${logLabel} created via API`, {
             jobId: job.id,
@@ -170,6 +266,9 @@ async function createResumeIdsJob(req, res, { jobType, optionsBuilder, logLabel 
 
         res.status(201).json(updatedJob);
     } catch (error) {
+        if (error.code === 'INSUFFICIENT_CREDITS') {
+            return respondInsufficientCredits(res, error);
+        }
         respondCreateJobError(res, `Failed to create ${jobType} job`, error);
     }
 }

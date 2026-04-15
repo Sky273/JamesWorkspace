@@ -21,6 +21,7 @@ import {
     buildEmptyImprovementAnalysis,
     finalizeImprovedOutput
 } from './resumeNormalization.js';
+import { normalizeNonRetryableLlmProviderError } from '../llmGateway.service.js';
 
 function inferMetricsProvider(model) {
     if (isLikelyAnthropicModel(model)) return 'anthropic';
@@ -71,7 +72,12 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
         });
     }
 
-    let response = await requestAnalysis(false);
+    let response;
+    try {
+        response = await requestAnalysis(false);
+    } catch (error) {
+        throw normalizeNonRetryableLlmProviderError(error);
+    }
 
     let rawAnalysis;
     try {
@@ -82,7 +88,11 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
                 error: parseError.message,
                 operationType
             });
-            response = await requestAnalysis(true);
+            try {
+                response = await requestAnalysis(true);
+            } catch (error) {
+                throw normalizeNonRetryableLlmProviderError(error);
+            }
             rawAnalysis = parseJsonFromLlmResponse(response.choices[0].message.content);
         } else {
         safeLog('error', 'Failed to parse LLM analysis response as JSON', {
@@ -210,7 +220,7 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
             inputChars: text.length,
             metadata: { source: 'provider-call', error: error.message, ...(userMetadata?.promptMetadata || {}) }
         });
-        throw error;
+        throw normalizeNonRetryableLlmProviderError(error);
     }
 
     const rawContent = stripLlmThinkingContent(response.choices[0].message.content);
@@ -296,6 +306,10 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
 
                     return result;
                 } catch (retryError) {
+                    const normalizedRetryError = normalizeNonRetryableLlmProviderError(retryError);
+                    if (normalizedRetryError !== retryError) {
+                        throw normalizedRetryError;
+                    }
                     safeLog('error', 'Resume improvement retry failed', {
                         error: retryError.message,
                         model

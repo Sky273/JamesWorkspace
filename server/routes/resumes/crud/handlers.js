@@ -504,6 +504,7 @@ function createUpdateResumeHandler() {
             }
             if (error.code === 'INSUFFICIENT_CREDITS') {
                 return res.status(402).json({
+                    code: 'INSUFFICIENT_CREDITS',
                     error: 'Insufficient credits for this AI action',
                     details: error.details
                 });

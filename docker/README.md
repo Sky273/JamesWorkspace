@@ -24,9 +24,9 @@ This Docker setup creates a **single, fully autonomous container** that includes
 
 ### ⚠️ Required: `.env.docker` file
 
-The `.env.docker` file must be present at the project root **before building** the Docker image. The `Dockerfile` copies it as `.env` inside the container (`COPY .env.docker ./.env`).
+The `.env.docker` file must be present at the project root **before building or running** the Docker stack. It is injected at runtime and is **not** copied into the image.
 
-This file is **not versioned** (listed in `.gitignore`) because it contains secrets. You must create it manually or obtain it from the project administrator.
+This file must contain environment-specific secrets and must be reviewed before use. The sanitized repository copy is only a template.
 
 ```env
 # Docker-specific values (database is local to container)
@@ -74,7 +74,7 @@ GOOGLE_CLIENT_SECRET=your-client-secret
 MAIL_TOKEN_ENCRYPTION_KEY=your-64-hex-key
 ```
 
-> **Without this file, `docker-build.bat` will fail** with a `COPY .env.docker ./.env` error.
+> **Without this file, Docker helper scripts fail early** before build or run.
 
 ## 🚀 Quick Start
 
@@ -139,12 +139,12 @@ chmod +x docker/docker-build.sh
 After starting the container:
 
 - **URL**: https://localhost:3443
-- **Email**: `admin@resumeconverter.local`
-- **Password**: `admin123`
+- **Email**: value of `DEFAULT_ADMIN_EMAIL`
+- **Password**: value of `DEFAULT_ADMIN_PASSWORD`
 
 If this account does not exist yet, Docker initialization now creates it automatically if missing.
 
-⚠️ **Change these credentials immediately in production!**
+⚠️ **Use a strong `DEFAULT_ADMIN_PASSWORD` in production. Startup now fails if it is missing, too short, or left as `admin123`.**
 
 ## 📝 Available Commands
 

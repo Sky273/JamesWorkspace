@@ -4,7 +4,7 @@ import { safeLog } from '../../utils/logger.backend.js';
 import { getRequestMetadata } from '../../services/security.service.js';
 import { metrics, buildLLMMetricLabel } from '../../services/metrics.service.js';
 import { normalizeUtf8Text, parseJsonFromLlmResponse, stripLlmThinkingContent } from '../../services/openai/textUtils.js';
-import { runAiActionWithCredits } from '../../services/aiCredits.service.js';
+import { executeAiWorkflowWithCredits, runAiActionWithCredits, workflowReservationCoversAction } from '../../services/aiCredits.service.js';
 
 /**
  * AI Modify Handler
@@ -96,21 +96,35 @@ IMPORTANT : Retourne UNIQUEMENT ce JSON, sans texte avant ou après.`);
         // Call LLM with strict system prompt
         let response;
         try {
-            response = await runAiActionWithCredits({
+            response = await executeAiWorkflowWithCredits({
                 firmId: userMetadata.firmId,
                 userId: userMetadata.userId,
-                actionType: 'resume.ai_modify',
+                workflowActionType: 'resume.ai_modify',
+                steps: [{ actionType: 'resume.ai_modify' }],
                 metadata: {
                     ...userMetadata,
                     resumeId: req.params?.id,
                     hasSelection
                 }
-            }, (actionConfig = {}) => callBusinessChatCompletion({
-                model,
-                messages: [
-                    {
-                        role: 'system',
-                        content: `You are a professional resume editor assistant with STRICT limitations:
+            }, async ({ workflowReservation }) => (
+                runAiActionWithCredits({
+                    firmId: userMetadata.firmId,
+                    userId: userMetadata.userId,
+                    actionType: 'resume.ai_modify',
+                    metadata: {
+                        ...userMetadata,
+                        resumeId: req.params?.id,
+                        hasSelection
+                    },
+                    reservation: workflowReservationCoversAction(workflowReservation, 'resume.ai_modify')
+                        ? workflowReservation
+                        : null
+                }, (actionConfig = {}) => callBusinessChatCompletion({
+                    model,
+                    messages: [
+                        {
+                            role: 'system',
+                            content: `You are a professional resume editor assistant with STRICT limitations:
 
 ALLOWED ACTIONS:
 - Edit resume text content (wording, phrasing, formatting)
@@ -140,15 +154,16 @@ OUTPUT REQUIREMENTS:
 - Preserve HTML structure and CSS classes in the content
 
 If the user's instructions are not related to resume editing, refuse politely and return the original content with an appropriate message.`
-                    },
-                    { role: 'user', content: modificationPrompt }
-                ],
-                maxTokens: actionConfig.maxTokens,
-                temperature: 0.3,
-                timeout: 90000,
-                userMetadata,
-                operationType: 'Resume AI Modification'
-            }));
+                        },
+                        { role: 'user', content: modificationPrompt }
+                    ],
+                    maxTokens: actionConfig.maxTokens,
+                    temperature: 0.3,
+                    timeout: 90000,
+                    userMetadata,
+                    operationType: 'Resume AI Modification'
+                }))
+            ));
         } catch (error) {
             metrics.trackAiModifyActivity({
                 provider: metricsProvider,
@@ -160,6 +175,7 @@ If the user's instructions are not related to resume editing, refuse politely an
             });
             if (error.code === 'INSUFFICIENT_CREDITS') {
                 return res.status(402).json({
+                    code: 'INSUFFICIENT_CREDITS',
                     error: 'Insufficient credits for this AI action',
                     details: error.details
                 });

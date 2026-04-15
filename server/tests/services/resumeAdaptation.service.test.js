@@ -43,7 +43,14 @@ vi.mock('../../utils/logger.backend.js', () => ({
 }));
 
 vi.mock('../../services/aiCredits.service.js', () => ({
-    runAiActionWithCredits: (_options, action) => action()
+    executeAiWorkflowWithCredits: (_options, runner) => runner({
+        workflowReservation: {
+            id: 'wf-1',
+            plan: [{ actionType: 'resume.adaptation' }]
+        }
+    }),
+    runAiActionWithCredits: (_options, action) => action(),
+    workflowReservationCoversAction: () => true
 }));
 
 import { executeResumeAdaptation } from '../../services/resumeAdaptation.service.js';

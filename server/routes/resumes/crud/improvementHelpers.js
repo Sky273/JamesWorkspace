@@ -7,7 +7,11 @@ import { parseScore } from '../helpers.js';
 import * as resumesService from '../../../services/resumes.service.js';
 import { persistResumeSkillEvidence } from '../../../services/skillEvidence.service.js';
 import { updateVersionPostAnalysis } from '../../../services/resumeVersions.service.js';
-import { runAiActionWithCredits } from '../../../services/aiCredits.service.js';
+import {
+    executeAiWorkflowWithCredits,
+    runAiActionWithCredits,
+    workflowReservationCoversAction
+} from '../../../services/aiCredits.service.js';
 
 function hasSuggestionContent(suggestions) {
     if (!suggestions || typeof suggestions !== 'object') return false;
@@ -80,7 +84,14 @@ async function updateResumeVersionWithPostAnalysis(resumeId, versionNumber, anal
     await updateVersionPostAnalysis(resumeId, versionNumber, analysis);
 }
 
-async function persistDeferredPostImprovementAnalysis({ resumeId, improvedText, fileName, userMetadata, currentVersion }) {
+async function persistDeferredPostImprovementAnalysisInternal({
+    resumeId,
+    improvedText,
+    fileName,
+    userMetadata,
+    currentVersion,
+    workflowReservation = null
+}) {
     const settings = await getLLMSettings();
     const model = settings.llmModel;
     const cvMode = settings.cvMode || 'nominative';
@@ -101,7 +112,10 @@ async function persistDeferredPostImprovementAnalysis({ resumeId, improvedText, 
         metadata: {
             ...(userMetadata || {}),
             resumeId
-        }
+        },
+        reservation: workflowReservationCoversAction(workflowReservation, 'resume.improvement')
+            ? workflowReservation
+            : null
     }, (actionConfig = {}) => analyzeResume(
         cleanupText(improvedText),
         model,
@@ -135,6 +149,45 @@ async function persistDeferredPostImprovementAnalysis({ resumeId, improvedText, 
         updatedResume,
         improvedAnalysis
     };
+}
+
+async function persistDeferredPostImprovementAnalysis({
+    resumeId,
+    improvedText,
+    fileName,
+    userMetadata,
+    currentVersion,
+    workflowReservation = null
+}) {
+    if (workflowReservation) {
+        return persistDeferredPostImprovementAnalysisInternal({
+            resumeId,
+            improvedText,
+            fileName,
+            userMetadata,
+            currentVersion,
+            workflowReservation
+        });
+    }
+
+    return executeAiWorkflowWithCredits({
+        firmId: userMetadata?.firmId || null,
+        userId: userMetadata?.userId || null,
+        workflowActionType: 'resume.improvement',
+        steps: [{ actionType: 'resume.improvement' }],
+        metadata: {
+            ...(userMetadata || {}),
+            resumeId,
+            source: 'resume-update'
+        }
+    }, ({ workflowReservation: reservedWorkflow }) => persistDeferredPostImprovementAnalysisInternal({
+        resumeId,
+        improvedText,
+        fileName,
+        userMetadata,
+        currentVersion,
+        workflowReservation: reservedWorkflow
+    }));
 }
 
 export {

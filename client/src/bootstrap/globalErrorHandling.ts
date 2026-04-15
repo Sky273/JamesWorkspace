@@ -1,5 +1,6 @@
 import { createLogger } from '../utils/logger.frontend';
 import { resetSessionState } from '../utils/apiInterceptor';
+import { isInsufficientCreditsRedirectError } from '../utils/insufficientCreditsRedirect';
 
 const log = createLogger('GlobalError');
 
@@ -121,6 +122,12 @@ function handleUnhandledRejection(event: PromiseRejectionEvent): void {
     return;
   }
 
+  if (isInsufficientCreditsRedirectError(event.reason)) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    return;
+  }
+
   if (isAuthError(reason) || isAuthError(stack)) {
     log.warn('Authentication-related rejection captured, redirecting to signin', { reason });
     event.preventDefault();
@@ -152,6 +159,12 @@ function handleRuntimeError(event: ErrorEvent): void {
   const combinedMessage = `${message} ${errorString}`;
 
   if (isSessionRedirect(event.error)) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    return;
+  }
+
+  if (isInsufficientCreditsRedirectError(event.error)) {
     event.preventDefault();
     event.stopImmediatePropagation();
     return;

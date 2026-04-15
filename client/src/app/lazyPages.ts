@@ -40,6 +40,7 @@ export const MetiersPage = lazyWithCss(() => import('../pages/MetiersPage'), edi
 export const ClientsPage = lazyWithCss(() => import('../pages/ClientsPage'), editorialCssLoaders);
 export const EmailTemplatesPage = lazyWithCss(() => import('../pages/admin/EmailTemplatesPage'), editorialCssLoaders);
 export const FirmCreditsPage = lazyWithCss(() => import('../pages/FirmCreditsPage'), editorialCssLoaders);
+export const InsufficientCreditsPage = lazyWithCss(() => import('../pages/InsufficientCreditsPage'), editorialCssLoaders);
 export const SignIn = lazy(() => import('../components/SignIn'));
 export const Register = lazy(() => import('../components/Register'));
 export const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage'));

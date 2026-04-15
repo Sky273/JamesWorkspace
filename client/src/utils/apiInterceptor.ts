@@ -39,6 +39,7 @@ import { getCsrfToken, refreshCsrfToken, resetCsrfState, isCsrfError } from './c
 import {
   REQUEST_TIMEOUT_MESSAGE,
   isSessionForbiddenError,
+  parsePaymentRequiredResponse,
   parseForbiddenResponse,
   toTimeoutError,
   toTimeoutUserError,
@@ -49,6 +50,7 @@ import {
   setSessionExpiredHandler as setRedirectHandler,
   triggerSessionExpiry,
 } from './sessionRedirect';
+import { InsufficientCreditsRedirectError, redirectToInsufficientCreditsPage } from './insufficientCreditsRedirect';
 
 // ============================================
 // SESSION STATE
@@ -234,6 +236,18 @@ export const fetchWithAuth = async (
         triggerSessionExpiry();
         // Throw special error to stop all processing
         throw new SessionRedirectError();
+      }
+
+      throw new Error(errorMessage);
+    }
+
+    if (response.status === 402) {
+      logger.warn('[API Interceptor] 402 Payment Required - checking for insufficient credits');
+
+      const { errorMessage, errorCode, details } = await parsePaymentRequiredResponse(response);
+      if (errorCode === 'INSUFFICIENT_CREDITS') {
+        redirectToInsufficientCreditsPage(details);
+        throw new InsufficientCreditsRedirectError(errorMessage);
       }
 
       throw new Error(errorMessage);

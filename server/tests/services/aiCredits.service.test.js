@@ -29,7 +29,9 @@ vi.mock('../../services/settings.service.js', () => ({
 }));
 
 import {
+    executeAiWorkflowWithCredits,
     reserveAiCredits,
+    reserveAiWorkflowCredits,
     refundAiCredits,
     runAiActionWithCredits,
     addFirmCreditsTransaction
@@ -147,6 +149,83 @@ describe('aiCredits.service', () => {
         })).rejects.toThrow('boom');
 
         expect(refundClient.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO firm_credit_transactions'), expect.arrayContaining(['firm-1', 'user-1', 'credit.refund', 5, 100]));
+    });
+
+    it('uses an existing upfront reservation without reserving again', async () => {
+        const markReservedConsumption = vi.fn(async () => undefined);
+
+        const result = await runAiActionWithCredits({
+            firmId: 'firm-1',
+            userId: 'user-1',
+            actionType: 'resume.improvement',
+            reservation: { id: 'reserved-1' },
+            markReservedConsumption
+        }, async ({ maxTokens }) => ({ maxTokens }));
+
+        expect(result).toEqual({ maxTokens: getAiActionMaxTokens('resume.improvement') });
+        expect(markReservedConsumption).toHaveBeenCalledTimes(1);
+        expect(getClientMock).not.toHaveBeenCalled();
+    });
+
+    it('reserves upfront workflow credits across one or more planned actions', async () => {
+        const client = createDbClient([
+            undefined,
+            { rows: [{ id: 'firm-1', credits: 100 }] },
+            undefined,
+            { rows: [{ id: 'tx-1', firm_id: 'firm-1', user_id: 'user-1', action_type: 'resume.adaptation', credits_delta: -50, balance_after: 50 }] },
+            undefined
+        ]);
+        getClientMock.mockResolvedValue(client);
+
+        const result = await reserveAiWorkflowCredits({
+            firmId: 'firm-1',
+            userId: 'user-1',
+            workflowActionType: 'resume.adaptation',
+            steps: [{ actionType: 'resume.adaptation' }]
+        });
+
+        expect(result.totalReserved).toBe(50);
+        expect(result.plan).toEqual([
+            expect.objectContaining({
+                actionType: 'resume.adaptation',
+                units: 1,
+                reservedAmount: 50
+            })
+        ]);
+    });
+
+    it('refunds a workflow reservation when the wrapped workflow fails', async () => {
+        const reserveClient = createDbClient([
+            undefined,
+            { rows: [{ id: 'firm-1', credits: 100 }] },
+            undefined,
+            { rows: [{ id: 'tx-1', firm_id: 'firm-1', user_id: 'user-1', action_type: 'resume.improvement', credits_delta: -75, balance_after: 25 }] },
+            undefined
+        ]);
+        const refundClient = createDbClient([
+            undefined,
+            { rows: [{ id: 'firm-1', credits: 25 }] },
+            undefined,
+            { rows: [{ id: 'tx-2', action_type: 'credit.refund', credits_delta: 75, balance_after: 100 }] },
+            undefined
+        ]);
+        getClientMock
+            .mockResolvedValueOnce(reserveClient)
+            .mockResolvedValueOnce(refundClient);
+
+        await expect(executeAiWorkflowWithCredits({
+            firmId: 'firm-1',
+            userId: 'user-1',
+            workflowActionType: 'resume.improvement',
+            steps: [{ actionType: 'resume.improvement' }]
+        }, async () => {
+            throw new Error('workflow boom');
+        })).rejects.toThrow('workflow boom');
+
+        expect(refundClient.query).toHaveBeenCalledWith(
+            expect.stringContaining('INSERT INTO firm_credit_transactions'),
+            expect.arrayContaining(['firm-1', 'user-1', 'credit.refund', 75, 100])
+        );
     });
 
     it('records positive credit adjustments for manual grants', async () => {

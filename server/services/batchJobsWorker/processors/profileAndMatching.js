@@ -7,6 +7,7 @@ import { getLLMSettings } from '../../settings.service.js';
 import { DEFAULT_MATCH_ANALYSIS_PROMPT } from '../../../config/prompts.backend.js';
 import { findMatchingProfiles, analyzeProfileForMission } from '../../profileMatching.service.js';
 import { runAiActionWithCredits } from '../../aiCredits.service.js';
+import { getBatchJobActionCreditReservation, markBatchJobActionCreditConsumed } from '../../batchJobCredits.service.js';
 
 export async function processAdaptItem(item, job, options) {
     const missionId = options?.missionId;
@@ -28,7 +29,9 @@ export async function processAdaptItem(item, job, options) {
             source: 'batch-job',
             jobId: job.id,
             itemId: item.id
-        }
+        },
+        creditReservation: getBatchJobActionCreditReservation(options, 'resume.adaptation'),
+        onCreditConsumed: () => markBatchJobActionCreditConsumed(item.id, 'resume.adaptation')
     });
 
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, {
@@ -85,7 +88,9 @@ export async function processMatchItem(item, job, options) {
             itemId: item.id,
             resumeId: item.resume_id,
             missionId
-        }
+        },
+        reservation: getBatchJobActionCreditReservation(options, 'resume.match'),
+        markReservedConsumption: () => markBatchJobActionCreditConsumed(item.id, 'resume.match')
     }, (actionConfig = {}) => matchResumeWithMission(
         resumeText,
         missionRecord.title || '',
@@ -134,7 +139,9 @@ export async function processProfileSearchItem(item, job, options) {
             jobId: job.id,
             itemId: item.id,
             missionId
-        }
+        },
+        reservation: getBatchJobActionCreditReservation(options, 'profile.search'),
+        markReservedConsumption: () => markBatchJobActionCreditConsumed(item.id, 'profile.search')
     }, (actionConfig = {}) => findMatchingProfiles(missionId, {
         limit: options?.limit ?? 0,
         minScore: options?.minScore ?? 0,
@@ -202,7 +209,9 @@ export async function processProfileAnalysisItem(item, job, options) {
             itemId: item.id,
             resumeId: item.resume_id,
             missionId
-        }
+        },
+        reservation: getBatchJobActionCreditReservation(options, 'profile.analysis'),
+        markReservedConsumption: () => markBatchJobActionCreditConsumed(item.id, 'profile.analysis')
     }, (actionConfig = {}) => analyzeProfileForMission(missionId, item.resume_id, {
         source: 'batch-job',
         jobId: job.id,

@@ -8,6 +8,7 @@ import { Component, ErrorInfo, ReactNode, useState } from 'react';
 import { ExclamationTriangleIcon, ChevronDownIcon, ChevronUpIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { createLogger } from '../utils/logger.frontend';
 import { isSessionRedirectError, resetSessionState } from '../utils/apiInterceptor';
+import { isInsufficientCreditsRedirectError } from '../utils/insufficientCreditsRedirect';
 
 const log = createLogger('ErrorBoundary');
 
@@ -50,7 +51,7 @@ const isAuthError = (error: Error | null): boolean => {
   if (!error) return false;
   
   // Check for SessionRedirectError first
-  if (isSessionRedirectError(error)) {
+  if (isSessionRedirectError(error) || isInsufficientCreditsRedirectError(error)) {
     return true;
   }
   
@@ -174,6 +175,9 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
+    if (isInsufficientCreditsRedirectError(error)) {
+      return { hasError: false, error: null, isRedirecting: true };
+    }
     // Check if this is an authentication error - mark as redirecting
     if (isAuthError(error)) {
       log.warn('Auth error detected, will redirect to signin', { error: error.message });
@@ -185,6 +189,9 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    if (isInsufficientCreditsRedirectError(error)) {
+      return;
+    }
     // Double-check for auth errors in componentDidCatch
     if (isAuthError(error)) {
       log.warn('Auth error in componentDidCatch, redirecting');

@@ -34,6 +34,13 @@ show_help() {
 }
 
 build_image() {
+    if [ ! -f "$(pwd)/.env.docker" ]; then
+        echo ""
+        echo "Missing .env.docker file."
+        echo "Create it from .env.example with Docker-specific values before building."
+        exit 1
+    fi
+
     echo ""
     echo "Building Docker image: ${IMAGE_NAME}:${TAG}"
     echo "This may take several minutes on first build..."
@@ -72,26 +79,20 @@ run_container() {
     mkdir -p "$(pwd)/uploads"
     mkdir -p "$(pwd)/logs"
 
-    JWT_SECRET_VAL="${JWT_SECRET:-docker-jwt-secret-change-in-production-min32chars}"
-    JWT_REFRESH_SECRET_VAL="${JWT_REFRESH_SECRET:-docker-jwt-refresh-secret-change-in-production-min32chars}"
-    REFRESH_TOKEN_SECRET_VAL="${REFRESH_TOKEN_SECRET:-docker-refresh-token-secret-change-in-production-min32chars}"
-    CSRF_SECRET_VAL="${CSRF_SECRET:-docker-csrf-secret-change-in-production-min32chars}"
-    PDF_SERVER_INTERNAL_TOKEN_VAL="${PDF_SERVER_INTERNAL_TOKEN:-docker-pdf-server-internal-token-change-in-production-min32chars}"
+    if [ ! -f "$(pwd)/.env.docker" ]; then
+        echo ""
+        echo "Missing .env.docker file."
+        echo "Create it from .env.example with Docker-specific values before running the container."
+        exit 1
+    fi
 
     docker run -d \
         --name $CONTAINER_NAME \
         -p 443:3443 \
         -p 3443:3443 \
-        -e OPENAI_API_KEY="${OPENAI_API_KEY}" \
-        -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" \
-        -e JWT_SECRET="${JWT_SECRET_VAL}" \
-        -e JWT_REFRESH_SECRET="${JWT_REFRESH_SECRET_VAL}" \
-        -e REFRESH_TOKEN_SECRET="${REFRESH_TOKEN_SECRET_VAL}" \
-        -e CSRF_SECRET="${CSRF_SECRET_VAL}" \
-        -e PDF_SERVER_INTERNAL_TOKEN="${PDF_SERVER_INTERNAL_TOKEN_VAL}" \
-        -e GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID}" \
-        -e GOOGLE_CLIENT_SECRET="${GOOGLE_CLIENT_SECRET}" \
-        -e MAIL_TOKEN_ENCRYPTION_KEY="${MAIL_TOKEN_ENCRYPTION_KEY}" \
+        --env-file "$(pwd)/.env.docker" \
+        -e CACHE_REDIS_URL="redis://127.0.0.1:6379" \
+        -e DISABLE_INTERNAL_REDIS="false" \
         -v "$(pwd)/data/postgresql:/var/lib/postgresql/18/main" \
         -v "$(pwd)/uploads:/app/uploads" \
         -v "$(pwd)/logs:/app/logs" \
@@ -105,8 +106,8 @@ run_container() {
         echo "============================================"
         echo "  Application URLs: https://localhost and https://localhost:3443"
         echo "  Database: ./data/postgresql (persistent local directory)"
-        echo "  Default login:   admin@resumeconverter.local"
-        echo "  Default password: admin123"
+        echo "  Config source:  .env.docker (runtime only, not baked into image)"
+        echo "  Admin bootstrap credentials: configured via DEFAULT_ADMIN_* in .env.docker"
         echo "============================================"
         echo ""
         echo "Commands:"

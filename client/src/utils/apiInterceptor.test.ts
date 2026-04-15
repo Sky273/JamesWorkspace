@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
     error: vi.fn(),
     info: vi.fn(),
   },
+  redirectToInsufficientCreditsPage: vi.fn(),
 }));
 
 vi.mock('./logger.frontend', () => ({ default: mocks.logger }));
@@ -32,6 +33,15 @@ vi.mock('./sessionRedirect', () => ({
   resetSessionRedirect: mocks.resetSessionRedirect,
   setSessionExpiredHandler: mocks.setSessionExpiredHandler,
   triggerSessionExpiry: mocks.triggerSessionExpiry,
+}));
+vi.mock('./insufficientCreditsRedirect', () => ({
+  InsufficientCreditsRedirectError: class InsufficientCreditsRedirectError extends Error {
+    constructor(message = 'Insufficient credits redirect in progress') {
+      super(message);
+      this.name = 'InsufficientCreditsRedirectError';
+    }
+  },
+  redirectToInsufficientCreditsPage: mocks.redirectToInsufficientCreditsPage,
 }));
 
 import {
@@ -223,6 +233,33 @@ describe('apiInterceptor', () => {
 
     await expect(fetchWithAuth('/api/protected')).rejects.toBeInstanceOf(SessionRedirectError);
     expect(mocks.triggerSessionExpiry).toHaveBeenCalled();
+  });
+
+  it('redirects to the insufficient credits page on 402 credit errors', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse(
+        {
+          error: 'Insufficient credits for this AI action',
+          code: 'INSUFFICIENT_CREDITS',
+          details: {
+            available: 10,
+            required: 25,
+            actionType: 'resume.analysis',
+          },
+        },
+        { status: 402 },
+      ),
+    );
+
+    await expect(fetchWithAuth('/api/protected')).rejects.toMatchObject({
+      name: 'InsufficientCreditsRedirectError',
+      message: 'Insufficient credits for this AI action',
+    });
+    expect(mocks.redirectToInsufficientCreditsPage).toHaveBeenCalledWith({
+      available: 10,
+      required: 25,
+      actionType: 'resume.analysis',
+    });
   });
 
   it('returns csrf 403 responses so fetchWithCsrfRetry can retry them', async () => {

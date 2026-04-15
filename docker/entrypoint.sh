@@ -49,6 +49,39 @@ prepare_log_paths() {
 
 prepare_log_paths
 
+looks_like_placeholder_secret() {
+    local value="$1"
+    local normalized
+    normalized="$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')"
+
+    [[ "$normalized" == *"change-this-in-production"* ]] \
+        || [[ "$normalized" == *"your-super-secret"* ]] \
+        || [[ "$normalized" == *"your-secure-password"* ]] \
+        || [[ "$normalized" == *"your-google-client"* ]] \
+        || [[ "$normalized" == *"your-64-character-hex"* ]] \
+        || [[ "$normalized" == *"your-domain.com"* ]] \
+        || [[ "$normalized" == *"your-client-id"* ]] \
+        || [[ "$normalized" == *"your-client-secret"* ]] \
+        || [[ "$normalized" == *"your-openai-api-key"* ]] \
+        || [[ "$normalized" == *"your-anthropic-api-key"* ]]
+}
+
+generate_runtime_secret() {
+    openssl rand -hex 32
+}
+
+ensure_runtime_secret() {
+    local var_name="$1"
+    local current_value="${!var_name:-}"
+
+    if [ -z "$current_value" ] || [ "${#current_value}" -lt 32 ] || looks_like_placeholder_secret "$current_value"; then
+        local generated_secret
+        generated_secret="$(generate_runtime_secret)"
+        export "$var_name=$generated_secret"
+        echo "Generated runtime value for $var_name."
+    fi
+}
+
 resolve_positive_int_with_cap() {
     local raw_value="$1"
     local default_value="$2"
@@ -183,11 +216,15 @@ done
 echo "PostgreSQL is ready!"
 
 # =============================================================================
-# Normalize internal PDF auth token before spawning Supervisor-managed services
+# Normalize runtime secrets before spawning Supervisor-managed services
 # =============================================================================
 echo "[3/5] Preparing shared internal service secrets..."
 
-if [ -z "$PDF_SERVER_INTERNAL_TOKEN" ] || [ "${#PDF_SERVER_INTERNAL_TOKEN}" -lt 32 ]; then
+ensure_runtime_secret "JWT_SECRET"
+ensure_runtime_secret "CSRF_SECRET"
+ensure_runtime_secret "REFRESH_TOKEN_SECRET"
+
+if [ -z "$PDF_SERVER_INTERNAL_TOKEN" ] || [ "${#PDF_SERVER_INTERNAL_TOKEN}" -lt 32 ] || looks_like_placeholder_secret "$PDF_SERVER_INTERNAL_TOKEN"; then
     if [ -n "$JWT_SECRET" ] && [ "${#JWT_SECRET}" -ge 32 ] && [ -n "$CSRF_SECRET" ] && [ "${#CSRF_SECRET}" -ge 32 ]; then
         PDF_SERVER_INTERNAL_TOKEN="$(printf '%s' "${JWT_SECRET}:${CSRF_SECRET}:resumeconverter-pdf-server-internal-token-v1" | base64 | tr '+/' '-_' | tr -d '=\n' | cut -c1-48)"
         export PDF_SERVER_INTERNAL_TOKEN
@@ -238,7 +275,7 @@ echo "  - PDF Server:    http://localhost:3002 (internal)"
 echo "  - PostgreSQL:    localhost:5432 (internal)"
 echo "=============================================="
 echo ""
-echo "Default login: admin@resumeconverter.local / admin123"
+echo "Admin bootstrap credentials: configured via DEFAULT_ADMIN_*"
 echo ""
 
 # Start supervisor (manages all Node.js processes)

@@ -8,7 +8,8 @@ import { createContext, useContext, useState, useCallback, useRef, ReactNode } f
 import { useAuth } from './AuthContext';
 import { createAuthOptionsWithCsrf, fetchWithAuth, fetchWithCsrfRetry, getResponseErrorMessage } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
-import { showCaughtError, getUserFriendlyMessage } from '../components/errorToast.helpers';
+import { showCaughtError, getUserFriendlyMessage, isAiProviderConfigurationError } from '../components/errorToast.helpers';
+import { isInsufficientCreditsRedirectError } from '../utils/insufficientCreditsRedirect';
 import { normalizeResume, normalizeResumeList } from '../utils/resumeNormalization';
 import { createAndTrackJob } from '../utils/longRunningOperation';
 import { deriveResumeImprovementProcessingStep, waitForResumeImprovementJobCompletion } from '../utils/resumeImprovementJob';
@@ -305,10 +306,15 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       return newResume;
     } catch (error) {
       if (!controller.signal.aborted) {
+        if (isInsufficientCreditsRedirectError(error)) {
+          return;
+        }
         const { message: userFriendlyMessage } = getUserFriendlyMessage(error);
         setProcessingError(userFriendlyMessage);
         logger.error('[ResumeContext] ERROR during upload:', error);
-        showCaughtError(error);
+        if (!isAiProviderConfigurationError(error)) {
+          showCaughtError(error);
+        }
       }
       throw error;
     } finally {
@@ -377,8 +383,15 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       markResumeViewsDirty();
       return improvedResume;
     } catch (error) {
+      if (isInsufficientCreditsRedirectError(error)) {
+        throw error;
+      }
+      const { message: userFriendlyMessage } = getUserFriendlyMessage(error);
+      setProcessingError(userFriendlyMessage);
       logger.error('Error improving resume:', error);
-      showCaughtError(error);
+      if (!isAiProviderConfigurationError(error)) {
+        showCaughtError(error);
+      }
       throw error;
     } finally {
       setLoading(false);
@@ -450,6 +463,9 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
       }
     } catch (error) {
       if (!controller.signal.aborted) {
+        if (isInsufficientCreditsRedirectError(error)) {
+          return;
+        }
         logger.error('Error deleting resume:', error);
         const { message: userFriendlyMessage } = getUserFriendlyMessage(error);
         setProcessingError(userFriendlyMessage);

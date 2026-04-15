@@ -61,6 +61,24 @@
       "creditsAdded": "{{amount}} crédits ajoutés à {{name}}",
       "errorAddingCredits": "Erreur lors de l'ajout des crédits"
     },
+    "insufficient": {
+      "title": "Crédits insuffisants",
+      "subtitleManager": "Votre cabinet n'a plus assez de crédits pour lancer cette action IA. Rechargez le solde avant de recommencer.",
+      "subtitleUser": "Votre cabinet n'a plus assez de crédits pour lancer cette action IA. Contactez un administrateur pour débloquer la situation.",
+      "kicker": "Action bloquée",
+      "heading": "Le solde IA du cabinet est insuffisant",
+      "actionMessage": "L'action « {{action}} » n'a pas pu démarrer car le cabinet ne dispose pas du nombre de crédits requis.",
+      "defaultMessage": "Cette action IA n'a pas pu démarrer car le cabinet ne dispose pas du nombre de crédits requis.",
+      "availableCredits": "Crédits disponibles",
+      "requiredCredits": "Crédits requis",
+      "missingCredits": "Crédits manquants",
+      "nextStepsTitle": "Suite recommandée",
+      "nextStepsManager": "Ouvrez la gestion des crédits pour recharger le cabinet, puis relancez l'action IA depuis l'écran d'origine.",
+      "nextStepsUser": "Revenez à l'écran précédent et contactez votre administrateur local ou le super administrateur pour réapprovisionner les crédits du cabinet.",
+      "manageCreditsCta": "Gérer les crédits du cabinet",
+      "contactManagerCta": "Revenir et contacter un administrateur",
+      "backCta": "Retourner à l'écran précédent"
+    },
     "actions": {
       "firm.initial_grant": "Dotation initiale",
       "firm.credit_grant": "Ajout manuel",

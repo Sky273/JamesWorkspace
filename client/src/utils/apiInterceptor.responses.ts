@@ -14,6 +14,7 @@ export const REQUEST_TIMEOUT_MESSAGE = 'Request timeout';
 export const FORBIDDEN_MESSAGE_FALLBACK = 'Acces refuse';
 export const REQUEST_TIMEOUT_USER_MESSAGE = 'La requete a expire. Veuillez reessayer.';
 export const GATEWAY_TIMEOUT_USER_MESSAGE = 'Le serveur a mis trop de temps a repondre. Le traitement peut continuer en arriere-plan.';
+export const INSUFFICIENT_CREDITS_MESSAGE_FALLBACK = 'Insufficient credits for this AI action';
 
 export const getResponseErrorMessage = async (response: Response, fallbackMessage: string): Promise<string> => {
   const contentType = response.headers.get('content-type') || '';
@@ -101,6 +102,27 @@ export const parseForbiddenResponse = async (response: Response): Promise<{ erro
   }
 
   return { errorMessage, errorCode };
+};
+
+export const parsePaymentRequiredResponse = async (
+  response: Response,
+): Promise<{ errorMessage: string; errorCode: string; details: Record<string, unknown> | null }> => {
+  let errorMessage = INSUFFICIENT_CREDITS_MESSAGE_FALLBACK;
+  let errorCode = '';
+  let details: Record<string, unknown> | null = null;
+
+  try {
+    const errorData = await response.clone().json() as Record<string, unknown>;
+    errorMessage = typeof errorData.error === 'string' ? errorData.error : errorMessage;
+    errorCode = typeof errorData.code === 'string' ? errorData.code : '';
+    details = errorData.details && typeof errorData.details === 'object'
+      ? errorData.details as Record<string, unknown>
+      : null;
+  } catch {
+    // Ignore JSON parse errors
+  }
+
+  return { errorMessage, errorCode, details };
 };
 
 export const isSessionForbiddenError = (errorMessage: string, errorCode: string): boolean => {

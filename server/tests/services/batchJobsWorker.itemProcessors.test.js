@@ -123,6 +123,18 @@ vi.mock('../../services/resumes.service.js', () => ({
     findMissionRecord: vi.fn()
 }));
 
+const mockRunAiActionWithCredits = vi.fn(async (options, action) => action({ maxTokens: 1234, cost: 0 }, options));
+const mockGetBatchJobActionCreditReservation = vi.fn(() => null);
+const mockMarkBatchJobActionCreditConsumed = vi.fn(async () => undefined);
+vi.mock('../../services/aiCredits.service.js', () => ({
+    runAiActionWithCredits: (...args) => mockRunAiActionWithCredits(...args),
+    getConfiguredAiActionRuntimeConfig: vi.fn(async () => ({ maxTokens: 1234, cost: 0 }))
+}));
+vi.mock('../../services/batchJobCredits.service.js', () => ({
+    getBatchJobActionCreditReservation: (...args) => mockGetBatchJobActionCreditReservation(...args),
+    markBatchJobActionCreditConsumed: (...args) => mockMarkBatchJobActionCreditConsumed(...args)
+}));
+
 import { processImportItem, processImproveItem, processAdaptItem } from '../../services/batchJobsWorker/itemProcessors.js';
 import { updateJobItemStatus, getJobItemFilePayload, clearJobItemFileData } from '../../services/batchJobs/itemCrud.js';
 import { getLLMSettings } from '../../services/settings.service.js';
@@ -145,6 +157,10 @@ describe('Batch Jobs Worker - Item Processors', () => {
         mockInsertResume.mockClear();
         mockUpdateResume.mockClear();
         mockUpdateResumeFileUrl.mockClear();
+        mockRunAiActionWithCredits.mockClear();
+        mockGetBatchJobActionCreditReservation.mockReset();
+        mockGetBatchJobActionCreditReservation.mockReturnValue(null);
+        mockMarkBatchJobActionCreditConsumed.mockReset();
         vi.mocked(getJobItemFilePayload).mockReset();
         vi.mocked(clearJobItemFileData).mockReset();
         vi.mocked(getJobItemFilePayload).mockResolvedValue({
@@ -721,7 +737,13 @@ describe('Batch Jobs Worker - Item Processors', () => {
 
             await processImproveItem({ id: 'i2', resume_id: 'res-1', file_name: 'bob.pdf' }, job, {});
 
-            expect(mockImprove).toHaveBeenCalledWith('Original CV text', expect.objectContaining({ name: 'Bob' }), 'firm-1', 'bob.pdf');
+            expect(mockImprove).toHaveBeenCalledWith(
+                'Original CV text',
+                expect.objectContaining({ name: 'Bob' }),
+                'firm-1',
+                'bob.pdf',
+                expect.objectContaining({ maxTokens: 1234 })
+            );
             expect(mockUpdateResume).toHaveBeenCalledWith('res-1', expect.objectContaining({
                 improved_text: '<p>improved text</p>'
             }));
@@ -745,5 +767,24 @@ describe('Batch Jobs Worker - Item Processors', () => {
                 processImproveItem({ id: 'i3', resume_id: 'res-1', file_name: 'a.pdf' }, job, {})
             ).rejects.toThrow('tentatives');
         }, 10000);
+
+        it('should not retry when provider authentication fails during improvement', async () => {
+            mockQuery.mockResolvedValueOnce({
+                rows: [{
+                    id: 'res-1', original_text: 'Original text', global_rating: 70,
+                    skills_score: 65, experience_score: 72, education_score: 68,
+                    ats_score: 70, executive_summary_score: 75, hobbies_languages_score: 60,
+                    name: 'Alice', title: 'Dev', key_improvements: '{}'
+                }]
+            });
+
+            mockImprove.mockRejectedValueOnce(new Error('token expired or incorrect'));
+
+            await expect(
+                processImproveItem({ id: 'i4', resume_id: 'res-1', file_name: 'a.pdf' }, job, {})
+            ).rejects.toThrow("fournisseur IA est mal configuré");
+
+            expect(mockImprove).toHaveBeenCalledTimes(1);
+        });
     });
 });

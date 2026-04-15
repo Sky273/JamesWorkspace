@@ -35,6 +35,13 @@ if not exist "%cd%\data\postgresql" mkdir "%cd%\data\postgresql"
 if not exist "%cd%\data\redis" mkdir "%cd%\data\redis"
 if not exist "%cd%\uploads" mkdir "%cd%\uploads"
 if not exist "%cd%\logs" mkdir "%cd%\logs"
+if not exist "%cd%\.env.docker" (
+    echo.
+    echo Missing .env.docker file.
+    echo Create it from .env.example with Docker-specific values before starting the stack.
+    pause
+    exit /b 1
+)
 
 docker compose -f "%cd%\docker-compose.redis.yml" up -d
 
@@ -54,8 +61,7 @@ echo ============================================
 echo   Stack started successfully!
 echo.
 echo   URLs: https://localhost and https://localhost:3443
-echo   Login: admin@resumeconverter.local
-echo   Password: admin123
+echo   Admin bootstrap credentials come from DEFAULT_ADMIN_* in .env.docker
 echo ============================================
 echo.
 echo   Commands:

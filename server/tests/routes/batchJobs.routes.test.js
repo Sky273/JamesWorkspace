@@ -170,6 +170,9 @@ const mockGetResumeForAccessCheck = vi.fn(async () => ({
     firm_id: 'firm-123',
     name: 'Resume 1'
 }));
+const mockReserveBatchJobCredits = vi.fn();
+const mockRefundCreditsAmount = vi.fn();
+const mockSettleBatchJobCredits = vi.fn();
 
 vi.mock('../../services/batchJobs.service.js', () => ({
     createJob: (...args) => mockCreateJob(...args),
@@ -200,6 +203,14 @@ vi.mock('../../services/missions.service.js', () => ({
 }));
 vi.mock('../../services/resumes.service.js', () => ({
     getResumeForAccessCheck: (...args) => mockGetResumeForAccessCheck(...args)
+}));
+vi.mock('../../services/aiCredits.service.js', () => ({
+    refundCreditsAmount: (...args) => mockRefundCreditsAmount(...args)
+}));
+vi.mock('../../services/batchJobCredits.service.js', () => ({
+    reserveBatchJobCredits: (...args) => mockReserveBatchJobCredits(...args),
+    settleBatchJobCredits: (...args) => mockSettleBatchJobCredits(...args),
+    refundCreditsAmount: (...args) => mockRefundCreditsAmount(...args)
 }));
 
 // Mock firmHelpers
@@ -323,6 +334,9 @@ beforeEach(() => {
         firm_id: 'firm-123',
         name: 'Resume 1'
     });
+    mockReserveBatchJobCredits.mockResolvedValue(null);
+    mockRefundCreditsAmount.mockResolvedValue(null);
+    mockSettleBatchJobCredits.mockResolvedValue(null);
 });
 
 // Create test app
@@ -608,6 +622,48 @@ describe('Batch Jobs Routes - GET /api/batch-jobs/:id', () => {
             .set('Authorization', 'Bearer valid-token');
 
         expect(res.status).toBe(403);
+    });
+});
+
+describe('Batch Jobs Routes - POST /api/batch-jobs', () => {
+    let app;
+
+    beforeEach(() => {
+        vi.resetAllMocks();
+        resetMockPipeline();
+        mockReserveBatchJobCredits.mockResolvedValue(null);
+        mockRefundCreditsAmount.mockResolvedValue(null);
+        mockSettleBatchJobCredits.mockResolvedValue(null);
+        app = createTestApp();
+    });
+
+    it('should reject import job creation when firm credits are insufficient', async () => {
+        const insufficientCreditsError = new Error('Insufficient firm credits');
+        insufficientCreditsError.code = 'INSUFFICIENT_CREDITS';
+        insufficientCreditsError.details = {
+            firmId: 'firm-123',
+            available: 0,
+            required: 25,
+            actionType: 'resume.upload'
+        };
+        mockReserveBatchJobCredits.mockRejectedValueOnce(insufficientCreditsError);
+
+        const res = await request(app)
+            .post('/api/batch-jobs')
+            .set('Authorization', 'Bearer valid-token')
+            .attach('files', _getImportFileBuffer('resume.pdf'), 'resume.pdf');
+
+        expect(res.status).toBe(402);
+        expect(res.body).toMatchObject({
+            code: 'INSUFFICIENT_CREDITS',
+            error: 'Insufficient credits for this AI action',
+            details: {
+                available: 0,
+                required: 25,
+                actionType: 'resume.upload'
+            }
+        });
+        expect(mockCreateJob).not.toHaveBeenCalled();
     });
 });
 
@@ -931,6 +987,35 @@ describe('Batch Jobs Routes - POST /api/batch-jobs/improve', () => {
 
         expect(res.status).toBe(201);
         expect(mockCreateJob).toHaveBeenCalledWith(expect.objectContaining({ firmId: 'firm-override', jobType: 'improve' }));
+    });
+
+    it('should reject improve job creation when firm credits are insufficient', async () => {
+        const insufficientCreditsError = new Error('Insufficient firm credits');
+        insufficientCreditsError.code = 'INSUFFICIENT_CREDITS';
+        insufficientCreditsError.details = {
+            firmId: 'firm-123',
+            available: 0,
+            required: 75,
+            actionType: 'resume.improvement'
+        };
+        mockReserveBatchJobCredits.mockRejectedValueOnce(insufficientCreditsError);
+
+        const res = await request(app)
+            .post('/api/batch-jobs/improve')
+            .set('Authorization', 'Bearer valid-token')
+            .send({ resumeIds: ['123e4567-e89b-12d3-a456-426614174000'] });
+
+        expect(res.status).toBe(402);
+        expect(res.body).toMatchObject({
+            code: 'INSUFFICIENT_CREDITS',
+            error: 'Insufficient credits for this AI action',
+            details: {
+                available: 0,
+                required: 75,
+                actionType: 'resume.improvement'
+            }
+        });
+        expect(mockCreateJob).not.toHaveBeenCalled();
     });
 });
 

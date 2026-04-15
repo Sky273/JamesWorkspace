@@ -115,7 +115,9 @@ vi.mock('../../utils/logger.backend.js', () => ({
 }));
 
 vi.mock('../../services/aiCredits.service.js', () => ({
-    runAiActionWithCredits: (_options, action) => action()
+    executeAiWorkflowWithCredits: (_options, runner) => runner({ workflowReservation: null }),
+    runAiActionWithCredits: (_options, action) => action(),
+    workflowReservationCoversAction: () => false
 }));
 
 vi.mock('../../middleware/rateLimit.middleware.js', () => ({

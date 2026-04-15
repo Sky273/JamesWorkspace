@@ -2,7 +2,7 @@ import { safeLog } from '../../../utils/logger.backend.js';
 import { extractFromDOCX, extractFromPDF } from './extractors.js';
 import { inferMimeTypeFromFilename } from '../../../utils/uploadFileTypes.js';
 import { isValidDocxArchive, isValidFileSignature } from '../../../utils/fileSignature.js';
-import { runAiActionWithCredits } from '../../../services/aiCredits.service.js';
+import { executeAiWorkflowWithCredits, runAiActionWithCredits, workflowReservationCoversAction } from '../../../services/aiCredits.service.js';
 
 function createExtractFromCvHandler() {
     return async (req, res) => {
@@ -29,14 +29,26 @@ function createExtractFromCvHandler() {
             });
 
             try {
-                result = await runAiActionWithCredits({
+                result = await executeAiWorkflowWithCredits({
+                    firmId: req.user?.firmId || req.user?.firm_id || null,
+                    userId: req.user?.id || null,
+                    workflowActionType: 'template.extract',
+                    steps: [{ actionType: 'template.extract' }],
+                    metadata: {
+                        fileName: originalname,
+                        mimeType: resolvedMimeType
+                    }
+                }, ({ workflowReservation }) => runAiActionWithCredits({
                     firmId: req.user?.firmId || req.user?.firm_id || null,
                     userId: req.user?.id || null,
                     actionType: 'template.extract',
                     metadata: {
                         fileName: originalname,
                         mimeType: resolvedMimeType
-                    }
+                    },
+                    reservation: workflowReservationCoversAction(workflowReservation, 'template.extract')
+                        ? workflowReservation
+                        : null
                 }, async (actionConfig = {}) => {
                     if (resolvedMimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
                         return extractFromDOCX(buffer, originalname, { maxTokens: actionConfig.maxTokens });
@@ -48,10 +60,11 @@ function createExtractFromCvHandler() {
                         throw Object.assign(new Error('Old .doc format is not supported. Please convert to .docx or PDF.'), { statusCode: 400 });
                     }
                     throw Object.assign(new Error('Unsupported file type.'), { statusCode: 400 });
-                });
+                }));
             } catch (error) {
                 if (error.code === 'INSUFFICIENT_CREDITS') {
                     return res.status(402).json({
+                        code: 'INSUFFICIENT_CREDITS',
                         error: 'Insufficient credits for this AI action',
                         details: error.details
                     });

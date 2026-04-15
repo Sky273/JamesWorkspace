@@ -308,7 +308,8 @@ export async function updateJobItemStatus(itemId, status, updates = {}) {
             const pendingData = {
                 analysis: updates.pending_analysis ? JSON.parse(updates.pending_analysis) : null,
                 text: updates.pending_text || null,
-                improve: updates.pending_improve || false
+                improve: updates.pending_improve || false,
+                ...(updates.credit_usage ? { creditUsage: updates.credit_usage } : {})
             };
             setClauses.push(`pending_data = $${paramIndex}`);
             params.push(JSON.stringify(pendingData));
@@ -322,6 +323,39 @@ export async function updateJobItemStatus(itemId, status, updates = {}) {
         `, params);
     } catch (error) {
         safeLog('error', 'Failed to update batch job item status', { error: error.message, itemId });
+        throw error;
+    }
+}
+
+export async function mergeJobItemPendingData(itemId, patch = {}) {
+    try {
+        const result = await query(
+            `SELECT pending_data
+             FROM batch_job_items
+             WHERE id = $1`,
+            [itemId]
+        );
+
+        const currentValue = result.rows[0]?.pending_data;
+        const currentData = typeof currentValue === 'string'
+            ? JSON.parse(currentValue)
+            : (currentValue || {});
+
+        await query(
+            `UPDATE batch_job_items
+             SET pending_data = $2::jsonb
+             WHERE id = $1`,
+            [itemId, JSON.stringify({
+                ...currentData,
+                ...patch,
+                creditUsage: {
+                    ...(currentData.creditUsage || {}),
+                    ...(patch.creditUsage || {})
+                }
+            })]
+        );
+    } catch (error) {
+        safeLog('error', 'Failed to merge batch job item pending data', { error: error.message, itemId });
         throw error;
     }
 }

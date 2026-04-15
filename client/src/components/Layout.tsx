@@ -105,6 +105,7 @@ const Layout = (): JSX.Element => {
     '/metiers',
     '/guide',
     '/profile',
+    '/credits-required',
   ];
   const isEditorialMigratedRoute = editorialRoutes.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`));
   const editorialRouteClassName = isResumesRoute || isAdminWorkspaceRoute

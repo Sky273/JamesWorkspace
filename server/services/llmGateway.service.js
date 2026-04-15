@@ -267,6 +267,50 @@ function getProviderAdapter(provider) {
     return adapter;
 }
 
+function buildProviderErrorMessage(error) {
+    const status = error?.response?.status;
+    const providerMessage = String(error?.response?.data?.error?.message || error?.message || '').trim();
+
+    return {
+        status,
+        providerMessage,
+        lowerMessage: providerMessage.toLowerCase()
+    };
+}
+
+export function isNonRetryableLlmProviderError(error) {
+    const { status, lowerMessage } = buildProviderErrorMessage(error);
+
+    if (status === 401 || status === 403) {
+        return true;
+    }
+
+    return lowerMessage.includes('token expired or incorrect')
+        || lowerMessage.includes('invalid api key')
+        || lowerMessage.includes('incorrect api key')
+        || lowerMessage.includes('authentication')
+        || lowerMessage.includes('unauthorized')
+        || lowerMessage.includes('access denied')
+        || lowerMessage.includes('api key not configured')
+        || lowerMessage.includes('expired token');
+}
+
+export function normalizeNonRetryableLlmProviderError(error) {
+    if (!isNonRetryableLlmProviderError(error)) {
+        return error;
+    }
+
+    const normalizedError = new Error("Le fournisseur IA est actuellement mal configuré ou son jeton d'accès a expiré. Contactez un administrateur.");
+    normalizedError.code = 'LLM_PROVIDER_AUTH_ERROR';
+    normalizedError.retryable = false;
+    normalizedError.statusCode = 502;
+    normalizedError.cause = error;
+    normalizedError.providerStatus = error?.response?.status ?? null;
+    normalizedError.originalMessage = error?.message || null;
+
+    return normalizedError;
+}
+
 export async function callProviderChat({ provider, model, messages, settings = {}, options = {} }) {
     safeLog('debug', 'Applying resolved LLM model parameters', {
         provider,

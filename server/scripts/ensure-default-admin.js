@@ -30,13 +30,30 @@ const DEFAULT_ADMIN_ROLE = 'admin';
 const DEFAULT_ADMIN_STATUS = 'active';
 const DEFAULT_ADMIN_SALT_ROUNDS = 10;
 const DEFAULT_ADMIN_FIRM_NAME = process.env.DEFAULT_ADMIN_FIRM_NAME || 'Default Firm';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 const [{ query, closePool }, { safeLog }] = await Promise.all([
     import('../config/database.js'),
     import('../utils/logger.backend.js')
 ]);
 
+function assertSafeDefaultAdminConfiguration() {
+    if (!IS_PRODUCTION) {
+        return;
+    }
+
+    const normalizedPassword = String(DEFAULT_ADMIN_PASSWORD || '').trim();
+    if (!normalizedPassword || normalizedPassword === 'admin123') {
+        throw new Error('DEFAULT_ADMIN_PASSWORD must be explicitly set to a strong non-default value in production');
+    }
+
+    if (normalizedPassword.length < 12) {
+        throw new Error('DEFAULT_ADMIN_PASSWORD must be at least 12 characters long in production');
+    }
+}
+
 export async function ensureDefaultAdminAccount() {
+    assertSafeDefaultAdminConfiguration();
     await repairLegacyAuthAccounts();
 
     const normalizedEmail = DEFAULT_ADMIN_EMAIL.toLowerCase();

@@ -19,6 +19,7 @@ import { getLLMSettings } from '../settings.service.js';
 import { persistResumeSkillEvidence } from '../skillEvidence.service.js';
 import { insertResume, updateResume, updateResumeFileUrl } from '../resumes.service.js';
 import { runAiActionWithCredits } from '../aiCredits.service.js';
+import { getBatchJobActionCreditReservation, markBatchJobActionCreditConsumed } from '../batchJobCredits.service.js';
 
 function buildOcrMetricsMetadata(extractionResult, baseMetadata = {}) {
     return {
@@ -225,7 +226,9 @@ export async function processImportItem(item, job, options) {
                     itemId: item.id,
                     resumeId,
                     fileName: item.file_name
-                }
+                },
+                reservation: getBatchJobActionCreditReservation(options, 'resume.analysis'),
+                markReservedConsumption: () => markBatchJobActionCreditConsumed(item.id, 'resume.analysis')
             }, (actionConfig = {}) => analyzeResumeWithLLM(analysisInputText, job.firm_id, item.file_name, {
                 maxTokens: actionConfig.maxTokens,
                 ocrUsed: !!extractionResult?.ocrUsed
@@ -299,7 +302,10 @@ export async function processImportItem(item, job, options) {
                 error_message: 'En attente du nom du candidat (extraction automatique échouée)',
                 pending_analysis: JSON.stringify(analysis),
                 pending_text: analysisInputText,
-                pending_improve: improve
+                pending_improve: improve,
+                credit_usage: {
+                    'resume.analysis': true
+                }
             });
 
             metrics.trackBatchImportActivity({
@@ -373,7 +379,7 @@ export async function processImportItem(item, job, options) {
 
         if (improve) {
             currentStage = 'improve';
-            await processImprovement(item, resumeId, analysisInputText, analysis, job);
+            await processImprovement(item, resumeId, analysisInputText, analysis, job, options);
         }
 
         await clearJobItemFileData(item.id);

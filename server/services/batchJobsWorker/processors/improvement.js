@@ -7,8 +7,39 @@ import { getLLMSettings } from '../../settings.service.js';
 import { extractSummaryText, stringifyJsonField } from './shared.js';
 import { updateResume } from '../../resumes.service.js';
 import { getConfiguredAiActionRuntimeConfig, runAiActionWithCredits } from '../../aiCredits.service.js';
+import { getBatchJobActionCreditReservation, markBatchJobActionCreditConsumed } from '../../batchJobCredits.service.js';
+import { isNonRetryableLlmProviderError, normalizeNonRetryableLlmProviderError } from '../../llmGateway.service.js';
 
-export async function processImprovement(item, resumeId, text, analysis, job) {
+const IMPROVEMENT_PROVIDER_CONFIGURATION_MESSAGE = "L'amélioration du CV est indisponible car le fournisseur IA est mal configuré ou son jeton a expiré.";
+
+function normalizeImprovementExecutionError(error) {
+    const normalizedError = normalizeNonRetryableLlmProviderError(error);
+
+    if (normalizedError === error) {
+        return error;
+    }
+
+    normalizedError.message = IMPROVEMENT_PROVIDER_CONFIGURATION_MESSAGE;
+    return normalizedError;
+}
+
+function isNonRetryableImprovementError(error) {
+    return error?.retryable === false || error?.code === 'LLM_PROVIDER_AUTH_ERROR' || isNonRetryableLlmProviderError(error);
+}
+
+async function analyzeImprovedResumeForPersistence(improvedText, job, item) {
+    const { maxTokens } = await getConfiguredAiActionRuntimeConfig('resume.improvement');
+
+    try {
+        return await analyzeImprovedResumeWithLLM(improvedText, job.firm_id, item.file_name, {
+            maxTokens
+        });
+    } catch (error) {
+        throw normalizeImprovementExecutionError(error);
+    }
+}
+
+export async function processImprovement(item, resumeId, text, analysis, job, options = {}) {
     safeLog('info', 'Improving CV with LLM', { itemId: item.id, resumeId });
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 75 });
 
@@ -43,7 +74,9 @@ export async function processImprovement(item, resumeId, text, analysis, job) {
                     jobId: job.id,
                     itemId: item.id,
                     resumeId
-                }
+                },
+                reservation: getBatchJobActionCreditReservation(options, 'resume.improvement'),
+                markReservedConsumption: () => markBatchJobActionCreditConsumed(item.id, 'resume.improvement')
             }, (actionConfig = {}) => improveResumeWithLLM(
                 textForImprovement,
                 analysis,
@@ -53,14 +86,18 @@ export async function processImprovement(item, resumeId, text, analysis, job) {
             ));
             break;
         } catch (improveError) {
-            lastImproveError = improveError;
+            lastImproveError = normalizeImprovementExecutionError(improveError);
             safeLog('warn', `CV improvement attempt ${attempt} failed`, {
                 itemId: item.id,
                 resumeId,
                 attempt,
                 maxRetries: maxImproveRetries,
-                error: improveError.message
+                error: lastImproveError.message
             });
+
+            if (isNonRetryableImprovementError(lastImproveError)) {
+                break;
+            }
 
             if (attempt < maxImproveRetries) {
                 await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
@@ -74,16 +111,16 @@ export async function processImprovement(item, resumeId, text, analysis, job) {
             resumeId,
             error: lastImproveError.message
         });
+        if (isNonRetryableImprovementError(lastImproveError)) {
+            throw lastImproveError;
+        }
         throw new Error(`Échec de l'amélioration du CV après ${maxImproveRetries} tentatives: ${lastImproveError.message}`);
     }
 
     if (improvedResult && improvedResult.text && improvedResult.text.trim().length > 0) {
         safeLog('info', 'Starting post-improvement analysis', { itemId: item.id, resumeId });
         await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 80 });
-        const { maxTokens } = await getConfiguredAiActionRuntimeConfig('resume.improvement');
-        const improvedAnalysis = await analyzeImprovedResumeWithLLM(improvedResult.text, job.firm_id, item.file_name, {
-            maxTokens
-        });
+        const improvedAnalysis = await analyzeImprovedResumeForPersistence(improvedResult.text, job, item);
         await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 90 });
         await saveImprovedData(item, resumeId, {
             ...improvedResult,
@@ -255,18 +292,24 @@ export async function processImproveItem(item, job) {
                     jobId: job.id,
                     itemId: item.id,
                     resumeId: item.resume_id
-                }
+                },
+                reservation: getBatchJobActionCreditReservation(job, 'resume.improvement'),
+                markReservedConsumption: () => markBatchJobActionCreditConsumed(item.id, 'resume.improvement')
             }, (actionConfig = {}) => improveResumeWithLLM(text, analysis, job.firm_id, item.file_name, { maxTokens: actionConfig.maxTokens }));
             break;
         } catch (improveError) {
-            lastImproveError = improveError;
+            lastImproveError = normalizeImprovementExecutionError(improveError);
             safeLog('warn', `CV improvement attempt ${attempt} failed (improve job)`, {
                 itemId: item.id,
                 resumeId: item.resume_id,
                 attempt,
                 maxRetries: maxImproveRetries,
-                error: improveError.message
+                error: lastImproveError.message
             });
+
+            if (isNonRetryableImprovementError(lastImproveError)) {
+                break;
+            }
 
             if (attempt < maxImproveRetries) {
                 await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
@@ -280,6 +323,9 @@ export async function processImproveItem(item, job) {
             resumeId: item.resume_id,
             error: lastImproveError.message
         });
+        if (isNonRetryableImprovementError(lastImproveError)) {
+            throw lastImproveError;
+        }
         throw new Error(`Échec de l'amélioration du CV après ${maxImproveRetries} tentatives: ${lastImproveError.message}`);
     }
 
@@ -297,10 +343,7 @@ export async function processImproveItem(item, job) {
     safeLog('info', 'Starting post-improvement analysis (improve job)', { itemId: item.id, resumeId: item.resume_id });
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 80 });
 
-    const { maxTokens } = await getConfiguredAiActionRuntimeConfig('resume.improvement');
-    const improvedAnalysis = await analyzeImprovedResumeWithLLM(improvedResult.text, job.firm_id, item.file_name, {
-        maxTokens
-    });
+    const improvedAnalysis = await analyzeImprovedResumeForPersistence(improvedResult.text, job, item);
 
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 90 });
 

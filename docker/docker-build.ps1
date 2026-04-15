@@ -42,6 +42,14 @@ function Show-Help {
 }
 
 function Build-Image {
+    $EnvFile = Join-Path $PWD ".env.docker"
+    if (-not (Test-Path $EnvFile)) {
+        Write-Host ""
+        Write-Host "Missing .env.docker file." -ForegroundColor Red
+        Write-Host "Create it from .env.example with Docker-specific values before building." -ForegroundColor Yellow
+        exit 1
+    }
+
     Write-Host ""
     Write-Host "Building Docker image: ${ImageName}:${Tag}" -ForegroundColor Green
     Write-Host "This may take several minutes on first build..." -ForegroundColor Yellow
@@ -86,29 +94,22 @@ function Run-Container {
     if (-not (Test-Path $UploadsDir)) { New-Item -ItemType Directory -Path $UploadsDir -Force | Out-Null }
     if (-not (Test-Path $LogsDir)) { New-Item -ItemType Directory -Path $LogsDir -Force | Out-Null }
 
-    $JwtSecret = if ($env:JWT_SECRET) { $env:JWT_SECRET } else { "docker-jwt-secret-change-in-production-min32chars" }
-    $JwtRefreshSecret = if ($env:JWT_REFRESH_SECRET) { $env:JWT_REFRESH_SECRET } else { "docker-jwt-refresh-secret-change-in-production-min32chars" }
-    $RefreshTokenSecret = if ($env:REFRESH_TOKEN_SECRET) { $env:REFRESH_TOKEN_SECRET } else { "docker-refresh-token-secret-change-in-production-min32chars" }
-    $CsrfSecret = if ($env:CSRF_SECRET) { $env:CSRF_SECRET } else { "docker-csrf-secret-change-in-production-min32chars" }
-    $PdfServerInternalToken = if ($env:PDF_SERVER_INTERNAL_TOKEN) { $env:PDF_SERVER_INTERNAL_TOKEN } else { "docker-pdf-server-internal-token-change-in-production-min32chars" }
-    $OllamaBaseUrl = if ($env:OLLAMA_BASE_URL) { $env:OLLAMA_BASE_URL } else { "http://host.docker.internal:11434" }
+    $EnvFile = Join-Path $PWD ".env.docker"
+    if (-not (Test-Path $EnvFile)) {
+        Write-Host ""
+        Write-Host "Missing .env.docker file." -ForegroundColor Red
+        Write-Host "Create it from .env.example with Docker-specific values before running the container." -ForegroundColor Yellow
+        exit 1
+    }
 
     docker run -d `
         --name $ContainerName `
         -p 443:3443 `
         -p 3443:3443 `
         -p 5433:5432 `
-        -e OPENAI_API_KEY=$env:OPENAI_API_KEY `
-        -e ANTHROPIC_API_KEY=$env:ANTHROPIC_API_KEY `
-        -e JWT_SECRET="$JwtSecret" `
-        -e JWT_REFRESH_SECRET="$JwtRefreshSecret" `
-        -e REFRESH_TOKEN_SECRET="$RefreshTokenSecret" `
-        -e CSRF_SECRET="$CsrfSecret" `
-        -e PDF_SERVER_INTERNAL_TOKEN="$PdfServerInternalToken" `
-        -e OLLAMA_BASE_URL="$OllamaBaseUrl" `
-        -e GOOGLE_CLIENT_ID=$env:GOOGLE_CLIENT_ID `
-        -e GOOGLE_CLIENT_SECRET=$env:GOOGLE_CLIENT_SECRET `
-        -e MAIL_TOKEN_ENCRYPTION_KEY=$env:MAIL_TOKEN_ENCRYPTION_KEY `
+        --env-file "$EnvFile" `
+        -e CACHE_REDIS_URL=redis://127.0.0.1:6379 `
+        -e DISABLE_INTERNAL_REDIS=false `
         -v "${DataDir}:/var/lib/postgresql/18/main" `
         -v "${UploadsDir}:/app/uploads" `
         -v "${LogsDir}:/app/logs" `
@@ -122,9 +123,8 @@ function Run-Container {
         Write-Host "============================================" -ForegroundColor Cyan
         Write-Host "  Application URLs: https://localhost and https://localhost:3443" -ForegroundColor White
         Write-Host "  Database: ./data/postgresql (persistent local directory)" -ForegroundColor White
-        Write-Host "  Ollama host:    $OllamaBaseUrl" -ForegroundColor White
-        Write-Host "  Default login:   admin@resumeconverter.local" -ForegroundColor White
-        Write-Host "  Default password: admin123" -ForegroundColor White
+        Write-Host "  Config source:  .env.docker (runtime only, not baked into image)" -ForegroundColor White
+        Write-Host "  Admin bootstrap credentials: configured via DEFAULT_ADMIN_* in .env.docker" -ForegroundColor White
         Write-Host "============================================" -ForegroundColor Cyan
         Write-Host ""
         Write-Host "Commands:"

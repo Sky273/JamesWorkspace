@@ -11,6 +11,7 @@ import { claimPendingItems, updateJobItemStatus } from '../batchJobs/itemCrud.js
 import { resetLLMQueue } from './llmIntegration.js';
 import { processImportItem, processImproveItem, processAdaptItem, processMatchItem, processProfileSearchItem, processProfileAnalysisItem } from './itemProcessors.js';
 import { generateJobExport } from './exportGenerator.js';
+import { getCancelledJobsNeedingCreditSettlement, settleBatchJobCredits } from '../batchJobCredits.service.js';
 
 // Worker configuration
 const WORKER_INTERVAL = 5000; // Check for pending jobs every 5 seconds
@@ -54,6 +55,15 @@ async function finalizeCompletedJob(job, outcome) {
         error_count: outcome.counters.error_count,
         ...(outcome.status === JOB_STATUS.FAILED ? { error_message: 'One or more batch items failed' } : {})
     });
+
+    if (parseJobOptions(job).creditReservation) {
+        await settleBatchJobCredits({
+            ...job,
+            status: outcome.status
+        }, {
+            reason: outcome.status === JOB_STATUS.FAILED ? 'batch_job_failed' : 'batch_job_completed'
+        });
+    }
 
     safeLog('info', outcome.status === JOB_STATUS.FAILED ? 'Batch job failed with item errors' : 'Batch job completed', {
         jobId: job.id,
@@ -308,10 +318,40 @@ async function processNextBatch() {
             safeLog('error', 'Error processing job', { jobId: job.id, error: error.message });
             const latestStatus = await getJobStatus(job.id);
             if (latestStatus === JOB_STATUS.CANCELLED) {
+                if (parseJobOptions(job).creditReservation) {
+                    await settleBatchJobCredits({
+                        ...job,
+                        status: JOB_STATUS.CANCELLED
+                    }, {
+                        reason: 'batch_job_cancelled_after_error',
+                        error: error.message
+                    });
+                }
                 safeLog('info', 'Batch job remained cancelled after processing error', { jobId: job.id });
                 continue;
             }
             await updateJobStatus(job.id, JOB_STATUS.FAILED, { error_message: error.message });
+            if (parseJobOptions(job).creditReservation) {
+                await settleBatchJobCredits({
+                    ...job,
+                    status: JOB_STATUS.FAILED
+                }, {
+                    reason: 'batch_job_processing_error',
+                    error: error.message
+                });
+            }
+        }
+    }
+
+    const cancelledJobs = await getCancelledJobsNeedingCreditSettlement();
+    for (const job of cancelledJobs) {
+        try {
+            await settleBatchJobCredits(job, { reason: 'batch_job_cancelled' });
+        } catch (error) {
+            safeLog('error', 'Failed to settle cancelled batch job credits', {
+                jobId: job.id,
+                error: error.message
+            });
         }
     }
 }

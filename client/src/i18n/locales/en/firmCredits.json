@@ -61,6 +61,24 @@
       "creditsAdded": "{{amount}} credits added to {{name}}",
       "errorAddingCredits": "Failed to add credits"
     },
+    "insufficient": {
+      "title": "Insufficient credits",
+      "subtitleManager": "Your firm does not have enough credits to start this AI action. Top up the balance and try again.",
+      "subtitleUser": "Your firm does not have enough credits to start this AI action. Contact an administrator to unblock it.",
+      "kicker": "Action blocked",
+      "heading": "The firm's AI balance is too low",
+      "actionMessage": "The \"{{action}}\" action could not start because the firm does not have the required amount of credits.",
+      "defaultMessage": "This AI action could not start because the firm does not have the required amount of credits.",
+      "availableCredits": "Available credits",
+      "requiredCredits": "Required credits",
+      "missingCredits": "Missing credits",
+      "nextStepsTitle": "Recommended next step",
+      "nextStepsManager": "Open firm credit management, top up the balance, then restart the AI action from the previous screen.",
+      "nextStepsUser": "Go back to the previous screen and contact your local administrator or super administrator so they can top up the firm's credits.",
+      "manageCreditsCta": "Manage firm credits",
+      "contactManagerCta": "Go back and contact an administrator",
+      "backCta": "Back to previous screen"
+    },
     "actions": {
       "firm.initial_grant": "Initial grant",
       "firm.credit_grant": "Manual top-up",

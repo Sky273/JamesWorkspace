@@ -46,7 +46,10 @@ vi.mock('../../services/resumeVersions.service.js', () => ({
 }));
 
 vi.mock('../../services/aiCredits.service.js', () => ({
+    executeAiWorkflowWithCredits: (_options, runner) => runner({ workflowReservation: null }),
     runAiActionWithCredits: (...args) => mockRunAiActionWithCredits(...args)
+    ,
+    workflowReservationCoversAction: () => false
 }));
 
 vi.mock('../../utils/logger.backend.js', () => ({
