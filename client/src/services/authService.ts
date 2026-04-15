@@ -101,6 +101,22 @@ class AuthenticationError extends Error {
   }
 }
 
+const parseJsonResponseSafe = async (response: Response): Promise<Record<string, unknown>> => {
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.toLowerCase().includes('application/json')) {
+    return {};
+  }
+
+  try {
+    const data = await response.json();
+    return data && typeof data === 'object' ? data as Record<string, unknown> : {};
+  } catch {
+    return {};
+  }
+};
+
+const isGatewayFailure = (status: number): boolean => [502, 503, 504].includes(status);
+
 const fetchPublicAuth = (url: string, options: RequestInit = {}): Promise<Response> => {
   const headers = new Headers(options.headers || {});
   if (!headers.has('Accept')) {
@@ -153,7 +169,7 @@ export const authService = {
         body: JSON.stringify({ email, password, totpCode })
       });
 
-      const data = await response.json();
+      const data = await parseJsonResponseSafe(response);
 
       // Check if 2FA is required (server returns 200 with requires2FA flag)
       if (response.ok && data.requires2FA) {
@@ -165,8 +181,15 @@ export const authService = {
       }
 
       if (!response.ok) {
-        throw new AuthenticationError(data.error || 'Failed to sign in', {
-          code: data.code,
+        if (isGatewayFailure(response.status)) {
+          throw new AuthenticationError('Le service d\'authentification est temporairement indisponible. Reessayez dans quelques instants.', {
+            code: 'service_unavailable',
+            status: response.status,
+          });
+        }
+
+        throw new AuthenticationError(String(data.error || 'Failed to sign in'), {
+          code: typeof data.code === 'string' ? data.code : undefined,
           status: response.status,
         });
       }
@@ -214,11 +237,18 @@ export const authService = {
         })
       });
 
-      const data = await response.json();
+      const data = await parseJsonResponseSafe(response);
 
       if (!response.ok) {
-        throw new AuthenticationError(data.error || 'Failed to register', {
-          code: data.code,
+        if (isGatewayFailure(response.status)) {
+          throw new AuthenticationError('Authentication service is temporarily unavailable.', {
+            code: 'service_unavailable',
+            status: response.status,
+          });
+        }
+
+        throw new AuthenticationError(String(data.error || 'Failed to register'), {
+          code: typeof data.code === 'string' ? data.code : undefined,
           status: response.status,
         });
       }

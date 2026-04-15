@@ -29,7 +29,7 @@ import backupRoutes from '../../routes/backup.routes.js';
 import batchExportRoutes from '../../routes/batchExport.routes.js';
 import batchJobsRoutes from '../../routes/batchJobs.routes.js';
 import dealsRoutes from '../../routes/deals.routes.js';
-import billingRoutes from '../../routes/billing.routes.js';
+import { isStripeCheckoutEnabled } from '../stripe.js';
 
 function getApiCacheHeaders(method) {
     const normalizedMethod = String(method || 'GET').toUpperCase();
@@ -77,7 +77,6 @@ export function registerApiRoutes(app) {
     app.use('/api/rome', romeRoutes);
     app.use('/api/clients', clientsRoutes);
     app.use('/api/deals', dealsRoutes);
-    app.use('/api/billing', billingRoutes);
     app.use('/api/submissions', resumeSubmissionsRoutes);
     app.use('/api/mail', mailRoutes);
     app.use('/api/email-templates', emailTemplatesRoutes);
@@ -91,6 +90,17 @@ export function registerApiRoutes(app) {
     app.use('/api/backup', backupRoutes);
     app.use('/api/batch-export', batchExportRoutes);
     app.use('/api/batch-jobs', batchJobsRoutes);
+
+    if (isStripeCheckoutEnabled()) {
+        app.use('/api/billing', async (req, res, next) => {
+            try {
+                const module = await import('../../routes/billing.routes.js');
+                return module.default(req, res, next);
+            } catch (error) {
+                return next(error);
+            }
+        });
+    }
 }
 
 export { getApiCacheHeaders };

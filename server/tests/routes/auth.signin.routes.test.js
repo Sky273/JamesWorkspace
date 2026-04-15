@@ -39,15 +39,9 @@ const mockFindUserWithFirmById = vi.fn();
 const mockUpdateLastLogin = vi.fn();
 const mockFindExistingUserByEmail = vi.fn();
 const mockRegisterSelfServiceUser = vi.fn();
-const mockIsSelfServiceRegistrationUser = vi.fn((user) => {
-    const registrationSource = String(user?.registration_source || '').trim().toLowerCase();
-    if (registrationSource) {
-        return registrationSource === 'self_service';
-    }
-
-    const firmName = String(user?.firm_name || '').trim().toLowerCase();
-    return firmName === 'public registration' || firmName === 'cabinet test';
-});
+const mockIsSelfServiceRegistrationUser = vi.fn((user) =>
+    String(user?.registration_source || '').trim().toLowerCase() === 'self_service'
+);
 vi.mock('../../services/auth.service.js', () => ({
     findUserWithFirmByEmail: (...args) => mockFindUserWithFirmByEmail(...args),
     findUserWithFirmById: (...args) => mockFindUserWithFirmById(...args),

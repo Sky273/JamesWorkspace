@@ -67,7 +67,7 @@ const [
     { query, testConnection, closePool },
     { safeLog },
     { cleanupAllCaches },
-    { ensureDefaultAdminAccount },
+    { ensureDefaultAdminAccount, repairLegacyAuthAccounts },
     { initGdprAuditTable },
     { initResumeCommentsTable },
     { initShareResumeTable },
@@ -472,6 +472,7 @@ export async function runDockerMigrate() {
     }
     await seedIndustryAliases();
     await ensureAuxiliarySchema();
+    await repairLegacyAuthAccounts();
     await ensureDefaultAdminAccount();
     await verifyBootstrapState();
 

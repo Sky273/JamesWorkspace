@@ -37,6 +37,8 @@ const [{ query, closePool }, { safeLog }] = await Promise.all([
 ]);
 
 export async function ensureDefaultAdminAccount() {
+    await repairLegacyAuthAccounts();
+
     const normalizedEmail = DEFAULT_ADMIN_EMAIL.toLowerCase();
     const firmAssignment = await resolveDefaultAdminFirmAssignment();
 
@@ -116,6 +118,35 @@ export async function ensureDefaultAdminAccount() {
     });
 
     return { created: true, userId: insertResult.rows[0].id };
+}
+
+export async function repairLegacyAuthAccounts() {
+    const normalizedEmail = DEFAULT_ADMIN_EMAIL.toLowerCase();
+
+    await query(
+        `
+            UPDATE users
+            SET registration_source = CASE
+                WHEN LOWER(COALESCE(email, '')) = $1 THEN 'system_seed'
+                WHEN LOWER(COALESCE(firm_name, '')) IN ('public registration', 'cabinet test')
+                    OR LOWER(COALESCE(firm_name, '')) LIKE 'cabinet test %' THEN 'self_service'
+                ELSE 'admin_created'
+            END,
+            updated_at = CURRENT_TIMESTAMP
+            WHERE registration_source IS NULL
+        `,
+        [normalizedEmail]
+    );
+
+    await query(
+        `
+            UPDATE users
+            SET email_verified_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE email_verified_at IS NULL
+              AND COALESCE(registration_source, 'admin_created') <> 'self_service'
+        `
+    );
 }
 
 async function resolveDefaultAdminFirmAssignment() {

@@ -44,6 +44,9 @@ import { authService } from './authService';
 const mockResponse = (ok: boolean, data: unknown, status = ok ? 200 : 400): Response => ({
     ok,
     status,
+    headers: {
+        get: (name: string) => name.toLowerCase() === 'content-type' ? 'application/json' : null,
+    } as Headers,
     json: () => Promise.resolve(data),
     clone: () => mockResponse(ok, data, status),
 } as unknown as Response);
@@ -118,6 +121,25 @@ describe('authService', () => {
                 message: 'Account is inactive. Please contact administrator.',
                 code: 'account_inactive',
                 status: 403,
+            });
+        });
+
+        it('should surface service_unavailable on non-JSON gateway failures', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 502,
+                headers: {
+                    get: () => 'text/html',
+                },
+                json: () => Promise.reject(new Error('Unexpected token <')),
+                clone() {
+                    return this;
+                },
+            } as unknown as Response);
+
+            await expect(authService.signIn('test@test.com', 'password123')).rejects.toMatchObject({
+                code: 'service_unavailable',
+                status: 502,
             });
         });
     });

@@ -323,12 +323,12 @@ describe('Auth Service', () => {
             expect(isSelfServiceRegistrationUser({ registration_source: 'admin_created', firm_name: 'Public Registration' })).toBe(false);
         });
 
-        it('falls back to Public Registration when source is missing', () => {
-            expect(isSelfServiceRegistrationUser({ firm_name: 'Public Registration' })).toBe(true);
+        it('returns false when registration source is missing', () => {
+            expect(isSelfServiceRegistrationUser({ firm_name: 'Public Registration' })).toBe(false);
         });
 
-        it('falls back to Cabinet test users when source is missing', () => {
-            expect(isSelfServiceRegistrationUser({ firm_name: 'Cabinet test' })).toBe(true);
+        it('returns false for legacy Cabinet test users without explicit source', () => {
+            expect(isSelfServiceRegistrationUser({ firm_name: 'Cabinet test' })).toBe(false);
         });
 
         it('returns false for non self-service firms', () => {

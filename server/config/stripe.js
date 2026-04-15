@@ -1,5 +1,3 @@
-import Stripe from 'stripe';
-
 import { ALLOWED_ORIGINS } from './constants.js';
 import { normalizeOrigin } from '../utils/originUtils.js';
 
@@ -15,6 +13,7 @@ const DEFAULT_CREDIT_PACKS = [
 ];
 
 let stripeClient = null;
+let stripeModulePromise = null;
 
 function parseCreditPacks(rawValue) {
     if (!rawValue) {
@@ -54,13 +53,24 @@ export function getStripeClient() {
         throw new Error('Stripe secret key is not configured');
     }
 
-    if (!stripeClient) {
-        stripeClient = new Stripe(STRIPE_SECRET_KEY, {
-            apiVersion: STRIPE_API_VERSION
-        });
+    if (stripeClient) {
+        return stripeClient;
     }
 
-    return stripeClient;
+    if (!stripeModulePromise) {
+        stripeModulePromise = import('stripe');
+    }
+
+    return stripeModulePromise.then((module) => {
+        if (!stripeClient) {
+            const Stripe = module.default;
+            stripeClient = new Stripe(STRIPE_SECRET_KEY, {
+                apiVersion: STRIPE_API_VERSION
+            });
+        }
+
+        return stripeClient;
+    });
 }
 
 export function getStripeCreditPacks() {

@@ -102,7 +102,7 @@ export async function createStripeCheckoutSession({
 
         const purchase = purchaseResult.rows[0];
 
-        const stripe = getStripeClient();
+        const stripe = await getStripeClient();
         const session = await stripe.checkout.sessions.create({
             mode: 'payment',
             success_url: `${baseUrl}/admin?tab=firmCredits&stripe=success`,
@@ -276,7 +276,7 @@ export async function handleStripeWebhook(rawBody, signature) {
         throw buildValidationError('Stripe signature is required');
     }
 
-    const stripe = getStripeClient();
+    const stripe = await getStripeClient();
     const event = stripe.webhooks.constructEvent(rawBody, signature, STRIPE_WEBHOOK_SECRET);
 
     switch (event.type) {

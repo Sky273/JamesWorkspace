@@ -21,13 +21,7 @@ export const SELF_SERVICE_FIRM_NAMES = [
 ];
 
 export function isSelfServiceRegistrationUser(user) {
-    const registrationSource = String(user?.registration_source || '').trim().toLowerCase();
-    if (registrationSource) {
-        return registrationSource === 'self_service';
-    }
-
-    const firmName = String(user?.firm_name || '').trim().toLowerCase();
-    return Boolean(firmName && SELF_SERVICE_FIRM_NAMES.includes(firmName));
+    return String(user?.registration_source || '').trim().toLowerCase() === 'self_service';
 }
 
 /**
