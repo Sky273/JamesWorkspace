@@ -96,11 +96,6 @@ vi.mock('../../utils/logger.backend.js', () => ({
 }));
 
 import { getLLMSettings } from '../../services/settings.service.js';
-import { callOpenAI } from '../../services/openai/apiClient.js';
-import { callDeepSeekWithCircuitBreaker } from '../../services/deepseek.service.js';
-import { callGLMWithCircuitBreaker } from '../../services/glm.service.js';
-import { callOllama } from '../../services/ollama.service.js';
-import { callMiniMaxOpenAICompatible } from '../../services/minimax.service.js';
 import { callBusinessChatCompletion } from '../../services/llmProvider.service.js';
 
 describe('llmProvider.service', () => {

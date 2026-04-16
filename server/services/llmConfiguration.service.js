@@ -119,7 +119,7 @@ export function isLikelyHuggingFaceModel(model = '') {
         return false;
     }
 
-    if (Boolean(HUGGINGFACE_MODEL_ALIASES[normalizedModel.toLowerCase()])) {
+    if (HUGGINGFACE_MODEL_ALIASES[normalizedModel.toLowerCase()]) {
         return true;
     }
 

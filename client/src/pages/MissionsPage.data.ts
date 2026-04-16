@@ -123,7 +123,7 @@ export function computeMissionStats(missions: Mission[], totalCount: number): Mi
   return {
     total: totalCount,
     firms: [...new Set(missions.map((mission) => mission.Firm).filter(Boolean))].length,
-    linkedDeals: missions.filter((mission) => Boolean(mission['Deal ID'])).length,
+    linkedDeals: missions.filter((mission) => mission['Deal ID']).length,
     active: missions.filter((mission) => mission.Status === 'Active').length,
     draft: missions.filter((mission) => mission.Status === 'Draft').length,
     closed: missions.filter((mission) => mission.Status === 'Closed').length,
@@ -135,7 +135,7 @@ export function canDeleteMission(mission: Mission | null | undefined): boolean {
     return false;
   }
 
-  return !Boolean(mission['Has Attachments'])
+  return !mission['Has Attachments']
     && Number(mission['Adaptations Count'] || 0) === 0
     && Number(mission['Submissions Count'] || 0) === 0
     && Number(mission['Pipeline Count'] || 0) === 0;

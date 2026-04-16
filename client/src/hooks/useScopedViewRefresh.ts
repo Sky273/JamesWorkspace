@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 
 import {
   consumeDirtyViewScopesForConsumer,
@@ -22,7 +22,7 @@ export function useScopedViewRefresh({
 }: UseScopedViewRefreshOptions): void {
   const scopeKey = scopes.join('|');
 
-  const runRefresh = (matchedScopes: ViewRefreshScope[]) => {
+  const runRefresh = useCallback((matchedScopes: ViewRefreshScope[]) => {
     const startedAt = performance.now();
 
     try {
@@ -35,7 +35,7 @@ export function useScopedViewRefresh({
       recordViewRefreshCycle(matchedScopes, performance.now() - startedAt, true);
       throw error;
     }
-  };
+  }, [onRefresh]);
 
   useEffect(() => {
     if (!enabled || scopes.length === 0) {
@@ -47,7 +47,7 @@ export function useScopedViewRefresh({
     }
 
     runRefresh(scopes);
-  }, [consumerId, enabled, onRefresh, scopeKey]);
+  }, [consumerId, enabled, runRefresh, scopes, scopeKey]);
 
   useEffect(() => {
     if (!enabled || scopes.length === 0) {
@@ -55,5 +55,5 @@ export function useScopedViewRefresh({
     }
 
     return subscribeToViewRefreshForConsumer(consumerId, scopes, runRefresh);
-  }, [consumerId, enabled, onRefresh, scopeKey]);
+  }, [consumerId, enabled, runRefresh, scopes, scopeKey]);
 }

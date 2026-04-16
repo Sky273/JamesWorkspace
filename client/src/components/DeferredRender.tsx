@@ -39,7 +39,7 @@ export default function DeferredRender({
         globalThis.clearTimeout(timeoutId);
       }
     };
-  }, [delayMs]);
+  }, [delayMs, strategy]);
 
   return isReady ? <>{children}</> : null;
 }

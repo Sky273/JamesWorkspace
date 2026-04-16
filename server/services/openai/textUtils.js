@@ -61,7 +61,7 @@ function sanitizeJsonLikePayload(text) {
 
     return text
         .replace(/^\uFEFF/, '')
-        .replace(/\u0000/g, '')
+        .replaceAll('\u0000', '')
         .trim();
 }
 
@@ -399,7 +399,7 @@ function insertMissingJsonCommas(text) {
             '$1,$2'
         )
         .replace(
-            /(\}|\]|-?\d+(?:\.\d+)?(?:[eE][+\-]?\d+)?|\btrue\b|\bfalse\b|\bnull\b)\s+("(?:\\.|[^"\\])*"\s*:)/g,
+            /(\}|\]|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|\btrue\b|\bfalse\b|\bnull\b)\s+("(?:\\.|[^"\\])*"\s*:)/g,
             '$1,$2'
         );
 }

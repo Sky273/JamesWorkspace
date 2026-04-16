@@ -22,8 +22,7 @@ import ResumeAnalysisHeader from '../components/ResumeAnalysisPage/ResumeAnalysi
 import ResumeAnalysisStepIndicator from '../components/ResumeAnalysisPage/ResumeAnalysisStepIndicator';
 import { useResumeAnalysisPage } from './ResumeAnalysisPage.hooks';
 
-const ANALYSIS_TABS = ['overview', 'skills', 'original', 'extracted', 'pipeline'] as const;
-type AnalysisTabKey = (typeof ANALYSIS_TABS)[number];
+type AnalysisTabKey = 'overview' | 'skills' | 'original' | 'extracted' | 'pipeline';
 
 const getAnalysisTabLabel = (tab: AnalysisTabKey, t: TFunction): string => {
   switch (tab) {

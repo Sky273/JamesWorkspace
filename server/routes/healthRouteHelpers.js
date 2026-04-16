@@ -105,7 +105,6 @@ function getCacheActivityScore(stats = {}) {
 }
 
 export function getApplicationCacheDiagnosticSummary({ cacheRegistry = {}, caches = {} } = {}) {
-    const registryEntries = Object.values(cacheRegistry);
     const applicationEntries = getApplicationCacheEntries({ cacheRegistry, caches });
 
     const configuredBackends = [...new Set(

@@ -1,9 +1,10 @@
-import { ArrowPathIcon, BriefcaseIcon, ChartBarIcon, CheckCircleIcon, MapIcon, TableCellsIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon, CheckCircleIcon, MapIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 
 import ResponsivePageTabs from '../components/page/ResponsivePageTabs';
 import type { MarketFact } from '../services/marketRadarService';
 import type { FactsStats, TabType } from './FactsPage.hooks';
+import { FACTS_TAB_OPTIONS } from './FactsPage.constants';
 import {
   FactsAdminCollectionPanel,
   FactsEmptyState,
@@ -51,15 +52,6 @@ interface FactsDataTabProps {
   onCollect: (source: 'france_travail' | 'adzuna') => void;
   onClearFilters: () => void;
 }
-
-export const FACTS_TAB_OPTIONS = [
-  { value: 'map', labelKey: 'marketRadar.tabs.map', icon: MapIcon },
-  { value: 'trends', labelKey: 'marketRadar.tabs.trends', icon: ChartBarIcon },
-  { value: 'data', labelKey: 'marketRadar.tabs.facts', icon: TableCellsIcon },
-  { value: 'metiers', labelKey: 'marketRadar.tabs.metiers', icon: BriefcaseIcon },
-] as const satisfies ReadonlyArray<{ value: TabType; labelKey: string; icon: typeof MapIcon }>;
-
-export const DEFAULT_FACTS_TAB: TabType = FACTS_TAB_OPTIONS[0].value;
 
 export const TabLoader = () => (
   <div className="flex items-center justify-center py-12">

@@ -1,7 +1,26 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const hookState = vi.hoisted((): { value: any } => ({
+type SettingsHookValue = {
+  settings: Record<string, unknown> | null;
+  loading: boolean;
+  saving: boolean;
+  testingConnection: boolean;
+  ollamaDiscoveryLoading: boolean;
+  ollamaModelCatalog: unknown[];
+  ollamaModelCapabilities: Record<string, unknown>;
+  activeTab: string;
+  setActiveTab: ReturnType<typeof vi.fn>;
+  formData: Record<string, unknown>;
+  tabs: Array<{ value: string; label: string; icon: () => null }>;
+  totalWeight: number;
+  handleSave: ReturnType<typeof vi.fn>;
+  handleTestConnection: ReturnType<typeof vi.fn>;
+  handleInputChange: ReturnType<typeof vi.fn>;
+  resetToDefaults: ReturnType<typeof vi.fn>;
+};
+
+const hookState = vi.hoisted((): { value: SettingsHookValue } => ({
   value: {
     settings: {
       llmAvailability: {},

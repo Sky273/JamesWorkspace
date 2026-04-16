@@ -4,7 +4,7 @@
  * Extracted from DealsGroupedView.tsx
  */
 
-import { useEffect, useRef, useState, memo } from 'react';
+import { useEffect, useRef, useState, memo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -27,7 +27,7 @@ const TagsWithTooltip = memo(({ skills, industries, resumeTags, hasAnyTags, tagC
   const triggerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
-  const updateTooltipPosition = () => {
+  const updateTooltipPosition = useCallback(() => {
     if (!triggerRef.current || !hasAnyTags) {
       return;
     }
@@ -59,7 +59,7 @@ const TagsWithTooltip = memo(({ skills, industries, resumeTags, hasAnyTags, tagC
       left: nextLeft,
       placement: 'top',
     });
-  };
+  }, [hasAnyTags]);
 
   useEffect(() => {
     if (!isHovered) {
@@ -79,7 +79,7 @@ const TagsWithTooltip = memo(({ skills, industries, resumeTags, hasAnyTags, tagC
       window.removeEventListener('scroll', handleViewportChange, true);
       window.removeEventListener('resize', handleViewportChange);
     };
-  }, [isHovered, hasAnyTags]);
+  }, [isHovered, updateTooltipPosition]);
 
   const handleMouseEnter = () => {
     if (triggerRef.current && hasAnyTags) {

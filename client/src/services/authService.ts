@@ -116,6 +116,11 @@ const parseJsonResponseSafe = async (response: Response): Promise<Record<string,
 };
 
 const isGatewayFailure = (status: number): boolean => [502, 503, 504].includes(status);
+const asString = (value: unknown, fallback = ''): string =>
+  typeof value === 'string' ? value : fallback;
+
+const asRegistrationStatus = (value: unknown): RegisterResponse['registrationStatus'] =>
+  value === 'active' || value === 'pending' ? value : undefined;
 
 const fetchPublicAuth = (url: string, options: RequestInit = {}): Promise<Response> => {
   const headers = new Headers(options.headers || {});
@@ -255,8 +260,8 @@ export const authService = {
 
       return {
         success: true,
-        message: data.message || 'Registration successful. Please wait for admin approval to access your account.',
-        registrationStatus: data.registrationStatus,
+        message: asString(data.message, 'Registration successful. Please wait for admin approval to access your account.'),
+        registrationStatus: asRegistrationStatus(data.registrationStatus),
         autoApproved: data.autoApproved === true
       };
     } catch (error) {

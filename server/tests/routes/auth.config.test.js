@@ -11,9 +11,7 @@ import {
     CLEAR_ACCESS_TOKEN,
     CLEAR_REFRESH_TOKEN,
     getAccessTokenCookieOptions,
-    getRefreshTokenCookieOptions,
-    getClearAccessTokenOptions,
-    getClearRefreshTokenOptions
+    getRefreshTokenCookieOptions
 } from '../../routes/auth/config.js';
 
 describe('Auth Cookie Config', () => {

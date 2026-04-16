@@ -32,6 +32,18 @@ const AUTH_ERROR_PATTERNS = [
   'SessionRedirectError'
 ];
 
+const getErrorMessage = (error: unknown): string => (
+  error instanceof Error ? error.message : ''
+);
+
+const getErrorString = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.toString();
+  }
+
+  return String(error ?? '');
+};
+
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
@@ -47,16 +59,16 @@ interface ErrorBoundaryState {
 /**
  * Check if an error is authentication-related
  */
-const isAuthError = (error: Error | null): boolean => {
-  if (!error) return false;
+const isAuthError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) return false;
   
   // Check for SessionRedirectError first
   if (isSessionRedirectError(error) || isInsufficientCreditsRedirectError(error)) {
     return true;
   }
   
-  const errorString = error.toString().toLowerCase();
-  const errorMessage = (error.message || '').toLowerCase();
+  const errorString = getErrorString(error).toLowerCase();
+  const errorMessage = getErrorMessage(error).toLowerCase();
   
   return AUTH_ERROR_PATTERNS.some(pattern => 
     errorString.includes(pattern.toLowerCase()) || 
@@ -180,7 +192,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     }
     // Check if this is an authentication error - mark as redirecting
     if (isAuthError(error)) {
-      log.warn('Auth error detected, will redirect to signin', { error: error.message });
+      log.warn('Auth error detected, will redirect to signin', { error: getErrorMessage(error) });
       // Schedule redirect (can't call directly in static method)
       setTimeout(() => redirectToSignin(), 0);
       return { hasError: false, error: null, isRedirecting: true }; // Don't show error UI
@@ -200,7 +212,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     }
     
     this.setState({ errorInfo });
-    log.error('Caught error', { error: error.message, componentStack: errorInfo?.componentStack?.substring(0, 200) });
+    log.error('Caught error', { error: getErrorMessage(error), componentStack: errorInfo?.componentStack?.substring(0, 200) });
   }
 
   handleRetry = (): void => {

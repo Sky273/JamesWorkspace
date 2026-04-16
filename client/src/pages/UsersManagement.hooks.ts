@@ -219,7 +219,7 @@ export function useUsersManagementDashboard(options: { embedded?: boolean; force
           computeAdjustedTotalCount(
             userData.users,
             deletedUserIdsRef.current,
-            userData.pagination?.totalCount,
+            userData.pagination?.totalCount ?? undefined,
             nextUsers.length,
           ),
         );
@@ -295,7 +295,7 @@ export function useUsersManagementDashboard(options: { embedded?: boolean; force
           computeAdjustedTotalCount(
             customerData.customers,
             deletedFirmIdsRef.current,
-            customerData.pagination?.totalCount,
+            customerData.pagination?.totalCount ?? undefined,
             nextFirms.length,
           ),
         );

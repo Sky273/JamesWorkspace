@@ -72,7 +72,7 @@ vi.mock('../components/AdminFirmSelector', () => ({
 }));
 
 vi.mock('../components/TiptapEditor/DeferredTiptapEditor', () => ({
-  default: ({
+  default: function MockDeferredTiptapEditor({
     content,
     onChange,
     onReady,
@@ -80,7 +80,7 @@ vi.mock('../components/TiptapEditor/DeferredTiptapEditor', () => ({
     content: string;
     onChange: (value: string) => void;
     onReady: () => void;
-  }) => {
+  }) {
     useEffect(() => {
       onReady();
     }, [onReady]);

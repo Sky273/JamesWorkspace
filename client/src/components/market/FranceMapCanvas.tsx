@@ -196,7 +196,7 @@ export default function FranceMapCanvas({
       }
       setMapReady(false);
     };
-  }, [isDarkMode, mapRef, onMapLoad]);
+  }, [isDarkMode, mapReady, mapRef, onMapLoad]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -212,7 +212,7 @@ export default function FranceMapCanvas({
     map.setStyle(nextStyle);
     appliedStyleRef.current = nextStyle;
     map.once('styledata', onMapLoad);
-  }, [isDarkMode, mapRef, onMapLoad]);
+  }, [isDarkMode, mapReady, mapRef, onMapLoad]);
 
   useEffect(() => {
     const map = mapRef.current;

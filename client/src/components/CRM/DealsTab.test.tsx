@@ -78,7 +78,8 @@ vi.mock('../page/SearchField', () => ({
   ),
 }));
 
-import DealsTab, { mergePreservedDealIntoResults } from './DealsTab';
+import DealsTab from './DealsTab';
+import { mergePreservedDealIntoResults } from './dealsTab.utils';
 
 describe('DealsTab', () => {
   beforeEach(() => {

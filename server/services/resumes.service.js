@@ -8,7 +8,7 @@ import { query } from '../config/database.js';
 import { findWithTimeout, createWithTimeout } from '../utils/postgresHelpers.js';
 import { stripNullCharacters } from '../utils/sanitizer.backend.js';
 import { invalidateDashboardAndGroupedViews } from './viewCacheInvalidation.service.js';
-import { CACHE_KEYS, invalidateClientsCaches, invalidateDealsCaches, invalidateResumesCaches, resumesCache } from './cache.service.js';
+import { invalidateClientsCaches, invalidateDealsCaches, invalidateResumesCaches, resumesCache } from './cache.service.js';
 
 function resolveExecutor(executor) {
     if (typeof executor === 'function') {

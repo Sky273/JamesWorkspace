@@ -18,36 +18,11 @@ import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterce
 import logger from '../../utils/logger.frontend';
 import { markDealsViewDirty } from '../../utils/viewRefreshScopes';
 import { Deal, Client, Contact, DealFormData, DealsTabProps, STATUS_CONFIG } from './dealsTab.types';
+import { mergePreservedDealIntoResults } from './dealsTab.utils';
 import DealCard from './DealCard';
 import DealFormModal from './DealFormModal';
 import DealDeleteModal from './DealDeleteModal';
 import SearchField from '../page/SearchField';
-
-export function mergePreservedDealIntoResults<T extends { id: string; title?: string; client_id?: string; status?: string }>(
-  deals: T[],
-  preservedDeal: T | null,
-  {
-    normalizedSearch,
-    clientFilter,
-    statusFilter,
-    pageSize,
-  }: {
-    normalizedSearch: string;
-    clientFilter: string;
-    statusFilter: string;
-    pageSize: number;
-  }
-) {
-  const shouldPreserve = preservedDeal != null
-    && (statusFilter === 'all' || !statusFilter || preservedDeal.status === statusFilter)
-    && (!clientFilter || preservedDeal.client_id === clientFilter)
-    && (normalizedSearch.length === 0 || (preservedDeal.title || '').toLowerCase().includes(normalizedSearch))
-    && !deals.some((deal) => deal.id === preservedDeal.id);
-
-  return shouldPreserve
-    ? [preservedDeal, ...deals].slice(0, pageSize)
-    : deals;
-}
 
 const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
   const refreshConsumerId = 'deals-tab';

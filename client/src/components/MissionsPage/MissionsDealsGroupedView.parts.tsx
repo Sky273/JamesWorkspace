@@ -428,12 +428,10 @@ export function DealSection({
 export function MissionCardInDealWithActions({
   mission,
   index,
-  onEditMission,
   onDeleteMission,
 }: {
   mission: GroupedMission;
   index: number;
-  onEditMission: (mission: GroupedMission) => void;
   onDeleteMission: (mission: GroupedMission) => void;
 }) {
   const { t } = useTranslation();

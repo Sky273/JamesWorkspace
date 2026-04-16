@@ -143,27 +143,28 @@ vi.mock('../components/TiptapEditor', () => ({
 
 vi.mock('../components/TiptapEditor/DeferredTiptapEditor', async () => {
   const React = await import('react');
+  const MockDeferredTiptapEditor = React.forwardRef(function MockDeferredTiptapEditor({
+    content,
+    onReady,
+    skillProofs,
+  }: {
+    content: string;
+    onReady: () => void;
+    skillProofs?: Array<{ name?: string; tool?: string }>;
+  }, ref) {
+    const [currentContent, setCurrentContent] = React.useState(content);
+    React.useImperativeHandle(ref, () => ({
+      getContent: () => currentContent,
+      setContent: (nextContent: string) => setCurrentContent(nextContent),
+      getEditor: () => null,
+    }), [currentContent]);
+    onReady();
+    const labels = (skillProofs || []).map((proof) => proof.name || proof.tool).filter(Boolean).join(',');
+    return <div>editor:{currentContent}:{labels || 'none'}</div>;
+  });
 
   return {
-    default: React.forwardRef(({
-      content,
-      onReady,
-      skillProofs,
-    }: {
-      content: string;
-      onReady: () => void;
-      skillProofs?: Array<{ name?: string; tool?: string }>;
-    }, ref) => {
-      const [currentContent, setCurrentContent] = React.useState(content);
-      React.useImperativeHandle(ref, () => ({
-        getContent: () => currentContent,
-        setContent: (nextContent: string) => setCurrentContent(nextContent),
-        getEditor: () => null,
-      }), [currentContent]);
-      onReady();
-      const labels = (skillProofs || []).map((proof) => proof.name || proof.tool).filter(Boolean).join(',');
-      return <div>editor:{currentContent}:{labels || 'none'}</div>;
-    }),
+    default: MockDeferredTiptapEditor,
   };
 });
 

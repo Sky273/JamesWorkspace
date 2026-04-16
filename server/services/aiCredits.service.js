@@ -108,7 +108,7 @@ export async function addInitialFirmCreditGrant(firmId, { client = null, amount 
 export async function getConfiguredInitialFirmCredits() {
     try {
         return getInitialFirmCredits(await getLLMSettings());
-    } catch (_error) {
+    } catch {
         return DEFAULT_FIRM_CREDITS;
     }
 }
@@ -116,7 +116,7 @@ export async function getConfiguredInitialFirmCredits() {
 export async function getConfiguredAiCreditCost(actionType) {
     try {
         return getAiCreditCost(actionType, await getLLMSettings());
-    } catch (_error) {
+    } catch {
         return getAiCreditCost(actionType);
     }
 }
@@ -124,7 +124,7 @@ export async function getConfiguredAiCreditCost(actionType) {
 export async function getConfiguredAiActionRuntimeConfig(actionType) {
     try {
         return getAiActionRuntimeConfig(actionType, await getLLMSettings());
-    } catch (_error) {
+    } catch {
         return getAiActionRuntimeConfig(actionType);
     }
 }
@@ -631,7 +631,6 @@ export async function listFirmCredits({
     search,
     page = 1,
     limit = 100,
-    bypassCache = false,
     firmId = null
 } = {}) {
     const offset = (page - 1) * limit;

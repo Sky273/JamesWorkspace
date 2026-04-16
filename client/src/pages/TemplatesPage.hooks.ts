@@ -227,7 +227,7 @@ export function useTemplatesDashboard(options: { embedded?: boolean } = {}) {
       setIsDeleting(false);
       closeDeleteConfirmModal();
     }
-  }, [closeDeleteConfirmModal, t, templateToDelete]);
+  }, [closeDeleteConfirmModal, fetchTemplates, t, templateToDelete]);
 
   const filteredTemplates = useMemo(() => {
     const nextTemplates = [...templates];

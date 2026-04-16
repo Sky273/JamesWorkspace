@@ -283,7 +283,7 @@ export function useAdaptationsDashboard() {
       logger.error('Error deleting adaptation:', error);
       toast.error(t('adaptations.messages.deleteError'));
     }
-  }, [t]);
+  }, [fetchAdaptations, t]);
 
   const handleExportPDF = useCallback((adaptation: Adaptation) => {
     setAdaptationToExport(adaptation);

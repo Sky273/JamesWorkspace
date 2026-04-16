@@ -66,7 +66,7 @@ export async function initShareResumeTable() {
  * @param {string} filename - Original filename
  * @returns {Promise<{token: string, path: string, expiresAt: Date}>} Share info
  */
-export async function storeSharedPdf(resumeId, pdfBuffer, filename) {
+export async function storeSharedPdf(resumeId, pdfBuffer, _filename) {
     let pdfPath = null;
     let storedPdfPath = null;
 

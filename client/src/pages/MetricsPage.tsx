@@ -134,13 +134,6 @@ const MetricsPage = (): JSX.Element => {
     await Promise.all([fetchDbMetrics(), fetchApmMetrics(), fetchOperationsMetrics()]);
   }, [fetchDbMetrics, fetchApmMetrics, fetchOperationsMetrics]);
 
-  const refreshAllMetrics = useCallback(async (): Promise<void> => {
-    await Promise.all([
-      fetchMetrics(),
-      secondaryReady ? refreshSecondaryMetrics() : Promise.resolve()
-    ]);
-  }, [fetchMetrics, refreshSecondaryMetrics, secondaryReady]);
-
   const handleRefresh = useCallback(async (): Promise<void> => {
     setSecondaryReady(true);
     await Promise.all([fetchMetrics(), refreshSecondaryMetrics()]);

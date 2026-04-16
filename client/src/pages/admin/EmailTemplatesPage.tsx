@@ -221,7 +221,7 @@ const EmailTemplatesPage = ({ embedded = false }: { embedded?: boolean } = {}): 
     } finally {
       setDuplicating(false);
     }
-  }, [closeDuplicateModal, duplicateFirmId, duplicateTemplateTarget, loadData, t]);
+  }, [closeDuplicateModal, duplicateFirmId, duplicateTemplateTarget, t]);
 
   const handleDelete = useCallback(
     async (template: EmailTemplate) => {

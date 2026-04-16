@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import ProfileMatchSearchPanel from './ProfileMatchSearchPanel';
+import type { Deal, Mission } from '../types/entities';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -11,12 +12,15 @@ vi.mock('react-i18next', () => ({
 
 describe('ProfileMatchSearchPanel', () => {
   it('associates both selects with visible labels', () => {
+    const deals: Deal[] = [{ id: 'deal-1', title: 'Deal 1', client_name: 'Client A' }];
+    const missions: Mission[] = [{ id: 'mission-1', Title: 'Mission 1' }];
+
     render(
       <ProfileMatchSearchPanel
-        deals={[{ id: 'deal-1', title: 'Deal 1', client_name: 'Client A' } as any]}
+        deals={deals}
         selectedDealId=""
         setSelectedDealId={vi.fn()}
-        missions={[{ id: 'mission-1', Title: 'Mission 1' } as any]}
+        missions={missions}
         selectedMissionId="mission-1"
         setSelectedMissionId={vi.fn()}
         selectedMission={undefined}

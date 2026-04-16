@@ -10,7 +10,8 @@ import { useNavigate } from 'react-router-dom';
 import PageHeader from '../components/page/PageHeader';
 import { useAuth } from '../context/AuthContext';
 
-import { DEFAULT_FACTS_TAB, FactsCollectionOverlay, FactsDataTab, FactsTabs, TabLoader } from './FactsPage.components';
+import { FactsCollectionOverlay, FactsDataTab, FactsTabs, TabLoader } from './FactsPage.components';
+import { DEFAULT_FACTS_TAB } from './FactsPage.constants';
 import { type TabType, useFactsDashboard } from './FactsPage.hooks';
 
 const FranceMapTab = lazy(() => import('../components/market/FranceMapTab'));

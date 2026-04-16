@@ -565,13 +565,10 @@ export function buildStructuredPdfTemplateInput({
     const normalizedItems = normalizeTextItems(items, styles, pageHeight);
     const lines = groupItemsIntoLines(normalizedItems);
     const regions = splitLinesIntoRegions(lines, pageHeight);
-    const headerTop = regions.header.length > 0 ? Math.min(...regions.header.map((line) => line.top)) : 0;
     const headerBottom = regions.header.length > 0 ? Math.max(...regions.header.map((line) => line.bottom)) : Math.round(pageHeight * DEFAULT_HEADER_RATIO);
     const contentTop = regions.content.length > 0 ? Math.min(...regions.content.map((line) => line.top)) : headerBottom;
     const contentBottom = regions.content.length > 0 ? Math.max(...regions.content.map((line) => line.bottom)) : Math.round(pageHeight * (1 - DEFAULT_FOOTER_RATIO));
     const footerTop = regions.footer.length > 0 ? Math.min(...regions.footer.map((line) => line.top)) : contentBottom;
-    const footerBottom = regions.footer.length > 0 ? Math.max(...regions.footer.map((line) => line.bottom)) : pageHeight;
-
     const headerBounds = getRegionBounds(regions.header, 0, headerBottom, pageWidth);
     const contentBounds = getRegionBounds(regions.content, contentTop, contentBottom, pageWidth);
     const footerBounds = getRegionBounds(regions.footer, footerTop, pageHeight, pageWidth);

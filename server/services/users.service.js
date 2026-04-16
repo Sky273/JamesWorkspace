@@ -5,7 +5,7 @@
  */
 
 import { query } from '../config/database.js';
-import { selectWithTimeout, escapeLike, createWithTimeout, updateWithTimeout, destroyWithTimeout, transaction } from '../utils/postgresHelpers.js';
+import { selectWithTimeout, escapeLike, createWithTimeout, updateWithTimeout, transaction } from '../utils/postgresHelpers.js';
 import { CACHE_KEYS, invalidateClientsCaches, invalidateUsersCaches, usersCache } from './cache.service.js';
 
 /**

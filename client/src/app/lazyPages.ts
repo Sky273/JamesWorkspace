@@ -3,7 +3,9 @@ import { lazy, type ComponentType } from 'react';
 const editorialCssLoaders = [() => import('../styles/editorialPages.css')];
 const resumesEditorialCssLoaders = [() => import('../styles/resumesEditorial.css')];
 
-const lazyWithCss = <T extends { default: ComponentType<any> }>(
+type LazyPageModule = { default: ComponentType<Record<string, never>> };
+
+const lazyWithCss = <T extends LazyPageModule>(
   importer: () => Promise<T>,
   cssLoaders: Array<() => Promise<unknown>> = [],
 ) =>

@@ -38,7 +38,7 @@ vi.mock('../../services/cache.service.js', () => ({
 }));
 
 import { query } from '../../config/database.js';
-import { selectWithTimeout, createWithTimeout, updateWithTimeout, destroyWithTimeout, transaction } from '../../utils/postgresHelpers.js';
+import { selectWithTimeout, createWithTimeout, updateWithTimeout, transaction } from '../../utils/postgresHelpers.js';
 import {
     listUsers,
     updateUserProfile,
