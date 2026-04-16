@@ -69,6 +69,7 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
     
     const systemMessage = 'You are a JSON-only resume analysis API. Respond with valid JSON only.';
     const operationType = isImprovedCV ? 'Improved Resume Analysis' : 'Resume Analysis';
+    const requestedMaxTokens = Number.isFinite(options.maxTokens) ? options.maxTokens : undefined;
 
     async function requestAnalysis({ compactRetry = false, repairPayload = null } = {}) {
         const userContent = repairPayload
@@ -86,7 +87,9 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
                     content: userContent
                 }
             ],
-            maxTokens: repairPayload ? Math.min(options.maxTokens ?? 8000, 4000) : (options.maxTokens ?? 8000),
+            ...(repairPayload
+                ? (requestedMaxTokens !== undefined ? { maxTokens: Math.min(requestedMaxTokens, 4000) } : {})
+                : (requestedMaxTokens !== undefined ? { maxTokens: requestedMaxTokens } : {})),
             temperature: 0,
             responseFormat: { type: "json_object" },
             maxPromptLength: 120000,
