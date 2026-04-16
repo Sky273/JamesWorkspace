@@ -54,6 +54,17 @@ const HTML_ENTITIES = {
 
 const MOJIBAKE_SEQUENCES = ['\\u00c3', '\\u00c2', '\\u00e2\\u20ac', '\\u00e2\\u20ac\\u201c', '\\u00e2\\u20ac\\u201d', '\\u00e2\\u20ac\\u00a6', '\\u00e2\\u20ac\\u00a2', '\\u00ef\\u00bf\\u00bd'];
 
+function sanitizeJsonLikePayload(text) {
+    if (!text || typeof text !== 'string') {
+        return text;
+    }
+
+    return text
+        .replace(/^\uFEFF/, '')
+        .replace(/\u0000/g, '')
+        .trim();
+}
+
 export function normalizeUtf8Text(text) {
     if (!text || typeof text !== 'string') {
         return text;
@@ -120,7 +131,7 @@ export function stripLlmThinkingContent(text) {
 }
 
 export function extractJsonPayload(text) {
-    const cleaned = stripLlmThinkingContent(text);
+    const cleaned = sanitizeJsonLikePayload(stripLlmThinkingContent(text));
     if (!cleaned) {
         return cleaned;
     }
@@ -304,13 +315,27 @@ function escapeJsonControlCharacters(text) {
     return result;
 }
 
+function removeTrailingJsonCommas(text) {
+    if (!text || typeof text !== 'string') {
+        return text;
+    }
+
+    return text.replace(/,\s*([}\]])/g, '$1');
+}
+
 export function parseJsonFromLlmResponse(text) {
     const payload = extractJsonPayload(text);
 
     try {
         return JSON.parse(payload);
     } catch (error) {
-        const repairedPayload = repairMalformedJsonStrings(escapeJsonControlCharacters(payload));
+        const repairedPayload = removeTrailingJsonCommas(
+            repairMalformedJsonStrings(
+                escapeJsonControlCharacters(
+                    sanitizeJsonLikePayload(payload)
+                )
+            )
+        );
         if (repairedPayload !== payload) {
             return JSON.parse(repairedPayload);
         }

@@ -241,7 +241,7 @@ describe('Batch Jobs Worker - Item Processors', () => {
             // Should extract text
             expect(mockExtractText).toHaveBeenCalledWith(Buffer.from('pdf'), item.file_mime_type, item.file_name);
             // Should analyze
-            expect(mockAnalyze).toHaveBeenCalledWith(expect.any(String), 'firm-1', 'cv.pdf', expect.objectContaining({ ocrUsed: false }));
+            expect(mockAnalyze).toHaveBeenCalledWith(expect.any(String), 'firm-1', 'cv.pdf', expect.objectContaining({ ocrUsed: false, maxTokens: 1234 }));
             // Should update resume with analysis
             expect(mockUpdateResumeFileUrl).toHaveBeenCalledWith('res-1', '/api/resumes/res-1/download');
             const finalUpdateCall = mockUpdateResume.mock.calls.find(([, data]) => data?.status === 'analyzed');

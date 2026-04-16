@@ -139,7 +139,7 @@ describe('llmProvider.service', () => {
                 keep_alive: '15m',
                 num_ctx: 16384,
                 stop: ['END'],
-                timeout: 20 * 60 * 1000,
+                timeout: 15 * 60 * 1000,
                 operationType: 'Resume Analysis'
             })
         }));
@@ -172,7 +172,7 @@ describe('llmProvider.service', () => {
                 temperature: 0,
                 metadata: { source: 'admin-settings' },
                 stop: ['END'],
-                timeout: 20 * 60 * 1000,
+                timeout: 15 * 60 * 1000,
                 operationType: 'Resume Analysis'
             })
         }));
@@ -203,7 +203,7 @@ describe('llmProvider.service', () => {
                 metadata: { source: 'admin-settings' },
                 stop: ['END'],
                 operationType: 'Resume Analysis',
-                timeout: 20 * 60 * 1000
+                timeout: 15 * 60 * 1000
             })
         }));
         expect(result.choices[0].message.content).toBe('ok minimax');
@@ -234,7 +234,7 @@ describe('llmProvider.service', () => {
                 temperature: 0,
                 metadata: { source: 'admin-settings' },
                 stop: ['END'],
-                timeout: 20 * 60 * 1000,
+                timeout: 15 * 60 * 1000,
                 operationType: 'Resume Analysis'
             })
         }));
@@ -269,5 +269,29 @@ describe('llmProvider.service', () => {
         }));
         expect(result.choices[0].message.content).toBe('openai ok');
         expect(result.model).toBe('gpt-4o');
+    });
+
+    it('keeps per-request max_tokens overrides ahead of persisted model parameters', async () => {
+        getLLMSettings.mockResolvedValueOnce({
+            llmProvider: 'openai',
+            llmModel: 'gpt-4o'
+        });
+        callProviderChatMock.mockResolvedValueOnce({
+            model: 'gpt-4o',
+            choices: [{ message: { content: 'openai ok' } }],
+            usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
+        });
+
+        await callBusinessChatCompletion({
+            messages: [{ role: 'user', content: 'Analyse ce CV' }],
+            maxTokens: 2222,
+            operationType: 'Resume Analysis'
+        });
+
+        expect(callProviderChatMock).toHaveBeenCalledWith(expect.objectContaining({
+            options: expect.objectContaining({
+                max_tokens: 2222
+            })
+        }));
     });
 });

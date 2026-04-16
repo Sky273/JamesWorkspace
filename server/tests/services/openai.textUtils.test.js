@@ -106,6 +106,16 @@ describe('OpenAI Text Utilities', () => {
             const parsed = parseJsonFromLlmResponse('{"summary":"Line 1\nLine 2","score":85}');
             expect(parsed).toEqual({ summary: 'Line 1\nLine 2', score: 85 });
         });
+
+        it('should repair trailing commas in JSON payloads', () => {
+            const parsed = parseJsonFromLlmResponse('{"name":"John","skills":["React","Node"],}');
+            expect(parsed).toEqual({ name: 'John', skills: ['React', 'Node'] });
+        });
+
+        it('should strip BOM and null characters before parsing JSON payloads', () => {
+            const parsed = parseJsonFromLlmResponse('\uFEFF{"name":"Jo\u0000hn","score":85}\u0000');
+            expect(parsed).toEqual({ name: 'John', score: 85 });
+        });
     });
 
     describe('cleanupHtml', () => {

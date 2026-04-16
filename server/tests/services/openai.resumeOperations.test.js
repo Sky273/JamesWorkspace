@@ -13,6 +13,10 @@ vi.mock('../../services/llmProvider.service.js', () => ({
     callBusinessChatCompletion: vi.fn()
 }));
 
+vi.mock('../../services/llmGateway.service.js', () => ({
+    normalizeNonRetryableLlmProviderError: vi.fn((error) => error)
+}));
+
 vi.mock('../../services/metrics.service.js', () => ({
     __esModule: true,
     default: {
@@ -27,6 +31,7 @@ vi.mock('../../services/metrics.service.js', () => ({
 vi.mock('../../services/llmConfiguration.service.js', () => ({
     isLikelyAnthropicModel: vi.fn((model) => /^claude/i.test(String(model || ''))),
     isLikelyDeepSeekModel: vi.fn((model) => /^deepseek/i.test(String(model || ''))),
+    isLikelyHuggingFaceModel: vi.fn((model) => /huggingface/i.test(String(model || ''))),
     isLikelyGlmModel: vi.fn((model) => /^glm/i.test(String(model || ''))),
     isLikelyMiniMaxModel: vi.fn((model) => /^minimax/i.test(String(model || '')))
 }));
@@ -407,10 +412,32 @@ describe('OpenAI Resume Operations', () => {
             expect(callArgs.messages[1].content).toContain('cv_john.pdf');
         });
 
-        it('should throw on invalid JSON response', async () => {
+        it('should use the per-request maxTokens override for analysis requests', async () => {
             callBusinessChatCompletion.mockResolvedValueOnce({
-                choices: [{ message: { content: 'not valid json' } }]
+                choices: [{ message: { content: JSON.stringify(mockAnalysis) } }]
             });
+
+            await analyzeResume('text', 'gpt-4o', '{TEXT} {FILENAME}', null, false, 'cv.pdf', {
+                maxTokens: 4321
+            });
+
+            expect(callBusinessChatCompletion.mock.calls[0][0]).toEqual(expect.objectContaining({
+                maxTokens: 4321,
+                temperature: 0
+            }));
+        });
+
+        it('should throw on invalid JSON response', async () => {
+            callBusinessChatCompletion
+                .mockResolvedValueOnce({
+                    choices: [{ message: { content: 'not valid json' } }]
+                })
+                .mockResolvedValueOnce({
+                    choices: [{ message: { content: 'still invalid json' } }]
+                })
+                .mockResolvedValueOnce({
+                    choices: [{ message: { content: 'definitely not json either' } }]
+                });
 
             await expect(analyzeResume('text', 'gpt-4o', '{TEXT} {FILENAME}')).rejects.toThrow();
         });
@@ -436,6 +463,47 @@ describe('OpenAI Resume Operations', () => {
 
             expect(result.name).toBe('John Doe');
             expect(callBusinessChatCompletion).toHaveBeenCalledTimes(2);
+        });
+
+        it('should repair malformed JSON after compact retry fails', async () => {
+            callBusinessChatCompletion
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: {
+                            content: 'not valid json'
+                        }
+                    }]
+                })
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: {
+                            content: '{"name":"John","skills":["React",}'
+                        }
+                    }]
+                })
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: {
+                            content: JSON.stringify(mockAnalysis)
+                        }
+                    }]
+                });
+
+            const result = await analyzeResume('resume text', 'gpt-4o', '{TEXT} {FILENAME}', null, false, 'cv.pdf', {
+                maxTokens: 6789
+            });
+
+            expect(result.name).toBe('John Doe');
+            expect(callBusinessChatCompletion).toHaveBeenCalledTimes(3);
+            expect(callBusinessChatCompletion.mock.calls[1][0]).toEqual(expect.objectContaining({
+                maxTokens: 6789,
+                temperature: 0
+            }));
+            expect(callBusinessChatCompletion.mock.calls[2][0]).toEqual(expect.objectContaining({
+                maxTokens: 4000,
+                temperature: 0
+            }));
+            expect(callBusinessChatCompletion.mock.calls[2][0].messages[1].content).toContain('malformed');
         });
     });
 
