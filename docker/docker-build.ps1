@@ -45,16 +45,6 @@ function Wait-AppHealthy {
 }
 
 function Sync-PostgresRolePassword {
-    $envFile = Join-Path $PWD ".env.docker"
-    $envLines = Get-Content $envFile
-    $postgresUser = (($envLines | Where-Object { $_ -match '^POSTGRES_USER=' } | Select-Object -First 1) -replace '^POSTGRES_USER=', '')
-    $postgresPassword = (($envLines | Where-Object { $_ -match '^POSTGRES_PASSWORD=' } | Select-Object -First 1) -replace '^POSTGRES_PASSWORD=', '')
-
-    if (-not $postgresUser -or -not $postgresPassword) {
-        Write-Host "POSTGRES_USER or POSTGRES_PASSWORD missing from .env.docker." -ForegroundColor Red
-        exit 1
-    }
-
     Write-Host ""
     Write-Host "Synchronizing PostgreSQL role password inside Docker container..." -ForegroundColor Yellow
 
@@ -70,8 +60,7 @@ function Sync-PostgresRolePassword {
             continue
         }
 
-        $sql = "ALTER ROLE {0} WITH LOGIN SUPERUSER PASSWORD '{1}';" -f $postgresUser, $postgresPassword
-        docker exec -u postgres resumeconverter-postgres psql -d postgres -v ON_ERROR_STOP=1 -c $sql
+        powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PWD "docker\sync-postgres-role-password.ps1") -ProjectRoot $PWD
         if ($LASTEXITCODE -eq 0) {
             Write-Host "PostgreSQL role password synchronized." -ForegroundColor Green
             return

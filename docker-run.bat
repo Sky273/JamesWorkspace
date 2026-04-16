@@ -61,7 +61,7 @@ set "PG_SYNC_OK="
 for /L %%i in (1,1,24) do (
     for /f "usebackq delims=" %%s in (`docker inspect -f "{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}" resumeconverter-postgres 2^>nul`) do set "POSTGRES_STATE=%%s"
     if /I "!POSTGRES_STATE!"=="healthy" (
-        docker exec -u postgres resumeconverter-postgres psql -d postgres -v ON_ERROR_STOP=1 -c "ALTER ROLE !POSTGRES_USER! WITH LOGIN SUPERUSER PASSWORD '!POSTGRES_PASSWORD!';"
+        powershell -NoProfile -ExecutionPolicy Bypass -File "%cd%\docker\sync-postgres-role-password.ps1" -ProjectRoot "%cd%"
         if !ERRORLEVEL! EQU 0 (
             set "PG_SYNC_OK=1"
             goto :postgres_sync_done

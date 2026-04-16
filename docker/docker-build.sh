@@ -37,12 +37,15 @@ wait_app_healthy() {
 }
 
 sync_postgres_role_password() {
-    local postgres_user postgres_password
+    local postgres_user postgres_password postgres_db
     postgres_user="$(grep -E '^POSTGRES_USER=' "$(pwd)/.env.docker" | sed 's/^POSTGRES_USER=//')"
     postgres_password="$(grep -E '^POSTGRES_PASSWORD=' "$(pwd)/.env.docker" | sed 's/^POSTGRES_PASSWORD=//')"
+    postgres_db="$(grep -E '^POSTGRES_DB=' "$(pwd)/.env.docker" | sed 's/^POSTGRES_DB=//')"
+    local escaped_password
+    escaped_password="$(printf "%s" "$postgres_password" | sed "s/'/''/g")"
 
-    if [ -z "$postgres_user" ] || [ -z "$postgres_password" ]; then
-        echo "POSTGRES_USER or POSTGRES_PASSWORD missing from .env.docker."
+    if [ -z "$postgres_user" ] || [ -z "$postgres_password" ] || [ -z "$postgres_db" ]; then
+        echo "POSTGRES_USER, POSTGRES_PASSWORD, or POSTGRES_DB missing from .env.docker."
         exit 1
     fi
 
@@ -56,7 +59,8 @@ sync_postgres_role_password() {
             continue
         fi
 
-        if docker exec -u postgres resumeconverter-postgres psql -d postgres -v ON_ERROR_STOP=1 -c "ALTER ROLE $postgres_user WITH LOGIN SUPERUSER PASSWORD '$postgres_password';"; then
+        if docker exec -u postgres resumeconverter-postgres psql -d postgres -v ON_ERROR_STOP=1 -c "ALTER ROLE $postgres_user WITH LOGIN SUPERUSER PASSWORD '$escaped_password';" \
+            && docker exec -e "PGPASSWORD=$postgres_password" resumeconverter-postgres psql -h 127.0.0.1 -p 5432 -U "$postgres_user" -d "$postgres_db" -tAc "select 1" >/dev/null; then
             echo "PostgreSQL role password synchronized."
             return 0
         fi
