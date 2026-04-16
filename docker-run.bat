@@ -42,6 +42,9 @@ set "POSTGRES_PASSWORD="
 for /f "tokens=1,* delims==" %%A in ('findstr /b "POSTGRES_USER=" "%cd%\.env.docker"') do set "POSTGRES_USER=%%B"
 for /f "tokens=1,* delims==" %%A in ('findstr /b "POSTGRES_PASSWORD=" "%cd%\.env.docker"') do set "POSTGRES_PASSWORD=%%B"
 
+docker compose -f "%cd%\docker-compose.redis.yml" stop app >nul 2>&1
+docker compose -f "%cd%\docker-compose.redis.yml" rm -f app >nul 2>&1
+
 docker compose -f "%cd%\docker-compose.redis.yml" up -d postgres redis
 
 if not %ERRORLEVEL% EQU 0 (

@@ -176,6 +176,8 @@ function Run-Container {
         exit 1
     }
 
+    docker compose -f "$ComposeFile" stop app >$null 2>&1
+    docker compose -f "$ComposeFile" rm -f app >$null 2>&1
     docker compose -f "$ComposeFile" up -d postgres redis
 
     if ($LASTEXITCODE -eq 0) {

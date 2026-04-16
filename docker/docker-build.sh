@@ -154,6 +154,8 @@ run_container() {
         exit 1
     fi
 
+    docker compose -f "$compose_file" stop app >/dev/null 2>&1 || true
+    docker compose -f "$compose_file" rm -f app >/dev/null 2>&1 || true
     docker compose -f "$compose_file" up -d postgres redis
 
     if [ $? -eq 0 ]; then
