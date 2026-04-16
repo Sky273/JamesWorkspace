@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { decodeHtmlEntities, cleanupText, cleanupHtml, stripLlmThinkingContent, extractJsonPayload, parseJsonFromLlmResponse } from '../../services/openai/textUtils.js';
+import { decodeHtmlEntities, cleanupText, cleanupHtml, stripLlmThinkingContent, extractJsonPayload, parseJsonFromLlmResponse, salvageResumeAnalysisFromText } from '../../services/openai/textUtils.js';
 
 describe('OpenAI Text Utilities', () => {
     describe('decodeHtmlEntities', () => {
@@ -140,6 +140,39 @@ describe('OpenAI Text Utilities', () => {
         it('should strip BOM and null characters before parsing JSON payloads', () => {
             const parsed = parseJsonFromLlmResponse('\uFEFF{"name":"Jo\u0000hn","score":85}\u0000');
             expect(parsed).toEqual({ name: 'John', score: 85 });
+        });
+
+        it('should salvage a loose markdown analysis payload when JSON parsing is impossible', () => {
+            const salvaged = salvageResumeAnalysisFromText(`
+Name: Jane Doe
+Title: Backend Engineer
+Global Rating: 84%
+Skills Rating: 88%
+
+Top Skills:
+- Java
+- Node.js
+
+Top Tools: Docker, PostgreSQL
+
+Executive Summary Improvements:
+- Tighten the introduction
+- Add measurable impact
+            `);
+
+            expect(salvaged).toEqual(expect.objectContaining({
+                name: 'Jane Doe',
+                title: 'Backend Engineer',
+                globalRating: '84%',
+                skillsRating: '88%',
+                tags: expect.objectContaining({
+                    skills: ['Java', 'Node.js'],
+                    tools: ['Docker', 'PostgreSQL']
+                }),
+                suggestions: expect.objectContaining({
+                    executiveSummary: ['Tighten the introduction', 'Add measurable impact']
+                })
+            }));
         });
     });
 

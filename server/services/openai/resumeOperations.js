@@ -14,7 +14,7 @@ import {
     isLikelyGlmModel,
     isLikelyMiniMaxModel
 } from '../llmConfiguration.service.js';
-import { cleanupHtml, normalizeUtf8Text, parseJsonFromLlmResponse, stripLlmThinkingContent } from './textUtils.js';
+import { cleanupHtml, normalizeUtf8Text, parseJsonFromLlmResponse, salvageResumeAnalysisFromText, stripLlmThinkingContent } from './textUtils.js';
 import {
     normalizeAnalysisResponse,
     extractImprovementEnvelope,
@@ -100,15 +100,19 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
     }
 
     let response;
+    let initialContent = '';
+    let compactRetryContent = '';
+    let repairContent = '';
     try {
         response = await requestAnalysis();
+        initialContent = getAssistantContent(response);
     } catch (error) {
         throw normalizeNonRetryableLlmProviderError(error);
     }
 
     let rawAnalysis;
     try {
-        rawAnalysis = parseJsonFromLlmResponse(getAssistantContent(response));
+        rawAnalysis = parseJsonFromLlmResponse(initialContent);
     } catch (parseError) {
         safeLog('warn', 'Resume analysis returned malformed JSON', {
             error: parseError.message,
@@ -118,7 +122,8 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
 
         try {
             response = await requestAnalysis({ compactRetry: true });
-            rawAnalysis = parseJsonFromLlmResponse(getAssistantContent(response));
+            compactRetryContent = getAssistantContent(response);
+            rawAnalysis = parseJsonFromLlmResponse(compactRetryContent);
         } catch (compactRetryError) {
             const normalizedCompactRetryError = normalizeNonRetryableLlmProviderError(compactRetryError);
             if (normalizedCompactRetryError !== compactRetryError) {
@@ -131,19 +136,40 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
             });
 
             try {
-                response = await requestAnalysis({ repairPayload: getAssistantContent(response) });
-                rawAnalysis = parseJsonFromLlmResponse(getAssistantContent(response));
+                response = await requestAnalysis({ repairPayload: compactRetryContent || initialContent });
+                repairContent = getAssistantContent(response);
+                rawAnalysis = parseJsonFromLlmResponse(repairContent);
             } catch (error) {
                 const normalizedError = normalizeNonRetryableLlmProviderError(error);
                 if (normalizedError !== error) {
                     throw normalizedError;
                 }
 
+                const recoveredAnalysis = [
+                    repairContent,
+                    compactRetryContent,
+                    initialContent
+                ]
+                    .map(candidate => salvageResumeAnalysisFromText(candidate))
+                    .find(Boolean);
+
+                if (recoveredAnalysis) {
+                    safeLog('warn', 'Recovered resume analysis from non-JSON LLM output using loose-text salvage', {
+                        operationType,
+                        initialError: parseError.message,
+                        compactRetryError: compactRetryError.message,
+                        repairError: error.message,
+                        recoveredKeys: Object.keys(recoveredAnalysis)
+                    });
+                    rawAnalysis = recoveredAnalysis;
+                    return normalizeAnalysisResponse(rawAnalysis);
+                }
+
                 safeLog('error', 'Failed to recover malformed LLM analysis response', {
                     initialError: parseError.message,
                     compactRetryError: compactRetryError.message,
                     repairError: error.message,
-                    responsePreview: getAssistantContent(response).substring(0, 500)
+                    responsePreview: (repairContent || compactRetryContent || initialContent).substring(0, 500)
                 });
 
                 throw new Error(normalizeUtf8Text('Le modèle LLM a retourné une réponse invalide. Veuillez réessayer ou contacter le support si le problème persiste.'));

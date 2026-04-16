@@ -522,6 +522,48 @@ describe('OpenAI Resume Operations', () => {
             }));
             expect(callBusinessChatCompletion.mock.calls[2][0].messages[1].content).toContain('malformed');
         });
+
+        it('should salvage a minimal analysis from non-JSON markdown after all JSON recovery attempts fail', async () => {
+            callBusinessChatCompletion
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: {
+                            content: 'not valid json'
+                        }
+                    }]
+                })
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: {
+                            content: 'still not valid json'
+                        }
+                    }]
+                })
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: {
+                            content: `Name: Jane Doe
+Title: Backend Engineer
+Global Rating: 84%
+Top Skills:
+- Java
+- Node.js
+Top Tools: Docker, PostgreSQL
+Executive Summary Improvements:
+- Add a stronger profile summary`
+                        }
+                    }]
+                });
+
+            const result = await analyzeResume('resume text', 'gpt-4o', '{TEXT} {FILENAME}');
+
+            expect(result.name).toBe('Jane Doe');
+            expect(result.title).toBe('Backend Engineer');
+            expect(result.globalRating).toBe('84%');
+            expect(result.tags.skills).toEqual(['Java', 'Node.js']);
+            expect(result.tags.tools).toEqual(['Docker', 'PostgreSQL']);
+            expect(result.suggestions.executiveSummary).toEqual(['Add a stronger profile summary']);
+        });
     });
 
     describe('improveResume', () => {
