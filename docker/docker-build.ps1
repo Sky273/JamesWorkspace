@@ -45,6 +45,47 @@ function Invoke-ContainerMigration {
     exit 1
 }
 
+function Sync-PostgresRolePassword {
+    $envFile = Join-Path $PWD ".env.docker"
+    $envLines = Get-Content $envFile
+    $postgresUser = (($envLines | Where-Object { $_ -match '^POSTGRES_USER=' } | Select-Object -First 1) -replace '^POSTGRES_USER=', '')
+    $postgresPassword = (($envLines | Where-Object { $_ -match '^POSTGRES_PASSWORD=' } | Select-Object -First 1) -replace '^POSTGRES_PASSWORD=', '')
+
+    if (-not $postgresUser -or -not $postgresPassword) {
+        Write-Host "POSTGRES_USER or POSTGRES_PASSWORD missing from .env.docker." -ForegroundColor Red
+        exit 1
+    }
+
+    Write-Host ""
+    Write-Host "Synchronizing PostgreSQL role password inside Docker container..." -ForegroundColor Yellow
+
+    for ($attempt = 1; $attempt -le 24; $attempt++) {
+        $postgresState = docker inspect -f "{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}" resumeconverter-postgres 2>$null
+        if ($LASTEXITCODE -ne 0 -or -not $postgresState) {
+            Start-Sleep -Seconds 5
+            continue
+        }
+
+        if ($postgresState.Trim() -ne "healthy") {
+            Start-Sleep -Seconds 5
+            continue
+        }
+
+        $sql = "ALTER ROLE {0} WITH LOGIN SUPERUSER PASSWORD '{1}';" -f $postgresUser, $postgresPassword
+        docker exec -u postgres resumeconverter-postgres psql -d postgres -v ON_ERROR_STOP=1 -c $sql
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "PostgreSQL role password synchronized." -ForegroundColor Green
+            return
+        }
+
+        Write-Host "PostgreSQL role sync attempt $attempt failed, retrying..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 5
+    }
+
+    Write-Host "Failed to synchronize PostgreSQL role password after container startup." -ForegroundColor Red
+    exit 1
+}
+
 function Show-Help {
     Write-Host ""
     Write-Host "ResumeConverter Docker Management Script" -ForegroundColor Cyan
@@ -107,13 +148,6 @@ function Build-Image {
 }
 
 function Run-Container {
-    $existing = docker ps -aq -f name=$ContainerName
-    if ($existing) {
-        Write-Host "Stopping existing container..." -ForegroundColor Yellow
-        docker stop $ContainerName 2>$null
-        docker rm $ContainerName 2>$null
-    }
-
     $imageExists = docker images -q "${ImageName}:${Tag}"
     if (-not $imageExists) {
         Write-Host "Image not found, building..." -ForegroundColor Yellow
@@ -124,11 +158,14 @@ function Run-Container {
     Write-Host "Starting container: $ContainerName" -ForegroundColor Green
     Write-Host ""
 
+    $ComposeFile = Join-Path $PWD "docker-compose.redis.yml"
     $DataDir = Join-Path $PWD "data\postgresql"
+    $RedisDataDir = Join-Path $PWD "data\redis"
     $UploadsDir = Join-Path $PWD "uploads"
     $LogsDir = Join-Path $PWD "logs"
 
     if (-not (Test-Path $DataDir)) { New-Item -ItemType Directory -Path $DataDir -Force | Out-Null }
+    if (-not (Test-Path $RedisDataDir)) { New-Item -ItemType Directory -Path $RedisDataDir -Force | Out-Null }
     if (-not (Test-Path $UploadsDir)) { New-Item -ItemType Directory -Path $UploadsDir -Force | Out-Null }
     if (-not (Test-Path $LogsDir)) { New-Item -ItemType Directory -Path $LogsDir -Force | Out-Null }
 
@@ -140,21 +177,11 @@ function Run-Container {
         exit 1
     }
 
-    docker run -d `
-        --name $ContainerName `
-        -p 443:3443 `
-        -p 3443:3443 `
-        -p 5433:5432 `
-        --env-file "$EnvFile" `
-        -e CACHE_REDIS_URL=redis://127.0.0.1:6379 `
-        -e DISABLE_INTERNAL_REDIS=false `
-        -v "${DataDir}:/var/lib/postgresql/18/main" `
-        -v "${UploadsDir}:/app/uploads" `
-        -v "${LogsDir}:/app/logs" `
-        --restart unless-stopped `
-        "${ImageName}:${Tag}"
+    docker compose -f "$ComposeFile" down >$null 2>&1
+    docker compose -f "$ComposeFile" up -d
 
     if ($LASTEXITCODE -eq 0) {
+        Sync-PostgresRolePassword
         Invoke-ContainerMigration
 
         Write-Host ""
@@ -162,7 +189,9 @@ function Run-Container {
         Write-Host ""
         Write-Host "============================================" -ForegroundColor Cyan
         Write-Host "  Application URLs: https://localhost and https://localhost:3443" -ForegroundColor White
-        Write-Host "  Database: ./data/postgresql (persistent local directory)" -ForegroundColor White
+        Write-Host "  PostgreSQL:      localhost:5433 -> compose service postgres" -ForegroundColor White
+        Write-Host "  Redis:           localhost:6379 -> compose service redis" -ForegroundColor White
+        Write-Host "  Database data:   ./data/postgresql" -ForegroundColor White
         Write-Host "  Config source:  .env.docker" -ForegroundColor White
         Write-Host "  Admin bootstrap credentials: configured via DEFAULT_ADMIN_* in .env.docker" -ForegroundColor White
         Write-Host "============================================" -ForegroundColor Cyan
@@ -180,10 +209,10 @@ function Run-Container {
 }
 
 function Stop-Container {
-    Write-Host "Stopping container: $ContainerName" -ForegroundColor Yellow
-    docker stop $ContainerName 2>$null
-    docker rm $ContainerName 2>$null
-    Write-Host "Container stopped." -ForegroundColor Green
+    $ComposeFile = Join-Path $PWD "docker-compose.redis.yml"
+    Write-Host "Stopping compose stack..." -ForegroundColor Yellow
+    docker compose -f "$ComposeFile" down 2>$null
+    Write-Host "Stack stopped." -ForegroundColor Green
 }
 
 function Show-Logs {
@@ -202,8 +231,8 @@ function Open-Shell {
 function Clean-All {
     Write-Host "Cleaning up Docker resources..." -ForegroundColor Yellow
 
-    docker stop $ContainerName 2>$null
-    docker rm $ContainerName 2>$null
+    $ComposeFile = Join-Path $PWD "docker-compose.redis.yml"
+    docker compose -f "$ComposeFile" down 2>$null
     docker rmi "${ImageName}:${Tag}" 2>$null
 
     Write-Host "Cleanup complete." -ForegroundColor Green

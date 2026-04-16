@@ -4,8 +4,8 @@
 
 This Docker setup starts the application stack with:
 
-- PostgreSQL 18
-- Redis
+- dedicated PostgreSQL 18 container
+- dedicated Redis container
 - Node.js 20
 - Google Chrome for PDF generation
 - Tesseract OCR, Poppler, PaddleOCR fallback
@@ -29,6 +29,10 @@ Important:
 - `docker-compose.redis.yml` loads `/.env.docker`
 - the React frontend reads public variables at image build time
 - changing a frontend public variable requires rebuilding the image
+- helper scripts also resynchronize the PostgreSQL role password against `POSTGRES_PASSWORD` when reusing an existing Docker data volume created by the previous all-in-one container layout
+- the application image now uses a multi-stage Docker build:
+  - builder stage: `npm ci`, frontend build, `npm prune --omit=dev`
+  - runtime stage: system runtime packages + pruned `node_modules` + built `client/dist`
 
 ## Required File
 
@@ -264,8 +268,7 @@ docker exec -it resumeconverter-app tail -100 /var/log/supervisor/proxy-server.e
 ### Database issues
 
 ```bash
-docker exec -it resumeconverter-app /bin/bash
-psql -U resumeconverter -d resumeconverter
+docker exec -it resumeconverter-postgres psql -U resumeconverter -d resumeconverter
 ```
 
 ### PDF generation issues

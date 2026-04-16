@@ -30,6 +30,8 @@ docker stop resumeconverter-app 2>nul
 docker rm resumeconverter-app 2>nul
 docker stop resumeconverter-redis 2>nul
 docker rm resumeconverter-redis 2>nul
+docker stop resumeconverter-postgres 2>nul
+docker rm resumeconverter-postgres 2>nul
 
 if not exist "%cd%\data\postgresql" mkdir "%cd%\data\postgresql"
 if not exist "%cd%\data\redis" mkdir "%cd%\data\redis"
@@ -43,6 +45,11 @@ if not exist "%cd%\.env.docker" (
     exit /b 1
 )
 
+set "POSTGRES_USER="
+set "POSTGRES_PASSWORD="
+for /f "tokens=1,* delims==" %%A in ('findstr /b "POSTGRES_USER=" "%cd%\.env.docker"') do set "POSTGRES_USER=%%B"
+for /f "tokens=1,* delims==" %%A in ('findstr /b "POSTGRES_PASSWORD=" "%cd%\.env.docker"') do set "POSTGRES_PASSWORD=%%B"
+
 docker compose -f "%cd%\docker-compose.redis.yml" up -d
 
 if not %ERRORLEVEL% EQU 0 (
@@ -52,6 +59,32 @@ if not %ERRORLEVEL% EQU 0 (
     pause
     exit /b 1
 )
+
+echo.
+echo Synchronizing PostgreSQL role password inside Docker container...
+set "PG_SYNC_OK="
+for /L %%i in (1,1,24) do (
+    for /f "usebackq delims=" %%s in (`docker inspect -f "{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}" resumeconverter-postgres 2^>nul`) do set "POSTGRES_STATE=%%s"
+    if /I "!POSTGRES_STATE!"=="healthy" (
+        docker exec -u postgres resumeconverter-postgres psql -d postgres -v ON_ERROR_STOP=1 -c "ALTER ROLE !POSTGRES_USER! WITH LOGIN SUPERUSER PASSWORD '!POSTGRES_PASSWORD!';"
+        if !ERRORLEVEL! EQU 0 (
+            set "PG_SYNC_OK=1"
+            goto :postgres_sync_done
+        )
+        echo PostgreSQL role sync attempt %%i failed, retrying...
+    )
+    timeout /t 5 /nobreak >nul
+)
+
+:postgres_sync_done
+if not defined PG_SYNC_OK (
+    echo.
+    echo Failed to synchronize PostgreSQL role password after container startup!
+    pause
+    exit /b 1
+)
+
+echo PostgreSQL role password synchronized.
 
 echo.
 echo Running database migration inside Docker container...

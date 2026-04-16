@@ -1,4 +1,22 @@
 services:
+  postgres:
+    image: postgres:18
+    container_name: resumeconverter-postgres
+    restart: unless-stopped
+    env_file:
+      - ./.env.docker
+    environment:
+      PGDATA: /var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./data/postgresql:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
   redis:
     image: redis:7-alpine
     container_name: resumeconverter-redis
@@ -14,18 +32,21 @@ services:
     container_name: resumeconverter-app
     restart: unless-stopped
     depends_on:
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
     env_file:
       - ./.env.docker
     ports:
       - "443:3443"
       - "3443:3443"
-      - "5433:5432"
     volumes:
-      - ./data/postgresql:/var/lib/postgresql/18/main
       - ./uploads:/app/uploads
       - ./logs:/app/logs
     environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
       CACHE_BACKEND: redis
       CACHE_REDIS_URL: redis://redis:6379
       CACHE_KEY_PREFIX: resumeconverter

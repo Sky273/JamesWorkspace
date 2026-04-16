@@ -31,6 +31,39 @@ run_container_migration() {
     exit 1
 }
 
+sync_postgres_role_password() {
+    local postgres_user postgres_password
+    postgres_user="$(grep -E '^POSTGRES_USER=' "$(pwd)/.env.docker" | sed 's/^POSTGRES_USER=//')"
+    postgres_password="$(grep -E '^POSTGRES_PASSWORD=' "$(pwd)/.env.docker" | sed 's/^POSTGRES_PASSWORD=//')"
+
+    if [ -z "$postgres_user" ] || [ -z "$postgres_password" ]; then
+        echo "POSTGRES_USER or POSTGRES_PASSWORD missing from .env.docker."
+        exit 1
+    fi
+
+    echo ""
+    echo "Synchronizing PostgreSQL role password inside Docker container..."
+
+    for attempt in $(seq 1 24); do
+        postgres_state="$(docker inspect -f "{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}" resumeconverter-postgres 2>/dev/null || true)"
+        if [ "$postgres_state" != "healthy" ]; then
+            sleep 5
+            continue
+        fi
+
+        if docker exec -u postgres resumeconverter-postgres psql -d postgres -v ON_ERROR_STOP=1 -c "ALTER ROLE $postgres_user WITH LOGIN SUPERUSER PASSWORD '$postgres_password';"; then
+            echo "PostgreSQL role password synchronized."
+            return 0
+        fi
+
+        echo "PostgreSQL role sync attempt $attempt failed, retrying..."
+        sleep 5
+    done
+
+    echo "Failed to synchronize PostgreSQL role password after container startup."
+    exit 1
+}
+
 show_help() {
     echo ""
     echo "ResumeConverter Docker Management Script"
@@ -92,12 +125,6 @@ build_image() {
 }
 
 run_container() {
-    if docker ps -aq -f name=$CONTAINER_NAME | grep -q .; then
-        echo "Stopping existing container..."
-        docker stop $CONTAINER_NAME 2>/dev/null
-        docker rm $CONTAINER_NAME 2>/dev/null
-    fi
-
     if ! docker images -q "${IMAGE_NAME}:${TAG}" | grep -q .; then
         echo "Image not found, building..."
         build_image
@@ -107,7 +134,11 @@ run_container() {
     echo "Starting container: $CONTAINER_NAME"
     echo ""
 
+    local compose_file
+    compose_file="$(pwd)/docker-compose.redis.yml"
+
     mkdir -p "$(pwd)/data/postgresql"
+    mkdir -p "$(pwd)/data/redis"
     mkdir -p "$(pwd)/uploads"
     mkdir -p "$(pwd)/logs"
 
@@ -118,20 +149,11 @@ run_container() {
         exit 1
     fi
 
-    docker run -d \
-        --name $CONTAINER_NAME \
-        -p 443:3443 \
-        -p 3443:3443 \
-        --env-file "$(pwd)/.env.docker" \
-        -e CACHE_REDIS_URL="redis://127.0.0.1:6379" \
-        -e DISABLE_INTERNAL_REDIS="false" \
-        -v "$(pwd)/data/postgresql:/var/lib/postgresql/18/main" \
-        -v "$(pwd)/uploads:/app/uploads" \
-        -v "$(pwd)/logs:/app/logs" \
-        --restart unless-stopped \
-        "${IMAGE_NAME}:${TAG}"
+    docker compose -f "$compose_file" down >/dev/null 2>&1 || true
+    docker compose -f "$compose_file" up -d
 
     if [ $? -eq 0 ]; then
+        sync_postgres_role_password
         run_container_migration
 
         echo ""
@@ -139,7 +161,9 @@ run_container() {
         echo ""
         echo "============================================"
         echo "  Application URLs: https://localhost and https://localhost:3443"
-        echo "  Database: ./data/postgresql (persistent local directory)"
+        echo "  PostgreSQL:      localhost:5433 -> compose service postgres"
+        echo "  Redis:           localhost:6379 -> compose service redis"
+        echo "  Database data:   ./data/postgresql"
         echo "  Config source:  .env.docker"
         echo "  Admin bootstrap credentials: configured via DEFAULT_ADMIN_* in .env.docker"
         echo "============================================"
@@ -157,10 +181,9 @@ run_container() {
 }
 
 stop_container() {
-    echo "Stopping container: $CONTAINER_NAME"
-    docker stop $CONTAINER_NAME 2>/dev/null
-    docker rm $CONTAINER_NAME 2>/dev/null
-    echo "Container stopped."
+    echo "Stopping compose stack..."
+    docker compose -f "$(pwd)/docker-compose.redis.yml" down 2>/dev/null || true
+    echo "Stack stopped."
 }
 
 show_logs() {
@@ -185,8 +208,7 @@ open_shell() {
 
 clean_all() {
     echo "Cleaning up Docker resources..."
-    docker stop $CONTAINER_NAME 2>/dev/null
-    docker rm $CONTAINER_NAME 2>/dev/null
+    docker compose -f "$(pwd)/docker-compose.redis.yml" down 2>/dev/null || true
     docker rmi "${IMAGE_NAME}:${TAG}" 2>/dev/null
     echo "Cleanup complete."
 }

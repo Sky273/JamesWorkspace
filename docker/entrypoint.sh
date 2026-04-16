@@ -1,7 +1,7 @@
 #!/bin/bash
 # =============================================================================
 # ResumeConverter - Container Entrypoint Script
-# Starts PostgreSQL, initializes database, then starts all Node.js servers
+# Waits for external PostgreSQL, initializes schema, then starts Node.js servers
 # =============================================================================
 
 set -e
@@ -10,41 +10,15 @@ echo "=============================================="
 echo "  ResumeConverter - Starting Container"
 echo "=============================================="
 
-cleanup_stale_postgres_state() {
-    local pid_file="$PGDATA/postmaster.pid"
-
-    if [ ! -f "$pid_file" ]; then
-        return
-    fi
-
-    if [ ! -s "$pid_file" ]; then
-        echo "Removing empty PostgreSQL PID file left by a previous failed start..."
-        rm -f "$pid_file"
-        return
-    fi
-
-    local postgres_pid
-    postgres_pid="$(head -n 1 "$pid_file" 2>/dev/null | tr -d '[:space:]')"
-
-    if [ -z "$postgres_pid" ] || ! kill -0 "$postgres_pid" 2>/dev/null; then
-        echo "Removing stale PostgreSQL PID file for non-running process: ${postgres_pid:-unknown}"
-        rm -f "$pid_file"
-    fi
-}
-
 prepare_log_paths() {
     mkdir -p /var/log/supervisor
-    mkdir -p /var/log/postgresql
     mkdir -p /app/logs
 
     touch /var/log/supervisor/supervisord.log
-    touch /var/log/supervisor/redis.out.log
-    touch /var/log/supervisor/redis.err.log
     touch /var/log/supervisor/proxy-server.out.log
     touch /var/log/supervisor/proxy-server.err.log
     touch /var/log/supervisor/pdf-server.out.log
     touch /var/log/supervisor/pdf-server.err.log
-    touch /var/log/postgresql/postgresql-18-main.log
 }
 
 prepare_log_paths
@@ -106,10 +80,12 @@ print_runtime_configuration_summary() {
     effective_batch_size="$(resolve_positive_int_with_cap "${BATCH_EXPORT_BATCH_SIZE:-}" 100 100)"
 
     echo "Runtime configuration summary:"
+    echo "  - PostgreSQL host:     ${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}"
     echo "  - PostgreSQL database: ${POSTGRES_DB:-resumeconverter}"
     echo "  - PostgreSQL user:     ${POSTGRES_USER:-postgres}"
-    echo "  - Batch max ops:      ${effective_batch_max}"
-    echo "  - Batch batch size:   ${effective_batch_size}"
+    echo "  - Redis cache:         ${CACHE_REDIS_URL:-redis://redis:6379}"
+    echo "  - Batch max ops:       ${effective_batch_max}"
+    echo "  - Batch batch size:    ${effective_batch_size}"
 
     if [ -z "${JWT_SECRET:-}" ] || [ "${#JWT_SECRET}" -lt 32 ]; then
         echo "WARN: JWT_SECRET is missing or shorter than 32 characters."
@@ -120,15 +96,31 @@ print_runtime_configuration_summary() {
     fi
 }
 
+wait_for_postgres() {
+    local host="${POSTGRES_HOST:-postgres}"
+    local port="${POSTGRES_PORT:-5432}"
+    local user="${POSTGRES_USER:-resumeconverter}"
+
+    until pg_isready -h "$host" -p "$port" -U "$user" >/dev/null 2>&1; do
+        echo "Waiting for PostgreSQL at ${host}:${port}..."
+        sleep 2
+    done
+
+    echo "PostgreSQL is ready!"
+}
+
 verify_database_bootstrap_state() {
     local default_admin_email escaped_admin_email schema_migrations_exists users_exists default_admin_exists
+    local host="${POSTGRES_HOST:-postgres}"
+    local port="${POSTGRES_PORT:-5432}"
+
     default_admin_email="${DEFAULT_ADMIN_EMAIL:-admin@resumeconverter.local}"
     escaped_admin_email="${default_admin_email//\'/\'\'}"
-    schema_migrations_exists="$(PGPASSWORD="$POSTGRES_PASSWORD" psql -h 127.0.0.1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAqc \
+    schema_migrations_exists="$(PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$host" -p "$port" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAqc \
         "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'schema_migrations')::int;" | tr -d '[:space:]')"
-    users_exists="$(PGPASSWORD="$POSTGRES_PASSWORD" psql -h 127.0.0.1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAqc \
+    users_exists="$(PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$host" -p "$port" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAqc \
         "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users')::int;" | tr -d '[:space:]')"
-    default_admin_exists="$(PGPASSWORD="$POSTGRES_PASSWORD" psql -h 127.0.0.1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAqc \
+    default_admin_exists="$(PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$host" -p "$port" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAqc \
         "SELECT EXISTS (SELECT 1 FROM users WHERE LOWER(email) = LOWER('${escaped_admin_email}'))::int;" | tr -d '[:space:]')"
 
     if [ "$schema_migrations_exists" != "1" ] || [ "$users_exists" != "1" ] || [ "$default_admin_exists" != "1" ]; then
@@ -144,7 +136,7 @@ print_runtime_configuration_summary
 # =============================================================================
 # Generate SSL Certificates (if not mounted)
 # =============================================================================
-echo "[1/5] Checking SSL certificates..."
+echo "[1/4] Checking SSL certificates..."
 
 CERT_DIR="/app/certificates"
 CERT_FILE="$CERT_DIR/certificate.crt"
@@ -162,63 +154,15 @@ else
 fi
 
 # =============================================================================
-# Start PostgreSQL
+# Wait for external PostgreSQL
 # =============================================================================
-echo "[2/5] Starting PostgreSQL..."
-
-# PostgreSQL data directory
-PGDATA="/var/lib/postgresql/18/main"
-
-cleanup_stale_postgres_state
-
-# Check if data directory is empty or not a valid cluster (first run with mounted volume)
-if [ ! -f "$PGDATA/PG_VERSION" ]; then
-    echo "Initializing PostgreSQL cluster in mounted volume..."
-    
-    # Ensure directory exists and has correct permissions
-    mkdir -p "$PGDATA"
-    chown postgres:postgres "$PGDATA"
-    chmod 700 "$PGDATA"
-    
-    # Initialize the cluster as postgres user
-    su - postgres -c "/usr/lib/postgresql/18/bin/initdb -D $PGDATA --encoding=UTF8 --locale=C"
-    
-    # Configure PostgreSQL for connections
-    echo "host all all 127.0.0.1/32 md5" >> "$PGDATA/pg_hba.conf"
-    echo "host all all 0.0.0.0/0 md5" >> "$PGDATA/pg_hba.conf"
-    echo "listen_addresses='*'" >> "$PGDATA/postgresql.conf"
-    
-    # Start PostgreSQL
-    su - postgres -c "/usr/lib/postgresql/18/bin/pg_ctl start -D $PGDATA -l /var/log/postgresql/postgresql-18-main.log -w"
-    
-    # Create user and database
-    echo "Creating database user and database..."
-    su - postgres -c "psql -c \"CREATE USER $POSTGRES_USER WITH SUPERUSER PASSWORD '$POSTGRES_PASSWORD';\""
-    su - postgres -c "createdb -O $POSTGRES_USER $POSTGRES_DB"
-    
-    echo "PostgreSQL cluster initialized!"
-else
-    # Fix permissions for mounted data directory (required when mounting from host)
-    chown -R postgres:postgres "$PGDATA"
-    chmod 700 "$PGDATA"
-
-    cleanup_stale_postgres_state
-    
-    # Start PostgreSQL using pg_ctl directly (more reliable with mounted volumes)
-    su - postgres -c "/usr/lib/postgresql/18/bin/pg_ctl start -D $PGDATA -l /var/log/postgresql/postgresql-18-main.log -w"
-fi
-
-# Wait for PostgreSQL to be ready
-until pg_isready -h 127.0.0.1 -p 5432 -U resumeconverter; do
-    echo "Waiting for PostgreSQL to start..."
-    sleep 2
-done
-echo "PostgreSQL is ready!"
+echo "[2/4] Waiting for PostgreSQL..."
+wait_for_postgres
 
 # =============================================================================
 # Normalize runtime secrets before spawning Supervisor-managed services
 # =============================================================================
-echo "[3/5] Preparing shared internal service secrets..."
+echo "[3/4] Preparing shared internal service secrets..."
 
 ensure_runtime_secret "JWT_SECRET"
 ensure_runtime_secret "CSRF_SECRET"
@@ -240,7 +184,7 @@ fi
 # =============================================================================
 # Initialize / migrate database schema outside the web runtime
 # =============================================================================
-echo "[4/5] Running docker-migrate..."
+echo "[4/4] Running docker-migrate..."
 node server/scripts/docker-migrate.js
 node server/scripts/ensure-default-admin.js
 verify_database_bootstrap_state
@@ -248,35 +192,17 @@ verify_database_bootstrap_state
 # =============================================================================
 # Start all services via Supervisor
 # =============================================================================
-echo "[5/5] Starting application servers..."
-
-SUPERVISOR_CONF="/etc/supervisor/conf.d/supervisord.conf"
-if [ "$DISABLE_INTERNAL_REDIS" = "true" ]; then
-    echo "Internal Redis disabled; using external/shared Redis backend."
-    awk '
-        BEGIN { skip = 0 }
-        /^\[program:redis\]/ { skip = 1; next }
-        skip && /^\[program:/ { skip = 0 }
-        !skip { print }
-    ' "$SUPERVISOR_CONF" > /tmp/supervisord-runtime.conf
-    SUPERVISOR_CONF="/tmp/supervisord-runtime.conf"
-fi
-
+echo "Starting application servers..."
 echo ""
 echo "=============================================="
 echo "  Services:"
-if [ "$DISABLE_INTERNAL_REDIS" = "true" ]; then
-    echo "  - Redis Cache:   $CACHE_REDIS_URL (external)"
-else
-    echo "  - Redis Cache:   redis://127.0.0.1:6379 (internal)"
-fi
+echo "  - PostgreSQL:    ${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432} (external container)"
+echo "  - Redis Cache:   ${CACHE_REDIS_URL:-redis://redis:6379} (external container)"
 echo "  - Proxy Server:  https://localhost:3443"
 echo "  - PDF Server:    http://localhost:3002 (internal)"
-echo "  - PostgreSQL:    localhost:5432 (internal)"
 echo "=============================================="
 echo ""
 echo "Admin bootstrap credentials: configured via DEFAULT_ADMIN_*"
 echo ""
 
-# Start supervisor (manages all Node.js processes)
-exec /usr/bin/supervisord -c "$SUPERVISOR_CONF"
+exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
