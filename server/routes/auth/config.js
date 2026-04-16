@@ -50,6 +50,10 @@ function logInsecureCookieFallback(req, cookieName) {
         return;
     }
 
+    if (process.env.E2E_QUIET_EXPECTED_WARNINGS === 'true') {
+        return;
+    }
+
     safeLog('warn', 'Auth cookie emitted without Secure attribute', {
         cookieName,
         path: req?.path,

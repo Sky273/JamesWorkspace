@@ -19,7 +19,8 @@ vi.mock('../../config/constants.js', () => ({
     MAX_PROMPT_LENGTH: 1000,
     MINIMAX_API_KEY: 'test-minimax-key',
     MINIMAX_ANTHROPIC_BASE_URL: 'https://api.minimax.io/anthropic',
-    MINIMAX_OPENAI_BASE_URL: 'https://api.minimax.io/v1'
+    MINIMAX_OPENAI_BASE_URL: 'https://api.minimax.io/v1',
+    LLM_OPERATION_TIMEOUT_MS: 15 * 60 * 1000
 }));
 
 vi.mock('../../services/metrics.service.js', () => ({

@@ -222,17 +222,17 @@ describe('Auth Middleware', () => {
   });
 
   describe('authenticateToken - branch coverage', () => {
-    it('should return 403 for token with missing id or email', async () => {
-      // Token with id but no email
+    it('should return 401 for token without a resolvable current user', async () => {
       const user = { id: 'user-123', email: '', name: 'Test', status: 'Active', role: 'user' };
       const token = generateAccessToken(user);
       mockReq.cookies.accessToken = token;
 
       await authenticateToken(mockReq, mockRes, nextFn);
 
-      expect(mockRes.status).toHaveBeenCalledWith(403);
+      expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-        error: 'Invalid token payload'
+        error: 'Invalid or expired token',
+        code: 'TOKEN_INVALID'
       }));
       expect(nextFn).not.toHaveBeenCalled();
     });

@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('axios');
 vi.mock('../../config/constants.js', () => ({
-    ANTHROPIC_API_KEY: 'anthropic-test-key'
+    ANTHROPIC_API_KEY: 'anthropic-test-key',
+    LLM_OPERATION_TIMEOUT_MS: 15 * 60 * 1000
 }));
 vi.mock('../../services/metrics.service.js', () => ({
     buildLLMMetricLabel: vi.fn((provider, model) => `${provider}:${model}`),

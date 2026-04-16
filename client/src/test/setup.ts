@@ -2,6 +2,8 @@ import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
 const GLIB_GIO_WARNING_PATTERN = /GLib-GIO-WARNING|Failed to open application manifest .*Microsoft\.Limitless/i;
+const HAPPY_DOM_ABORT_NOISE_PATTERN = /DOMException \[(AbortError|NetworkError)\]|happy-dom\/lib\/fetch\/Fetch\.js|happy-dom\/lib\/browser\/utilities\/BrowserFrameFactory\.js|Failed to execute "fetch\(\)" on "Window" with URL "http:\/\/localhost:3000\/api\/resumes\/.*\/preview"/i;
+const PUNYCODE_DEPRECATION_PATTERN = /\[DEP0040\]|The `punycode` module is deprecated/i;
 const stderrPatchFlag = Symbol.for('resumeconverter.vitest.stderrPatched');
 
 if (!(process as typeof process & { [key: symbol]: boolean })[stderrPatchFlag]) {
@@ -10,7 +12,11 @@ if (!(process as typeof process & { [key: symbol]: boolean })[stderrPatchFlag]) 
 
   process.stderr.write = ((chunk: unknown, encoding?: BufferEncoding | ((error?: Error | null) => void), callback?: (error?: Error | null) => void) => {
     const text = typeof chunk === 'string' ? chunk : Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk ?? '');
-    if (GLIB_GIO_WARNING_PATTERN.test(text)) {
+    if (
+      GLIB_GIO_WARNING_PATTERN.test(text)
+      || HAPPY_DOM_ABORT_NOISE_PATTERN.test(text)
+      || PUNYCODE_DEPRECATION_PATTERN.test(text)
+    ) {
       if (typeof encoding === 'function') {
         encoding();
       } else if (typeof callback === 'function') {
@@ -67,6 +73,17 @@ Object.defineProperty(HTMLAnchorElement.prototype, 'click', {
   configurable: true,
   writable: true,
   value: vi.fn(),
+});
+
+// Prevent happy-dom iframe navigation from issuing real fetches during tests.
+Object.defineProperty(HTMLIFrameElement.prototype, 'src', {
+  configurable: true,
+  get() {
+    return this.getAttribute('src') ?? '';
+  },
+  set(value: string) {
+    this.setAttribute('src', value);
+  },
 });
 
 // Mock localStorage

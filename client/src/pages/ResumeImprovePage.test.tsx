@@ -250,12 +250,14 @@ describe('ResumeImprovePage', () => {
       id: 'resume-1',
       Name: 'Ada Lovelace',
       'Improved Text': 'Contenu amélioré',
+      improvedText: 'Contenu amélioré',
       'Improved Key Improvements': 'Point 1',
       improvedSkillsEvidence: [{ name: 'Java', evidenceScore: 0.91 }],
       improvedToolsEvidence: [{ tool: 'Docker', evidence_score: 0.83 }],
     };
     resumeContextState.currentResume = improvedResume;
     resumeContextState.resumes = [improvedResume];
+    mockGetResume.mockResolvedValue(improvedResume);
 
     render(<ResumeImprovePage />);
 
@@ -283,9 +285,11 @@ describe('ResumeImprovePage', () => {
       id: 'resume-1',
       Name: 'Ada Lovelace',
       'Improved Text': 'Contenu amÃ©liorÃ©',
+      improvedText: 'Contenu amÃ©liorÃ©',
     };
     resumeContextState.currentResume = improvedResume;
     resumeContextState.resumes = [improvedResume];
+    mockGetResume.mockResolvedValue(improvedResume);
 
     render(<ResumeImprovePage />);
 
@@ -301,9 +305,11 @@ describe('ResumeImprovePage', () => {
       id: 'resume-1',
       Name: 'Ada Lovelace',
       'Improved Text': '<p>Contenu sauvegarde</p>',
+      improvedText: '<p>Contenu sauvegarde</p>',
     };
     resumeContextState.currentResume = improvedResume;
     resumeContextState.resumes = [improvedResume];
+    mockGetResume.mockResolvedValue(improvedResume);
     resumeContextState.updateImprovedContent.mockResolvedValueOnce({ success: true, currentVersion: 6 });
 
     render(<ResumeImprovePage />);

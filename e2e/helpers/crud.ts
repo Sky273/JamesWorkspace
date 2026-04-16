@@ -1,7 +1,7 @@
 import path from 'path';
 import { expect, type Page } from '@playwright/test';
 import { ensureLongResumeFixture } from './docx';
-import { getCsrfToken, getJsonViaApi, postJsonViaApi } from './ui';
+import { getCsrfToken, getJsonViaApi, postJsonViaApi, putJsonViaApi } from './ui';
 
 const FALLBACK_DOCX_FIXTURE = path.resolve('node_modules/mammoth/test/test-data/tables.docx');
 
@@ -78,7 +78,7 @@ export async function uploadResumeAndWaitForAnalysis(
   page: Page,
   candidateName: string,
 ): Promise<{ resumeId: string; candidateName: string; displayName: string }> {
-  const docxFixture = await ensureLongResumeFixture().catch(() => FALLBACK_DOCX_FIXTURE);
+  const docxFixture = await ensureLongResumeFixture(candidateName).catch(() => FALLBACK_DOCX_FIXTURE);
 
   await page.goto('/upload');
   await page.getByRole('button', { name: /employee|collaborateur/i }).click();
@@ -100,12 +100,11 @@ export async function uploadResumeAndWaitForAnalysis(
   expect(match?.[1]).toBeTruthy();
 
   const resumeId = match![1];
+  await putJsonViaApi(page, `/api/resumes/${resumeId}`, { Name: candidateName });
   const resume = await getJsonViaApi<Record<string, unknown>>(page, `/api/resumes/${resumeId}?refresh=1`);
   const displayName = typeof resume?.Name === 'string' && resume.Name.trim()
     ? resume.Name.trim()
-    : typeof resume?.['File Name'] === 'string' && resume['File Name'].trim()
-      ? resume['File Name'].trim()
-      : candidateName;
+    : candidateName;
 
   return {
     resumeId,

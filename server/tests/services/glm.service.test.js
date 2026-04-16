@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../../config/constants.js', () => ({
     GLM_API_KEY: 'test-key',
     GLM_BASE_URL: 'https://api.z.ai/api/paas/v4',
-    MAX_PROMPT_LENGTH: 100000
+    MAX_PROMPT_LENGTH: 100000,
+    LLM_OPERATION_TIMEOUT_MS: 15 * 60 * 1000
 }));
 
 const mockPost = vi.fn();

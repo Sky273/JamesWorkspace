@@ -4,6 +4,17 @@ import JSZip from 'jszip';
 
 const LONG_RESUME_FIXTURE_NAME = 'long-resume-e2e.docx';
 
+function toFixtureSlug(value: string): string {
+  const normalized = value
+    .normalize('NFKD')
+    .replace(/[^\x00-\x7F]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return normalized || 'resume';
+}
+
 function createDocumentXml(paragraphs: string[]): string {
   const xmlParagraphs = paragraphs.map((paragraph) => (
     `<w:p><w:r><w:t xml:space="preserve">${paragraph}</w:t></w:r></w:p>`
@@ -39,9 +50,12 @@ function createDocumentXml(paragraphs: string[]): string {
 </w:document>`;
 }
 
-export async function ensureLongResumeFixture(): Promise<string> {
+export async function ensureLongResumeFixture(candidateName = 'Jean E2E Durand'): Promise<string> {
   const fixtureDir = path.resolve('e2e', 'fixtures');
-  const fixturePath = path.join(fixtureDir, LONG_RESUME_FIXTURE_NAME);
+  const fixtureFileName = candidateName === 'Jean E2E Durand'
+    ? LONG_RESUME_FIXTURE_NAME
+    : `long-resume-${toFixtureSlug(candidateName).slice(0, 60)}.docx`;
+  const fixturePath = path.join(fixtureDir, fixtureFileName);
 
   try {
     await fs.access(fixturePath);
@@ -51,7 +65,7 @@ export async function ensureLongResumeFixture(): Promise<string> {
   }
 
   const paragraphs = [
-    'Jean E2E Durand',
+    candidateName,
     'Consultant data senior specialise dans la transformation analytique, la structuration de portefeuilles projets et la coordination de parties prenantes metier et techniques.',
     'Experience recente: pilotage d un programme data RH, mise en place d indicateurs de performance, animation d ateliers de cadrage, production de supports executifs et accompagnement du changement.',
     'Competences: SQL, Python, Power BI, gouvernance de donnees, cartographie de processus, definition de KPI, priorisation de backlog, communication ecrite et orale en contexte client.',

@@ -1,0 +1,2 @@
+import{H as e}from"./vendor-markdown-DGpJprFw.js";import{t}from"./vendor-ui-D4xnb2cr.js";var n=e(),r=`lux-card rounded-[1.75rem] border transition-all duration-200`;function i({children:e,className:i=``,contentClassName:a,hoverClassName:o=`hover:shadow-lg`,index:s=0}){return(0,n.jsx)(t.div,{initial:{opacity:0,y:20},animate:{opacity:1,y:0},transition:{delay:s*.05},className:[r,o,i].filter(Boolean).join(` `),children:a?(0,n.jsx)(`div`,{className:a,children:e}):e})}export{i as t};
+//# sourceMappingURL=AnimatedCard-Bu1uWnlf.js.map

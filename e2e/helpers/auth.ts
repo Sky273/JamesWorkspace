@@ -18,6 +18,9 @@ const DEFAULT_APP_ADMIN_FIRM_NAME = 'Default Firm';
 const E2E_TEMPLATE_NAME = '000 Playwright Export Template';
 const E2E_TEMPLATE_CONTENT = '<section><h1>-name-</h1><h2>-title-</h2><div>-content-</div></section>';
 const E2E_TEMPLATE_STYLESHEET = 'body { font-family: Arial, sans-serif; } h1 { font-size: 20px; } h2 { font-size: 14px; color: #555; }';
+const E2E_MIN_FIRM_CREDITS = 5000;
+const CACHE_INVALIDATION_CHANNEL = 'cache_invalidations';
+const SETTINGS_CACHE_SCOPES = ['settings:ui', 'settings:llm'] as const;
 const JWT_SECRET = process.env.JWT_SECRET || 'playwright-jwt-secret-minimum-32-characters';
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'playwright-refresh-token-secret-minimum-32-chars';
 const JWT_EXPIRES_IN = '1h';
@@ -107,6 +110,37 @@ function createPool(): pg.Pool {
   });
 }
 
+async function invalidateSettingsCachesForE2E(pool: pg.Pool): Promise<void> {
+  for (const scope of SETTINGS_CACHE_SCOPES) {
+    const versionResult = await pool.query(
+      `
+        INSERT INTO public.cache_scope_versions (scope, version, updated_at)
+        VALUES ($1, 2, CURRENT_TIMESTAMP)
+        ON CONFLICT (scope) DO UPDATE
+        SET
+          version = public.cache_scope_versions.version + 1,
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING version
+      `,
+      [scope]
+    );
+
+    await pool.query(
+      'SELECT pg_notify($1, $2)',
+      [
+        CACHE_INVALIDATION_CHANNEL,
+        JSON.stringify({
+          scope,
+          version: Number(versionResult.rows[0]?.version ?? 1),
+          source: 'e2e.auth.helper',
+          reason: 'settings_mutation',
+          timestamp: new Date().toISOString(),
+        }),
+      ]
+    );
+  }
+}
+
 export async function setSelfServiceRegistrationAutoApproval(enabled: boolean): Promise<void> {
   const pool = createPool();
 
@@ -121,6 +155,8 @@ export async function setSelfServiceRegistrationAutoApproval(enabled: boolean): 
       `,
       [enabled]
     );
+
+    await invalidateSettingsCachesForE2E(pool);
   } finally {
     await pool.end();
   }
@@ -304,6 +340,18 @@ async function ensureActivePlaywrightUser(): Promise<void> {
           'SELECT name FROM firms WHERE id = $1 LIMIT 1',
           [firmId]
         );
+
+        await pool.query(
+          `
+            UPDATE firms
+            SET
+              credits = GREATEST(COALESCE(credits, 0), $1),
+              updated_at = CURRENT_TIMESTAMP
+            WHERE id = $2
+          `,
+          [E2E_MIN_FIRM_CREDITS, firmId]
+        );
+
         const userPasswordHash = await bcrypt.hash(E2E_USER_PASSWORD, 10);
         const adminPasswordHash = await bcrypt.hash(E2E_ADMIN_PASSWORD, 10);
 

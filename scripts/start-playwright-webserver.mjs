@@ -1,9 +1,11 @@
 import 'dotenv/config';
 import { spawn } from 'child_process';
+import { fileURLToPath } from 'url';
 
 const HEALTH_URL = process.env.PLAYWRIGHT_WEB_HEALTH_URL || 'http://localhost:3001/health';
 const HEALTH_TIMEOUT_MS = Number.parseInt(process.env.PLAYWRIGHT_WEB_HEALTH_TIMEOUT_MS || '110000', 10);
 const HEALTH_POLL_INTERVAL_MS = 1000;
+const CLIENT_DIR = fileURLToPath(new URL('../client', import.meta.url));
 
 let stackProcess = null;
 let shuttingDown = false;
@@ -12,6 +14,7 @@ process.env.JWT_SECRET = process.env.JWT_SECRET || 'playwright-jwt-secret-minimu
 process.env.CSRF_SECRET = process.env.CSRF_SECRET || 'playwright-csrf-secret-minimum-32chars';
 process.env.REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'playwright-refresh-token-secret-minimum-32-chars';
 process.env.PDF_SERVER_INTERNAL_TOKEN = process.env.PDF_SERVER_INTERNAL_TOKEN || 'playwright-pdf-server-internal-token-32chars';
+process.env.DEFAULT_ADMIN_PASSWORD = process.env.DEFAULT_ADMIN_PASSWORD || 'Playwright-admin-password-2026!';
 process.env.HTTPS_ENABLED = 'false';
 process.env.VITE_HTTPS_ENABLED = 'false';
 process.env.PROXY_PORT = process.env.PROXY_PORT || '3001';
@@ -30,10 +33,10 @@ process.env.CLOUDFLARE_TURNSTILE_SITE_KEY = '';
 process.env.TURNSTILE_SECRET_KEY = '';
 process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY = '';
 
-function spawnChecked(command, args, label) {
+function spawnChecked(command, args, label, cwd = process.cwd()) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
-      cwd: process.cwd(),
+      cwd,
       stdio: 'inherit',
       shell: false,
       env: process.env,
@@ -105,7 +108,12 @@ process.on('SIGBREAK', () => shutdown(0));
 process.on('disconnect', () => shutdown(0));
 
 try {
-  await spawnChecked('cmd.exe', ['/d', '/s', '/c', 'npm run build'], 'build');
+  await spawnChecked(
+    process.execPath,
+    ['../node_modules/vite/bin/vite.js', 'build'],
+    'build',
+    CLIENT_DIR
+  );
 
   stackProcess = spawn(process.execPath, ['scripts/start-e2e-stack.mjs'], {
     cwd: process.cwd(),

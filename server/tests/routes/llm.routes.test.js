@@ -25,7 +25,8 @@ vi.mock('../../config/constants.js', () => ({
     DEEPSEEK_API_KEY: 'test-deepseek-key',
     GLM_API_KEY: 'test-glm-key',
     MAX_PROMPT_LENGTH: 10000,
-    MINIMAX_API_KEY: 'test-minimax-key'
+    MINIMAX_API_KEY: 'test-minimax-key',
+    LLM_OPERATION_TIMEOUT_MS: 15 * 60 * 1000
 }));
 
 const mockAxiosPost = vi.fn();
@@ -66,6 +67,85 @@ vi.mock('../../services/llmAvailability.service.js', () => ({
         reason: null,
         originalModel: provider === 'ollama' ? (model ?? null) : (model || fallbackModel || null),
         fallbackModel: fallbackModel || null
+    }))
+}));
+vi.mock('../../services/llmConfiguration.service.js', () => ({
+    resolveCompatibleProviderRuntimeConfig: vi.fn(({ settings = {}, requestedModel, responseShape = 'openai' }) => ({
+        provider: settings.llmProvider || (responseShape === 'anthropic' ? 'anthropic' : 'openai'),
+        model: requestedModel || settings.llmModel || null
+    }))
+}));
+vi.mock('../../services/llmContent.service.js', () => ({
+    extractOpenAIResponsesText: vi.fn((output = []) => output
+        .flatMap((item) => item?.content || [])
+        .filter((item) => item?.type === 'output_text')
+        .map((item) => item.text)
+        .join('')),
+    flattenLlmTextContent: vi.fn((value) => typeof value === 'string' ? value : JSON.stringify(value)),
+    sanitizeOpenAICompatibleResponseBody: vi.fn((body) => ({
+        ...body,
+        choices: Array.isArray(body?.choices)
+            ? body.choices.map((choice) => ({
+                ...choice,
+                message: choice?.message
+                    ? {
+                        ...choice.message,
+                        content: String(choice.message.content || '').replace(/<think>[\s\S]*?<\/think>/gi, ''),
+                        reasoning_content: undefined
+                    }
+                    : choice?.message
+            }))
+            : body?.choices
+    }))
+}));
+vi.mock('../../services/llmProviderCommon.service.js', () => ({
+    normalizeAnthropicRequestBody: vi.fn((body = {}, model) => {
+        const messages = Array.isArray(body.messages) ? body.messages : [];
+        const system = messages
+            .filter((message) => message.role === 'system')
+            .flatMap((message) => typeof message.content === 'string'
+                ? [{ type: 'text', text: message.content }]
+                : message.content || []);
+
+        return {
+            ...body,
+            model,
+            messages: messages
+                .filter((message) => message.role !== 'system')
+                .map((message) => ({
+                    role: message.role,
+                    content: typeof message.content === 'string'
+                        ? [{ type: 'text', text: message.content }]
+                        : message.content
+                })),
+            ...(system.length > 0 ? { system } : {})
+        };
+    }),
+    toAnthropicCompatibleResponse: vi.fn((result, provider) => ({
+        id: result.id || 'msg-1',
+        type: 'message',
+        role: 'assistant',
+        model: result.actualModel || result.model,
+        provider,
+        content: typeof result.content === 'string'
+            ? [{ type: 'text', text: result.content }]
+            : (result.content || [{ type: 'text', text: result.choices?.[0]?.message?.content || '' }]),
+        usage: result.usage
+    })),
+    toOpenAICompatibleResponse: vi.fn((result, provider) => ({
+        id: result.id || 'chatcmpl-1',
+        object: 'chat.completion',
+        provider,
+        model: result.actualModel || result.model,
+        choices: result.choices || [{
+            index: 0,
+            message: {
+                role: 'assistant',
+                content: result.content?.[0]?.text || result.content || ''
+            },
+            finish_reason: 'stop'
+        }],
+        usage: result.usage
     }))
 }));
 

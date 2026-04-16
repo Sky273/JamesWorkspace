@@ -42,7 +42,9 @@ vi.mock('../../services/metrics.service.js', () => ({
 }));
 
 vi.mock('../../services/aiCredits.service.js', () => ({
-    runAiActionWithCredits: (_options, action) => action()
+    executeAiWorkflowWithCredits: (_options, action) => action({ workflowReservation: null }),
+    runAiActionWithCredits: (_options, action) => action({}),
+    workflowReservationCoversAction: vi.fn(() => false)
 }));
 
 import { aiModifyHandler } from '../../routes/resumes/aiModify.handler.js';

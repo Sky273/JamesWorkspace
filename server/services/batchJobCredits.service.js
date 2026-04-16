@@ -288,7 +288,7 @@ export async function getCancelledJobsNeedingCreditSettlement(limit = 10) {
            AND options IS NOT NULL
            AND options->'creditReservation' IS NOT NULL
            AND COALESCE(options->'creditReservation'->>'settledAt', '') = ''
-         ORDER BY updated_at ASC NULLS FIRST, created_at ASC
+         ORDER BY completed_at ASC NULLS FIRST, started_at ASC NULLS FIRST, created_at ASC
          LIMIT $1`,
         [limit]
     );

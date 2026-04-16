@@ -133,7 +133,7 @@ describe('ExtractTemplateModal', () => {
     fireEvent.click(screen.getByText('Extraire'));
 
     expect(await screen.findByText('Extraction terminee')).toBeInTheDocument();
-    expect(screen.getByText('preview-frame:Template CV')).toBeInTheDocument();
+    expect(await screen.findByText('preview-frame:Template CV')).toBeInTheDocument();
     expect(screen.getByText(/Confiance elevee 84%/)).toBeInTheDocument();
     expect(screen.getByText('Fragments detectes')).toBeInTheDocument();
     expect(screen.getByText('Blocs visuels')).toBeInTheDocument();

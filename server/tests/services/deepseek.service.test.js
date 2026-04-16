@@ -4,7 +4,8 @@ vi.mock('axios');
 vi.mock('../../config/constants.js', () => ({
     DEEPSEEK_API_KEY: 'deepseek-test-key',
     DEEPSEEK_BASE_URL: 'https://api.deepseek.com/v1',
-    MAX_PROMPT_LENGTH: 50000
+    MAX_PROMPT_LENGTH: 50000,
+    LLM_OPERATION_TIMEOUT_MS: 15 * 60 * 1000
 }));
 vi.mock('../../services/llmPayloadCapabilities.service.js', () => ({
     buildCapabilityAwareOpenAICompatibleParams: vi.fn((_provider, _model, options) => ({

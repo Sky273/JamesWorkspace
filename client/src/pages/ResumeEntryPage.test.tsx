@@ -50,6 +50,10 @@ describe('ResumeEntryPage', () => {
   });
 
   it('redirects to improve when the resume already has improved content', async () => {
+    mockGetResume.mockResolvedValue({
+      id: 'resume-1',
+      'Improved Text': 'Texte ameliore',
+    });
     resumeContextState.resumes = [{
       id: 'resume-1',
       'Improved Text': 'Texte ameliore',

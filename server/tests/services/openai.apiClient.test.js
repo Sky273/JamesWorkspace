@@ -8,7 +8,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('axios');
 vi.mock('../../config/constants.js', () => ({
     OPENAI_API_KEY: 'test-key',
-    MAX_PROMPT_LENGTH: 50000
+    MAX_PROMPT_LENGTH: 50000,
+    LLM_OPERATION_TIMEOUT_MS: 15 * 60 * 1000
 }));
 vi.mock('../../services/llm.service.js', () => ({
     buildOpenAIParams: vi.fn((model, opts) => ({
@@ -36,9 +37,61 @@ vi.mock('../../services/retry.service.js', () => ({
     withRetry: vi.fn((fn) => fn()),
     getCircuitBreakerStates: vi.fn(() => ({ openai: { state: 'CLOSED', failures: 0 } }))
 }));
+vi.mock('../../services/llmPayloadCapabilities.service.js', () => ({
+    buildCapabilityAwareOpenAICompatibleParams: vi.fn((_provider, model, options) => ({
+        effectiveMaxTokens: options.maxTokens,
+        requestParams: {
+            model,
+            messages: options.additionalParams?.messages || [],
+            max_tokens: options.maxTokens
+        },
+        parameters: {
+            ...(options.responseFormat ? { response_format: options.responseFormat } : {})
+        }
+    }))
+}));
+vi.mock('../../services/llmContent.service.js', () => ({
+    extractOpenAIResponsesText: vi.fn((output = []) => output
+        .flatMap((item) => item?.content || [])
+        .filter((item) => item?.type === 'output_text')
+        .map((item) => item.text)
+        .join('')),
+    flattenLlmTextContent: vi.fn((value) => {
+        if (typeof value === 'string') return value;
+        if (Array.isArray(value)) {
+            return value.map((item) => item?.text || item?.content || '').filter(Boolean).join('\n');
+        }
+        return String(value || '');
+    }),
+    sanitizeOpenAICompatibleResponseBody: vi.fn((body) => ({
+        ...body,
+        choices: Array.isArray(body?.choices)
+            ? body.choices.map((choice) => ({
+                ...choice,
+                message: choice?.message
+                    ? {
+                        ...choice.message,
+                        content: String(choice.message.content || '').replace(/<think>[\s\S]*?<\/think>/gi, '')
+                    }
+                    : choice?.message
+            }))
+            : body?.choices
+    }))
+}));
+vi.mock('../../services/llmModelCapabilities.service.js', () => ({
+    clampModelMaxOutputTokens: vi.fn((_provider, _model, requested) => ({
+        requestedMaxTokens: requested,
+        effectiveMaxTokens: requested,
+        providerCap: null,
+        capabilities: {}
+    }))
+}));
 const mockMarkModelUnavailable = vi.fn();
 vi.mock('../../services/llmAvailability.service.js', () => ({
     markModelUnavailable: (...args) => mockMarkModelUnavailable(...args)
+}));
+vi.mock('../../services/llmConfiguration.service.js', () => ({
+    inferProviderFallbackModel: vi.fn((_provider, model) => model === 'gpt-4o' ? 'gpt-4o-mini' : null)
 }));
 
 import axios from 'axios';

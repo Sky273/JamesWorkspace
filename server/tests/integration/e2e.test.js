@@ -176,8 +176,8 @@ describe('E2E: Authentication Flow', () => {
             const decoded = await verifyToken(accessToken);
             expect(decoded).not.toBeNull();
             expect(decoded.id).toBe(mockUser.id);
-            expect(decoded.email).toBe(mockUser.email);
             expect(decoded.role).toBe(mockUser.role);
+            expect(decoded.firmId).toBe(mockUser.firm_id);
         });
 
         it('should reject sign-in with invalid password', async () => {

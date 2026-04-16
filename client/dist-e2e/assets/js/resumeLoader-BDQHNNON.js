@@ -1,2 +1,0 @@
-async function e(e){let{id:t,currentResume:n,resumes:r,fetchResume:i}=e;if(!t)return{kind:`missing-id`};if(!e.preferFresh&&n?.id===t)return{kind:`current`,resume:n};let a=e.preferFresh?void 0:r.find(e=>e.id===t);if(a)return{kind:`cached`,resume:a};let o=await i(t);return o?{kind:`fetched`,resume:o}:{kind:`not-found`}}export{e as t};
-//# sourceMappingURL=resumeLoader-BDQHNNON.js.map

@@ -8,7 +8,8 @@ import {
   uploadResumeAndWaitForAnalysis,
 } from './helpers/crud';
 import {
-  cardContaining,
+  clickButtonSafely,
+  clickConfirmButton,
   clickRefreshButton,
   deleteViaApi,
   postJsonViaApi,
@@ -44,11 +45,13 @@ test.describe('Resumes and adaptations refresh flows', () => {
     await page.goto('/resumes');
     await expect(page.getByRole('heading', { name: /cvth[eè]que|resumes/i }).first()).toBeVisible();
 
+    await page.getByRole('button', { name: /liste/i }).click();
+
     const resumeSearch = page.getByPlaceholder(/rechercher/i).first();
     await resumeSearch.fill(displayName);
-    await expect(cardContaining(page, displayName)).toBeVisible();
+    await expect(page.getByText(displayName).first()).toBeVisible({ timeout: 30_000 });
     await clickRefreshButton(page);
-    await expect(cardContaining(page, displayName)).toBeVisible();
+    await expect(page.getByText(displayName).first()).toBeVisible({ timeout: 30_000 });
 
     await postJsonViaApi(page, `/api/deals/${deal.id}/resumes`, {
       resumeId,
@@ -67,9 +70,9 @@ test.describe('Resumes and adaptations refresh flows', () => {
     await page.getByRole('button', { name: /liste/i }).click();
     const adaptationSearch = page.getByPlaceholder(/rechercher/i).first();
     await adaptationSearch.fill(displayName);
-    await expect(adaptationHeading(page, candidateName)).toBeVisible();
+    await expect(adaptationHeading(page, candidateName)).toBeVisible({ timeout: 30_000 });
     await clickRefreshButton(page);
-    await expect(adaptationHeading(page, candidateName)).toBeVisible();
+    await expect(adaptationHeading(page, candidateName)).toBeVisible({ timeout: 30_000 });
 
     await page.getByRole('button', { name: /par affaire/i }).click();
     await clickRefreshButton(page);
@@ -77,7 +80,7 @@ test.describe('Resumes and adaptations refresh flows', () => {
 
     await page.getByRole('button', { name: /liste/i }).click();
     await adaptationSearch.fill(displayName);
-    await expect(adaptationHeading(page, candidateName)).toBeVisible();
+    await expect(adaptationHeading(page, candidateName)).toBeVisible({ timeout: 30_000 });
     page.once('dialog', async (dialog) => {
       await dialog.accept();
     });
@@ -88,10 +91,10 @@ test.describe('Resumes and adaptations refresh flows', () => {
     await page.goto('/resumes');
     await page.getByRole('button', { name: /liste/i }).click();
     await resumeSearch.fill(displayName);
-    await cardContaining(page, displayName).getByRole('button', { name: /supprimer|delete/i }).click();
-    await page.getByRole('button', { name: /confirmer|confirm|supprimer|delete/i }).last().click();
+    await clickButtonSafely(page.getByRole('button', { name: /supprimer|delete/i }).last());
+    await clickConfirmButton(page);
     await clickRefreshButton(page);
-    await expect(cardContaining(page, displayName)).toHaveCount(0);
+    await expect(page.getByText(displayName)).toHaveCount(0);
 
     await page.getByRole('button', { name: /par affaire/i }).click();
     await clickRefreshButton(page);

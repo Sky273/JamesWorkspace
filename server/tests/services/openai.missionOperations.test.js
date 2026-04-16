@@ -27,6 +27,7 @@ vi.mock('../../services/metrics.service.js', () => ({
 vi.mock('../../services/llmConfiguration.service.js', () => ({
     isLikelyAnthropicModel: vi.fn((model) => /^claude/i.test(String(model || ''))),
     isLikelyDeepSeekModel: vi.fn((model) => /^deepseek/i.test(String(model || ''))),
+    isLikelyHuggingFaceModel: vi.fn((model) => /^[^/\s]+\/[^/\s]+(?::[a-z0-9._-]+)?$/i.test(String(model || ''))),
     isLikelyGlmModel: vi.fn((model) => /^glm/i.test(String(model || ''))),
     isLikelyMiniMaxModel: vi.fn((model) => /^minimax/i.test(String(model || '')))
 }));

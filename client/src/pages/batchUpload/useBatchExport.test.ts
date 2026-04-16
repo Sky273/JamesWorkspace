@@ -6,6 +6,7 @@ import type { FileStatus } from '../batchUpload.utils';
 const {
   fetchWithAuthMock,
   createAuthOptionsWithCsrfMock,
+  prepareLongRunningRequestMock,
   toastSuccessMock,
   toastErrorMock,
   createObjectURLMock,
@@ -15,6 +16,7 @@ const {
 } = vi.hoisted(() => ({
   fetchWithAuthMock: vi.fn(),
   createAuthOptionsWithCsrfMock: vi.fn(),
+  prepareLongRunningRequestMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
   createObjectURLMock: vi.fn(() => 'blob:zip-export'),
@@ -26,6 +28,7 @@ const {
 vi.mock('../../utils/apiInterceptor', () => ({
   fetchWithAuth: fetchWithAuthMock,
   createAuthOptionsWithCsrf: createAuthOptionsWithCsrfMock,
+  prepareLongRunningRequest: prepareLongRunningRequestMock,
 }));
 
 vi.mock('react-hot-toast', () => ({
@@ -50,6 +53,7 @@ describe('useBatchExport', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     createAuthOptionsWithCsrfMock.mockImplementation(async (options: RequestInit) => options);
+    prepareLongRunningRequestMock.mockResolvedValue(undefined);
     Object.defineProperty(window, 'URL', {
       configurable: true,
       value: {
@@ -104,12 +108,14 @@ describe('useBatchExport', () => {
       '/api/batch-export',
       expect.objectContaining({
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           resumeIds: ['resume-1', 'resume-2'],
           templateId: 'template-1',
           formats: ['pdf', 'docx'],
         }),
-      })
+      }),
+      300000
     );
     expect(clickMock).toHaveBeenCalled();
     expect(removeMock).toHaveBeenCalled();
