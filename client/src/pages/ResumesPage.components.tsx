@@ -53,7 +53,6 @@ export function ResumesViewModeToggle({
 export function ResumesListPanel({
   authUserRole,
   filteredResumes,
-  formatResumeDate,
   getTagCategory,
   goToBatchUpload,
   goToPage,
@@ -80,7 +79,6 @@ export function ResumesListPanel({
   clearFilters: () => void;
   currentPage: number;
   filteredResumes: Resume[];
-  formatResumeDate: (dateString?: string) => string;
   getTagCategory: (tag: string) => string;
   goToBatchUpload?: () => void;
   goToPage: (page: number) => void;
@@ -134,14 +132,15 @@ export function ResumesListPanel({
       <ResumesResultsGrid
         clearFilters={clearFilters}
         filteredResumes={filteredResumes}
-        formatResumeDate={formatResumeDate}
         goToUpload={goToUpload}
         handleDownloadResume={handleDownloadResume}
         handleResumeClick={handleResumeClick}
         loading={loading}
         onDeleteResume={onDeleteResume}
+        onRefresh={onRefresh}
         searchQuery={searchQuery}
         selectedTags={selectedTags}
+        stats={stats}
       />
 
       <Pagination

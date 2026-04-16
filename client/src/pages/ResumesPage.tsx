@@ -24,7 +24,6 @@ const ResumesPage = (): JSX.Element => {
     deleting,
     fetchResumes,
     filteredResumes,
-    formatResumeDate,
     getTagCategory,
     goToBatchUpload,
     goToPage,
@@ -70,7 +69,6 @@ const ResumesPage = (): JSX.Element => {
           clearFilters={clearFilters}
           currentPage={currentPage}
           filteredResumes={filteredResumes}
-          formatResumeDate={formatResumeDate}
           getTagCategory={getTagCategory}
           goToBatchUpload={goToBatchUpload}
           goToPage={goToPage}

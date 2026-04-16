@@ -1,17 +1,11 @@
 /* eslint-disable react-refresh/only-export-components */
 import {
-  ArrowDownTrayIcon,
   BuildingOfficeIcon,
-  CalendarIcon,
-  ChartBarIcon,
   ChevronRightIcon,
   DocumentPlusIcon,
-  DocumentTextIcon,
-  EyeIcon,
   FunnelIcon,
   MagnifyingGlassIcon,
   SparklesIcon,
-  TrashIcon,
   UserGroupIcon,
   WrenchScrewdriverIcon,
   XMarkIcon,
@@ -21,11 +15,12 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import EmptyStateCard from '../components/page/EmptyStateCard';
-import ConsentBadge from '../components/ConsentBadge';
-import { ManageResumeDealsModal } from '../components/ResumesPage';
+import DealResumeCard from '../components/ResumesPage/DealResumeCard';
 import { SkeletonResumeList } from '../components/ui/Skeleton';
+import type { ResumeBasic } from '../components/ResumesPage/dealsGrouped.types';
 import type { Resume } from '../types/entities';
 import { getResumePreviewTags, type TagsByCategory } from './ResumesPage.data';
+import type { ResumeStats } from './ResumesPage.hooks';
 
 export const filterContentVariants: Variants = {
   expanded: {
@@ -475,28 +470,98 @@ function ResultsCollectionHeader({
 export function ResumesResultsGrid({
   clearFilters,
   filteredResumes,
-  formatResumeDate,
   goToUpload,
   handleDownloadResume,
   handleResumeClick,
   loading,
   onDeleteResume,
+  onRefresh,
   searchQuery,
   selectedTags,
+  stats,
 }: {
   clearFilters: () => void;
   filteredResumes: Resume[];
-  formatResumeDate: (dateString?: string) => string;
   goToUpload: () => void;
   handleDownloadResume: (resume: Resume, event: React.MouseEvent) => Promise<void>;
   handleResumeClick: (resume: Resume) => void;
   loading: boolean;
   onDeleteResume: (resume: Resume, event: React.MouseEvent) => void;
+  onRefresh: () => Promise<void>;
   searchQuery: string;
   selectedTags: string[];
+  stats: ResumeStats;
 }) {
   const { t } = useTranslation();
   const hasActiveFilters = searchQuery.length > 0 || selectedTags.length > 0;
+  const visibleAverage = useMemo(() => {
+    if (filteredResumes.length === 0) {
+      return 0;
+    }
+
+    const total = filteredResumes.reduce((sum, resume) => {
+      const score = Number(resume['Improved Global Rating'] ?? resume['Global Rating'] ?? 0);
+      return sum + (Number.isFinite(score) ? score : 0);
+    }, 0);
+
+    return Math.round(total / filteredResumes.length);
+  }, [filteredResumes]);
+
+  const listItems = useMemo(() => {
+    return filteredResumes.map((resume) => ({
+      raw: resume,
+      basic: {
+        id: resume.id,
+        name: resume.Name || resume.name || resume['Resume File']?.[0]?.filename || t('resumes.untitled'),
+        title: resume.Title || resume.title || resume.adapted_title || undefined,
+        status: resume.Status || 'new',
+        global_rating: Number(resume['Global Rating'] ?? 0) || 0,
+        improved_global_rating: Number(resume['Improved Global Rating'] ?? 0) || undefined,
+        created_at: String(resume['Created At'] || ''),
+        file_name: (resume['File Name'] as string | undefined) || resume.fileName || resume.file_name || undefined,
+        original_name: (resume['Original Name'] as string | undefined) || resume.originalName || undefined,
+        firm_name: (resume.FirmName as string | undefined) || undefined,
+        candidate_name: resume.candidate_name || undefined,
+        candidate_email: resume.candidate_email || undefined,
+        consent_status: resume.consent_status || undefined,
+        consent_token_expires_at: resume.consent_token_expires_at || undefined,
+        retention_until: resume.retention_until || undefined,
+        skills: (resume.Skills as string | undefined) || undefined,
+        industries: (resume.Industries as string | undefined) || undefined,
+        tools: (resume.Tools as string | undefined) || undefined,
+        soft_skills: (resume['Soft Skills'] as string | undefined) || undefined,
+      } satisfies ResumeBasic,
+    }));
+  }, [filteredResumes, t]);
+
+  const getResumeTags = useMemo(() => {
+    return (resume: ResumeBasic): Record<string, string[]> => ({
+      skills: getResumePreviewTags({
+        Skills: resume.skills,
+      } as Resume, 'Skills'),
+      industries: getResumePreviewTags({
+        Industries: resume.industries,
+      } as Resume, 'Industries'),
+      tools: getResumePreviewTags({
+        Tools: resume.tools,
+      } as Resume, 'Tools'),
+      soft_skills: getResumePreviewTags({
+        'Soft Skills': resume.soft_skills,
+      } as Resume, 'Soft Skills'),
+    });
+  }, []);
+
+  const getDownloadTitle = useMemo(() => {
+    return (resume: ResumeBasic) => {
+      const lines = [t('resumes.downloadResume')];
+      if (resume.original_name) {
+        lines.push(resume.original_name);
+      } else if (resume.file_name) {
+        lines.push(resume.file_name);
+      }
+      return lines.join('\n');
+    };
+  }, [t]);
 
   if (loading) {
     return (
@@ -538,127 +603,57 @@ export function ResumesResultsGrid({
   return (
     <div className="cv-panel overflow-hidden rounded-[2rem]">
       <ResultsCollectionHeader count={filteredResumes.length} hasActiveFilters={hasActiveFilters} loading={false} />
+      <div className="border-b border-slate-200/70 px-5 py-4 dark:border-white/6 sm:px-6">
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-[1.2rem] bg-white/70 px-4 py-3 dark:bg-white/[0.03]">
+            <div className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-[#8f99b8]">
+              {t('resumes.resultsLabel', 'Résultats')}
+            </div>
+            <div className="cv-display mt-2 text-2xl font-semibold text-slate-950 dark:text-[#dee5ff]">
+              {filteredResumes.length}
+            </div>
+          </div>
+          <div className="rounded-[1.2rem] bg-white/70 px-4 py-3 dark:bg-white/[0.03]">
+            <div className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-[#8f99b8]">
+              {t('resumes.score_label')}
+            </div>
+            <div className="cv-display mt-2 text-2xl font-semibold text-slate-950 dark:text-[#dee5ff]">
+              {visibleAverage}%
+            </div>
+          </div>
+          <div className="rounded-[1.2rem] bg-white/70 px-4 py-3 dark:bg-white/[0.03]">
+            <div className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-[#8f99b8]">
+              {t('resumes.improved', 'Optimisés')}
+            </div>
+            <div className="cv-display mt-2 text-2xl font-semibold text-slate-950 dark:text-[#dee5ff]">
+              {stats.improved}
+            </div>
+          </div>
+        </div>
+      </div>
       <div className="p-5 sm:p-6">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {filteredResumes.map((resume, index) => (
-        <motion.div
-          key={resume.id}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.05 }}
-          className="cv-card group overflow-hidden rounded-[2rem] transition-all cursor-pointer"
-          onClick={() => handleResumeClick(resume)}
-        >
-          <div className="border-b border-slate-200/70 p-5 dark:border-white/6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-[var(--cv-primary-soft)] text-[var(--cv-primary)]">
-                    <DocumentTextIcon className="w-5 h-5" />
-                  </div>
-                  <h3 className="cv-display truncate text-lg font-bold text-slate-950 dark:text-[#dee5ff]">
-                    {resume.Name || resume['Resume File']?.[0]?.filename || t('resumes.untitled')}
-                  </h3>
-                </div>
-                {resume.Title ? <p className="mt-2 truncate pl-12 text-sm text-slate-600 dark:text-[#a3aac4]">{resume.Title}</p> : null}
-              </div>
-              <span className={classNames('cv-pill inline-flex w-fit flex-shrink-0 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] sm:ml-2', getStatusBadgeClass(resume.Status))}>
-                {t(`resumes.status.${resume.Status?.toLowerCase() || 'new'}`)}
-              </span>
-            </div>
-          </div>
-
-          <div className="p-5">
-            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2">
-                <ChartBarIcon className="w-5 h-5 text-slate-400 dark:text-[#7f8ab0]" />
-                <span className="text-sm text-slate-600 dark:text-[#a3aac4]">{t('resumes.score_label')}</span>
-              </div>
-              <div className="flex items-center gap-2 self-start sm:self-auto">
-                {resume['Improved Global Rating'] && resume['Improved Global Rating'] !== resume['Global Rating'] ? (
-                  <>
-                    <span className="text-sm text-slate-400 line-through dark:text-[#6f7a98]">{resume['Global Rating'] != null ? `${resume['Global Rating']}%` : '0%'}</span>
-                    <span className="cv-display text-2xl font-bold text-[var(--cv-tertiary)]">{resume['Improved Global Rating'] != null ? `${resume['Improved Global Rating']}%` : '0%'}</span>
-                  </>
-                ) : (
-                  <span className="cv-display text-2xl font-bold text-slate-950 dark:text-[#dee5ff]">{resume['Global Rating'] != null ? `${resume['Global Rating']}%` : '0%'}</span>
-                )}
-              </div>
-            </div>
-
-            <div className="cv-score-track mb-4 h-2 overflow-hidden rounded-full">
-              <div
-                className="cv-score-fill h-full rounded-full"
-                style={{ width: `${resume['Improved Global Rating'] ?? resume['Global Rating'] ?? 0}%` }}
-              />
-            </div>
-
-            <div className="mb-3 flex flex-col gap-2 text-sm text-slate-500 dark:text-[#a3aac4] sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2">
-                <CalendarIcon className="w-4 h-4" />
-                {formatResumeDate(resume['Created At'])}
-              </div>
-              {resume.consent_status ? (
-                <ConsentBadge
-                  status={resume.consent_status}
-                  candidateName={resume.candidate_name}
-                  candidateEmail={resume.candidate_email}
-                  consentTokenExpiresAt={resume.consent_token_expires_at}
-                  retentionUntil={resume.retention_until}
-                  compact={true}
-                />
-              ) : null}
-            </div>
-
-            {resume.FirmName ? (
-              <div className="mb-4 flex items-center gap-1">
-                <BuildingOfficeIcon className="w-3 h-3 text-slate-400 dark:text-[#7f8ab0]" />
-                <span className="text-xs text-slate-500 dark:text-[#8f99b8]">{resume.FirmName}</span>
-              </div>
-            ) : null}
-
-            <div className="flex flex-wrap gap-2">
-              {(['Skills', 'Industries', 'Tools', 'Soft Skills'] as const).flatMap((category) =>
-                getResumePreviewTags(resume, category).slice(0, 2).map((tag, tagIndex) => (
-                  <span key={`${category}-${tagIndex}`} className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] ${tagColorMap[category]}`}>
-                    {tag}
-                  </span>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 p-5 pt-0 sm:flex-nowrap">
-            <button
-              onClick={(event) => {
-                event.stopPropagation();
-                handleResumeClick(resume);
+        <div className="space-y-3">
+          {listItems.map(({ raw, basic }, index) => (
+            <DealResumeCard
+              key={basic.id}
+              resume={basic}
+              sourceDealId={null}
+              isDragging={false}
+              dropping={false}
+              draggableEnabled={false}
+              onDragStart={() => undefined}
+              onDragEnd={() => undefined}
+              onClick={() => handleResumeClick(raw)}
+              onDownload={(_resumeBasic, event) => {
+                void handleDownloadResume(raw, event);
               }}
-              className="cv-ghost-button flex min-h-12 w-full items-center justify-center gap-1 rounded-2xl px-3 py-3 text-sm transition-colors cursor-pointer sm:flex-1"
-            >
-              <EyeIcon className="w-5 h-5" />
-              {t('resumes.view')}
-            </button>
-            {resume['Resume File']?.[0] ? (
-              <button
-                onClick={(event) => void handleDownloadResume(resume, event)}
-                className="cv-ghost-button min-h-12 min-w-12 rounded-2xl p-3 text-[var(--cv-primary)] transition-colors cursor-pointer"
-                title={resume['File Name'] || resume['Resume File']?.[0]?.filename || t('resumes.downloadResume')}
-              >
-                <ArrowDownTrayIcon className="w-5 h-5" />
-              </button>
-            ) : null}
-            <ManageResumeDealsModal resumeId={resume.id} />
-            <button
-              onClick={(event) => onDeleteResume(resume, event)}
-              className="cv-ghost-button min-h-12 min-w-12 rounded-2xl p-3 text-[#ff8ca5] transition-colors cursor-pointer"
-              title={t('resumes.deleteResume')}
-            >
-              <TrashIcon className="w-5 h-5" />
-            </button>
-          </div>
-        </motion.div>
-      ))}
+              onDelete={(_resumeBasic, event) => onDeleteResume(raw, event)}
+              onDealChange={onRefresh}
+              getResumeTags={getResumeTags}
+              getDownloadTitle={getDownloadTitle}
+              index={index}
+            />
+          ))}
         </div>
       </div>
     </div>

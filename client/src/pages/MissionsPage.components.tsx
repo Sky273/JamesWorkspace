@@ -1,14 +1,19 @@
-import { BriefcaseIcon, FolderIcon, ListBulletIcon } from '@heroicons/react/24/outline';
+import { FolderIcon, ListBulletIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 
-import EmptyStateCard from '../components/page/EmptyStateCard';
 import PageHeader from '../components/page/PageHeader';
 import ViewModeToggle from '../components/page/ViewModeToggle';
 import Pagination from '../components/Pagination';
-import { MissionsDealsGroupedView, SearchAndActions, StatsCards } from '../components/MissionsPage';
+import { StatsCards } from '../components/MissionsPage';
+import {
+  MissionCardInDeal,
+  MissionsGroupedEmptyState,
+  MissionsGroupedSummary,
+  MissionsGroupedToolbar,
+} from '../components/MissionsPage/MissionsDealsGroupedView.parts';
+import MissionsDealsGroupedView from '../components/MissionsPage/MissionsDealsGroupedView';
 import type { GroupedMission } from '../components/MissionsPage/MissionsDealsGroupedView.types';
 import { SkeletonMissionList } from '../components/ui/Skeleton';
-import MissionCard from './MissionCard';
 import type { Mission, MissionStats, MissionViewMode } from './MissionsPage.hooks';
 import { MISSIONS_PAGE_SIZE } from './MissionsPage.hooks';
 
@@ -78,40 +83,149 @@ export function MissionsListPanel({
   return (
     <>
       <StatsCards stats={stats} missionsCount={totalCount} t={t} />
-      <SearchAndActions
-        searchTerm={searchTerm}
-        resultsLabel={
-          searchTerm
-            ? `${totalCount} ${t('missions.results')} · “${searchTerm}”`
-            : `${totalCount} ${t('missions.results')}`
-        }
-        onSearchChange={onSearchChange}
-        onRefresh={() => {
-          void onRefresh();
-        }}
-        onAddMission={onAddMission}
-        onReset={onResetSearch}
-        t={t}
-      />
-
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalCount={totalCount}
-        pageSize={MISSIONS_PAGE_SIZE}
-        onPageChange={onPageChange}
-        loading={loading}
-        itemName={t('missions.results')}
-      />
-
       <MissionsGrid
         canDeleteMission={canDeleteMission}
+        currentPage={currentPage}
         loading={loading}
         missions={missions}
         onAddMission={onAddMission}
         onDelete={onDelete}
         onEdit={onEdit}
+        onPageChange={onPageChange}
+        onRefresh={onRefresh}
+        onResetSearch={onResetSearch}
+        onSearchChange={onSearchChange}
         searchTerm={searchTerm}
+        totalCount={totalCount}
+        totalPages={totalPages}
+      />
+    </>
+  );
+}
+
+function toGroupedMission(mission: Mission): GroupedMission {
+  return {
+    id: mission.id,
+    title: mission.Title || '',
+    content: mission.Content || undefined,
+    status: mission.Status || 'Active',
+    keywords: (mission['Keywords'] as string | undefined) || undefined,
+    created_at: (mission['Created At'] as string | undefined) || '',
+    updated_at: (mission['Updated At'] as string | undefined) || undefined,
+    firm: mission.Firm || undefined,
+    client_id: (mission['Client ID'] as string | undefined) || undefined,
+    contact_id: (mission['Contact ID'] as string | undefined) || undefined,
+    client_name: (mission['Client Name'] as string | undefined) || undefined,
+    client_type: (mission['Client Type'] as string | undefined) || undefined,
+    contact_name: (mission['Contact Name'] as string | undefined) || undefined,
+    contact_email: (mission['Contact Email'] as string | undefined) || undefined,
+    contact_role: (mission['Contact Role'] as string | undefined) || undefined,
+    adaptations_count: Number(mission['Adaptations Count'] || 0),
+    submissions_count: Number(mission['Submissions Count'] || 0),
+    pipeline_count: Number(mission['Pipeline Count'] || 0),
+    has_attached_elements: Boolean(mission['Has Attachments']),
+  };
+}
+
+function MissionsGrid({
+  canDeleteMission,
+  currentPage,
+  loading,
+  missions,
+  onAddMission,
+  onDelete,
+  onEdit,
+  onPageChange,
+  onRefresh,
+  onResetSearch,
+  onSearchChange,
+  searchTerm,
+  totalCount,
+  totalPages,
+}: {
+  canDeleteMission: (mission: Mission | null | undefined) => boolean;
+  currentPage: number;
+  loading: boolean;
+  missions: Mission[];
+  onAddMission: () => void;
+  onDelete: (mission: Mission) => void;
+  onEdit: (mission: Mission) => void;
+  onPageChange: (page: number) => void;
+  onRefresh: () => Promise<void>;
+  onResetSearch: () => void;
+  onSearchChange: (value: string) => void;
+  searchTerm: string;
+  totalCount: number;
+  totalPages: number;
+}) {
+  const { t } = useTranslation();
+  const groupedMissions = missions.map(toGroupedMission);
+  const hasSearch = searchTerm.trim() !== '';
+
+  if (loading) {
+    return (
+      <div className="space-y-5">
+        <MissionsGroupedToolbar
+          onAddMission={onAddMission}
+          onRefresh={() => {
+            void onRefresh();
+          }}
+          searchQuery={searchTerm}
+          setSearchQuery={onSearchChange}
+          totalMissions={totalCount}
+          dealCount={0}
+          visibleCount={missions.length}
+        />
+        <MissionsGroupedSummary dealCount={0} totalMissions={missions.length} unassignedCount={0} />
+        <div className="cv-panel rounded-[2rem] p-5 sm:p-6">
+          <SkeletonMissionList count={6} />
+        </div>
+      </div>
+    );
+  }
+
+  if (groupedMissions.length === 0) {
+    return (
+      <div className="space-y-5">
+        <MissionsGroupedToolbar
+          onAddMission={onAddMission}
+          onRefresh={() => {
+            void onRefresh();
+          }}
+          searchQuery={searchTerm}
+          setSearchQuery={onSearchChange}
+          totalMissions={totalCount}
+          dealCount={0}
+          visibleCount={0}
+        />
+        <MissionsGroupedSummary dealCount={0} totalMissions={0} unassignedCount={0} />
+        <MissionsGroupedEmptyState
+          hasSearch={hasSearch}
+          onAddMission={onAddMission}
+          onClearSearch={onResetSearch}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <MissionsGroupedToolbar
+        onAddMission={onAddMission}
+        onRefresh={() => {
+          void onRefresh();
+        }}
+        searchQuery={searchTerm}
+        setSearchQuery={onSearchChange}
+        totalMissions={totalCount}
+        dealCount={0}
+        visibleCount={groupedMissions.length}
+      />
+
+      <MissionsGroupedSummary
+        dealCount={0}
+        totalMissions={groupedMissions.length}
+        unassignedCount={0}
       />
 
       <Pagination
@@ -123,66 +237,29 @@ export function MissionsListPanel({
         loading={loading}
         itemName={t('missions.results')}
       />
-    </>
-  );
-}
 
-function MissionsGrid({
-  canDeleteMission,
-  loading,
-  missions,
-  onAddMission,
-  onDelete,
-  onEdit,
-  searchTerm,
-}: {
-  canDeleteMission: (mission: Mission | null | undefined) => boolean;
-  loading: boolean;
-  missions: Mission[];
-  onAddMission: () => void;
-  onDelete: (mission: Mission) => void;
-  onEdit: (mission: Mission) => void;
-  searchTerm: string;
-}) {
-  const { t } = useTranslation();
+      <div className="space-y-3">
+        {groupedMissions.map((mission, index) => (
+          <MissionCardInDeal
+            key={mission.id}
+            mission={mission}
+            index={index}
+            canDelete={canDeleteMission(missions[index])}
+            onEdit={() => { onEdit(missions[index]); }}
+            onDelete={() => { onDelete(missions[index]); }}
+          />
+        ))}
+      </div>
 
-  if (loading) {
-    return <SkeletonMissionList count={6} />;
-  }
-
-  if (missions.length === 0) {
-    return (
-      <EmptyStateCard
-        icon={BriefcaseIcon}
-        title={t('missions.noMissions')}
-        description={searchTerm ? t('missions.noResults') : t('missions.createFirst')}
-        containerClassName="cv-panel rounded-[2rem] p-12 text-center"
-        action={
-          <button
-            onClick={onAddMission}
-            className="cv-gradient-button mt-6 inline-flex min-h-12 items-center justify-center rounded-full px-5 text-sm font-semibold"
-          >
-            {t('missions.addMission')}
-          </button>
-        }
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        pageSize={MISSIONS_PAGE_SIZE}
+        onPageChange={onPageChange}
+        loading={loading}
+        itemName={t('missions.results')}
       />
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 2xl:grid-cols-3">
-      {missions.map((mission, index) => (
-        <MissionCard
-          key={mission.id}
-          canDelete={canDeleteMission(mission)}
-          mission={mission}
-          index={index}
-          onEdit={onEdit}
-          onDelete={() => {
-            onDelete(mission);
-          }}
-        />
-      ))}
     </div>
   );
 }

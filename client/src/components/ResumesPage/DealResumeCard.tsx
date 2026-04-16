@@ -27,6 +27,7 @@ interface DealResumeCardProps {
   sourceDealId: string | null;
   isDragging: boolean;
   dropping: boolean;
+  draggableEnabled?: boolean;
   onDragStart: (e: React.DragEvent, resumeId: string, sourceDealId: string | null) => void;
   onDragEnd: (e: React.DragEvent) => void;
   onClick: (resumeId: string) => void;
@@ -43,6 +44,7 @@ export default function DealResumeCard({
   sourceDealId,
   isDragging,
   dropping,
+  draggableEnabled = true,
   onDragStart,
   onDragEnd,
   onClick,
@@ -100,11 +102,13 @@ export default function DealResumeCard({
       tabIndex={0}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      draggable={!dropping}
+      draggable={draggableEnabled && !dropping}
       onDragStart={(e) => onDragStart(e as unknown as React.DragEvent, resume.id, sourceDealId)}
       onDragEnd={(e) => onDragEnd(e as unknown as React.DragEvent)}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(resume.id); } }}
-      className={`overflow-hidden rounded-[1.6rem] border border-slate-200/70 transition-all duration-200 cursor-grab active:cursor-grabbing dark:border-white/6 ${
+      className={`overflow-hidden rounded-[1.6rem] border border-slate-200/70 transition-all duration-200 ${
+        draggableEnabled ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
+      } dark:border-white/6 ${
         isDragging
           ? 'border-[var(--cv-primary)] opacity-50 bg-white dark:bg-[color:color-mix(in_srgb,var(--cv-panel-end)_86%,black)]'
           : stripingClass
