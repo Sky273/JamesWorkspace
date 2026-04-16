@@ -177,11 +177,15 @@ function Run-Container {
         exit 1
     }
 
-    docker compose -f "$ComposeFile" down >$null 2>&1
-    docker compose -f "$ComposeFile" up -d
+    docker compose -f "$ComposeFile" up -d postgres redis
 
     if ($LASTEXITCODE -eq 0) {
         Sync-PostgresRolePassword
+        docker compose -f "$ComposeFile" up -d app
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Failed to start application container!" -ForegroundColor Red
+            exit 1
+        }
         Invoke-ContainerMigration
 
         Write-Host ""

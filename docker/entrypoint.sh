@@ -109,6 +109,24 @@ wait_for_postgres() {
     echo "PostgreSQL is ready!"
 }
 
+run_migration_with_retry() {
+    local max_attempts="${DOCKER_MIGRATE_MAX_ATTEMPTS:-24}"
+    local sleep_seconds="${DOCKER_MIGRATE_RETRY_DELAY_SECONDS:-5}"
+    local attempt
+
+    for attempt in $(seq 1 "$max_attempts"); do
+        if node server/scripts/docker-migrate.js && node server/scripts/ensure-default-admin.js; then
+            return 0
+        fi
+
+        echo "docker-migrate attempt ${attempt}/${max_attempts} failed, retrying in ${sleep_seconds}s..."
+        sleep "$sleep_seconds"
+    done
+
+    echo "ERROR: docker-migrate did not succeed after ${max_attempts} attempts."
+    return 1
+}
+
 verify_database_bootstrap_state() {
     local default_admin_email escaped_admin_email schema_migrations_exists users_exists default_admin_exists
     local host="${POSTGRES_HOST:-postgres}"
@@ -185,8 +203,7 @@ fi
 # Initialize / migrate database schema outside the web runtime
 # =============================================================================
 echo "[4/4] Running docker-migrate..."
-node server/scripts/docker-migrate.js
-node server/scripts/ensure-default-admin.js
+run_migration_with_retry
 verify_database_bootstrap_state
 
 # =============================================================================

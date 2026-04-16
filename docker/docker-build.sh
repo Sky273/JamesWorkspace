@@ -149,11 +149,15 @@ run_container() {
         exit 1
     fi
 
-    docker compose -f "$compose_file" down >/dev/null 2>&1 || true
-    docker compose -f "$compose_file" up -d
+    docker compose -f "$compose_file" up -d postgres redis
 
     if [ $? -eq 0 ]; then
         sync_postgres_role_password
+        docker compose -f "$compose_file" up -d app
+        if [ $? -ne 0 ]; then
+            echo "Failed to start application container!"
+            exit 1
+        fi
         run_container_migration
 
         echo ""

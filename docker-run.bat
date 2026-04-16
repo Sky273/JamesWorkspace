@@ -25,14 +25,6 @@ if not errorlevel 1 (
     echo.
 )
 
-docker compose -f "%cd%\docker-compose.redis.yml" down >nul 2>&1
-docker stop resumeconverter-app 2>nul
-docker rm resumeconverter-app 2>nul
-docker stop resumeconverter-redis 2>nul
-docker rm resumeconverter-redis 2>nul
-docker stop resumeconverter-postgres 2>nul
-docker rm resumeconverter-postgres 2>nul
-
 if not exist "%cd%\data\postgresql" mkdir "%cd%\data\postgresql"
 if not exist "%cd%\data\redis" mkdir "%cd%\data\redis"
 if not exist "%cd%\uploads" mkdir "%cd%\uploads"
@@ -50,7 +42,7 @@ set "POSTGRES_PASSWORD="
 for /f "tokens=1,* delims==" %%A in ('findstr /b "POSTGRES_USER=" "%cd%\.env.docker"') do set "POSTGRES_USER=%%B"
 for /f "tokens=1,* delims==" %%A in ('findstr /b "POSTGRES_PASSWORD=" "%cd%\.env.docker"') do set "POSTGRES_PASSWORD=%%B"
 
-docker compose -f "%cd%\docker-compose.redis.yml" up -d
+docker compose -f "%cd%\docker-compose.redis.yml" up -d postgres redis
 
 if not %ERRORLEVEL% EQU 0 (
     echo.
@@ -85,6 +77,17 @@ if not defined PG_SYNC_OK (
 )
 
 echo PostgreSQL role password synchronized.
+
+echo.
+echo Starting application container...
+docker compose -f "%cd%\docker-compose.redis.yml" up -d app
+
+if not %ERRORLEVEL% EQU 0 (
+    echo.
+    echo Failed to start application container!
+    pause
+    exit /b 1
+)
 
 echo.
 echo Running database migration inside Docker container...
