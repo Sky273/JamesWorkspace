@@ -53,8 +53,31 @@ if not %ERRORLEVEL% EQU 0 (
     exit /b 1
 )
 
+echo.
+echo Running database migration inside Docker container...
+set "MIGRATION_OK="
+for /L %%i in (1,1,24) do (
+    for /f "usebackq delims=" %%s in (`docker inspect -f "{{.State.Status}}" resumeconverter-app 2^>nul`) do set "CONTAINER_STATE=%%s"
+    if /I "!CONTAINER_STATE!"=="running" (
+        docker exec resumeconverter-app node server/scripts/docker-migrate.js
+        if !ERRORLEVEL! EQU 0 (
+            set "MIGRATION_OK=1"
+            goto :migration_done
+        )
+        echo Migration attempt %%i failed, retrying...
+    )
+    timeout /t 5 /nobreak >nul
+)
 
+:migration_done
+if not defined MIGRATION_OK (
+    echo.
+    echo Failed to run docker migration after container startup!
+    pause
+    exit /b 1
+)
 
+echo Docker migration completed.
 
 echo.
 echo ============================================

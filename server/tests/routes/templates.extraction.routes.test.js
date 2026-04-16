@@ -50,6 +50,7 @@ async function buildValidDocxBuffer() {
     <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
       <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml" />
     </Types>`);
+    zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>');
     zip.file('word/document.xml', '<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Template</w:t></w:r></w:p></w:body></w:document>');
     return Buffer.from(await zip.generateAsync({ type: 'nodebuffer' }));
 }
@@ -169,7 +170,7 @@ describe('Templates Extraction Routes', () => {
             template: { name: 'DOCX Template' },
             model: 'test-model',
             usage: { total_tokens: 1 },
-            extractionMethod: 'docx-html'
+            extractionMethod: 'office-pdf-layout-html'
         });
         mockExtractFromPDF.mockResolvedValue({
             template: { name: 'PDF Template' },
@@ -201,12 +202,16 @@ describe('Templates Extraction Routes', () => {
             expect(res.body.error).toContain('No file');
         });
 
-        it('should return 400 for old .doc format', async () => {
+        it('should support legacy .doc uploads through the Office to PDF pipeline', async () => {
             const res = await request(app)
                 .post('/api/templates/extract-from-cv')
                 .set({ ...AUTH, 'x-test-mimetype': 'application/msword', 'x-test-filename': 'template.doc' });
-            expect(res.status).toBe(400);
-            expect(res.body.error).toContain('.doc format');
+            expect(res.status).toBe(200);
+            expect(mockExtractFromDOCX).toHaveBeenCalledWith(
+                expect.any(Buffer),
+                'template.doc',
+                { maxTokens: undefined }
+            );
         });
 
         it('should trust the file extension over a generic mimetype for docx uploads', async () => {
@@ -323,13 +328,13 @@ describe('Templates Extraction Routes', () => {
                 template: { name: 'Template 1' },
                 model: 'test-model',
                 usage: { total_tokens: 1 },
-                extractionMethod: 'docx-html'
+                extractionMethod: 'office-pdf-layout-html'
             });
             releaseSecond({
                 template: { name: 'Template 2' },
                 model: 'test-model',
                 usage: { total_tokens: 1 },
-                extractionMethod: 'docx-html'
+                extractionMethod: 'office-pdf-layout-html'
             });
 
             const [firstResponse, secondResponse] = await Promise.all([firstRequest, secondRequest]);

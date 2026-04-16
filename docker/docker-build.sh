@@ -7,6 +7,30 @@ IMAGE_NAME="resumeconverter"
 CONTAINER_NAME="resumeconverter-app"
 TAG="${TAG:-latest}"
 
+run_container_migration() {
+    echo ""
+    echo "Running database migration inside Docker container..."
+
+    for attempt in $(seq 1 24); do
+        container_state="$(docker inspect -f "{{.State.Status}}" "$CONTAINER_NAME" 2>/dev/null || true)"
+        if [ "$container_state" != "running" ]; then
+            sleep 5
+            continue
+        fi
+
+        if docker exec "$CONTAINER_NAME" node server/scripts/docker-migrate.js; then
+            echo "Docker migration completed."
+            return 0
+        fi
+
+        echo "Migration attempt $attempt failed, retrying..."
+        sleep 5
+    done
+
+    echo "Failed to run docker migration after container startup."
+    exit 1
+}
+
 show_help() {
     echo ""
     echo "ResumeConverter Docker Management Script"
@@ -108,6 +132,8 @@ run_container() {
         "${IMAGE_NAME}:${TAG}"
 
     if [ $? -eq 0 ]; then
+        run_container_migration
+
         echo ""
         echo "Container started successfully!"
         echo ""

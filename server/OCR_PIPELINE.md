@@ -33,6 +33,12 @@ The PDF OCR pipeline is split into focused modules:
 6. Use advanced OCR only when candidate quality stays below the configured threshold.
 7. Aggregate page results into a document-level extraction result.
 
+## Default backend policy
+
+- `OCR_ADVANCED_BACKEND` defaults to `paddleocr`.
+- If the Python runtime or the advanced backend is unavailable, the pipeline degrades to CLI OCR when available.
+- If CLI OCR is unavailable too, the service can still fall back to `tesseract.js`.
+
 ## Testing strategy
 
 The OCR stack is covered at multiple levels:

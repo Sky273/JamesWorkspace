@@ -177,8 +177,13 @@ Réponds toujours en français, sauf si l'utilisateur pose sa question en anglai
                 for (let attempt = 1; attempt <= 2; attempt++) {
                     try {
                         const response = await callLLM(messages, {
+                            operationType: 'Chatbot Message',
                             temperature: 0.7,
-                            max_tokens: maxTokens
+                            max_tokens: maxTokens,
+                            userMetadata: {
+                                ...getRequestMetadata(req),
+                                actionType: 'chatbot.message'
+                            }
                         });
 
                         if (response && response.content) {

@@ -8,6 +8,7 @@ async function buildDocxBuffer() {
     <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
       <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml" />
     </Types>`);
+    zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>');
     zip.file('word/document.xml', '<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Resume</w:t></w:r></w:p></w:body></w:document>');
     return Buffer.from(await zip.generateAsync({ type: 'nodebuffer' }));
 }
@@ -47,5 +48,30 @@ describe('fileSignature', () => {
         const buffer = await buildDocxBufferWithCustomMainDocument();
 
         await expect(isValidDocxArchive(buffer)).resolves.toBe(true);
+    });
+
+    it('rejects OOXML-like archives when the declared main document part is missing', async () => {
+        const zip = new JSZip();
+        zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8"?>
+        <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+          <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml" />
+        </Types>`);
+        zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>');
+        zip.file('word/other.xml', '<xml />');
+        const buffer = Buffer.from(await zip.generateAsync({ type: 'nodebuffer' }));
+
+        await expect(isValidDocxArchive(buffer)).resolves.toBe(false);
+    });
+
+    it('rejects OOXML-like archives without the package root relationships part', async () => {
+        const zip = new JSZip();
+        zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8"?>
+        <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+          <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml" />
+        </Types>`);
+        zip.file('word/document.xml', '<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body /></w:document>');
+        const buffer = Buffer.from(await zip.generateAsync({ type: 'nodebuffer' }));
+
+        await expect(isValidDocxArchive(buffer)).resolves.toBe(false);
     });
 });

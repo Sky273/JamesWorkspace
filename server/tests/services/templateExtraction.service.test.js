@@ -55,6 +55,15 @@ describe('Template Extraction Service', () => {
             expect(result.template.templateContent).toContain('-title-');
             expect(result.template.templateContent).toContain('-content-');
             expect(result.model).toBe('gpt-4');
+            expect(callLLM).toHaveBeenCalledWith(
+                expect.any(Array),
+                expect.objectContaining({
+                    operationType: 'Template Extraction',
+                    userMetadata: expect.objectContaining({
+                        actionType: 'template.extract'
+                    })
+                })
+            );
         });
 
         it('should handle markdown-wrapped JSON response', async () => {
@@ -179,6 +188,47 @@ describe('Template Extraction Service', () => {
             expect(userMsg).toContain('#333');
             expect(userMsg).toContain('Roboto');
         });
+
+        it('should include structured layout fragments in the LLM call when provided', async () => {
+            callLLM.mockResolvedValueOnce({ content: validTemplateJSON, model: 'gpt-4', usage: {} });
+
+            await extractTemplateFromHTML('<div>Layout</div>', [], 'cv.pdf', {}, {
+                layoutAnalysis: {
+                    headerHtml: '<div>Header</div>',
+                    contentHtml: '<div>Content</div>',
+                    footerHtml: '<div>Footer</div>',
+                    stylesheet: '.template-page{width:600px;}',
+                    metrics: { totalLines: 3 }
+                }
+            });
+
+            const userMsg = callLLM.mock.calls[0][0][1].content;
+            expect(userMsg).toContain('FRAGMENTS DE LAYOUT PRE-DECOUPES');
+            expect(userMsg).toContain('Header');
+            expect(userMsg).toContain('Footer');
+            expect(userMsg).toContain('totalLines');
+        });
+
+        it('sanitizes returned HTML and stylesheet fragments', async () => {
+            callLLM.mockResolvedValueOnce({
+                content: JSON.stringify({
+                    name: 'Unsafe Template',
+                    headerContent: '<div><script>alert(1)</script>Header</div>',
+                    templateContent: '<h1>-name-</h1><img src="javascript:alert(1)"><div>-content-</div>',
+                    footerContent: '<div onclick="alert(1)">Footer</div>',
+                    stylesheet: '@import "https://evil.test/x.css"; body { color: red; }'
+                }),
+                model: 'gpt-4',
+                usage: {}
+            });
+
+            const result = await extractTemplateFromHTML('<html>CV</html>');
+
+            expect(result.template.headerContent).not.toContain('<script>');
+            expect(result.template.templateContent).not.toContain('javascript:');
+            expect(result.template.footerContent).not.toContain('onclick');
+            expect(result.template.stylesheet).not.toContain('@import');
+        });
     });
 
     describe('extractTemplateFromImage', () => {
@@ -194,6 +244,16 @@ describe('Template Extraction Service', () => {
             expect(result.success).toBe(true);
             expect(result.template.name).toBe('Modern Template');
             expect(callLLMWithVision).toHaveBeenCalledTimes(1);
+            expect(callLLMWithVision).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.any(Array),
+                expect.objectContaining({
+                    operationType: 'Template Extraction Vision Fallback',
+                    userMetadata: expect.objectContaining({
+                        actionType: 'template.extract'
+                    })
+                })
+            );
         });
 
         it('should include text content as context when long enough', async () => {

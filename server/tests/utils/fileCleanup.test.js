@@ -396,6 +396,29 @@ describe('File Cleanup Utilities', () => {
             }));
         });
 
+        it('should keep cleanup totals numeric when successful DB-backed cleanup results omit deletedCount', async () => {
+            fs.access.mockRejectedValue(new Error('ENOENT'));
+            fs.mkdir.mockResolvedValue(undefined);
+            fs.readdir.mockResolvedValue([]);
+
+            cleanupExpiredShareArtifacts.mockResolvedValue({
+                expiredPdfLinksCleared: 2,
+                expiredFileLinksCleared: 1,
+                expiredPdfFilesDeleted: 3
+            });
+            cleanupOldJobs.mockResolvedValue({
+                deletedJobs: 4,
+                deletedItems: 7
+            });
+
+            startPeriodicCleanup(60000);
+            await vi.advanceTimersByTimeAsync(10);
+
+            const stats = getFileCleanupStats();
+            expect(stats.totalFilesDeleted).toBe(0);
+            expect(Number.isNaN(stats.totalFilesDeleted)).toBe(false);
+        });
+
         it('should reflect timer stopped after stopPeriodicCleanup', async () => {
             fs.access.mockRejectedValue(new Error('ENOENT'));
             fs.mkdir.mockResolvedValue(undefined);

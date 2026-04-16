@@ -4,6 +4,7 @@
  */
 
 import express from 'express';
+import multer from 'multer';
 import { authenticateToken, requireUserManager } from '../../middleware/auth.middleware.js';
 import { userRateLimit } from '../../middleware/rateLimit.middleware.js';
 import { createExtractFromCvHandler } from './extraction/handlers.js';
@@ -41,13 +42,34 @@ function templateExtractionConcurrencyLimit(req, res, next) {
     next();
 }
 
+function uploadTemplateFile(req, res, next) {
+    upload.single('file')(req, res, (error) => {
+        if (!error) {
+            next();
+            return;
+        }
+
+        if (error instanceof multer.MulterError) {
+            if (error.code === 'LIMIT_FILE_SIZE') {
+                res.status(413).json({ error: 'File too large. Maximum allowed size is 10 MB.' });
+                return;
+            }
+
+            res.status(400).json({ error: error.message || 'Invalid upload payload.' });
+            return;
+        }
+
+        res.status(400).json({ error: error.message || 'Invalid upload payload.' });
+    });
+}
+
 router.post(
     '/extract-from-cv',
     authenticateToken,
     requireUserManager,
     userRateLimit(10, 15 * 60 * 1000),
     templateExtractionConcurrencyLimit,
-    upload.single('file'),
+    uploadTemplateFile,
     createExtractFromCvHandler()
 );
 

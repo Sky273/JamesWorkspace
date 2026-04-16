@@ -15,6 +15,36 @@ param(
 $ImageName = "resumeconverter"
 $ContainerName = "resumeconverter-app"
 
+function Invoke-ContainerMigration {
+    Write-Host ""
+    Write-Host "Running database migration inside Docker container..." -ForegroundColor Yellow
+
+    for ($attempt = 1; $attempt -le 24; $attempt++) {
+        $containerState = docker inspect -f "{{.State.Status}}" $ContainerName 2>$null
+        if ($LASTEXITCODE -ne 0 -or -not $containerState) {
+            Start-Sleep -Seconds 5
+            continue
+        }
+
+        if ($containerState.Trim() -ne "running") {
+            Start-Sleep -Seconds 5
+            continue
+        }
+
+        docker exec $ContainerName node server/scripts/docker-migrate.js
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "Docker migration completed." -ForegroundColor Green
+            return
+        }
+
+        Write-Host "Migration attempt $attempt failed, retrying..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 5
+    }
+
+    Write-Host "Failed to run docker migration after container startup." -ForegroundColor Red
+    exit 1
+}
+
 function Show-Help {
     Write-Host ""
     Write-Host "ResumeConverter Docker Management Script" -ForegroundColor Cyan
@@ -125,6 +155,8 @@ function Run-Container {
         "${ImageName}:${Tag}"
 
     if ($LASTEXITCODE -eq 0) {
+        Invoke-ContainerMigration
+
         Write-Host ""
         Write-Host "Container started successfully!" -ForegroundColor Green
         Write-Host ""

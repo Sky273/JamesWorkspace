@@ -47,6 +47,10 @@ function resolveManagedCleanupPath(candidatePath) {
     };
 }
 
+function getDeletedCount(result) {
+    return typeof result?.deletedCount === 'number' ? result.deletedCount : 0;
+}
+
 // Directory configurations with TTL (time-to-live)
 const CLEANUP_DIRS = {
     uploads: {
@@ -443,8 +447,8 @@ async function cleanupAllDirectories(options = {}) {
         }
         
         const totalDirectoryDeletes = Object.values(results)
-            .filter(result => result.success && typeof result.deletedCount === 'number')
-            .reduce((sum, result) => sum + result.deletedCount, 0);
+            .filter(result => result.success)
+            .reduce((sum, result) => sum + getDeletedCount(result), 0);
 
         metrics.trackCleanupActivity({
             filesDeleted: totalDirectoryDeletes,
@@ -491,7 +495,7 @@ export function startPeriodicCleanup(intervalMs = 60 * 60 * 1000, _maxAgeMs = 60
     cleanupAllDirectories({ enableDatabaseTasks }).then(results => {
         const totalDeleted = Object.values(results)
             .filter(r => r.success)
-            .reduce((sum, r) => sum + r.deletedCount, 0);
+            .reduce((sum, r) => sum + getDeletedCount(r), 0);
         if (totalDeleted > 0) {
             safeLog('info', 'Initial cleanup completed', { totalDeleted, results });
         }
@@ -504,7 +508,7 @@ export function startPeriodicCleanup(intervalMs = 60 * 60 * 1000, _maxAgeMs = 60
         cleanupAllDirectories({ enableDatabaseTasks }).then(results => {
             const totalDeleted = Object.values(results)
                 .filter(r => r.success)
-                .reduce((sum, r) => sum + r.deletedCount, 0);
+                .reduce((sum, r) => sum + getDeletedCount(r), 0);
             if (totalDeleted > 0) {
                 safeLog('info', 'Periodic cleanup completed', { totalDeleted });
             }

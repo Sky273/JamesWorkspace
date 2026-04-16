@@ -69,6 +69,10 @@ function extractMainWordDocumentPart(contentTypesXml) {
     return '';
 }
 
+function hasRootRelationshipsEntry(entryNames) {
+    return entryNames.includes('_rels/.rels');
+}
+
 export async function isValidDocxArchive(buffer) {
     if (!isDocx(buffer)) {
         return false;
@@ -88,17 +92,16 @@ export async function isValidDocxArchive(buffer) {
         }
 
         const contentTypesXml = await contentTypesEntry.async('string');
-        const declaredMainDocument = extractMainWordDocumentPart(contentTypesXml);
-        if (declaredMainDocument && entryNames.includes(declaredMainDocument)) {
-            return true;
+        if (!hasRootRelationshipsEntry(entryNames)) {
+            return false;
         }
 
-        const hasWordXmlEntry = entryNames.some((entryName) => /^word\/.+\.xml$/i.test(entryName));
-        const hasOfficePackageMarker = entryNames.includes('_rels/.rels')
-            || entryNames.includes('docProps/core.xml')
-            || entryNames.includes('docProps/app.xml');
+        const declaredMainDocument = extractMainWordDocumentPart(contentTypesXml);
+        if (!declaredMainDocument) {
+            return false;
+        }
 
-        return hasWordXmlEntry && hasOfficePackageMarker;
+        return entryNames.includes(declaredMainDocument);
     } catch {
         return false;
     }

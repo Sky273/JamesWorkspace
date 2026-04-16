@@ -2,7 +2,7 @@
  * Template Service for CV templates
  */
 
-import { fetchWithAuth, createAuthOptions, createAuthOptionsWithCsrf, authPost, authPut, authDelete, fetchWithCsrfRetry } from './apiInterceptor';
+import { fetchWithAuth, createAuthOptions, createAuthOptionsWithCsrf, authPost, authPut, authDelete, fetchWithCsrfRetry, getResponseErrorMessage } from './apiInterceptor';
 import logger from './logger.frontend';
 import { FRONTEND_LLM_OPERATION_TIMEOUT_MS } from '../constants/llmTimeouts';
 
@@ -162,6 +162,37 @@ export interface ExtractedTemplate {
     extractedColors?: string[];
     extractedFonts?: string[];
     layoutDescription?: string;
+    extractionConfidence?: {
+        score: number;
+        level: 'low' | 'medium' | 'high';
+        reasons?: string[];
+    };
+    extractionReview?: {
+        extractionMethod: string;
+        textLength: number;
+        imageCount: number;
+        layoutMetrics?: Record<string, unknown> | null;
+        headerHtml?: string;
+        contentHtml?: string;
+        footerHtml?: string;
+        stylesheet?: string;
+        visualBlocks?: Array<{
+            type: string;
+            left: number;
+            top: number;
+            width: number;
+            height: number;
+            fill?: string;
+            region?: string;
+        }>;
+        imageRegions?: Array<{
+            left: number;
+            top: number;
+            width: number;
+            height: number;
+            region?: string;
+        }>;
+    };
 }
 
 export interface ExtractTemplateResponse {
@@ -175,6 +206,22 @@ export interface ExtractTemplateResponse {
         total_tokens: number;
     };
 }
+
+const parseJsonResponseOrThrow = async <T>(response: Response, fallbackMessage: string): Promise<T> => {
+    const contentType = (response.headers.get('content-type') || '').toLowerCase();
+
+    if (!contentType.includes('application/json')) {
+        const message = await getResponseErrorMessage(response, fallbackMessage);
+        throw new Error(message || fallbackMessage);
+    }
+
+    try {
+        return await response.json() as T;
+    } catch {
+        const message = await getResponseErrorMessage(response, fallbackMessage);
+        throw new Error(message || fallbackMessage);
+    }
+};
 
 export const templateService = {
     // Get only active templates (for export/selection purposes)
@@ -312,6 +359,9 @@ export const templateService = {
 
             const authOptions = await createAuthOptionsWithCsrf({
                 method: 'POST',
+                headers: {
+                    Accept: 'application/json'
+                },
                 body: formData
             });
             
@@ -325,11 +375,14 @@ export const templateService = {
             const response = await fetchWithCsrfRetry('/api/templates/extract-from-cv', authOptions, EXTRACTION_TIMEOUT);
             
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || errorData.message || 'Failed to extract template from CV');
+                const errorMessage = await getResponseErrorMessage(response, 'Failed to extract template from CV');
+                throw new Error(errorMessage);
             }
             
-            return await response.json();
+            return await parseJsonResponseOrThrow<ExtractTemplateResponse>(
+                response,
+                'Template extraction returned an invalid response.'
+            );
         } catch (error) {
             logger.error('Error extracting template from CV:', error);
             throw error;

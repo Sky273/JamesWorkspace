@@ -115,6 +115,17 @@ describe('Chatbot Routes', () => {
             expect(res.body.response).toBe('Bonjour! Comment puis-je vous aider?');
             expect(res.body.metadata).toBeDefined();
             expect(res.body.metadata.model).toBe('gpt-4o');
+            expect(mockCallLLM).toHaveBeenCalledWith(
+                expect.any(Array),
+                expect.objectContaining({
+                    operationType: 'Chatbot Message',
+                    userMetadata: expect.objectContaining({
+                        actionType: 'chatbot.message',
+                        firmId: 'firm-1',
+                        userId: 'user-123'
+                    })
+                })
+            );
         });
 
         it('should include conversation history in LLM call', async () => {

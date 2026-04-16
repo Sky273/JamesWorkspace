@@ -53,18 +53,18 @@ vi.mock('react-i18next', () => ({
       const map: Record<string, string> = {
         'templates.extract.title': 'Extraction de template',
         'templates.extract.subtitle': 'Sous-titre extraction',
-        'templates.extract.dragDrop': 'Dépose le fichier',
+        'templates.extract.dragDrop': 'Depose le fichier',
         'templates.extract.supportedFormats': 'PDF ou DOCX',
         'templates.extract.clickToChange': 'Cliquer pour changer',
         'templates.extract.extractButton': 'Extraire',
-        'templates.extract.success': 'Extraction réussie',
+        'templates.extract.success': 'Extraction reussie',
         'templates.extract.error': 'Erreur extraction',
-        'templates.extract.extractionComplete': 'Extraction terminée',
-        'templates.extract.preview': 'Aperçu',
-        'templates.extract.reviewNote': 'Relis avant création',
-        'templates.extract.createTemplate': 'Créer le template',
+        'templates.extract.extractionComplete': 'Extraction terminee',
+        'templates.extract.preview': 'Apercu',
+        'templates.extract.reviewNote': 'Relis avant creation',
+        'templates.extract.createTemplate': 'Creer le template',
         'templates.extract.errorTitle': 'Extraction impossible',
-        'templates.extract.tryAgain': 'Réessayer',
+        'templates.extract.tryAgain': 'Reessayer',
         'templates.editor.name.label': 'Nom',
         'templates.editor.description.label': 'Description',
         'common.cancel': 'Annuler',
@@ -82,21 +82,40 @@ describe('ExtractTemplateModal', () => {
     sessionStorage.clear();
   });
 
-  it('extrait un template puis navigue vers la création', async () => {
+  it('extracts a template, allows manual correction, then navigates to creation', async () => {
     mockExtractFromCV.mockResolvedValue({
       success: true,
       model: 'gpt-test',
-      extractionMethod: 'docx-html',
+      extractionMethod: 'office-pdf-layout-html',
       template: {
         name: 'Template CV',
         description: 'Description template',
         tags: ['cv', 'moderne'],
         stylesheet: '.page { color: black; }',
-        headerContent: '<div>Header</div>',
+        headerContent: '<div>Header final</div>',
         templateContent: '<div>Body</div>',
         footerContent: '<div>Footer</div>',
-        extractedColors: ['#000000'],
+        extractedColors: ['#336699'],
         extractedFonts: ['Inter'],
+        extractionConfidence: {
+          score: 0.84,
+          level: 'high',
+        },
+        extractionReview: {
+          extractionMethod: 'office-pdf-layout-html',
+          textLength: 320,
+          imageCount: 1,
+          layoutMetrics: {
+            totalLines: 12,
+            visualBlockCount: 2,
+            imageBlockCount: 1,
+          },
+          headerHtml: '<div>Header fragment</div>',
+          contentHtml: '<div>Content fragment</div>',
+          footerHtml: '<div>Footer fragment</div>',
+          visualBlocks: [{ type: 'fill-rect', left: 0, top: 0, width: 100, height: 40, region: 'header' }],
+          imageRegions: [{ left: 300, top: 20, width: 80, height: 80, region: 'header' }],
+        },
       },
     });
 
@@ -105,28 +124,36 @@ describe('ExtractTemplateModal', () => {
     const file = new File(['docx'], 'modele.docx', {
       type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     });
+
     await act(async () => {
       capturedOnDrop?.([file]);
     });
 
     expect(await screen.findByText('modele.docx')).toBeInTheDocument();
-
     fireEvent.click(screen.getByText('Extraire'));
 
-    expect(await screen.findByText('Extraction terminée')).toBeInTheDocument();
-    expect(screen.getByText('Template CV')).toBeInTheDocument();
-    expect(await screen.findByText('preview-frame:Template CV')).toBeInTheDocument();
-    expect(mockToastSuccess).toHaveBeenCalledWith('Extraction réussie');
+    expect(await screen.findByText('Extraction terminee')).toBeInTheDocument();
+    expect(screen.getByText('preview-frame:Template CV')).toBeInTheDocument();
+    expect(screen.getByText(/Confiance elevee 84%/)).toBeInTheDocument();
+    expect(screen.getByText('Fragments detectes')).toBeInTheDocument();
+    expect(screen.getByText('Blocs visuels')).toBeInTheDocument();
+    expect(mockToastSuccess).toHaveBeenCalledWith('Extraction reussie');
 
-    fireEvent.click(screen.getByText('Créer le template'));
+    fireEvent.change(screen.getByLabelText('Contenu final'), {
+      target: { value: '<div>Body corrected</div>' },
+    });
+    fireEvent.click(screen.getByText('Utiliser le header detecte'));
+    fireEvent.click(screen.getByText('Creer le template'));
 
     expect(JSON.parse(sessionStorage.getItem('extractedTemplate') || '{}')).toMatchObject({
       name: 'Template CV',
+      headerContent: '<div>Header fragment</div>',
+      templateContent: '<div>Body corrected</div>',
     });
     expect(mockNavigate).toHaveBeenCalledWith('/admin/templates/new?fromExtraction=true');
   });
 
-  it('affiche une erreur d’extraction et permet de revenir à l’upload', async () => {
+  it('shows extraction error and allows returning to upload', async () => {
     mockExtractFromCV.mockRejectedValue(new Error('Extraction KO'));
 
     render(<ExtractTemplateModal isOpen={true} onClose={vi.fn()} />);
@@ -142,14 +169,15 @@ describe('ExtractTemplateModal', () => {
     expect(screen.getByText('Extraction KO')).toBeInTheDocument();
     expect(mockToastError).toHaveBeenCalledWith('Erreur extraction');
 
-    fireEvent.click(screen.getByText('Réessayer'));
+    fireEvent.click(screen.getByText('Reessayer'));
 
     await waitFor(() => {
       expect(screen.getByText('modele.pdf')).toBeInTheDocument();
       expect(screen.getByText('Extraire')).toBeInTheDocument();
     });
   });
-  it('resets the modal state and clears extractedTemplate from sessionStorage on close', async () => {
+
+  it('resets state and clears extractedTemplate from sessionStorage on close', async () => {
     const onClose = vi.fn();
     sessionStorage.setItem('extractedTemplate', JSON.stringify({ name: 'old' }));
 
@@ -158,6 +186,7 @@ describe('ExtractTemplateModal', () => {
     const file = new File(['docx'], 'modele.docx', {
       type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     });
+
     await act(async () => {
       capturedOnDrop?.([file]);
     });
