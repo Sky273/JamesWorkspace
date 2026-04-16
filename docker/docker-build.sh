@@ -7,27 +7,32 @@ IMAGE_NAME="resumeconverter"
 CONTAINER_NAME="resumeconverter-app"
 TAG="${TAG:-latest}"
 
-run_container_migration() {
+wait_app_healthy() {
     echo ""
-    echo "Running database migration inside Docker container..."
+    echo "Waiting for application container health..."
 
     for attempt in $(seq 1 24); do
-        container_state="$(docker inspect -f "{{.State.Status}}" "$CONTAINER_NAME" 2>/dev/null || true)"
-        if [ "$container_state" != "running" ]; then
+        container_state="$(docker inspect -f "{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}" "$CONTAINER_NAME" 2>/dev/null || true)"
+        if [ "$container_state" = "healthy" ]; then
+            echo "Application container is healthy."
+            return 0
+        fi
+
+        if [ "$container_state" != "running" ] && [ "$container_state" != "starting" ]; then
+            echo "Application container entered unexpected state: ${container_state:-unknown}"
+            exit 1
+        fi
+
+        if [ -z "$container_state" ]; then
             sleep 5
             continue
         fi
 
-        if docker exec "$CONTAINER_NAME" node server/scripts/docker-migrate.js; then
-            echo "Docker migration completed."
-            return 0
-        fi
-
-        echo "Migration attempt $attempt failed, retrying..."
+        echo "Health check attempt $attempt pending, current state: $container_state"
         sleep 5
     done
 
-    echo "Failed to run docker migration after container startup."
+    echo "Application container did not become healthy after startup."
     exit 1
 }
 
@@ -158,7 +163,7 @@ run_container() {
             echo "Failed to start application container!"
             exit 1
         fi
-        run_container_migration
+        wait_app_healthy
 
         echo ""
         echo "Container started successfully!"

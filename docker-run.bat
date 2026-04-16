@@ -90,30 +90,32 @@ if not %ERRORLEVEL% EQU 0 (
 )
 
 echo.
-echo Running database migration inside Docker container...
-set "MIGRATION_OK="
+echo Waiting for application container health...
+set "APP_HEALTH_OK="
 for /L %%i in (1,1,24) do (
-    for /f "usebackq delims=" %%s in (`docker inspect -f "{{.State.Status}}" resumeconverter-app 2^>nul`) do set "CONTAINER_STATE=%%s"
-    if /I "!CONTAINER_STATE!"=="running" (
-        docker exec resumeconverter-app node server/scripts/docker-migrate.js
-        if !ERRORLEVEL! EQU 0 (
-            set "MIGRATION_OK=1"
-            goto :migration_done
-        )
-        echo Migration attempt %%i failed, retrying...
+    for /f "usebackq delims=" %%s in (`docker inspect -f "{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}" resumeconverter-app 2^>nul`) do set "CONTAINER_STATE=%%s"
+    if /I "!CONTAINER_STATE!"=="healthy" (
+        set "APP_HEALTH_OK=1"
+        goto :app_ready
     )
+    if /I not "!CONTAINER_STATE!"=="running" if /I not "!CONTAINER_STATE!"=="starting" (
+        echo Application container entered unexpected state: !CONTAINER_STATE!
+        pause
+        exit /b 1
+    )
+    echo Health check attempt %%i pending, current state: !CONTAINER_STATE!
     timeout /t 5 /nobreak >nul
 )
 
-:migration_done
-if not defined MIGRATION_OK (
+:app_ready
+if not defined APP_HEALTH_OK (
     echo.
-    echo Failed to run docker migration after container startup!
+    echo Application container did not become healthy after startup!
     pause
     exit /b 1
 )
 
-echo Docker migration completed.
+echo Application container is healthy.
 
 echo.
 echo ============================================

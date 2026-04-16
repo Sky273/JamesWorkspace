@@ -15,33 +15,32 @@ param(
 $ImageName = "resumeconverter"
 $ContainerName = "resumeconverter-app"
 
-function Invoke-ContainerMigration {
+function Wait-AppHealthy {
     Write-Host ""
-    Write-Host "Running database migration inside Docker container..." -ForegroundColor Yellow
+    Write-Host "Waiting for application container health..." -ForegroundColor Yellow
 
     for ($attempt = 1; $attempt -le 24; $attempt++) {
-        $containerState = docker inspect -f "{{.State.Status}}" $ContainerName 2>$null
+        $containerState = docker inspect -f "{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}" $ContainerName 2>$null
         if ($LASTEXITCODE -ne 0 -or -not $containerState) {
             Start-Sleep -Seconds 5
             continue
         }
 
-        if ($containerState.Trim() -ne "running") {
-            Start-Sleep -Seconds 5
-            continue
-        }
-
-        docker exec $ContainerName node server/scripts/docker-migrate.js
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "Docker migration completed." -ForegroundColor Green
+        if ($containerState.Trim() -eq "healthy") {
+            Write-Host "Application container is healthy." -ForegroundColor Green
             return
         }
 
-        Write-Host "Migration attempt $attempt failed, retrying..." -ForegroundColor Yellow
+        if ($containerState.Trim() -ne "running" -and $containerState.Trim() -ne "starting") {
+            Write-Host "Application container entered unexpected state: $($containerState.Trim())" -ForegroundColor Red
+            exit 1
+        }
+
+        Write-Host "Health check attempt $attempt pending, current state: $($containerState.Trim())" -ForegroundColor Yellow
         Start-Sleep -Seconds 5
     }
 
-    Write-Host "Failed to run docker migration after container startup." -ForegroundColor Red
+    Write-Host "Application container did not become healthy after startup." -ForegroundColor Red
     exit 1
 }
 
@@ -186,7 +185,7 @@ function Run-Container {
             Write-Host "Failed to start application container!" -ForegroundColor Red
             exit 1
         }
-        Invoke-ContainerMigration
+        Wait-AppHealthy
 
         Write-Host ""
         Write-Host "Container started successfully!" -ForegroundColor Green
