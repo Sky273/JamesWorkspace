@@ -17,7 +17,9 @@ import {
   normalizeTemplateFragment,
   normalizeTemplateStylesheet,
   summarizeTemplatePayload,
+  templateUsesLogoPlaceholder,
 } from '../utils/templateFragments';
+import { getFirmIdFromRecord, resolveFirmLogoMarkup } from '../utils/firmLogo';
 import type { ExportFormat } from '../components/ResumeAnalysis/ExportTab';
 
 export interface Adaptation {
@@ -321,18 +323,25 @@ export function useAdaptationsDashboard() {
 
       const baseFilename = customerName ? `${exportName}_${customerName}` : exportName;
       const stylesheet = normalizeTemplateStylesheet(template.Stylesheet);
+      const logoMarkup = templateUsesLogoPlaceholder(template)
+        ? await resolveFirmLogoMarkup({
+          firmId: getFirmIdFromRecord(resume as Record<string, unknown>),
+          resumeId,
+        })
+        : '';
       const processedBody = applyTemplatePlaceholders(template.TemplateContent, {
         name: candidateName,
         title: candidateTitle,
         content,
+        logoMarkup,
       });
       const processedHeader = applyTemplatePlaceholders(
         normalizeTemplateFragment(template.HeaderContent, 'header'),
-        { name: candidateName, title: candidateTitle }
+        { name: candidateName, title: candidateTitle, logoMarkup }
       );
       const processedFooter = applyTemplatePlaceholders(
         normalizeTemplateFragment(template.FooterContent, 'footer'),
-        { name: candidateName, title: candidateTitle }
+        { name: candidateName, title: candidateTitle, logoMarkup }
       );
       logger.warn('Adaptation export payload normalized', {
         templateId: template.id,

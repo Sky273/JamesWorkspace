@@ -28,7 +28,7 @@ async function generateAttachmentBlob(resume: Resume, template: Template, format
   const exportOptions = await createAuthOptionsWithCsrf({
     method: 'POST',
     headers: { 'Content-Type': 'application/json; charset=utf-8' },
-    body: JSON.stringify(buildExportPayload(resume, template, format))
+    body: JSON.stringify(await buildExportPayload(resume, template, format))
   }, true);
 
   const response = await fetchWithCsrfRetry(endpoint, exportOptions, 300000);

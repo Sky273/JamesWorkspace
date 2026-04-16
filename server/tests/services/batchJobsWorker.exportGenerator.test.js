@@ -222,14 +222,14 @@ describe('Batch Jobs Worker - Export Generator', () => {
             footer_content: '<footer>-logo-</footer>'
         };
 
-        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJob.mockResolvedValueOnce({ id: 'j1', firm_id: 'firm-exporter' });
         mockGetJobItems.mockResolvedValueOnce([
             { id: 'i1', status: 'success', resume_id: 'r1', file_name: 'cv.pdf' }
         ]);
         mockQuery
             .mockResolvedValueOnce({ rows: [logoTemplate] })
-            .mockResolvedValueOnce({ rows: [{ id: 'r1', improved_text: '<p>Good CV</p>', name: 'Alice', title: 'Dev', trigram: 'ALI', firm_id: 'firm-1' }] })
-            .mockResolvedValueOnce({ rows: [{ id: 'firm-1', logo_data: Buffer.from('logo-bytes'), logo_mime_type: 'image/png' }] });
+            .mockResolvedValueOnce({ rows: [{ id: 'r1', improved_text: '<p>Good CV</p>', name: 'Alice', title: 'Dev', trigram: 'ALI', firm_id: 'firm-resume' }] })
+            .mockResolvedValueOnce({ rows: [{ id: 'firm-resume', logo_data: Buffer.from('logo-bytes'), logo_mime_type: 'image/png' }] });
 
         mockFetch.mockResolvedValueOnce({
             ok: true,

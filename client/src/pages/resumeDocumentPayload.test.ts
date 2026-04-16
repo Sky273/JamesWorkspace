@@ -4,6 +4,7 @@ import {
   buildSharePayload,
   buildExportPayload,
 } from './resumeDocumentPayload';
+import { resolveFirmLogoMarkup } from '../utils/firmLogo';
 
 vi.mock('../components/TiptapEditor/suggestionsHtml', async () => {
   const actual = await vi.importActual<typeof import('../components/TiptapEditor/suggestionsHtml')>('../components/TiptapEditor/suggestionsHtml');
@@ -12,6 +13,11 @@ vi.mock('../components/TiptapEditor/suggestionsHtml', async () => {
     removeSuggestionMarkers: vi.fn((value: string) => value.replace(/\[\[suggestion\]\]/g, '')),
   };
 });
+
+vi.mock('../utils/firmLogo', () => ({
+  getFirmIdFromRecord: vi.fn(() => null),
+  resolveFirmLogoMarkup: vi.fn(async () => ''),
+}));
 
 describe('resumeDocumentPayload', () => {
   const resume = {
@@ -30,8 +36,8 @@ describe('resumeDocumentPayload', () => {
     Stylesheet: 'body { color: red; }',
   };
 
-  it('processes template placeholders with sanitized improved content', () => {
-    expect(processResumeTemplate(resume as never, template)).toEqual({
+  it('processes template placeholders with sanitized improved content', async () => {
+    expect(await processResumeTemplate(resume as never, template)).toEqual({
       body: '<main>Jane Doe|Engineer|Improved profile</main>',
       headerContent: '<header>Jane Doe</header>',
       footerContent: '<footer>Engineer</footer>',
@@ -41,8 +47,8 @@ describe('resumeDocumentPayload', () => {
     });
   });
 
-  it('builds the share payload without file extension', () => {
-    expect(buildSharePayload(resume as never, template)).toEqual({
+  it('builds the share payload without file extension', async () => {
+    expect(await buildSharePayload(resume as never, template)).toEqual({
       htmlContent: '<main>Jane Doe|Engineer|Improved profile</main>',
       filename: 'Jane_Doe',
       stylesheet: 'body { color: red; }',
@@ -52,8 +58,8 @@ describe('resumeDocumentPayload', () => {
     });
   });
 
-  it('builds the export payload with the selected format extension', () => {
-    expect(buildExportPayload(resume as never, template, 'docx')).toEqual({
+  it('builds the export payload with the selected format extension', async () => {
+    expect(await buildExportPayload(resume as never, template, 'docx')).toEqual({
       htmlContent: '<main>Jane Doe|Engineer|Improved profile</main>',
       filename: 'Jane_Doe.docx',
       stylesheet: 'body { color: red; }',
@@ -64,7 +70,7 @@ describe('resumeDocumentPayload', () => {
     });
   });
 
-  it('normalizes extracted full-document header and footer fragments before export', () => {
+  it('normalizes extracted full-document header and footer fragments before export', async () => {
     const extractedTemplate = {
       TemplateContent: '<main>-content-</main>',
       HeaderContent: '<html><head><style>.x{color:red}</style></head><body><div>noise</div><header><div>-name-</div></header></body></html>',
@@ -73,7 +79,7 @@ describe('resumeDocumentPayload', () => {
       Stylesheet: '<style>body { color: red; }</style>',
     };
 
-    expect(buildExportPayload(resume as never, extractedTemplate, 'pdf')).toEqual({
+    expect(await buildExportPayload(resume as never, extractedTemplate, 'pdf')).toEqual({
       htmlContent: '<main>Improved profile</main>',
       filename: 'Jane_Doe.pdf',
       stylesheet: 'body { color: red; }',
@@ -82,5 +88,26 @@ describe('resumeDocumentPayload', () => {
       footerHeight: 25,
       format: 'pdf',
     });
+  });
+
+  it('replaces -logo- across body, header, and footer when a logo is resolved', async () => {
+    vi.mocked(resolveFirmLogoMarkup).mockResolvedValueOnce('<img src="data:image/png;base64,AAA" alt="Cabinet logo" />');
+
+    const templateWithLogo = {
+      TemplateContent: '<main>-logo-|-content-</main>',
+      HeaderContent: '<header>-logo-</header>',
+      FooterContent: '<footer>-logo-</footer>',
+      FooterHeight: 20,
+      Stylesheet: '',
+    };
+
+    const payload = await buildExportPayload(resume as never, templateWithLogo, 'pdf');
+
+    expect(payload.htmlContent).toContain('<img src="data:image/png;base64,AAA" alt="Cabinet logo" />');
+    expect(payload.headerContent).toContain('<img src="data:image/png;base64,AAA" alt="Cabinet logo" />');
+    expect(payload.footerContent).toContain('<img src="data:image/png;base64,AAA" alt="Cabinet logo" />');
+    expect(payload.htmlContent).not.toContain('-logo-');
+    expect(payload.headerContent).not.toContain('-logo-');
+    expect(payload.footerContent).not.toContain('-logo-');
   });
 });

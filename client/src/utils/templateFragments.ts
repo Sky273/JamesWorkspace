@@ -2,6 +2,7 @@ interface PlaceholderValues {
   name: string;
   title: string;
   content?: string;
+  logoMarkup?: string;
 }
 
 type TemplateSection = 'header' | 'footer';
@@ -56,12 +57,23 @@ export function applyTemplatePlaceholders(
   let processed = String(template || '');
   processed = processed.replace(/-name-/g, values.name);
   processed = processed.replace(/-title-/g, values.title);
+  processed = processed.replace(/-logo-/g, values.logoMarkup || '');
 
   if (typeof values.content === 'string') {
     processed = processed.replace(/-content-/g, values.content);
   }
 
   return processed;
+}
+
+export function templateUsesLogoPlaceholder(template: {
+  TemplateContent?: string;
+  HeaderContent?: string;
+  FooterContent?: string;
+}): boolean {
+  return /-logo-/i.test(String(template.TemplateContent || ''))
+    || /-logo-/i.test(String(template.HeaderContent || ''))
+    || /-logo-/i.test(String(template.FooterContent || ''));
 }
 
 function includesDocumentWrapper(fragment: string | undefined): boolean {

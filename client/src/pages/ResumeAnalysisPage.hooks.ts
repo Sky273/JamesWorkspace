@@ -162,7 +162,7 @@ export function useResumeAnalysisPage() {
         const options = await createAuthOptionsWithCsrf({
           headers: { 'Content-Type': 'application/json' }
         });
-        const payload = buildSharePayload(currentResume as Resume, templates[0]);
+        const payload = await buildSharePayload(currentResume as Resume, templates[0]);
 
         const response = await fetchWithCsrfRetry(`/api/share/resume/${id}/generate`, {
           ...options,

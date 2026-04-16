@@ -39,11 +39,9 @@ import ResponsivePageTabs, { type ResponsivePageTabOption } from '../components/
 import { fetchWithAuth, fetchWithCsrfRetry, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
 import { FRONTEND_LLM_AI_MODIFICATION_TIMEOUT_MS } from '../constants/llmTimeouts';
 import {
-  applyTemplatePlaceholders,
-  normalizeTemplateFragment,
-  normalizeTemplateStylesheet,
   summarizeTemplatePayload,
 } from '../utils/templateFragments';
+import { buildSharePayload } from './resumeDocumentPayload';
 import TiptapEditor from '../components/TiptapEditor/DeferredTiptapEditor';
 import { parseSuggestions } from '../components/TiptapEditor/suggestions.shared';
 import { removeSuggestionMarkers } from '../components/TiptapEditor/suggestionsHtml';
@@ -233,29 +231,11 @@ const ResumeImprovePage = (): JSX.Element => {
       }
       const template = templates[0];
       
-      // Prepare content with replacements - clean suggestion markers
-      const rawContent = localResume['Improved Text'] || localResume['Original Text'] || '';
-      const content = removeSuggestionMarkers(rawContent);
-      const candidateName = localResume['Name'] || 'Candidat';
-      const candidateTitle = localResume['Title'] || '';
-      
-      const processedBody = applyTemplatePlaceholders(template.TemplateContent, {
-        name: candidateName,
-        title: candidateTitle,
-        content,
-      });
-      const processedHeader = applyTemplatePlaceholders(
-        normalizeTemplateFragment(template.HeaderContent, 'header'),
-        { name: candidateName, title: candidateTitle }
-      );
-      const processedFooter = applyTemplatePlaceholders(
-        normalizeTemplateFragment(template.FooterContent, 'footer'),
-        { name: candidateName, title: candidateTitle }
-      );
+      const payload = await buildSharePayload(localResume as Resume, template);
       logger.warn('Resume share payload normalized', {
         templateId: template.id,
-        filename: candidateName.replace(/\s+/g, '_'),
-        htmlLength: processedBody.length,
+        filename: payload.filename,
+        htmlLength: payload.htmlContent.length,
         ...summarizeTemplatePayload(template),
       });
       
@@ -267,14 +247,7 @@ const ResumeImprovePage = (): JSX.Element => {
       const response = await fetchWithCsrfRetry(`/api/share/resume/${id}/generate`, {
         ...options,
         method: 'POST',
-        body: JSON.stringify({
-          htmlContent: processedBody,
-          filename: candidateName.replace(/\s+/g, '_'),
-          stylesheet: normalizeTemplateStylesheet(template.Stylesheet),
-          headerContent: processedHeader || undefined,
-          footerContent: processedFooter || undefined,
-          footerHeight: template.FooterHeight || 25
-        })
+        body: JSON.stringify(payload)
       });
       
       const data = await response.json();

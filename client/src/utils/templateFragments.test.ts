@@ -4,6 +4,7 @@ import {
   normalizeTemplateFragment,
   normalizeTemplateStylesheet,
   summarizeTemplatePayload,
+  templateUsesLogoPlaceholder,
 } from './templateFragments';
 
 describe('templateFragments', () => {
@@ -27,11 +28,11 @@ describe('templateFragments', () => {
 
   it('normalizes stylesheet wrappers and applies placeholders', () => {
     const stylesheet = '<style>.page { color: blue; }</style>';
-    const template = '<section><h1>-name-</h1><h2>-title-</h2><div>-content-</div></section>';
+    const template = '<section><h1>-name-</h1><h2>-title-</h2><div>-logo-</div><div>-content-</div></section>';
 
     expect(normalizeTemplateStylesheet(stylesheet)).toBe('.page { color: blue; }');
-    expect(applyTemplatePlaceholders(template, { name: 'Alice', title: 'CTO', content: '<p>Body</p>' })).toBe(
-      '<section><h1>Alice</h1><h2>CTO</h2><div><p>Body</p></div></section>'
+    expect(applyTemplatePlaceholders(template, { name: 'Alice', title: 'CTO', content: '<p>Body</p>', logoMarkup: '<img src="logo.png">' })).toBe(
+      '<section><h1>Alice</h1><h2>CTO</h2><div><img src="logo.png"></div><div><p>Body</p></div></section>'
     );
   });
 
@@ -47,5 +48,28 @@ describe('templateFragments', () => {
     expect(summary.normalizedHeaderLength).toBeLessThan(summary.rawHeaderLength);
     expect(summary.normalizedFooterLength).toBeLessThan(summary.rawFooterLength);
     expect(summary.normalizedStylesheetLength).toBeLessThan(summary.rawStylesheetLength);
+  });
+
+  it('detects -logo- in body, header, or footer', () => {
+    expect(templateUsesLogoPlaceholder({
+      TemplateContent: '<main>-logo-</main>',
+      HeaderContent: '',
+      FooterContent: '',
+    })).toBe(true);
+    expect(templateUsesLogoPlaceholder({
+      TemplateContent: '',
+      HeaderContent: '<header>-logo-</header>',
+      FooterContent: '',
+    })).toBe(true);
+    expect(templateUsesLogoPlaceholder({
+      TemplateContent: '',
+      HeaderContent: '',
+      FooterContent: '<footer>-logo-</footer>',
+    })).toBe(true);
+    expect(templateUsesLogoPlaceholder({
+      TemplateContent: '<main>-content-</main>',
+      HeaderContent: '',
+      FooterContent: '',
+    })).toBe(false);
   });
 });

@@ -5,7 +5,9 @@ import {
   applyTemplatePlaceholders,
   normalizeTemplateFragment,
   normalizeTemplateStylesheet,
+  templateUsesLogoPlaceholder,
 } from '../utils/templateFragments';
+import { getFirmIdFromRecord, resolveFirmLogoMarkup } from '../utils/firmLogo';
 
 interface TemplateLike {
   TemplateContent?: string;
@@ -37,27 +39,34 @@ export interface ExportPayload extends SharePayload {
   format: ExportFormat;
 }
 
-export function processResumeTemplate(
+export async function processResumeTemplate(
   resume: Resume,
   template: TemplateLike
-): ProcessedTemplate {
+): Promise<ProcessedTemplate> {
   const rawContent = resume['Improved Text'] || resume['Original Text'] || '';
   const content = removeSuggestionMarkers(rawContent);
   const candidateName = (resume['Name'] as string) || 'Candidat';
   const candidateTitle = (resume['Title'] as string) || '';
+  const logoMarkup = templateUsesLogoPlaceholder(template)
+    ? await resolveFirmLogoMarkup({
+      firmId: getFirmIdFromRecord(resume as Record<string, unknown>),
+      resumeId: resume.id,
+    })
+    : '';
 
   const processedBody = applyTemplatePlaceholders(template.TemplateContent, {
     name: candidateName,
     title: candidateTitle,
     content,
+    logoMarkup,
   });
   const processedHeader = applyTemplatePlaceholders(
     normalizeTemplateFragment(template.HeaderContent, 'header'),
-    { name: candidateName, title: candidateTitle }
+    { name: candidateName, title: candidateTitle, logoMarkup }
   );
   const processedFooter = applyTemplatePlaceholders(
     normalizeTemplateFragment(template.FooterContent, 'footer'),
-    { name: candidateName, title: candidateTitle }
+    { name: candidateName, title: candidateTitle, logoMarkup }
   );
 
   return {
@@ -70,8 +79,8 @@ export function processResumeTemplate(
   };
 }
 
-export function buildSharePayload(resume: Resume, template: TemplateLike): SharePayload {
-  const processed = processResumeTemplate(resume, template);
+export async function buildSharePayload(resume: Resume, template: TemplateLike): Promise<SharePayload> {
+  const processed = await processResumeTemplate(resume, template);
 
   return {
     htmlContent: processed.body,
@@ -83,12 +92,12 @@ export function buildSharePayload(resume: Resume, template: TemplateLike): Share
   };
 }
 
-export function buildExportPayload(
+export async function buildExportPayload(
   resume: Resume,
   template: TemplateLike,
   format: ExportFormat
-): ExportPayload {
-  const sharePayload = buildSharePayload(resume, template);
+): Promise<ExportPayload> {
+  const sharePayload = await buildSharePayload(resume, template);
   const fileExtension = format === 'pdf' ? 'pdf' : format;
 
   return {

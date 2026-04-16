@@ -83,18 +83,20 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
       const simplifiedFilename = `${name.replace(/[^a-zA-Z]/g, '_')}_adapted.${fileExtension}`;
 
       const stylesheet = normalizeTemplateStylesheet(template.Stylesheet);
+      const logoMarkup = '';
       const processedBody = applyTemplatePlaceholders(template.TemplateContent, {
         name,
         title,
         content,
+        logoMarkup,
       });
       const processedHeader = applyTemplatePlaceholders(
         normalizeTemplateFragment(template.HeaderContent, 'header'),
-        { name, title }
+        { name, title, logoMarkup }
       );
       const processedFooter = applyTemplatePlaceholders(
         normalizeTemplateFragment(template.FooterContent, 'footer'),
-        { name, title }
+        { name, title, logoMarkup }
       );
       logger.warn('Adaptation export payload normalized', {
         templateId: template.id,

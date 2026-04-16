@@ -202,7 +202,7 @@ const AdaptationViewPage = (): JSX.Element => {
 
       const rawContent = editorRef.current?.getContent() || adaptation['Adapted Text'] || '';
       const content = removeSuggestionMarkers(rawContent);
-      const { processedBody, processedHeader, processedFooter, name } = buildTemplateHtml(
+      const { processedBody, processedHeader, processedFooter, name } = await buildTemplateHtml(
         template,
         adaptation,
         content,
@@ -349,7 +349,7 @@ const AdaptationViewPage = (): JSX.Element => {
 
             const rawContent = editorRef.current?.getContent() || adaptation['Adapted Text'] || '';
             const content = removeSuggestionMarkers(rawContent);
-            const { htmlContent, filenameBase } = buildEmailAttachmentHtml(template, adaptation, content);
+            const { htmlContent, filenameBase } = await buildEmailAttachmentHtml(template, adaptation, content);
 
             const endpoint = format === 'pdf' ? '/generate-pdf' : '/generate-docx';
             const fileExtension = format === 'pdf' ? 'pdf' : format;

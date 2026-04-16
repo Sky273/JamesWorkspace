@@ -3,7 +3,9 @@ import {
   applyTemplatePlaceholders,
   normalizeTemplateFragment,
   normalizeTemplateStylesheet,
+  templateUsesLogoPlaceholder,
 } from '../utils/templateFragments';
+import { getFirmIdFromRecord, resolveFirmLogoMarkup } from '../utils/firmLogo';
 import type { Adaptation, Template } from './AdaptationViewPage.types';
 
 export function formatAdaptationDate(dateString: string | undefined, language: string): string {
@@ -19,38 +21,44 @@ export function getAdaptationTitle(adaptation: Adaptation): string {
   return adaptation['Adapted Title'] || adaptation['Mission Title'] || 'CV Adapté';
 }
 
-export function buildTemplateHtml(
+export async function buildTemplateHtml(
   template: Template,
   adaptation: Adaptation,
   content: string,
-): {
+): Promise<{
   processedBody: string;
   processedHeader: string;
   processedFooter: string;
   name: string;
   title: string;
-} {
+}> {
   const name = getAdaptationName(adaptation);
   const title = getAdaptationTitle(adaptation);
+  const logoMarkup = templateUsesLogoPlaceholder(template)
+    ? await resolveFirmLogoMarkup({
+      firmId: getFirmIdFromRecord(adaptation as Record<string, unknown>),
+      resumeId: String(adaptation['Resume ID'] || adaptation.Resume?.[0] || ''),
+    })
+    : '';
 
-  const processedBody = applyTemplatePlaceholders(template.TemplateContent, { name, title, content });
+  const processedBody = applyTemplatePlaceholders(template.TemplateContent, { name, title, content, logoMarkup });
   const processedHeader = applyTemplatePlaceholders(
     normalizeTemplateFragment(template.HeaderContent, 'header'),
-    { name, title }
+    { name, title, logoMarkup }
   );
   const processedFooter = applyTemplatePlaceholders(
     normalizeTemplateFragment(template.FooterContent, 'footer'),
-    { name, title }
+    { name, title, logoMarkup }
   );
 
   return { processedBody, processedHeader, processedFooter, name, title };
 }
 
-export function buildEmailAttachmentHtml(template: Template, adaptation: Adaptation, content: string): {
+export async function buildEmailAttachmentHtml(template: Template, adaptation: Adaptation, content: string): Promise<{
   htmlContent: string;
   filenameBase: string;
-} {
-  const { processedBody, processedHeader, processedFooter, name, title } = buildTemplateHtml(template, adaptation, content);
+}> {
+  const { processedBody, processedHeader, processedFooter, name, title } = await buildTemplateHtml(template, adaptation, content);
 
   const htmlContent = `
     <!DOCTYPE html>
