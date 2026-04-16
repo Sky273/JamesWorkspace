@@ -1,9 +1,9 @@
 # Resume Converter
 
-[![Version](https://img.shields.io/badge/version-1.7.8-blue.svg)](./CHANGELOG.md)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
+[![Version](https://img.shields.io/badge/version-1.9.0-blue.svg)](./CHANGELOG.md)
+[![Node.js](https://img.shields.io/badge/node-22.x-green.svg)](https://nodejs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18+-blue.svg)](https://www.postgresql.org/)
-[![React](https://img.shields.io/badge/React-18.2-61dafb.svg)](https://reactjs.org/)
+[![React](https://img.shields.io/badge/React-19.2-61dafb.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg)](https://www.typescriptlang.org/)
 
 Application professionnelle de gestion et d'analyse de CVs avec intelligence artificielle, matching de profils et radar du marché de l'emploi intégré.

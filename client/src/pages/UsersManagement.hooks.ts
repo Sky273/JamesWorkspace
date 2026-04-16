@@ -11,7 +11,9 @@ import {
   markUsersViewDirty,
 } from '../utils/viewRefreshScopes';
 import {
+  buildVisibleRecordsPage,
   buildUsersManagementStats,
+  computeAdjustedTotalCount,
   createDeleteTarget,
   getTotalPages,
 } from './UsersManagement.hookUtils';
@@ -195,41 +197,40 @@ export function useUsersManagementDashboard(options: { embedded?: boolean; force
         return;
       }
 
-      const filterDeletedUsers = (records: User[]) => records.filter(
-        (record) => !deletedUserIdsRef.current.has(record.id),
-      );
       const preservedUser = options.preserveUser ?? (options.clearOptimisticState ? null : pendingUserRef.current);
-      const responseIncludesPreservedUser = Boolean(
-        preservedUser != null
-        && userData.users?.some((record) => record.id === preservedUser.id),
-      );
       const shouldPreserveUser = preservedUser != null
         && !deletedUserIdsRef.current.has(preservedUser.id)
         && (normalizedSearch.length === 0
           || (preservedUser.name || '').toLowerCase().includes(normalizedSearch)
-          || (preservedUser.email || '').toLowerCase().includes(normalizedSearch))
-        && !responseIncludesPreservedUser;
+          || (preservedUser.email || '').toLowerCase().includes(normalizedSearch));
 
       if (userData.users) {
-        const visibleUsers = filterDeletedUsers(userData.users);
-        const nextUsers = shouldPreserveUser && preservedUser
-          ? [preservedUser, ...visibleUsers].slice(0, USERS_PAGE_SIZE)
-          : visibleUsers;
+        const { nextRecords: nextUsers, responseIncludesPreservedRecord: responseIncludesPreservedUser } = buildVisibleRecordsPage(userData.users, {
+          deletedIds: deletedUserIdsRef.current,
+          pageSize: USERS_PAGE_SIZE,
+          preservedRecord: preservedUser,
+          shouldIncludePreservedRecord: shouldPreserveUser,
+        });
         setUsers(nextUsers);
         pendingUserRef.current = options.clearOptimisticState || responseIncludesPreservedUser
           ? null
           : preservedUser;
-        const reportedTotal = userData.pagination?.totalCount;
-        const adjustedTotal = typeof reportedTotal === 'number'
-          ? Math.max(0, reportedTotal - [...deletedUserIdsRef.current].filter((id) => userData.users.some((user) => user.id === id)).length)
-          : nextUsers.length;
-        setUsersTotalCount(adjustedTotal);
+        setUsersTotalCount(
+          computeAdjustedTotalCount(
+            userData.users,
+            deletedUserIdsRef.current,
+            userData.pagination?.totalCount,
+            nextUsers.length,
+          ),
+        );
         setUsersHasMore(userData.pagination?.hasMore || false);
       } else {
-        const visibleUsers = filterDeletedUsers(Array.isArray(userData) ? userData : []);
-        const nextUsers = shouldPreserveUser && preservedUser
-          ? [preservedUser, ...visibleUsers].slice(0, USERS_PAGE_SIZE)
-          : visibleUsers;
+        const { nextRecords: nextUsers } = buildVisibleRecordsPage(Array.isArray(userData) ? userData : [], {
+          deletedIds: deletedUserIdsRef.current,
+          pageSize: USERS_PAGE_SIZE,
+          preservedRecord: preservedUser,
+          shouldIncludePreservedRecord: shouldPreserveUser,
+        });
         setUsers(nextUsers);
         pendingUserRef.current = options.clearOptimisticState ? null : preservedUser;
         setUsersTotalCount(nextUsers.length);
@@ -276,28 +277,28 @@ export function useUsersManagementDashboard(options: { embedded?: boolean; force
         if (requestId !== firmsRequestIdRef.current) {
           return;
         }
-        const visibleFirms = customerData.customers.filter((firm) => !deletedFirmIdsRef.current.has(firm.id));
         const preservedFirm = options.preserveFirm ?? (options.clearOptimisticState ? null : pendingFirmRef.current);
-        const responseIncludesPreservedFirm = Boolean(
-          preservedFirm != null
-          && visibleFirms.some((firm) => firm.id === preservedFirm.id),
-        );
         const shouldPreserveFirm = preservedFirm != null
           && !deletedFirmIdsRef.current.has(preservedFirm.id)
-          && (normalizedSearch.length === 0 || preservedFirm.name.toLowerCase().includes(normalizedSearch))
-          && !responseIncludesPreservedFirm;
-        const nextFirms: Firm[] = shouldPreserveFirm && preservedFirm
-          ? [preservedFirm, ...visibleFirms].slice(0, USERS_PAGE_SIZE)
-          : visibleFirms;
+          && (normalizedSearch.length === 0 || preservedFirm.name.toLowerCase().includes(normalizedSearch));
+        const { nextRecords: nextFirms, responseIncludesPreservedRecord: responseIncludesPreservedFirm } = buildVisibleRecordsPage(customerData.customers, {
+          deletedIds: deletedFirmIdsRef.current,
+          pageSize: USERS_PAGE_SIZE,
+          preservedRecord: preservedFirm,
+          shouldIncludePreservedRecord: shouldPreserveFirm,
+        });
         setFirms(nextFirms);
         pendingFirmRef.current = options.clearOptimisticState || responseIncludesPreservedFirm
           ? null
           : preservedFirm;
-        const reportedTotal = customerData.pagination?.totalCount;
-        const adjustedTotal = typeof reportedTotal === 'number'
-          ? Math.max(0, reportedTotal - [...deletedFirmIdsRef.current].filter((id) => customerData.customers.some((firm) => firm.id === id)).length)
-          : nextFirms.length;
-        setFirmsTotalCount(adjustedTotal);
+        setFirmsTotalCount(
+          computeAdjustedTotalCount(
+            customerData.customers,
+            deletedFirmIdsRef.current,
+            customerData.pagination?.totalCount,
+            nextFirms.length,
+          ),
+        );
         setFirmsHasMore(customerData.pagination?.hasMore || false);
       }
     } catch (error) {

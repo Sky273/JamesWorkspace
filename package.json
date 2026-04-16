@@ -3,13 +3,16 @@
   "private": true,
   "version": "1.9.0",
   "type": "module",
+  "engines": {
+    "node": ">=22 <23"
+  },
   "scripts": {
     "dev": "cd client && node --max-http-header-size=32768 ../node_modules/vite/bin/vite.js --force",
     "start:proxy": "node --max-old-space-size=2048 --expose-gc server/proxy-server.js",
     "start:pdf": "node pdf-server/server.cjs",
     "build": "cd client && node ../node_modules/vite/bin/vite.js build",
-    "lint": "eslint client server --ext js,jsx,ts,tsx --report-unused-disable-directives",
-    "typecheck": "node ./node_modules/typescript/bin/tsc --noEmit -p client/tsconfig.json",
+    "lint": "node scripts/run-eslint.mjs client server --ext js,jsx,ts,tsx --report-unused-disable-directives",
+    "typecheck": "node scripts/run-typecheck.mjs --noEmit -p client/tsconfig.json",
     "validate:core": "node scripts/run-validation-suite.mjs --stage=core",
     "validate:e2e": "node scripts/run-validation-suite.mjs --stage=e2e",
     "validate:ci": "node scripts/run-validation-suite.mjs --stage=all",
@@ -29,7 +32,7 @@
     "migrate": "node server/scripts/migrate.js",
     "knip": "knip",
     "unused-exports": "ts-unused-exports client/tsconfig.json --showLineNumber",
-    "lint:fix": "eslint client server --ext js,jsx,ts,tsx --fix",
+    "lint:fix": "node scripts/run-eslint.mjs client server --ext js,jsx,ts,tsx --fix",
     "test:e2e": "node ./node_modules/@playwright/test/cli.js test",
     "test:e2e:ui": "node ./node_modules/@playwright/test/cli.js test --ui",
     "test:e2e:headed": "node ./node_modules/@playwright/test/cli.js test --headed",
