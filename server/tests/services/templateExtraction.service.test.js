@@ -59,9 +59,28 @@ describe('Template Extraction Service', () => {
                 expect.any(Array),
                 expect.objectContaining({
                     operationType: 'Template Extraction',
+                    timeout: 120000,
                     userMetadata: expect.objectContaining({
                         actionType: 'template.extract'
                     })
+                })
+            );
+        });
+
+        it('requests the extraction-specific timeout and relies on the LLM facade to enforce the standard minimum', async () => {
+            callLLM.mockResolvedValueOnce({
+                content: validTemplateJSON,
+                model: 'gpt-4',
+                usage: { total_tokens: 500 }
+            });
+
+            await extractTemplateFromHTML('<html>CV content</html>');
+
+            expect(callLLM).toHaveBeenCalledWith(
+                expect.any(Array),
+                expect.objectContaining({
+                    timeout: 120000,
+                    operationType: 'Template Extraction'
                 })
             );
         });
@@ -207,6 +226,32 @@ describe('Template Extraction Service', () => {
             expect(userMsg).toContain('Header');
             expect(userMsg).toContain('Footer');
             expect(userMsg).toContain('totalLines');
+        });
+
+        it('should fall back to a deterministic layout template when the LLM call fails and layout data exists', async () => {
+            callLLM.mockRejectedValueOnce(new Error('Upstream timeout after 120000ms'));
+
+            const result = await extractTemplateFromHTML('<div>Layout</div>', [], 'cv.pdf', { colors: ['#123456'], fonts: ['Inter'] }, {
+                layoutAnalysis: {
+                    headerHtml: '<header><div>Mehdi Hennad</div></header>',
+                    contentHtml: '<main><div>Body content</div></main>',
+                    footerHtml: '<footer><div>01 02 03 04 05</div></footer>',
+                    stylesheet: '.page { color: #123456; }',
+                    imageBlocks: [{ region: 'header', left: 10, top: 10, width: 80, height: 40 }]
+                }
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.model).toBe('deterministic-layout-fallback');
+            expect(result.template.headerContent).toContain('-logo-');
+            expect(result.template.headerContent).not.toContain('Mehdi Hennad');
+            expect(result.template.footerContent).not.toContain('01 02 03 04 05');
+            expect(result.template.templateContent).toContain('-name-');
+            expect(result.template.templateContent).toContain('-title-');
+            expect(result.template.templateContent).toContain('-content-');
+            expect(result.template.stylesheet).toContain('.template-layout-fallback');
+            expect(result.template.extractedColors).toEqual(['#123456']);
+            expect(result.template.extractedFonts).toEqual(['Inter']);
         });
 
         it('sanitizes returned HTML and stylesheet fragments', async () => {

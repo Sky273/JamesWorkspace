@@ -10,12 +10,14 @@ const {
   updateTemplateMock,
   getTemplateByIdMock,
   useParamsMock,
+  useAuthMock,
 } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
   createTemplateMock: vi.fn(),
   updateTemplateMock: vi.fn(),
   getTemplateByIdMock: vi.fn(),
   useParamsMock: vi.fn(),
+  useAuthMock: vi.fn(),
 }));
 
 vi.mock('react-router-dom', () => ({
@@ -61,6 +63,10 @@ vi.mock('../utils/templateService', () => ({
   },
 }));
 
+vi.mock('../context/AuthContext', () => ({
+  useAuth: () => useAuthMock(),
+}));
+
 vi.mock('../components/AdminFirmSelector', () => ({
   default: () => null,
 }));
@@ -93,6 +99,10 @@ describe('NewTemplatePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     useParamsMock.mockReturnValue({});
+    useAuthMock.mockReturnValue({
+      user: { firmId: 'firm-current', firm_id: 'firm-current', role: 'admin' },
+      loading: false,
+    });
     createTemplateMock.mockResolvedValue({
       id: 'tpl-new',
       Name: 'Nouveau modele',
@@ -127,5 +137,34 @@ describe('NewTemplatePage', () => {
         createdTemplate: expect.objectContaining({ id: 'tpl-new' }),
       },
     });
+  });
+
+  it('assigns the current user firm to templates loaded from extraction', async () => {
+    sessionStorage.setItem('extractedTemplate', JSON.stringify({
+      name: 'Template extrait',
+      description: 'Description extraite',
+      headerContent: '<div>Header</div>',
+      templateContent: '<p>Body</p>',
+      footerContent: '<div>Footer</div>',
+      stylesheet: 'body { color: #111; }',
+      tags: ['cv'],
+    }));
+
+    render(<NewTemplatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('templates.editor.name.label')).toHaveValue('Template extrait');
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'common.save' }));
+
+    await waitFor(() => {
+      expect(createTemplateMock).toHaveBeenCalledWith(expect.objectContaining({
+        firm_id: 'firm-current',
+        name: 'Template extrait',
+      }));
+    });
+
+    expect(sessionStorage.getItem('extractedTemplate')).toBeNull();
   });
 });

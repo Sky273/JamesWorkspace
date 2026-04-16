@@ -4,6 +4,10 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('../../config/constants.js', () => ({
+    LLM_OPERATION_TIMEOUT_MS: 15 * 60 * 1000
+}));
+
 vi.mock('../../services/settings.service.js', () => ({
     getLLMSettings: vi.fn()
 }));
@@ -108,8 +112,25 @@ describe('LLM Service', () => {
                 model: 'gpt-4o',
                 messages,
                 settings: { llmProvider: 'openai', llmModel: 'gpt-4o' },
-                options
+                options: {
+                    ...options,
+                    timeout: 15 * 60 * 1000
+                }
             });
+        });
+
+        it('preserves longer explicit timeouts while enforcing the standard minimum', async () => {
+            getLLMSettings.mockResolvedValueOnce({ llmProvider: 'openai', llmModel: 'gpt-4o' });
+            resolveLLMRuntimeConfig.mockReturnValueOnce({ provider: 'openai', model: 'gpt-4o' });
+            callProviderChat.mockResolvedValueOnce({ content: 'response' });
+
+            await callLLM([{ role: 'user', content: 'hello' }], { timeout: 20 * 60 * 1000 });
+
+            expect(callProviderChat).toHaveBeenCalledWith(expect.objectContaining({
+                options: expect.objectContaining({
+                    timeout: 20 * 60 * 1000
+                })
+            }));
         });
     });
 
@@ -139,7 +160,10 @@ describe('LLM Service', () => {
                 systemPrompt: 'Describe',
                 userContent,
                 settings: { llmProvider: 'anthropic', llmModel: 'claude-3-5-sonnet-20241022' },
-                options: { max_tokens: 512 }
+                options: {
+                    max_tokens: 512,
+                    timeout: 15 * 60 * 1000
+                }
             });
         });
     });

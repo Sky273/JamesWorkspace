@@ -7,10 +7,15 @@ import { callProviderChat, callProviderVision, logGatewayCall } from './llmGatew
 import { resolveLLMRuntimeConfig } from './llmConfiguration.service.js';
 import { buildOpenAICompatibleParams, getOpenAICompatibleTokenParam, supportsCustomTemperatureForOpenAICompatible } from './llmProviderCommon.service.js';
 import { resolveEffectiveModelParameters } from './llmAdminParameters.service.js';
+import { LLM_OPERATION_TIMEOUT_MS } from '../config/constants.js';
 
 export const getTokenParameter = getOpenAICompatibleTokenParam;
 export const supportsCustomTemperature = supportsCustomTemperatureForOpenAICompatible;
 export const buildOpenAIParams = buildOpenAICompatibleParams;
+
+function resolveStandardOperationTimeout(timeout) {
+    return Math.max(LLM_OPERATION_TIMEOUT_MS, Number(timeout) || 0);
+}
 
 export async function callLLM(messages, options = {}) {
     const settings = await getLLMSettings();
@@ -37,7 +42,7 @@ export async function callLLM(messages, options = {}) {
         settings,
         options: {
             ...parameters,
-            timeout: options.timeout,
+            timeout: resolveStandardOperationTimeout(options.timeout),
             maxPromptLength: options.maxPromptLength,
             userMetadata: options.userMetadata,
             operationType: options.operationType
@@ -71,7 +76,7 @@ export async function callLLMWithVision(systemPrompt, userContent, options = {})
         settings,
         options: {
             ...parameters,
-            timeout: options.timeout,
+            timeout: resolveStandardOperationTimeout(options.timeout),
             maxPromptLength: options.maxPromptLength,
             userMetadata: options.userMetadata,
             operationType: options.operationType

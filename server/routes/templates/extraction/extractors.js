@@ -1,8 +1,4 @@
 import multer from 'multer';
-import fs from 'fs/promises';
-import path from 'path';
-import { createRequire } from 'module';
-import puppeteer from 'puppeteer';
 import { safeLog } from '../../../utils/logger.backend.js';
 import {
     extractTemplateFromHTML,
@@ -22,9 +18,8 @@ import {
 } from './pdfExtractionHelpers.js';
 import { extractStructuredPdfTemplateInput } from './pdfLayoutTemplateBuilder.js';
 
-const require = createRequire(import.meta.url);
 const MIN_LAYOUT_TEXT_CHARACTERS = 80;
-let cachedPdfJsDataUrls = null;
+let cachedPdfJsModules = null;
 
 function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
@@ -120,33 +115,6 @@ function attachExtractionReview(result, {
     return result;
 }
 
-function resolvePdfJsAssetPath(candidates) {
-    for (const candidate of candidates) {
-        try {
-            return require.resolve(candidate);
-        } catch {
-            // Try next candidate.
-        }
-    }
-
-    const pdfJsPackagePath = require.resolve('pdfjs-dist/package.json');
-    const pdfJsRoot = path.dirname(pdfJsPackagePath);
-
-    for (const candidate of candidates) {
-        const relativeCandidate = candidate.replace(/^pdfjs-dist[\\/]/, '');
-        const absolutePath = path.join(pdfJsRoot, relativeCandidate);
-        try {
-            require.resolve(absolutePath);
-            return absolutePath;
-        } catch {
-            // Try next candidate.
-        }
-    }
-
-    const fallbackCandidate = candidates[0].replace(/^pdfjs-dist[\\/]/, '');
-    return path.join(pdfJsRoot, fallbackCandidate);
-}
-
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 10 * 1024 * 1024 },
@@ -165,31 +133,38 @@ const upload = multer({
     }
 });
 
-async function getPdfJsDataUrls() {
-    if (cachedPdfJsDataUrls) {
-        return cachedPdfJsDataUrls;
+async function getPdfJsModules() {
+    if (cachedPdfJsModules) {
+        return cachedPdfJsModules;
     }
 
-    const pdfJsBundlePath = resolvePdfJsAssetPath([
-        'pdfjs-dist/build/pdf.min.mjs',
-        'pdfjs-dist/legacy/build/pdf.min.mjs'
-    ]);
-    const pdfJsWorkerBundlePath = resolvePdfJsAssetPath([
-        'pdfjs-dist/build/pdf.worker.min.mjs',
-        'pdfjs-dist/legacy/build/pdf.worker.min.mjs'
-    ]);
+    const candidates = [
+        'pdfjs-dist/legacy/build/pdf.mjs',
+        'pdfjs-dist/build/pdf.mjs',
+        'pdfjs-dist/legacy/build/pdf.min.mjs',
+        'pdfjs-dist/build/pdf.min.mjs'
+    ];
 
-    const [pdfJsSource, pdfWorkerSource] = await Promise.all([
-        fs.readFile(pdfJsBundlePath, 'utf8'),
-        fs.readFile(pdfJsWorkerBundlePath, 'utf8')
-    ]);
+    let pdfJsModule = null;
+    let lastError = null;
+    for (const candidate of candidates) {
+        try {
+            pdfJsModule = await import(candidate);
+            break;
+        } catch (error) {
+            lastError = error;
+        }
+    }
 
-    cachedPdfJsDataUrls = {
-        pdfJsModuleUrl: `data:text/javascript;base64,${Buffer.from(pdfJsSource, 'utf8').toString('base64')}`,
-        pdfJsWorkerUrl: `data:text/javascript;base64,${Buffer.from(pdfWorkerSource, 'utf8').toString('base64')}`
+    if (!pdfJsModule) {
+        throw lastError || new Error('Unable to load pdfjs-dist module for PDF rendering');
+    }
+
+    cachedPdfJsModules = {
+        pdfJsModule
     };
 
-    return cachedPdfJsDataUrls;
+    return cachedPdfJsModules;
 }
 
 async function extractDocxAssets(buffer) {
@@ -280,65 +255,41 @@ async function extractPdfText(buffer, fileName) {
             fileName,
             error: error.message
         });
-        return extractTextFromPDFBuffer(buffer);
+        const fallbackResult = await extractTextFromPDFBuffer(buffer);
+        return typeof fallbackResult === 'string'
+            ? fallbackResult
+            : (fallbackResult?.text || '');
     }
 }
 
 async function renderPdfToFirstPageImage(buffer) {
-    let browser = null;
-    try {
-        const { pdfJsModuleUrl, pdfJsWorkerUrl } = await getPdfJsDataUrls();
-        browser = await puppeteer.launch({
-            headless: true,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage'
-            ]
-        });
+    const [{ createCanvas }, { pdfJsModule }] = await Promise.all([
+        import('canvas'),
+        getPdfJsModules()
+    ]);
 
-        const page = await browser.newPage();
-        await page.setViewport({ width: 1200, height: 1600, deviceScaleFactor: 2 });
+    const loadingTask = pdfJsModule.getDocument({
+        data: new Uint8Array(buffer),
+        disableWorker: true,
+        useWorkerFetch: false,
+        isEvalSupported: false,
+        standardFontDataUrl: undefined
+    });
+    const pdfDocument = await loadingTask.promise;
+    const pdfPage = await pdfDocument.getPage(1);
+    const viewport = pdfPage.getViewport({ scale: 2 });
+    const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+    const context = canvas.getContext('2d');
 
-        const pdfBase64 = buffer.toString('base64');
-        await page.setContent(`
-            <!DOCTYPE html>
-            <html>
-            <body style="margin:0;padding:0;background:white">
-                <div id="status" style="position:absolute;top:10px;left:10px;font-family:monospace">Loading PDF...</div>
-                <canvas id="canvas"></canvas>
-                <script type="module">
-                    import * as pdfjsLib from '${pdfJsModuleUrl}';
-                    pdfjsLib.GlobalWorkerOptions.workerSrc = '${pdfJsWorkerUrl}';
-                    const pdfData = atob('${pdfBase64}');
-                    const pdfArray = new Uint8Array(pdfData.length);
-                    for (let i = 0; i < pdfData.length; i++) {
-                        pdfArray[i] = pdfData.charCodeAt(i);
-                    }
-                    const loadingTask = pdfjsLib.getDocument({ data: pdfArray });
-                    const pdf = await loadingTask.promise;
-                    const pdfPage = await pdf.getPage(1);
-                    const viewport = pdfPage.getViewport({ scale: 2 });
-                    const canvas = document.getElementById('canvas');
-                    const context = canvas.getContext('2d');
-                    canvas.width = viewport.width;
-                    canvas.height = viewport.height;
-                    await pdfPage.render({ canvasContext: context, viewport }).promise;
-                    window.pdfRendered = true;
-                </script>
-            </body>
-            </html>
-        `, { waitUntil: 'networkidle0', timeout: 60000 });
+    await pdfPage.render({
+        canvasContext: context,
+        viewport
+    }).promise;
 
-        await page.waitForFunction(() => window.pdfRendered === true, { timeout: 120000 });
-        const canvas = await page.$('#canvas');
-        const imageBuffer = await canvas.screenshot({ type: 'png' });
-        return imageBuffer.toString('base64');
-    } finally {
-        if (browser) {
-            await browser.close().catch(() => {});
-        }
-    }
+    const imageBuffer = canvas.toBuffer('image/png');
+
+    await pdfDocument.destroy().catch(() => {});
+    return imageBuffer.toString('base64');
 }
 
 async function extractFromPdfWithLayout(buffer, fileName, extractedImages = [], extractedStyles = {}, options = {}) {

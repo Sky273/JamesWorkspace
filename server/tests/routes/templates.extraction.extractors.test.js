@@ -10,25 +10,17 @@ const mockExtractTemplateFromCV = vi.fn();
 const mockExtractTextFromPDFBuffer = vi.fn();
 const mockConvertWordBufferToPdfBuffer = vi.fn();
 const mockExtractStructuredPdfTemplateInput = vi.fn();
-const mockReadFile = vi.fn(async (filePath) => {
-    const normalized = String(filePath);
-    if (normalized.includes('pdf.min.mjs')) {
-        return 'pdfjs-module-source';
-    }
-    if (normalized.includes('pdf.worker.min.mjs')) {
-        return 'pdfjs-worker-source';
-    }
-    return '';
-});
 const mockPdfParse = vi.fn();
 const mockPdfDocumentLoad = vi.fn();
-const mockPuppeteerLaunch = vi.fn();
+const mockCreateCanvas = vi.fn();
+const mockCanvasToBuffer = vi.fn();
+const mockPdfJsGetDocument = vi.fn();
+const mockPdfJsRender = vi.fn();
+const mockPdfJsGetPage = vi.fn();
+const mockPdfJsDocumentDestroy = vi.fn();
 
-vi.mock('fs/promises', () => ({
-    default: {
-        readFile: (...args) => mockReadFile(...args)
-    },
-    readFile: (...args) => mockReadFile(...args)
+vi.mock('canvas', () => ({
+    createCanvas: (...args) => mockCreateCanvas(...args)
 }));
 
 vi.mock('../../services/templateExtraction.service.js', () => ({
@@ -49,10 +41,9 @@ vi.mock('../../routes/templates/extraction/pdfLayoutTemplateBuilder.js', () => (
     extractStructuredPdfTemplateInput: (...args) => mockExtractStructuredPdfTemplateInput(...args)
 }));
 
-vi.mock('puppeteer', () => ({
-    default: {
-        launch: (...args) => mockPuppeteerLaunch(...args)
-    }
+vi.mock('pdfjs-dist/legacy/build/pdf.mjs', () => ({
+    getDocument: (...args) => mockPdfJsGetDocument(...args),
+    GlobalWorkerOptions: {}
 }));
 
 vi.mock('pdf-parse', () => ({
@@ -124,18 +115,22 @@ describe('template extraction extractors', () => {
 
         mockConvertWordBufferToPdfBuffer.mockResolvedValue(Buffer.from('%PDF-1.7 converted'));
 
-        const page = {
-            setViewport: vi.fn().mockResolvedValue(undefined),
-            setContent: vi.fn().mockResolvedValue(undefined),
-            waitForFunction: vi.fn().mockResolvedValue(undefined),
-            $: vi.fn().mockResolvedValue({
-                screenshot: vi.fn().mockResolvedValue(Buffer.from('png'))
+        mockCanvasToBuffer.mockReturnValue(Buffer.from('png'));
+        mockCreateCanvas.mockReturnValue({
+            getContext: vi.fn().mockReturnValue({}),
+            toBuffer: mockCanvasToBuffer
+        });
+        mockPdfJsRender.mockResolvedValue(undefined);
+        mockPdfJsGetPage.mockResolvedValue({
+            getViewport: vi.fn().mockReturnValue({ width: 400, height: 600 }),
+            render: vi.fn().mockReturnValue({ promise: mockPdfJsRender })
+        });
+        mockPdfJsDocumentDestroy.mockResolvedValue(undefined);
+        mockPdfJsGetDocument.mockReturnValue({
+            promise: Promise.resolve({
+                getPage: mockPdfJsGetPage,
+                destroy: mockPdfJsDocumentDestroy
             })
-        };
-
-        mockPuppeteerLaunch.mockResolvedValue({
-            newPage: vi.fn().mockResolvedValue(page),
-            close: vi.fn().mockResolvedValue(undefined)
         });
     });
 

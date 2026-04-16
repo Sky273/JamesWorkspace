@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import logger from '../utils/logger.frontend';
 import { markTemplatesViewDirty } from '../utils/viewRefreshScopes';
 import AdminFirmSelector from '../components/AdminFirmSelector';
+import { useAuth } from '../context/AuthContext';
 import {
   normalizeTemplateFragment,
   normalizeTemplateStylesheet,
@@ -41,6 +42,7 @@ const ADMIN_TEMPLATES_ROUTE = '/admin?tab=templates';
 const NewTemplatePage = (): JSX.Element => {
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
+  const { user, loading: authLoading } = useAuth();
   const headerEditorRef = useRef<TiptapEditorRef | null>(null);
   const bodyEditorRef = useRef<TiptapEditorRef | null>(null);
   const footerEditorRef = useRef<TiptapEditorRef | null>(null);
@@ -48,6 +50,7 @@ const NewTemplatePage = (): JSX.Element => {
   const [editorReady, setEditorReady] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const { t } = useTranslation();
+  const currentUserFirmId = user?.firmId || user?.firm_id || '';
 
   const handleEditorReady = useCallback(() => {
     editorsReadyCount.current++;
@@ -75,6 +78,10 @@ const NewTemplatePage = (): JSX.Element => {
       // Check if we have an extracted template from sessionStorage
       const extractedTemplateJson = sessionStorage.getItem('extractedTemplate');
       if (extractedTemplateJson && !id) {
+        if (authLoading) {
+          return;
+        }
+
         try {
           const extractedTemplate = JSON.parse(extractedTemplateJson);
           const normalizedExtractedTemplate = {
@@ -94,7 +101,7 @@ const NewTemplatePage = (): JSX.Element => {
             status: 'Active',
             popular: false,
             tags: normalizedExtractedTemplate.tags || [],
-            firmId: ''
+            firmId: currentUserFirmId
           };
           setFormData(newFormData);
           // Clear sessionStorage after loading
@@ -139,7 +146,7 @@ const NewTemplatePage = (): JSX.Element => {
       }
     };
     fetchTemplate();
-  }, [id, navigate, t]);
+  }, [authLoading, currentUserFirmId, id, navigate, t]);
 
 
 

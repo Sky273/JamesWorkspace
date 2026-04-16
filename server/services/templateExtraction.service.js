@@ -13,6 +13,7 @@ import {
 
 const TEMPLATE_EXTRACTION_OPERATION_TYPE = 'Template Extraction';
 const TEMPLATE_EXTRACTION_VISION_OPERATION_TYPE = 'Template Extraction Vision Fallback';
+const TEMPLATE_EXTRACTION_HTML_TIMEOUT_MS = Number.parseInt(process.env.TEMPLATE_EXTRACTION_HTML_TIMEOUT_MS || '120000', 10);
 
 const HTML_EXTRACTION_PROMPT = [
     'Tu es un expert en creation de templates de CV reutilisables.',
@@ -149,6 +150,62 @@ function sanitizeTemplateData(templateData) {
     templateData.tags = Array.isArray(templateData.tags) ? templateData.tags : ['extrait', 'automatique'];
     templateData.extractedColors = Array.isArray(templateData.extractedColors) ? templateData.extractedColors : [];
     templateData.extractedFonts = Array.isArray(templateData.extractedFonts) ? templateData.extractedFonts : [];
+}
+
+function stripTextNodes(html = '') {
+    return String(html || '').replace(/>([^<]+)</g, '><').trim();
+}
+
+function mergeFallbackStylesheet(stylesheet = '') {
+    const fallbackRules = [
+        '.template-layout-fallback { display: flex; flex-direction: column; gap: 12px; }',
+        '.template-layout-fallback .candidate-name { font-size: 24px; font-weight: 700; line-height: 1.2; }',
+        '.template-layout-fallback .candidate-title { font-size: 16px; line-height: 1.3; opacity: 0.85; }',
+        '.template-layout-fallback .cv-content { margin-top: 16px; }',
+        '.template-layout-fallback .template-header-logo { display: flex; align-items: center; min-height: 40px; }'
+    ].join('\n');
+
+    return [sanitizeDocumentStylesheet(stylesheet || ''), fallbackRules].filter(Boolean).join('\n');
+}
+
+function buildFallbackTemplateFromLayout(fileName, layoutAnalysis = {}, extractedStyles = {}) {
+    const headerHasImageRegion = Array.isArray(layoutAnalysis?.imageBlocks)
+        && layoutAnalysis.imageBlocks.some((block) => block?.region === 'header');
+    const strippedHeader = stripTextNodes(layoutAnalysis?.headerHtml || '');
+    const strippedFooter = stripTextNodes(layoutAnalysis?.footerHtml || '');
+    const headerContent = [headerHasImageRegion ? '<div class="template-header-logo">-logo-</div>' : '', strippedHeader]
+        .filter(Boolean)
+        .join('\n');
+
+    const template = {
+        name: `Template extrait - ${fileName}`,
+        description: `Template genere automatiquement depuis la structure PDF de ${fileName}`,
+        headerContent,
+        templateContent: [
+            '<section class="template-layout-fallback">',
+            '  <div class="candidate-name">-name-</div>',
+            '  <div class="candidate-title">-title-</div>',
+            '  <div class="cv-content">-content-</div>',
+            '</section>'
+        ].join('\n'),
+        footerContent: strippedFooter,
+        stylesheet: mergeFallbackStylesheet(layoutAnalysis?.stylesheet || ''),
+        footerHeight: 25,
+        tags: ['extrait', 'automatique', 'fallback-layout'],
+        extractedColors: Array.isArray(extractedStyles.colors) ? extractedStyles.colors : [],
+        extractedFonts: Array.isArray(extractedStyles.fonts) ? extractedStyles.fonts : []
+    };
+
+    sanitizeTemplateData(template);
+    normalizeTemplatePlaceholders(template);
+    ensureRequiredPlaceholders(template);
+
+    return {
+        success: true,
+        template,
+        model: 'deterministic-layout-fallback',
+        usage: null
+    };
 }
 
 const SIMPLE_TEXT_ELEMENT_REGEX = /<(h1|h2|h3|h4|p|div|span|strong|em|li)(\b[^>]*)>([^<>]*\S[^<>]*)<\/\1>/gi;
@@ -360,6 +417,7 @@ export async function extractTemplateFromHTML(htmlContent, images = [], fileName
             operationType: TEMPLATE_EXTRACTION_OPERATION_TYPE,
             temperature: 0.1,
             max_tokens: options.maxTokens ?? 32000,
+            timeout: options.timeout ?? TEMPLATE_EXTRACTION_HTML_TIMEOUT_MS,
             userMetadata: {
                 actionType: 'template.extract',
                 fileName
@@ -369,6 +427,14 @@ export async function extractTemplateFromHTML(htmlContent, images = [], fileName
         return processLLMResponse(response, fileName, images);
     } catch (error) {
         safeLog('error', 'HTML template extraction failed', { error: error.message });
+        if (options.layoutAnalysis) {
+            safeLog('warn', 'Falling back to deterministic layout template extraction', {
+                fileName,
+                error: error.message,
+                timeoutMs: options.timeout ?? TEMPLATE_EXTRACTION_HTML_TIMEOUT_MS
+            });
+            return buildFallbackTemplateFromLayout(fileName, options.layoutAnalysis, extractedStyles);
+        }
         throw error;
     }
 }

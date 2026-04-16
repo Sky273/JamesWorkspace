@@ -101,11 +101,6 @@ vi.mock('../../routes/templates/extraction/extractors.js', () => ({
     extractFromPDF: (...args) => mockExtractFromPDF(...args)
 }));
 
-const mockPuppeteerLaunch = vi.fn();
-vi.mock('puppeteer', () => ({
-    default: { launch: (...args) => mockPuppeteerLaunch(...args) }
-}));
-
 const mockPdfParse = vi.fn();
 vi.mock('pdf-parse', () => ({
     default: (...args) => mockPdfParse(...args)
@@ -261,7 +256,6 @@ describe('Templates Extraction Routes', () => {
         it('falls back to pdfjs text extraction when pdf-parse is not callable', async () => {
             mockPdfParse.mockRejectedValue(new TypeError('pdfParse is not a function'));
             mockExtractTextFromPDFBuffer.mockResolvedValue('A'.repeat(80));
-            mockPuppeteerLaunch.mockRejectedValueOnce(new Error('vision unavailable'));
             mockExtractFromPDF.mockResolvedValueOnce({
                 template: { name: 'Fallback Template' },
                 model: 'test-model',
