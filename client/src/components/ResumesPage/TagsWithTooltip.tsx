@@ -112,14 +112,22 @@ const TagsWithTooltip = memo(({ skills, industries, resumeTags, hasAnyTags, tagC
       {isHovered && hasAnyTags && createPortal(
         <div 
           ref={tooltipRef}
-          className="fixed z-[9999] pointer-events-none"
+          className="pointer-events-none fixed isolate"
           style={{ 
             top: tooltipPosition.top,
             left: tooltipPosition.left,
-            transform: tooltipPosition.placement === 'top' ? 'translateY(-100%)' : 'none'
+            transform: tooltipPosition.placement === 'top' ? 'translateY(-100%)' : 'none',
+            zIndex: 2147483647,
           }}
         >
-          <div className="cv-panel rounded-2xl border p-3 min-w-[280px] max-w-[350px]">
+          <div
+            className="relative min-w-[280px] max-w-[350px] rounded-2xl border border-slate-700 bg-slate-950 p-3 text-slate-100 shadow-2xl"
+            style={{
+              backgroundColor: '#020817',
+              backgroundImage: 'none',
+              backdropFilter: 'none',
+            }}
+          >
             <div className="space-y-2">
               {(resumeTags.skills?.length || 0) > 0 && (
                 <div>
