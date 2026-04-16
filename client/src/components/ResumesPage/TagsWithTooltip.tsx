@@ -4,7 +4,7 @@
  * Extracted from DealsGroupedView.tsx
  */
 
-import { useState, useRef, memo } from 'react';
+import { useEffect, useRef, useState, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -19,18 +19,74 @@ interface TagsWithTooltipProps {
 
 const TagsWithTooltip = memo(({ skills, industries, resumeTags, hasAnyTags, tagColorMap, t }: TagsWithTooltipProps) => {
   const [isHovered, setIsHovered] = useState(false);
-  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
+  const [tooltipPosition, setTooltipPosition] = useState({
+    top: 0,
+    left: 0,
+    placement: 'top' as 'top' | 'bottom',
+  });
   const triggerRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
+  const updateTooltipPosition = () => {
+    if (!triggerRef.current || !hasAnyTags) {
+      return;
+    }
+
+    const rect = triggerRef.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const tooltipWidth = tooltipRef.current?.offsetWidth ?? 350;
+    const tooltipHeight = tooltipRef.current?.offsetHeight ?? 220;
+    const horizontalMargin = 16;
+    const verticalGap = 10;
+    const shouldPlaceBelow = rect.top < tooltipHeight + 24;
+    const nextLeft = Math.min(
+      Math.max(horizontalMargin, rect.right - tooltipWidth),
+      viewportWidth - tooltipWidth - horizontalMargin,
+    );
+
+    if (shouldPlaceBelow) {
+      setTooltipPosition({
+        top: Math.min(rect.bottom + verticalGap, viewportHeight - tooltipHeight - horizontalMargin),
+        left: nextLeft,
+        placement: 'bottom',
+      });
+      return;
+    }
+
+    setTooltipPosition({
+      top: Math.max(horizontalMargin, rect.top - verticalGap),
+      left: nextLeft,
+      placement: 'top',
+    });
+  };
+
+  useEffect(() => {
+    if (!isHovered) {
+      return;
+    }
+
+    updateTooltipPosition();
+
+    const handleViewportChange = () => {
+      updateTooltipPosition();
+    };
+
+    window.addEventListener('scroll', handleViewportChange, true);
+    window.addEventListener('resize', handleViewportChange);
+
+    return () => {
+      window.removeEventListener('scroll', handleViewportChange, true);
+      window.removeEventListener('resize', handleViewportChange);
+    };
+  }, [isHovered, hasAnyTags]);
 
   const handleMouseEnter = () => {
     if (triggerRef.current && hasAnyTags) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      // Position tooltip above the trigger, aligned to the right
-      setTooltipPosition({
-        top: rect.top - 8, // 8px gap above
-        left: Math.max(16, rect.right - 350) // Align right edge, but keep 16px from left edge
-      });
       setIsHovered(true);
+      requestAnimationFrame(() => {
+        updateTooltipPosition();
+      });
     }
   };
 
@@ -55,11 +111,12 @@ const TagsWithTooltip = memo(({ skills, industries, resumeTags, hasAnyTags, tagC
       </div>
       {isHovered && hasAnyTags && createPortal(
         <div 
+          ref={tooltipRef}
           className="fixed z-[9999] pointer-events-none"
           style={{ 
             top: tooltipPosition.top,
             left: tooltipPosition.left,
-            transform: 'translateY(-100%)'
+            transform: tooltipPosition.placement === 'top' ? 'translateY(-100%)' : 'none'
           }}
         >
           <div className="cv-panel rounded-2xl border p-3 min-w-[280px] max-w-[350px]">
@@ -105,9 +162,15 @@ const TagsWithTooltip = memo(({ skills, industries, resumeTags, hasAnyTags, tagC
                 </div>
               )}
             </div>
-            <div className="absolute bottom-0 right-4 translate-y-full">
-              <div className="h-0 w-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-[var(--cv-panel-end)]"></div>
-            </div>
+            {tooltipPosition.placement === 'top' ? (
+              <div className="absolute bottom-0 right-4 translate-y-full">
+                <div className="h-0 w-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-[var(--cv-panel-end)]"></div>
+              </div>
+            ) : (
+              <div className="absolute right-4 top-0 -translate-y-full">
+                <div className="h-0 w-0 border-b-8 border-l-8 border-r-8 border-b-[var(--cv-panel-start)] border-l-transparent border-r-transparent"></div>
+              </div>
+            )}
           </div>
         </div>,
         document.body
