@@ -47,7 +47,7 @@ export default function ResponsivePageTabs<T extends string>({
               }`}
             >
               <Icon className="h-4 w-4 shrink-0" />
-              <span className="min-w-0 whitespace-normal leading-tight [overflow-wrap:normal] [word-break:normal] hyphens-none">
+              <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap leading-tight [overflow-wrap:normal] [word-break:normal] hyphens-none">
                 {option.label}
               </span>
             </button>
