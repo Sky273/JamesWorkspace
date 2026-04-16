@@ -151,6 +151,67 @@ function sanitizeTemplateData(templateData) {
     templateData.extractedFonts = Array.isArray(templateData.extractedFonts) ? templateData.extractedFonts : [];
 }
 
+const SIMPLE_TEXT_ELEMENT_REGEX = /<(h1|h2|h3|h4|p|div|span|strong|em|li)(\b[^>]*)>([^<>]*\S[^<>]*)<\/\1>/gi;
+const PLACEHOLDER_TOKEN_REGEX = /-(name|title|content|logo)-/gi;
+
+function normalizeSpacing(value = '') {
+    return value.replace(/\s+/g, ' ').trim();
+}
+
+function replaceFirstSimpleTextElement(html, replacement) {
+    let replaced = false;
+    return html.replace(SIMPLE_TEXT_ELEMENT_REGEX, (match, tag, attrs = '', text = '') => {
+        if (replaced) {
+            return match;
+        }
+
+        const normalizedText = normalizeSpacing(text);
+        if (!normalizedText || PLACEHOLDER_TOKEN_REGEX.test(normalizedText)) {
+            PLACEHOLDER_TOKEN_REGEX.lastIndex = 0;
+            return match;
+        }
+
+        replaced = true;
+        PLACEHOLDER_TOKEN_REGEX.lastIndex = 0;
+        return `<${tag}${attrs}>${replacement}</${tag}>`;
+    });
+}
+
+function stripNonPlaceholderText(html) {
+    return html.replace(/>([^<]+)</g, (_match, text = '') => {
+        const placeholders = text.match(PLACEHOLDER_TOKEN_REGEX) || [];
+        PLACEHOLDER_TOKEN_REGEX.lastIndex = 0;
+        if (placeholders.length === 0) {
+            return '><';
+        }
+
+        return `>${placeholders.join(' ')}<`;
+    });
+}
+
+function normalizeTemplatePlaceholders(templateData) {
+    let templateContent = templateData.templateContent || '';
+
+    if (!templateContent.includes('-name-')) {
+        templateContent = replaceFirstSimpleTextElement(templateContent, '-name-');
+    }
+
+    if (!templateContent.includes('-title-')) {
+        templateContent = replaceFirstSimpleTextElement(templateContent, '-title-');
+    }
+
+    if (!templateContent.includes('-content-')) {
+        templateContent += '\n<div class="cv-content">-content-</div>';
+    }
+
+    templateContent = stripNonPlaceholderText(templateContent);
+    templateData.templateContent = templateContent;
+
+    if (templateData.headerContent?.includes('-name-')) {
+        templateData.headerContent = stripNonPlaceholderText(templateData.headerContent);
+    }
+}
+
 function ensureRequiredPlaceholders(templateData) {
     if (!templateData.templateContent.includes('-content-')) {
         safeLog('warn', 'LLM did not include -content- placeholder, adding fallback block');
@@ -245,6 +306,7 @@ function processLLMResponse(response, fileName, images = []) {
         ].join('\n');
     }
 
+    normalizeTemplatePlaceholders(templateData);
     ensureRequiredPlaceholders(templateData);
     injectImages(templateData, images);
     sanitizeTemplateData(templateData);

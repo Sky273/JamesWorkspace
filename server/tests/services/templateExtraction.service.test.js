@@ -229,6 +229,37 @@ describe('Template Extraction Service', () => {
             expect(result.template.footerContent).not.toContain('onclick');
             expect(result.template.stylesheet).not.toContain('@import');
         });
+
+        it('replaces extracted candidate text with template placeholders', async () => {
+            callLLM.mockResolvedValueOnce({
+                content: JSON.stringify({
+                    name: 'Candidate Template',
+                    headerContent: '<div class="brand">Cabinet Nova</div>',
+                    templateContent: [
+                        '<section class="hero">',
+                        '<h1>Jean Dupont</h1>',
+                        '<h2>Senior Product Designer</h2>',
+                        '<div class="summary">12 rue de Paris, jean.dupont@example.com, +33 6 00 00 00 00</div>',
+                        '<div class="experience"><p>Experience professionnelle detaillee</p></div>',
+                        '</section>'
+                    ].join(''),
+                    stylesheet: 'body{}'
+                }),
+                model: 'gpt-4',
+                usage: {}
+            });
+
+            const result = await extractTemplateFromHTML('<html>CV</html>');
+
+            expect(result.template.headerContent).toContain('Cabinet Nova');
+            expect(result.template.templateContent).toContain('-name-');
+            expect(result.template.templateContent).toContain('-title-');
+            expect(result.template.templateContent).toContain('-content-');
+            expect(result.template.templateContent).not.toContain('Jean Dupont');
+            expect(result.template.templateContent).not.toContain('Senior Product Designer');
+            expect(result.template.templateContent).not.toContain('jean.dupont@example.com');
+            expect(result.template.templateContent).not.toContain('Experience professionnelle detaillee');
+        });
     });
 
     describe('extractTemplateFromImage', () => {
