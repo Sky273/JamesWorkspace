@@ -87,3 +87,15 @@ export async function getResumesByIdsForExport(resumeIds, { isAdmin, userFirmId 
     const result = await query(sql, params);
     return result.rows;
 }
+
+export async function getFirmLogosByIds(firmIds) {
+    if (!Array.isArray(firmIds) || firmIds.length === 0) {
+        return [];
+    }
+
+    const result = await query(
+        'SELECT id, logo_url, logo_data, logo_mime_type FROM firms WHERE id = ANY($1::uuid[])',
+        [firmIds]
+    );
+    return result.rows;
+}

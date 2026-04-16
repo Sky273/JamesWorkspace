@@ -214,6 +214,37 @@ describe('Batch Jobs Worker - Export Generator', () => {
         }));
     });
 
+    it('should replace -logo- with the firm logo during worker exports', async () => {
+        const logoTemplate = {
+            ...template,
+            template_content: '<div>-logo- -content-</div>',
+            header_content: '<header>-logo-</header>',
+            footer_content: '<footer>-logo-</footer>'
+        };
+
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce([
+            { id: 'i1', status: 'success', resume_id: 'r1', file_name: 'cv.pdf' }
+        ]);
+        mockQuery
+            .mockResolvedValueOnce({ rows: [logoTemplate] })
+            .mockResolvedValueOnce({ rows: [{ id: 'r1', improved_text: '<p>Good CV</p>', name: 'Alice', title: 'Dev', trigram: 'ALI', firm_id: 'firm-1' }] })
+            .mockResolvedValueOnce({ rows: [{ id: 'firm-1', logo_data: Buffer.from('logo-bytes'), logo_mime_type: 'image/png' }] });
+
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(100))
+        });
+
+        await generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] });
+
+        const payload = JSON.parse(mockFetch.mock.calls[0][1].body);
+        expect(payload.htmlContent).toContain('data:image/png;base64,bG9nby1ieXRlcw==');
+        expect(payload.headerContent).toContain('data:image/png;base64,bG9nby1ieXRlcw==');
+        expect(payload.footerContent).toContain('data:image/png;base64,bG9nby1ieXRlcw==');
+        expect(payload.htmlContent).not.toContain('-logo-');
+    });
+
     it('should persist generated artifacts to temp files before ZIP generation', async () => {
         mockGetJob.mockResolvedValueOnce({ id: 'j1' });
         mockGetJobItems.mockResolvedValueOnce([

@@ -22,9 +22,16 @@ import { getPdfServerAuthHeaders } from '../../utils/pdfServerAuth.js';
 import { normalizeArchiveRelativePath } from '../../utils/archiveRelativePath.js';
 import { assertTrustedInternalServiceUrl } from '../../utils/networkHostSecurity.js';
 import { getBatchExportPdfTimeoutMs } from '../../utils/pdfServiceTimeouts.js';
+import { buildFirmLogoMarkup, replaceExportTemplatePlaceholders } from '../../utils/exportTemplatePlaceholders.js';
 
 const MAX_LOGGED_EXPORT_ERRORS = 10;
 let lastBatchExportSummary = null;
+
+function templateUsesLogoPlaceholder(template = {}) {
+    return /-logo-/i.test(template?.template_content || '')
+        || /-logo-/i.test(template?.header_content || '')
+        || /-logo-/i.test(template?.footer_content || '');
+}
 
 function updateLastBatchExportSummary(summary) {
     lastBatchExportSummary = {
@@ -252,6 +259,7 @@ export async function generateJobExport(jobId, options) {
     let exportErrorCount = 0;
     const exportErrors = [];
     const itemResults = new Map();
+    const firmLogoMarkupCache = new Map();
     
     // Create folders for each format in the ZIP
     const formatFolders = {};
@@ -332,12 +340,12 @@ export async function generateJobExport(jobId, options) {
         const sourceType = item.source_type || 'resume';
         
         try {
-            let content, candidateName, candidateTitle, trigram;
+            let content, candidateName, candidateTitle, trigram, firmId;
             
             if (sourceType === 'adaptation' && item.adaptation_id) {
                 // Fetch adaptation
                 const adaptResult = await query(
-                    'SELECT adapted_text, candidate_name, adapted_title, mission_title FROM resume_adaptations WHERE id = $1',
+                    'SELECT adapted_text, candidate_name, adapted_title, mission_title, firm_id FROM resume_adaptations WHERE id = $1',
                     [item.adaptation_id]
                 );
                 if (adaptResult.rows.length === 0) {
@@ -350,6 +358,7 @@ export async function generateJobExport(jobId, options) {
                 }
                 candidateName = adaptation.candidate_name || 'Candidat';
                 candidateTitle = adaptation.adapted_title || '';
+                firmId = adaptation.firm_id || null;
                 trigram = candidateName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase();
             } else {
                 // Fetch resume
@@ -364,22 +373,41 @@ export async function generateJobExport(jobId, options) {
                 }
                 candidateName = resume.name || 'Candidat';
                 candidateTitle = resume.title || '';
+                firmId = resume.firm_id || null;
                 trigram = resume.trigram || candidateName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase();
+            }
+
+            let logoMarkup = '';
+            if (firmId && templateUsesLogoPlaceholder(template)) {
+                if (!firmLogoMarkupCache.has(firmId)) {
+                    const firmResult = await query(
+                        'SELECT id, logo_url, logo_data, logo_mime_type FROM firms WHERE id = $1',
+                        [firmId]
+                    );
+                    firmLogoMarkupCache.set(firmId, buildFirmLogoMarkup(firmResult.rows[0] || null));
+                }
+                logoMarkup = firmLogoMarkupCache.get(firmId) || '';
             }
             
             // Process template
-            let processedBody = template.template_content || '';
-            processedBody = processedBody.replace(/-name-/g, candidateName);
-            processedBody = processedBody.replace(/-title-/g, candidateTitle);
+            let processedBody = replaceExportTemplatePlaceholders(template.template_content, {
+                name: candidateName,
+                title: candidateTitle,
+                logoMarkup
+            });
             processedBody = processedBody.replace(/-content-/g, content);
             
-            const processedHeader = (template.header_content || '')
-                .replace(/-name-/g, candidateName)
-                .replace(/-title-/g, candidateTitle);
+            const processedHeader = replaceExportTemplatePlaceholders(template.header_content, {
+                name: candidateName,
+                title: candidateTitle,
+                logoMarkup
+            });
             
-            const processedFooter = (template.footer_content || '')
-                .replace(/-name-/g, candidateName)
-                .replace(/-title-/g, candidateTitle);
+            const processedFooter = replaceExportTemplatePlaceholders(template.footer_content, {
+                name: candidateName,
+                title: candidateTitle,
+                logoMarkup
+            });
             
             // Generate document
             const result = await generateDocumentWithRetry(processedBody, processedHeader, processedFooter, candidateName, format);

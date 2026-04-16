@@ -13,9 +13,11 @@ process.env.PDF_SERVER_INTERNAL_TOKEN = 'test-pdf-server-internal-token-minimum-
 // Mock batchExport service
 const mockGetTemplateByIdForExport = vi.fn();
 const mockGetResumesByIdsForExport = vi.fn();
+const mockGetFirmLogosByIds = vi.fn();
 vi.mock('../../services/batchExport.service.js', () => ({
     getTemplateByIdForExport: (...args) => mockGetTemplateByIdForExport(...args),
-    getResumesByIdsForExport: (...args) => mockGetResumesByIdsForExport(...args)
+    getResumesByIdsForExport: (...args) => mockGetResumesByIdsForExport(...args),
+    getFirmLogosByIds: (...args) => mockGetFirmLogosByIds(...args)
 }));
 
 // Mock JSZip
@@ -144,6 +146,7 @@ describe('Batch Export Routes', () => {
     beforeEach(() => {
         mockGetTemplateByIdForExport.mockReset();
         mockGetResumesByIdsForExport.mockReset();
+        mockGetFirmLogosByIds.mockReset();
         mockFile.mockReset();
         mockGenerateNodeStream.mockReset();
         mockGenerateAsync.mockReset();
@@ -301,6 +304,49 @@ describe('Batch Export Routes', () => {
                 format: 'pdf',
                 filesCount: 1
             }));
+        });
+
+        it('should replace -logo- with the firm logo in export payloads', async () => {
+            mockFetch.mockResolvedValueOnce({ ok: true });
+            mockGetTemplateByIdForExport.mockResolvedValueOnce({
+                id: TEMPLATE_UUID,
+                template_content: '<main>-logo-<div>-content-</div></main>',
+                header_content: '<header>-logo-</header>',
+                footer_content: '<footer>-logo-</footer>',
+                stylesheet: '',
+                footer_height: 25
+            });
+            mockGetResumesByIdsForExport.mockResolvedValueOnce([{
+                id: RESUME_UUID,
+                name: 'John Doe',
+                title: 'Dev',
+                improved_text: 'CV content',
+                firm_id: '00000000-0000-0000-0000-000000000010'
+            }]);
+            mockGetFirmLogosByIds.mockResolvedValueOnce([{
+                id: '00000000-0000-0000-0000-000000000010',
+                logo_data: Buffer.from('logo-bytes'),
+                logo_mime_type: 'image/png'
+            }]);
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                body: Readable.from([Buffer.from('pdf-content')]),
+                arrayBuffer: () => Promise.resolve(Buffer.from('pdf-content'))
+            });
+            mockGenerateNodeStream.mockReturnValueOnce(Readable.from([Buffer.from('fake-zip')]));
+
+            const res = await request(app)
+                .post('/api/batch-export')
+                .set(AUTH)
+                .send({ resumeIds: [RESUME_UUID], templateId: TEMPLATE_UUID });
+
+            expect(res.status).toBe(200);
+            expect(mockGetFirmLogosByIds).toHaveBeenCalledWith(['00000000-0000-0000-0000-000000000010']);
+            const body = JSON.parse(mockFetch.mock.calls[1][1].body);
+            expect(body.htmlContent).toContain('data:image/png;base64,bG9nby1ieXRlcw==');
+            expect(body.headerContent).toContain('data:image/png;base64,bG9nby1ieXRlcw==');
+            expect(body.footerContent).toContain('data:image/png;base64,bG9nby1ieXRlcw==');
+            expect(body.htmlContent).not.toContain('-logo-');
         });
 
         it('should spool generated artifacts to temp files before zipping', async () => {

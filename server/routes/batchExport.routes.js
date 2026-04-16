@@ -19,6 +19,7 @@ import { setSafeFileResponseHeaders } from '../utils/fileResponseSecurity.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
 import { assertTrustedInternalServiceUrl } from '../utils/networkHostSecurity.js';
 import { getBatchExportPdfTimeoutMs } from '../utils/pdfServiceTimeouts.js';
+import { buildFirmLogoMarkup, replaceExportTemplatePlaceholders } from '../utils/exportTemplatePlaceholders.js';
 
 const router = express.Router();
 const MAX_BATCH_EXPORT_RESUMES = 100;
@@ -26,6 +27,12 @@ const DEFAULT_BATCH_EXPORT_CONCURRENCY = 4;
 const MAX_BATCH_EXPORT_CONCURRENCY = 8;
 const DEFAULT_BATCH_EXPORT_BATCH_DELAY_MS = 0;
 const MAX_BATCH_EXPORT_ERROR_DETAILS = 20;
+
+function templateUsesLogoPlaceholder(template = {}) {
+    return /-logo-/i.test(template?.template_content || '')
+        || /-logo-/i.test(template?.header_content || '')
+        || /-logo-/i.test(template?.footer_content || '');
+}
 
 function normalizeRequestId(rawValue) {
     if (typeof rawValue !== 'string') {
@@ -98,13 +105,6 @@ async function callPdfServer(endpoint, body, timeout = getBatchExportPdfTimeoutM
  * @param {string} title - Candidate title
  * @returns {string} Processed content
  */
-function processTemplatePlaceholders(content, name, title) {
-    if (!content) return '';
-    return content
-        .replace(/-name-/g, name)
-        .replace(/-title-/g, title);
-}
-
 function getBatchExportConcurrency() {
     const parsed = Number.parseInt(process.env.BATCH_EXPORT_CONCURRENCY || '', 10);
     if (!Number.isInteger(parsed) || parsed <= 0) {
@@ -246,6 +246,14 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
 
         const accessibleResumes = await batchExportService.getResumesByIdsForExport(resumeIds, { isAdmin, userFirmId });
         const resumesById = new Map(accessibleResumes.map((resume) => [resume.id, resume]));
+        const firmLogosById = new Map();
+        if (templateUsesLogoPlaceholder(template)) {
+            const firmIds = Array.from(new Set(accessibleResumes.map((resume) => resume.firm_id).filter(Boolean)));
+            const firmLogos = await batchExportService.getFirmLogosByIds(firmIds);
+            firmLogos.forEach((firm) => {
+                firmLogosById.set(firm.id, buildFirmLogoMarkup(firm));
+            });
+        }
         const inaccessibleResumeCount = Math.max(0, resumeIds.length - resumesById.size);
         
         // Create ZIP archive
@@ -265,23 +273,26 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
                 const content = resume.improved_text || resume.original_text || '';
                 const candidateName = resume.name || 'Candidat';
                 const candidateTitle = resume.title || '';
+                const logoMarkup = firmLogosById.get(resume.firm_id) || '';
 
-                let processedBody = template.template_content || '';
-                processedBody = processedBody.replace(/-name-/g, candidateName);
-                processedBody = processedBody.replace(/-title-/g, candidateTitle);
+                let processedBody = replaceExportTemplatePlaceholders(template.template_content, {
+                    name: candidateName,
+                    title: candidateTitle,
+                    logoMarkup
+                });
                 processedBody = processedBody.replace(/-content-/g, content);
 
-                const processedHeader = processTemplatePlaceholders(
-                    template.header_content,
-                    candidateName,
-                    candidateTitle
-                );
+                const processedHeader = replaceExportTemplatePlaceholders(template.header_content, {
+                    name: candidateName,
+                    title: candidateTitle,
+                    logoMarkup
+                });
 
-                const processedFooter = processTemplatePlaceholders(
-                    template.footer_content,
-                    candidateName,
-                    candidateTitle
-                );
+                const processedFooter = replaceExportTemplatePlaceholders(template.footer_content, {
+                    name: candidateName,
+                    title: candidateTitle,
+                    logoMarkup
+                });
 
                 const pdfResponse = await callPdfServer(endpoint, {
                     htmlContent: processedBody,
