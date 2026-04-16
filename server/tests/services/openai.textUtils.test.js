@@ -112,6 +112,11 @@ describe('OpenAI Text Utilities', () => {
             expect(parsed).toEqual({ name: 'John', skills: ['React', 'Node'] });
         });
 
+        it('should repair missing commas between JSON properties', () => {
+            const parsed = parseJsonFromLlmResponse('{"name":"John" "title":"Developer","score":85}');
+            expect(parsed).toEqual({ name: 'John', title: 'Developer', score: 85 });
+        });
+
         it('should strip BOM and null characters before parsing JSON payloads', () => {
             const parsed = parseJsonFromLlmResponse('\uFEFF{"name":"Jo\u0000hn","score":85}\u0000');
             expect(parsed).toEqual({ name: 'John', score: 85 });

@@ -465,6 +465,23 @@ describe('OpenAI Resume Operations', () => {
             expect(callBusinessChatCompletion).toHaveBeenCalledTimes(2);
         });
 
+        it('should recover locally when analysis JSON is missing a comma between properties', async () => {
+            callBusinessChatCompletion.mockResolvedValueOnce({
+                choices: [{
+                    message: {
+                        content: '{"name":"John Doe" "title":"Developer","globalRating":"85%","tags":{"skills":["React"]}}'
+                    }
+                }]
+            });
+
+            const result = await analyzeResume('resume text', 'gpt-4o', '{TEXT} {FILENAME}');
+
+            expect(result.name).toBe('John Doe');
+            expect(result.title).toBe('Developer');
+            expect(result.globalRating).toBe('85%');
+            expect(callBusinessChatCompletion).toHaveBeenCalledTimes(1);
+        });
+
         it('should repair malformed JSON after compact retry fails', async () => {
             callBusinessChatCompletion
                 .mockResolvedValueOnce({

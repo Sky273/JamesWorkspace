@@ -38,6 +38,7 @@ function isRecoverableStructuredJsonError(error) {
     return message.includes('Unexpected end of JSON input')
         || message.includes('Unterminated string in JSON')
         || message.includes('response truncated due to token limit')
+        || message.includes("Expected ',' or '}' after property value")
         || message.includes('Expected property name or')
         || message.includes('Unexpected token');
 }

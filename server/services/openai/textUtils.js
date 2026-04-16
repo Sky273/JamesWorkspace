@@ -323,6 +323,22 @@ function removeTrailingJsonCommas(text) {
     return text.replace(/,\s*([}\]])/g, '$1');
 }
 
+function insertMissingJsonCommas(text) {
+    if (!text || typeof text !== 'string') {
+        return text;
+    }
+
+    return text
+        .replace(
+            /("(?:\\.|[^"\\])*")\s+("(?:\\.|[^"\\])*"\s*:)/g,
+            '$1,$2'
+        )
+        .replace(
+            /(\}|\]|-?\d+(?:\.\d+)?(?:[eE][+\-]?\d+)?|\btrue\b|\bfalse\b|\bnull\b)\s+("(?:\\.|[^"\\])*"\s*:)/g,
+            '$1,$2'
+        );
+}
+
 export function parseJsonFromLlmResponse(text) {
     const payload = extractJsonPayload(text);
 
@@ -331,8 +347,10 @@ export function parseJsonFromLlmResponse(text) {
     } catch (error) {
         const repairedPayload = removeTrailingJsonCommas(
             repairMalformedJsonStrings(
-                escapeJsonControlCharacters(
-                    sanitizeJsonLikePayload(payload)
+                insertMissingJsonCommas(
+                    escapeJsonControlCharacters(
+                        sanitizeJsonLikePayload(payload)
+                    )
                 )
             )
         );
