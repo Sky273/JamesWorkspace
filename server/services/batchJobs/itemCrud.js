@@ -6,9 +6,14 @@
 import { query } from '../../config/database.js';
 import fs from 'fs/promises';
 import { safeLog } from '../../utils/logger.backend.js';
+import { stripNullCharacters, stripNullCharactersDeep } from '../../utils/sanitizer.backend.js';
 import { ITEM_STATUS, BATCH_SIZE } from './constants.js';
 
 const MAX_BATCH_INSERT_BYTES = 64 * 1024 * 1024;
+
+function sanitizeDbString(value) {
+    return typeof value === 'string' ? stripNullCharacters(value) : value;
+}
 
 async function refreshJobItemCount(jobId) {
     await query(`
@@ -269,7 +274,7 @@ export async function updateJobItemStatus(itemId, status, updates = {}) {
 
         if (updates.error_message) {
             setClauses.push(`error_message = $${paramIndex}`);
-            params.push(updates.error_message);
+            params.push(sanitizeDbString(updates.error_message));
             paramIndex++;
         }
 
@@ -287,29 +292,29 @@ export async function updateJobItemStatus(itemId, status, updates = {}) {
 
         if (updates.original_name) {
             setClauses.push(`original_name = $${paramIndex}`);
-            params.push(updates.original_name);
+            params.push(sanitizeDbString(updates.original_name));
             paramIndex++;
         }
 
         if (updates.display_name) {
             setClauses.push(`display_name = $${paramIndex}`);
-            params.push(updates.display_name);
+            params.push(sanitizeDbString(updates.display_name));
             paramIndex++;
         }
 
         if (updates.result_data !== undefined) {
             setClauses.push(`pending_data = $${paramIndex}`);
-            params.push(updates.result_data ? JSON.stringify(updates.result_data) : null);
+            params.push(updates.result_data ? JSON.stringify(stripNullCharactersDeep(updates.result_data)) : null);
             paramIndex++;
         }
 
         // Store pending data for items waiting for name input
         if (updates.pending_analysis || updates.pending_text || updates.pending_improve !== undefined) {
             const pendingData = {
-                analysis: updates.pending_analysis ? JSON.parse(updates.pending_analysis) : null,
-                text: updates.pending_text || null,
+                analysis: updates.pending_analysis ? stripNullCharactersDeep(JSON.parse(updates.pending_analysis)) : null,
+                text: sanitizeDbString(updates.pending_text) || null,
                 improve: updates.pending_improve || false,
-                ...(updates.credit_usage ? { creditUsage: updates.credit_usage } : {})
+                ...(updates.credit_usage ? { creditUsage: stripNullCharactersDeep(updates.credit_usage) } : {})
             };
             setClauses.push(`pending_data = $${paramIndex}`);
             params.push(JSON.stringify(pendingData));

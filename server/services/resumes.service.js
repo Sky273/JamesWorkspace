@@ -6,6 +6,7 @@
 
 import { query } from '../config/database.js';
 import { findWithTimeout, createWithTimeout } from '../utils/postgresHelpers.js';
+import { stripNullCharacters } from '../utils/sanitizer.backend.js';
 import { invalidateDashboardAndGroupedViews } from './viewCacheInvalidation.service.js';
 import { CACHE_KEYS, invalidateClientsCaches, invalidateDealsCaches, invalidateResumesCaches, resumesCache } from './cache.service.js';
 
@@ -28,6 +29,10 @@ async function invalidateResumeMutationViews(resumeId, firmId = null) {
         invalidateClientsCaches(),
         invalidateDealsCaches()
     ]);
+}
+
+function sanitizePersistenceValue(value) {
+    return typeof value === 'string' ? stripNullCharacters(value) : value;
 }
 
 /**
@@ -217,7 +222,7 @@ export async function updateResume(id, updateData) {
     for (const [key, value] of Object.entries(updateData)) {
         if (value !== undefined && ALLOWED_COLUMNS.has(key)) {
             setClauses.push(`${key} = $${idx}`);
-            params.push(value);
+            params.push(sanitizePersistenceValue(value));
             idx++;
         }
     }
@@ -263,22 +268,22 @@ export async function insertResume(data) {
             $14, $15, $16, $17, $18, $19
         ) RETURNING *`,
         [
-            data.name,
-            data.title,
-            data.fileName,
-            data.relativePath || null,
+            sanitizePersistenceValue(data.name),
+            sanitizePersistenceValue(data.title),
+            sanitizePersistenceValue(data.fileName),
+            sanitizePersistenceValue(data.relativePath) || null,
             data.fileBuffer,
             data.fileSize,
-            data.mimeType,
-            data.fileUrl,
-            data.status,
+            sanitizePersistenceValue(data.mimeType),
+            sanitizePersistenceValue(data.fileUrl),
+            sanitizePersistenceValue(data.status),
             data.firmId,
-            data.firmName,
-            data.profileType || null,
-            data.candidateName || null,
-            data.candidateEmail || null,
-            data.consentStatus || null,
-            data.consentToken || null,
+            sanitizePersistenceValue(data.firmName),
+            sanitizePersistenceValue(data.profileType) || null,
+            sanitizePersistenceValue(data.candidateName) || null,
+            sanitizePersistenceValue(data.candidateEmail) || null,
+            sanitizePersistenceValue(data.consentStatus) || null,
+            sanitizePersistenceValue(data.consentToken) || null,
             data.tokenExpiresAt || null,
             data.consentRequestedAt || null,
             data.retentionUntil || null

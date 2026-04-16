@@ -180,6 +180,20 @@ describe('Batch Jobs - Item CRUD', () => {
             expect(query.mock.calls[0][1]).toContain('parse failed');
         });
 
+        it('should strip null characters from direct string updates', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+
+            await updateJobItemStatus('i1', 'success', {
+                error_message: 'parse\u0000 failed',
+                original_name: 'Jo\u0000hn',
+                display_name: 'John\u0000 Doe'
+            });
+
+            expect(query.mock.calls[0][1]).toContain('parse failed');
+            expect(query.mock.calls[0][1]).toContain('John');
+            expect(query.mock.calls[0][1]).toContain('John Doe');
+        });
+
         it('should include resume_id, original_name, display_name', async () => {
             query.mockResolvedValueOnce({ rows: [] });
 
@@ -204,6 +218,21 @@ describe('Batch Jobs - Item CRUD', () => {
             });
 
             expect(query.mock.calls[0][0]).toContain('pending_data');
+        });
+
+        it('should strip null characters from pending data payloads', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+
+            await updateJobItemStatus('i1', 'pending_name', {
+                pending_analysis: '{"name":"Jo\\u0000hn","skills":["ja\\u0000va"]}',
+                pending_text: 'some\u0000 text',
+                pending_improve: true
+            });
+
+            const serializedPendingData = query.mock.calls[0][1].find((value) => typeof value === 'string' && value.includes('"analysis"'));
+            expect(serializedPendingData).toContain('"name":"John"');
+            expect(serializedPendingData).toContain('"skills":["java"]');
+            expect(serializedPendingData).toContain('"text":"some text"');
         });
     });
 

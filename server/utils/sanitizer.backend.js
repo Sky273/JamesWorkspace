@@ -60,6 +60,28 @@ function normalizeInput(value) {
     return typeof value === 'string' ? value.replace(NULL_CHARACTER_REGEX, '').trim() : '';
 }
 
+export function stripNullCharacters(value) {
+    return typeof value === 'string' ? value.replace(NULL_CHARACTER_REGEX, '') : value;
+}
+
+export function stripNullCharactersDeep(value) {
+    if (typeof value === 'string') {
+        return stripNullCharacters(value);
+    }
+
+    if (Array.isArray(value)) {
+        return value.map((item) => stripNullCharactersDeep(item));
+    }
+
+    if (value && typeof value === 'object' && !Buffer.isBuffer(value) && !(value instanceof Date)) {
+        return Object.fromEntries(
+            Object.entries(value).map(([key, nestedValue]) => [key, stripNullCharactersDeep(nestedValue)])
+        );
+    }
+
+    return value;
+}
+
 export function sanitizeHtmlContent(content) {
     return sanitizeHtml(normalizeInput(content), {
         allowedTags: [

@@ -242,6 +242,23 @@ describe('Resumes Service', () => {
             expect(query.mock.calls[0][1]).toHaveLength(2);
         });
 
+        it('should strip null characters from string fields before update', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 'r1', firm_id: 'f1' }] });
+
+            await updateResume('r1', {
+                name: 'John\u0000 Doe',
+                original_text: 'line\u0000break',
+                analysis_details: '{"name":"John\\u0000 Doe"}'
+            });
+
+            expect(query.mock.calls[0][1]).toEqual([
+                'John Doe',
+                'linebreak',
+                '{"name":"John\\u0000 Doe"}',
+                'r1'
+            ]);
+        });
+
         it('should return existing resume if no updates', async () => {
             query.mockResolvedValueOnce({ rows: [{ id: 'r1', name: 'Unchanged' }] });
 
@@ -303,6 +320,55 @@ describe('Resumes Service', () => {
             expect(mockInvalidateResumesCaches).toHaveBeenCalledWith();
             expect(mockInvalidateClientsCaches).toHaveBeenCalledWith();
             expect(mockInvalidateDealsCaches).toHaveBeenCalledWith();
+        });
+
+        it('should strip null characters from inserted string fields', async () => {
+            const created = { id: 'r1', name: 'New CV', firm_id: 'f1' };
+            query.mockResolvedValueOnce({ rows: [created] });
+
+            await insertResume({
+                name: 'New\u0000 CV',
+                title: 'De\u0000v',
+                fileName: 'cv\u0000.pdf',
+                relativePath: '/tmp/\u0000cv.pdf',
+                fileBuffer: Buffer.from('data'),
+                fileSize: 100,
+                mimeType: 'application/pdf',
+                fileUrl: '/files/\u0000cv.pdf',
+                status: 'up\u0000loaded',
+                firmId: 'f1',
+                firmName: 'Ac\u0000me',
+                profileType: 'ex\u0000ternal',
+                candidateName: 'Jo\u0000hn',
+                candidateEmail: 'j@test.com',
+                consentStatus: 'pen\u0000ding',
+                consentToken: 'to\u0000k',
+                tokenExpiresAt: null,
+                consentRequestedAt: null,
+                retentionUntil: null
+            });
+
+            expect(query.mock.calls[0][1]).toEqual([
+                'New CV',
+                'Dev',
+                'cv.pdf',
+                '/tmp/cv.pdf',
+                Buffer.from('data'),
+                100,
+                'application/pdf',
+                '/files/cv.pdf',
+                'uploaded',
+                'f1',
+                'Acme',
+                'external',
+                'John',
+                'j@test.com',
+                'pending',
+                'tok',
+                null,
+                null,
+                null
+            ]);
         });
     });
 
