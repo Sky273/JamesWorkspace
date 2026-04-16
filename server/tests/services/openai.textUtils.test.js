@@ -117,6 +117,26 @@ describe('OpenAI Text Utilities', () => {
             expect(parsed).toEqual({ name: 'John', title: 'Developer', score: 85 });
         });
 
+        it('should remove JSON comments before parsing', () => {
+            const parsed = parseJsonFromLlmResponse('{\n  "name": "John", // candidate name\n  "score": 85 /* rating */\n}');
+            expect(parsed).toEqual({ name: 'John', score: 85 });
+        });
+
+        it('should normalize smart quotes before parsing', () => {
+            const parsed = parseJsonFromLlmResponse('{“name”:“John Doe”,“title”:“Developer”}');
+            expect(parsed).toEqual({ name: 'John Doe', title: 'Developer' });
+        });
+
+        it('should repair duplicated separators in JSON payloads', () => {
+            const parsed = parseJsonFromLlmResponse('{"name":"John",,"title":"Developer","score"::85}');
+            expect(parsed).toEqual({ name: 'John', title: 'Developer', score: 85 });
+        });
+
+        it('should close a truncated root JSON object when the remainder is structurally obvious', () => {
+            const parsed = parseJsonFromLlmResponse('{"name":"John","tags":{"skills":["React","Node"]}');
+            expect(parsed).toEqual({ name: 'John', tags: { skills: ['React', 'Node'] } });
+        });
+
         it('should strip BOM and null characters before parsing JSON payloads', () => {
             const parsed = parseJsonFromLlmResponse('\uFEFF{"name":"Jo\u0000hn","score":85}\u0000');
             expect(parsed).toEqual({ name: 'John', score: 85 });

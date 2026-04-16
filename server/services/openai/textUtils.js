@@ -323,6 +323,71 @@ function removeTrailingJsonCommas(text) {
     return text.replace(/,\s*([}\]])/g, '$1');
 }
 
+function stripJsonComments(text) {
+    if (!text || typeof text !== 'string') {
+        return text;
+    }
+
+    let result = '';
+    let inString = false;
+    let escapeNext = false;
+
+    for (let index = 0; index < text.length; index++) {
+        const char = text[index];
+        const nextChar = text[index + 1];
+
+        if (escapeNext) {
+            result += char;
+            escapeNext = false;
+            continue;
+        }
+
+        if (char === '\\') {
+            result += char;
+            escapeNext = true;
+            continue;
+        }
+
+        if (char === '"') {
+            result += char;
+            inString = !inString;
+            continue;
+        }
+
+        if (!inString && char === '/' && nextChar === '/') {
+            index += 2;
+            while (index < text.length && text[index] !== '\n' && text[index] !== '\r') {
+                index++;
+            }
+            index--;
+            continue;
+        }
+
+        if (!inString && char === '/' && nextChar === '*') {
+            index += 2;
+            while (index < text.length - 1 && !(text[index] === '*' && text[index + 1] === '/')) {
+                index++;
+            }
+            index++;
+            continue;
+        }
+
+        result += char;
+    }
+
+    return result;
+}
+
+function normalizeJsonQuotes(text) {
+    if (!text || typeof text !== 'string') {
+        return text;
+    }
+
+    return text
+        .replace(/[\u201c\u201d\u00ab\u00bb]/g, '"')
+        .replace(/[\u2018\u2019]/g, '\'');
+}
+
 function insertMissingJsonCommas(text) {
     if (!text || typeof text !== 'string') {
         return text;
@@ -339,6 +404,63 @@ function insertMissingJsonCommas(text) {
         );
 }
 
+function removeDuplicateJsonSeparators(text) {
+    if (!text || typeof text !== 'string') {
+        return text;
+    }
+
+    return text
+        .replace(/,\s*,+/g, ',')
+        .replace(/:\s*:+/g, ':')
+        .replace(/,\s*:/g, ':')
+        .replace(/:\s*,/g, ':');
+}
+
+function balanceJsonDelimiters(text) {
+    if (!text || typeof text !== 'string') {
+        return text;
+    }
+
+    const stack = [];
+    let inString = false;
+    let escapeNext = false;
+
+    for (const char of text) {
+        if (escapeNext) {
+            escapeNext = false;
+            continue;
+        }
+
+        if (char === '\\') {
+            escapeNext = true;
+            continue;
+        }
+
+        if (char === '"') {
+            inString = !inString;
+            continue;
+        }
+
+        if (inString) {
+            continue;
+        }
+
+        if (char === '{') {
+            stack.push('}');
+        } else if (char === '[') {
+            stack.push(']');
+        } else if ((char === '}' || char === ']') && stack[stack.length - 1] === char) {
+            stack.pop();
+        }
+    }
+
+    if (inString) {
+        return text;
+    }
+
+    return `${text}${stack.reverse().join('')}`;
+}
+
 export function parseJsonFromLlmResponse(text) {
     const payload = extractJsonPayload(text);
 
@@ -347,9 +469,17 @@ export function parseJsonFromLlmResponse(text) {
     } catch (error) {
         const repairedPayload = removeTrailingJsonCommas(
             repairMalformedJsonStrings(
-                insertMissingJsonCommas(
-                    escapeJsonControlCharacters(
-                        sanitizeJsonLikePayload(payload)
+                removeDuplicateJsonSeparators(
+                    insertMissingJsonCommas(
+                        balanceJsonDelimiters(
+                            escapeJsonControlCharacters(
+                                stripJsonComments(
+                                    normalizeJsonQuotes(
+                                        sanitizeJsonLikePayload(payload)
+                                    )
+                                )
+                            )
+                        )
                     )
                 )
             )
