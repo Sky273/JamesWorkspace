@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import {
   consumeDirtyViewScopesForConsumer,
@@ -21,12 +21,22 @@ export function useScopedViewRefresh({
   enabled = true,
 }: UseScopedViewRefreshOptions): void {
   const scopeKey = scopes.join('|');
+  const stableScopesRef = useRef(scopes);
+  const onRefreshRef = useRef(onRefresh);
+
+  useEffect(() => {
+    stableScopesRef.current = scopes;
+  }, [scopeKey, scopes]);
+
+  useEffect(() => {
+    onRefreshRef.current = onRefresh;
+  }, [onRefresh]);
 
   const runRefresh = useCallback((matchedScopes: ViewRefreshScope[]) => {
     const startedAt = performance.now();
 
     try {
-      const result = onRefresh(matchedScopes);
+      const result = onRefreshRef.current(matchedScopes);
       void Promise.resolve(result).then(
         () => recordViewRefreshCycle(matchedScopes, performance.now() - startedAt, false),
         () => recordViewRefreshCycle(matchedScopes, performance.now() - startedAt, true),
@@ -35,25 +45,27 @@ export function useScopedViewRefresh({
       recordViewRefreshCycle(matchedScopes, performance.now() - startedAt, true);
       throw error;
     }
-  }, [onRefresh]);
+  }, []);
 
   useEffect(() => {
-    if (!enabled || scopes.length === 0) {
+    const stableScopes = stableScopesRef.current;
+    if (!enabled || stableScopes.length === 0) {
       return;
     }
 
-    if (!consumeDirtyViewScopesForConsumer(consumerId, scopes)) {
+    if (!consumeDirtyViewScopesForConsumer(consumerId, stableScopes)) {
       return;
     }
 
-    runRefresh(scopes);
-  }, [consumerId, enabled, runRefresh, scopes, scopeKey]);
+    runRefresh(stableScopes);
+  }, [consumerId, enabled, runRefresh, scopeKey]);
 
   useEffect(() => {
-    if (!enabled || scopes.length === 0) {
+    const stableScopes = stableScopesRef.current;
+    if (!enabled || stableScopes.length === 0) {
       return;
     }
 
-    return subscribeToViewRefreshForConsumer(consumerId, scopes, runRefresh);
-  }, [consumerId, enabled, runRefresh, scopes, scopeKey]);
+    return subscribeToViewRefreshForConsumer(consumerId, stableScopes, runRefresh);
+  }, [consumerId, enabled, runRefresh, scopeKey]);
 }

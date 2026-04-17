@@ -39,6 +39,7 @@ interface NavItem {
 }
 
 interface NavSection {
+  id: string;
   title: string | null;
   items: NavItem[];
   adminOnly?: boolean;
@@ -61,6 +62,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
   const homeItem: NavItem = { name: t('navigation.home'), href: '/', icon: HomeIcon };
 
   const gestionSection: NavSection = {
+    id: 'gestion',
     title: null,
     items: [
       { name: t('navigation.resumes'), href: '/resumes', icon: DocumentTextIcon },
@@ -73,6 +75,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
   };
 
   const adminSection: NavSection = {
+    id: 'administration',
     title: null,
     items: [
       { name: t('navigation.administration', 'Administration'), href: '/admin', icon: Squares2X2Icon },
@@ -138,7 +141,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
     if (visibleItems.length === 0) return null;
 
     return (
-      <div key={section.title} className="mt-5">
+      <div key={section.id} className="mt-5">
         {section.title && (
           <div className="mb-2 flex items-center gap-2 px-3">
             <span className="h-1.5 w-1.5 rounded-full bg-sky-500 dark:bg-sky-400" />

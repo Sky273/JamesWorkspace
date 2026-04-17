@@ -60,6 +60,10 @@ export function FilterPanel({
   const [globalTagQuery, setGlobalTagQuery] = useState('');
   const [categoryQueries, setCategoryQueries] = useState<Record<string, string>>({});
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const sanitizedSelectedTags = useMemo(
+    () => Array.from(new Set(selectedTags.map((tag) => tag.trim()).filter((tag) => tag.length > 0))),
+    [selectedTags],
+  );
 
   const totalTags = useMemo(
     () => Object.values(allTags).reduce((sum, tags) => sum + tags.length, 0),
@@ -131,7 +135,7 @@ export function FilterPanel({
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-2.5">
-                {selectedTags.map((tag) => {
+                {sanitizedSelectedTags.map((tag) => {
                   const category = getTagCategory(tag);
                   const colorClass = TAG_FILTER_COLORS[category]?.selected || 'bg-blue-500 text-white';
                   return (
@@ -188,7 +192,7 @@ export function FilterPanel({
                 </label>
 
                 <div className="flex min-h-[11.5rem] flex-wrap content-start gap-2.5">
-                  {previewTags.map((tag) => (
+                  {Array.from(new Set(previewTags.map((tag) => tag.trim()).filter((tag) => tag.length > 0))).map((tag) => (
                     <button
                       key={tag}
                       onClick={() => handleTagClick(tag)}
@@ -281,7 +285,7 @@ export function FilterPanel({
 
             <div className="flex-1 overflow-y-auto p-5">
               <div className="flex flex-wrap gap-2.5">
-                {activeCategoryData.filteredTags.map((tag) => (
+                {Array.from(new Set(activeCategoryData.filteredTags.map((tag) => tag.trim()).filter((tag) => tag.length > 0))).map((tag) => (
                   <button
                     key={tag}
                     onClick={() => handleTagClick(tag)}

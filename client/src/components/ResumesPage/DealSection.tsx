@@ -125,18 +125,21 @@ const DealSection = ({
       onDragOver={onDragOver}
       onDrop={(e) => onDrop(e, deal.id)}
     >
-      <button
-        onClick={onToggle}
-        aria-expanded={isExpanded}
-        aria-controls={`deal-content-${deal.id}`}
-        aria-label={`${isExpanded ? t('common.collapse') : t('common.expand')} ${deal.title}`}
+      <div
         className={`group flex w-full flex-col items-start gap-4 px-4 py-4 text-left transition-colors sm:px-5 xl:flex-row xl:items-center xl:justify-between ${
           isDragOver
             ? 'bg-[var(--cv-primary-soft)]'
             : 'hover:bg-slate-50 dark:hover:bg-[color:color-mix(in_srgb,var(--cv-panel-end)_86%,black)]'
         }`}
       >
-        <div className="flex w-full min-w-0 items-start gap-3">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={isExpanded}
+          aria-controls={`deal-content-${deal.id}`}
+          aria-label={`${isExpanded ? t('common.collapse') : t('common.expand')} ${deal.title}`}
+          className="flex w-full min-w-0 items-start gap-3 text-left xl:flex-1"
+        >
           {isExpanded ? (
             <ChevronDownIcon className="mt-2 h-5 w-5 flex-shrink-0 text-slate-400 dark:text-[#7f8ab0]" />
           ) : (
@@ -200,7 +203,7 @@ const DealSection = ({
               </div>
             </div>
           </div>
-        </div>
+        </button>
 
         <div className="flex w-full flex-wrap items-center gap-2 xl:w-auto xl:justify-end">
           <button
@@ -228,7 +231,7 @@ const DealSection = ({
             {t('dealExport.title')}
           </button>
         </div>
-      </button>
+      </div>
 
       {isDragOver && !isExpanded ? (
         <div className="border-t border-[color:color-mix(in_srgb,var(--cv-primary)_20%,transparent)] bg-[var(--cv-primary-soft)] px-4 py-3">
