@@ -27,6 +27,34 @@ function isNonRetryableImprovementError(error) {
     return error?.retryable === false || error?.code === 'LLM_PROVIDER_AUTH_ERROR' || isNonRetryableLlmProviderError(error);
 }
 
+function isInvalidImprovedAnalysisError(error) {
+    const message = String(error?.message || '').toLowerCase();
+    return message.includes('réponse invalide')
+        || message.includes('rÃ©ponse invalide')
+        || message.includes('reponse invalide')
+        || message.includes('invalid response');
+}
+
+function hasUsableFallbackAnalysis(analysis) {
+    if (!analysis || typeof analysis !== 'object') {
+        return false;
+    }
+
+    return Boolean(
+        analysis.globalRating !== undefined
+        || analysis.skillsRating !== undefined
+        || analysis.experiencesRating !== undefined
+        || analysis.educationRating !== undefined
+        || analysis.atsOptimizationRating !== undefined
+        || analysis.executiveSummaryRating !== undefined
+        || analysis.hobbiesLanguagesRating !== undefined
+        || (analysis.summary && String(analysis.summary).trim())
+        || (analysis.title && String(analysis.title).trim())
+        || (analysis.tags && Object.values(analysis.tags).some((value) => Array.isArray(value) ? value.length > 0 : Boolean(value)))
+        || (analysis.suggestions && Object.keys(analysis.suggestions).length > 0)
+    );
+}
+
 async function analyzeImprovedResumeForPersistence(improvedText, job, item) {
     const { maxTokens } = await getConfiguredAiActionRuntimeConfig('resume.improvement');
 
@@ -36,6 +64,25 @@ async function analyzeImprovedResumeForPersistence(improvedText, job, item) {
         });
     } catch (error) {
         throw normalizeImprovementExecutionError(error);
+    }
+}
+
+async function resolveImprovedAnalysisWithFallback(improvedResult, improvedText, job, item) {
+    try {
+        return await analyzeImprovedResumeForPersistence(improvedText, job, item);
+    } catch (error) {
+        if (!isInvalidImprovedAnalysisError(error) || !hasUsableFallbackAnalysis(improvedResult?.analysis)) {
+            throw error;
+        }
+
+        safeLog('warn', 'Post-improvement analysis returned invalid structured payload; falling back to embedded improvement analysis', {
+            itemId: item.id,
+            resumeId: item.resume_id,
+            error: error.message,
+            fallbackKeys: Object.keys(improvedResult.analysis || {})
+        });
+
+        return improvedResult.analysis;
     }
 }
 
@@ -120,7 +167,7 @@ export async function processImprovement(item, resumeId, text, analysis, job, op
     if (improvedResult && improvedResult.text && improvedResult.text.trim().length > 0) {
         safeLog('info', 'Starting post-improvement analysis', { itemId: item.id, resumeId });
         await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 80 });
-        const improvedAnalysis = await analyzeImprovedResumeForPersistence(improvedResult.text, job, item);
+        const improvedAnalysis = await resolveImprovedAnalysisWithFallback(improvedResult, improvedResult.text, job, item);
         await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 90 });
         await saveImprovedData(item, resumeId, {
             ...improvedResult,
@@ -343,7 +390,7 @@ export async function processImproveItem(item, job) {
     safeLog('info', 'Starting post-improvement analysis (improve job)', { itemId: item.id, resumeId: item.resume_id });
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 80 });
 
-    const improvedAnalysis = await analyzeImprovedResumeForPersistence(improvedResult.text, job, item);
+    const improvedAnalysis = await resolveImprovedAnalysisWithFallback(improvedResult, improvedResult.text, job, item);
 
     await updateJobItemStatus(item.id, ITEM_STATUS.PROCESSING, { progress: 90 });
 

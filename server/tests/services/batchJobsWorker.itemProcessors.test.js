@@ -749,6 +749,45 @@ describe('Batch Jobs Worker - Item Processors', () => {
             }));
         });
 
+        it('should persist the improved resume when post-improvement analysis returns an invalid response but embedded analysis is usable', async () => {
+            mockQuery
+                .mockResolvedValueOnce({
+                    rows: [{
+                        id: 'res-1', original_text: 'Original CV text', global_rating: 70,
+                        skills_score: 65, experience_score: 72, education_score: 68,
+                        ats_score: 70, executive_summary_score: 75, hobbies_languages_score: 60,
+                        name: 'Bob', title: 'PM', key_improvements: '{}'
+                    }]
+                })
+                .mockResolvedValueOnce({ rows: [] });
+
+            mockImprove.mockResolvedValueOnce({
+                text: '<p>improved text</p>',
+                analysis: {
+                    globalRating: 84,
+                    skillsRating: 80,
+                    experiencesRating: 78,
+                    educationRating: 75,
+                    atsOptimizationRating: 82,
+                    executiveSummaryRating: 85,
+                    hobbiesLanguagesRating: 70,
+                    title: 'Senior PM',
+                    tags: { skills: ['Leadership'], industries: ['Tech'], tools: ['Jira'], softSkills: ['Communication'] },
+                    suggestions: {}
+                }
+            });
+            mockAnalyzeImproved.mockRejectedValueOnce(new Error('Le modèle LLM a retourné une réponse invalide.'));
+
+            await processImproveItem({ id: 'i2b', resume_id: 'res-1', file_name: 'bob.pdf' }, job, {});
+
+            expect(mockUpdateResume).toHaveBeenCalledWith('res-1', expect.objectContaining({
+                improved_text: '<p>improved text</p>',
+                title: 'Senior PM',
+                improved_skills: JSON.stringify(['Leadership']),
+                improved_tools: JSON.stringify(['Jira'])
+            }));
+        });
+
         it('should throw after retries if improvement keeps failing', async () => {
             mockQuery.mockResolvedValueOnce({
                 rows: [{
