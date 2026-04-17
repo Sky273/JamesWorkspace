@@ -334,6 +334,7 @@ export function trackImprovementActivity(operations, normalizeProviderKey, paylo
         failedRuns = 0,
         fallbackRuns = 0,
         postAnalysisFallbackRuns = 0,
+        postAnalysisMergeRuns = 0,
         structuredRuns = 0,
         inputChars = 0,
         outputChars = 0,
@@ -347,6 +348,7 @@ export function trackImprovementActivity(operations, normalizeProviderKey, paylo
         failedRuns: 0,
         fallbackRuns: 0,
         postAnalysisFallbackRuns: 0,
+        postAnalysisMergeRuns: 0,
         structuredRuns: 0,
         inputChars: 0,
         outputChars: 0
@@ -361,6 +363,7 @@ export function trackImprovementActivity(operations, normalizeProviderKey, paylo
     operations.improvement.failedRuns += Number(failedRuns) || 0;
     operations.improvement.fallbackRuns += Number(fallbackRuns) || 0;
     operations.improvement.postAnalysisFallbackRuns += Number(postAnalysisFallbackRuns) || 0;
+    operations.improvement.postAnalysisMergeRuns += Number(postAnalysisMergeRuns) || 0;
     operations.improvement.structuredRuns += Number(structuredRuns) || 0;
     operations.improvement.inputChars += Number(inputChars) || 0;
     operations.improvement.outputChars += Number(outputChars) || 0;
@@ -369,6 +372,7 @@ export function trackImprovementActivity(operations, normalizeProviderKey, paylo
     bucket.failedRuns += Number(failedRuns) || 0;
     bucket.fallbackRuns += Number(fallbackRuns) || 0;
     bucket.postAnalysisFallbackRuns += Number(postAnalysisFallbackRuns) || 0;
+    bucket.postAnalysisMergeRuns += Number(postAnalysisMergeRuns) || 0;
     bucket.structuredRuns += Number(structuredRuns) || 0;
     bucket.inputChars += Number(inputChars) || 0;
     bucket.outputChars += Number(outputChars) || 0;
@@ -381,6 +385,7 @@ export function trackImprovementActivity(operations, normalizeProviderKey, paylo
         failedRuns: Number(failedRuns) || 0,
         fallbackRuns: Number(fallbackRuns) || 0,
         postAnalysisFallbackRuns: Number(postAnalysisFallbackRuns) || 0,
+        postAnalysisMergeRuns: Number(postAnalysisMergeRuns) || 0,
         structuredRuns: Number(structuredRuns) || 0,
         inputChars: Number(inputChars) || 0,
         outputChars: Number(outputChars) || 0,

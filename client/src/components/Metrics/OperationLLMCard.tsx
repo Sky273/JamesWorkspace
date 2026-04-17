@@ -12,11 +12,14 @@ interface OperationRecentEntry {
   failedRuns?: number;
   fallbackRuns?: number;
   postAnalysisFallbackRuns?: number;
+  postAnalysisMergeRuns?: number;
   structuredRuns?: number;
   inputChars?: number;
   outputChars?: number;
   source?: string;
   stage?: string;
+  resumeSource?: string;
+  mergedKeys?: string[];
   promptId?: string;
   promptVersion?: string;
   contractId?: string;
@@ -31,6 +34,7 @@ interface OperationMetrics {
   failedRuns?: number;
   fallbackRuns?: number;
   postAnalysisFallbackRuns?: number;
+  postAnalysisMergeRuns?: number;
   structuredRuns?: number;
   inputChars?: number;
   outputChars?: number;
@@ -42,6 +46,7 @@ interface OperationMetrics {
     failedRuns?: number;
     fallbackRuns?: number;
     postAnalysisFallbackRuns?: number;
+    postAnalysisMergeRuns?: number;
     structuredRuns?: number;
     inputChars?: number;
     outputChars?: number;
@@ -87,6 +92,24 @@ export default function OperationLLMCard({
     if (!isAdaptation && entry.source === 'embedded-analysis-fallback') {
       return t('metrics.embeddedAnalysisFallbackSource', { defaultValue: 'Analyse embarquée conservée' });
     }
+    if (!isAdaptation && entry.source === 'embedded-analysis-merge') {
+      return t('metrics.embeddedAnalysisMergeSource', { defaultValue: 'Analyse embarquée fusionnée' });
+    }
+    if (isAdaptation && entry.source === 'structured-json') {
+      return t('metrics.structuredJsonSource', { defaultValue: 'JSON structuré' });
+    }
+    if (isAdaptation && entry.source === 'legacy-structured-json') {
+      return t('metrics.legacyStructuredJsonSource', { defaultValue: 'JSON structuré hérité' });
+    }
+    if (isAdaptation && entry.source === 'plain-text-fallback') {
+      return t('metrics.plainTextFallbackSource', { defaultValue: 'Fallback texte brut' });
+    }
+    if (isAdaptation && entry.source === 'unknown-json-format') {
+      return t('metrics.unknownJsonFormatSource', { defaultValue: 'JSON non reconnu' });
+    }
+    if (isAdaptation && entry.source === 'adapt-provider-call') {
+      return t('metrics.adaptProviderCallSource', { defaultValue: 'Appel provider adaptation' });
+    }
     return entry.source;
   };
 
@@ -96,6 +119,17 @@ export default function OperationLLMCard({
       return t('metrics.postAnalysisStage', { defaultValue: 'Post-analyse' });
     }
     return entry.stage;
+  };
+
+  const renderRecentResumeSource = (entry: OperationRecentEntry): string | null => {
+    if (!entry.resumeSource) return null;
+    if (entry.resumeSource === 'improved_text') {
+      return t('metrics.resumeSourceImprovedText', { defaultValue: 'CV amélioré' });
+    }
+    if (entry.resumeSource === 'original_text') {
+      return t('metrics.resumeSourceOriginalText', { defaultValue: 'CV original' });
+    }
+    return entry.resumeSource;
   };
 
   return (
@@ -128,6 +162,12 @@ export default function OperationLLMCard({
           <div className={`${tileClasses} rounded-lg p-3`}>
             <p className="opacity-70">{t('metrics.postAnalysisFallbacks', { defaultValue: 'Fallbacks post-analyse' })}</p>
             <p className="font-semibold">{safeNumber(metrics.postAnalysisFallbackRuns)}</p>
+          </div>
+        )}
+        {!isAdaptation && (
+          <div className={`${tileClasses} rounded-lg p-3`}>
+            <p className="opacity-70">{t('metrics.postAnalysisMerges', { defaultValue: 'Fusions post-analyse' })}</p>
+            <p className="font-semibold">{safeNumber(metrics.postAnalysisMergeRuns)}</p>
           </div>
         )}
         {isAdaptation && (
@@ -195,6 +235,7 @@ export default function OperationLLMCard({
                 {(() => {
                   const sourceLabel = renderRecentSource(entry);
                   const stageLabel = renderRecentStage(entry);
+                  const resumeSourceLabel = renderRecentResumeSource(entry);
 
                   return (
                     <>
@@ -209,9 +250,16 @@ export default function OperationLLMCard({
                 <div className="mt-1 opacity-70">
                   {t('metrics.structuredFallback')}: {safeNumber(entry.structuredRuns)} / {safeNumber(entry.fallbackRuns)}
                   {!isAdaptation ? ` | ${t('metrics.postAnalysisFallbacks', { defaultValue: 'Fallbacks post-analyse' })}: ${safeNumber(entry.postAnalysisFallbackRuns)}` : ''}
+                  {!isAdaptation ? ` | ${t('metrics.postAnalysisMerges', { defaultValue: 'Fusions post-analyse' })}: ${safeNumber(entry.postAnalysisMergeRuns)}` : ''}
                   {sourceLabel ? ` | ${t('metrics.source')}: ${sourceLabel}` : ''}
                   {stageLabel ? ` | ${t('metrics.stage')}: ${stageLabel}` : ''}
+                  {resumeSourceLabel ? ` | ${t('metrics.resumeSource', { defaultValue: 'Source CV' })}: ${resumeSourceLabel}` : ''}
                 </div>
+                {!isAdaptation && entry.mergedKeys && entry.mergedKeys.length > 0 && (
+                  <div className="mt-1 opacity-70">
+                    {t('metrics.mergedFields', { defaultValue: 'Champs fusionnés' })}: {entry.mergedKeys.join(', ')}
+                  </div>
+                )}
                 {(entry.promptId || entry.contractId) && (
                   <div className="mt-1 opacity-70">
                     {entry.promptId ? `${t('metrics.prompt')}: ${entry.promptId}${entry.promptVersion ? `@${entry.promptVersion}` : ''}` : ''}

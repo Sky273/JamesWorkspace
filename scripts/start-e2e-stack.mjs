@@ -1,13 +1,21 @@
+/* global console, process, setInterval, setTimeout */
 import { spawn } from 'child_process';
 
 const childProcesses = [];
 let shuttingDown = false;
 
-function spawnChild(label, command, args) {
+const sharedPdfServerToken =
+  process.env.PDF_SERVER_INTERNAL_TOKEN || 'playwright-pdf-server-internal-token-32chars';
+const localPdfServerUrl = 'http://127.0.0.1:3002';
+
+function spawnChild(label, command, args, extraEnv = {}) {
   const child = spawn(command, args, {
     stdio: 'inherit',
     shell: false,
-    env: process.env,
+    env: {
+      ...process.env,
+      ...extraEnv,
+    },
   });
 
   childProcesses.push(child);
@@ -61,7 +69,12 @@ process.on('SIGTERM', () => shutdown(0));
 process.on('SIGBREAK', () => shutdown(0));
 process.on('disconnect', () => shutdown(0));
 
-spawnChild('pdf-server', process.execPath, ['pdf-server/server.cjs']);
-spawnChild('proxy-server', process.execPath, ['--max-old-space-size=2048', '--expose-gc', 'server/proxy-server.js']);
+spawnChild('pdf-server', process.execPath, ['pdf-server/server.cjs'], {
+  PDF_SERVER_INTERNAL_TOKEN: sharedPdfServerToken,
+});
+spawnChild('proxy-server', process.execPath, ['--max-old-space-size=2048', '--expose-gc', 'server/proxy-server.js'], {
+  PDF_SERVER_INTERNAL_TOKEN: sharedPdfServerToken,
+  PDF_SERVER_URL: localPdfServerUrl,
+});
 
 setInterval(() => {}, 1 << 30);

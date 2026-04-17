@@ -58,7 +58,12 @@ Respond in the same language as the resume.`;
             event: 'run',
             successfulRuns: 1,
             inputChars,
-            ...result.tracking
+            ...result.tracking,
+            metadata: {
+                ...(result.tracking?.metadata || {}),
+                resumeSource: userMetadata?.resumeSource || 'unknown',
+                ...(userMetadata?.promptMetadata || {})
+            }
         });
         return {
             adaptedText: result.adaptedText,
@@ -76,7 +81,11 @@ Respond in the same language as the resume.`;
         fallbackRuns: 1,
         inputChars,
         outputChars: content.length,
-        metadata: { source: 'plain-text-fallback', ...(userMetadata?.promptMetadata || {}) }
+        metadata: {
+            source: 'plain-text-fallback',
+            resumeSource: userMetadata?.resumeSource || 'unknown',
+            ...(userMetadata?.promptMetadata || {})
+        }
     });
 
     return {

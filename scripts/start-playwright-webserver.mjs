@@ -2,6 +2,7 @@
 import 'dotenv/config';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
+import net from 'net';
 import pg from 'pg';
 
 const HEALTH_URL = process.env.PLAYWRIGHT_WEB_HEALTH_URL || 'http://localhost:3001/health';
@@ -24,6 +25,7 @@ process.env.PROXY_PORT = process.env.PROXY_PORT || '3001';
 process.env.CACHE_BACKEND = 'memory';
 process.env.VITE_BUILD_OUT_DIR = 'dist-e2e';
 process.env.STATIC_DIST_DIR = 'client/dist-e2e';
+process.env.PDF_SERVER_URL = process.env.PDF_SERVER_URL || 'http://127.0.0.1:3002';
 process.env.VITE_DISABLE_ASSET_COMPRESSION = 'true';
 process.env.E2E_DISABLE_EXTERNAL_EMAIL = 'true';
 process.env.E2E_DISABLE_GDPR_SCHEDULER = 'true';
@@ -35,6 +37,9 @@ process.env.VITE_TURNSTILE_SITE_KEY = '';
 process.env.CLOUDFLARE_TURNSTILE_SITE_KEY = '';
 process.env.TURNSTILE_SECRET_KEY = '';
 process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY = '';
+
+const PROXY_PORT = Number.parseInt(process.env.PROXY_PORT || '3001', 10);
+const PDF_SERVER_PORT = Number.parseInt(new URL(process.env.PDF_SERVER_URL || 'http://127.0.0.1:3002').port || '3002', 10);
 
 function spawnChecked(command, args, label, cwd = process.cwd()) {
   return new Promise((resolve, reject) => {
@@ -57,6 +62,34 @@ function spawnChecked(command, args, label, cwd = process.cwd()) {
 
       const detail = signal ? `signal ${signal}` : `code ${code}`;
       reject(new Error(`[playwright-webserver] ${label} exited with ${detail}`));
+    });
+  });
+}
+
+async function ensurePortAvailable(port, label) {
+  await new Promise((resolve, reject) => {
+    const server = net.createServer();
+
+    server.once('error', (error) => {
+      if (error?.code === 'EADDRINUSE') {
+        reject(new Error(
+          `[playwright-webserver] Cannot start ${label}: port ${port} is already in use. ` +
+          'Stop the stale local service or set PLAYWRIGHT_REUSE_EXISTING_SERVER=true if reuse is intentional.'
+        ));
+        return;
+      }
+
+      reject(new Error(`[playwright-webserver] Failed to probe port ${port} for ${label}: ${error.message}`));
+    });
+
+    server.listen(port, '127.0.0.1', () => {
+      server.close((closeError) => {
+        if (closeError) {
+          reject(new Error(`[playwright-webserver] Failed to release probed port ${port}: ${closeError.message}`));
+          return;
+        }
+        resolve();
+      });
     });
   });
 }
@@ -156,6 +189,8 @@ async function verifyDatabaseConnection() {
 }
 
 try {
+  await ensurePortAvailable(PROXY_PORT, 'proxy server');
+  await ensurePortAvailable(PDF_SERVER_PORT, 'PDF server');
   await verifyDatabaseConnection();
 
   await spawnChecked(

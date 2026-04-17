@@ -299,5 +299,36 @@ describe('OpenAI Mission Operations', () => {
             expect(result.adaptedText).toContain('Plain HTML');
             expect(result.adaptedTitle).toBeNull();
         });
+
+        it('should include resume source metadata in adaptation metrics', async () => {
+            callBusinessChatCompletion.mockResolvedValueOnce({
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            improvedText: '<p>Adapted CV</p>',
+                            summary: { title: 'Dev Senior' }
+                        })
+                    }
+                }]
+            });
+
+            await adaptResumeToMission({
+                resumeText: 'text',
+                missionTitle: 'Job',
+                missionContent: 'content',
+                matchAnalysis: {},
+                model: 'gpt-4o',
+                adaptationPrompt: '{RESUME_TEXT}{MISSION_TITLE}{MISSION_CONTENT}{MATCH_ANALYSIS_JSON}',
+                userMetadata: { resumeSource: 'improved_text', promptMetadata: { promptId: 'adapt' } }
+            });
+
+            expect(metrics.trackAdaptationActivity).toHaveBeenCalledWith(expect.objectContaining({
+                metadata: expect.objectContaining({
+                    source: 'structured-json',
+                    resumeSource: 'improved_text',
+                    promptId: 'adapt'
+                })
+            }));
+        });
     });
 });

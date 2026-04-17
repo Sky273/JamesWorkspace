@@ -17,7 +17,8 @@ const INVALID_RESPONSE_MARKERS = [
     'rÃ©ponse invalide',
     'rÃƒÂ©ponse invalide',
     'reponse invalide',
-    'invalid response'
+    'invalid response',
+    'returned an invalid response'
 ];
 
 function normalizeImprovementExecutionError(error) {
@@ -60,6 +61,138 @@ function hasUsableFallbackAnalysis(analysis) {
     );
 }
 
+function normalizeArray(items) {
+    if (!Array.isArray(items)) {
+        return [];
+    }
+
+    return [...new Set(items.map((item) => String(item || '').trim()).filter(Boolean))];
+}
+
+function hasMeaningfulAnalysisValue(value) {
+    if (value === undefined || value === null) {
+        return false;
+    }
+
+    if (Array.isArray(value)) {
+        return value.length > 0;
+    }
+
+    if (typeof value === 'object') {
+        return Object.keys(value).length > 0;
+    }
+
+    return String(value).trim() !== '';
+}
+
+function mergeSuggestionSections(primary = {}, fallback = {}) {
+    const merged = {};
+    let changed = false;
+    const keys = new Set([...Object.keys(primary || {}), ...Object.keys(fallback || {})]);
+
+    for (const key of keys) {
+        const preferred = normalizeArray(primary?.[key]);
+        const alternate = normalizeArray(fallback?.[key]);
+        const combined = preferred.length > 0 ? preferred : alternate;
+        if (combined.length > 0) {
+            merged[key] = combined;
+        }
+        if (preferred.length === 0 && alternate.length > 0) {
+            changed = true;
+        }
+    }
+
+    return { value: merged, changed };
+}
+
+function mergeTagSections(primary = {}, fallback = {}) {
+    const merged = {};
+    let changed = false;
+    const keys = new Set([...Object.keys(primary || {}), ...Object.keys(fallback || {})]);
+
+    for (const key of keys) {
+        const preferred = normalizeArray(primary?.[key]);
+        const alternate = normalizeArray(fallback?.[key]);
+        const combined = preferred.length > 0 ? preferred : alternate;
+        if (combined.length > 0) {
+            merged[key] = combined;
+        }
+        if (preferred.length === 0 && alternate.length > 0) {
+            changed = true;
+        }
+    }
+
+    return { value: merged, changed };
+}
+
+function mergeImprovedAnalysis(primaryAnalysis, fallbackAnalysis) {
+    if (!primaryAnalysis || typeof primaryAnalysis !== 'object' || !hasUsableFallbackAnalysis(fallbackAnalysis)) {
+        return {
+            merged: primaryAnalysis,
+            mergedFromFallback: false,
+            mergedKeys: []
+        };
+    }
+
+    const scalarKeys = [
+        'globalRating',
+        'skillsRating',
+        'experiencesRating',
+        'educationRating',
+        'atsOptimizationRating',
+        'executiveSummaryRating',
+        'hobbiesLanguagesRating',
+        'summary',
+        'Summary',
+        'title',
+        'name',
+        'candidateName',
+        'experienceYears',
+        'experience_years',
+        'educationLevel',
+        'education_level',
+        'certifications',
+        'languages'
+    ];
+
+    const merged = { ...primaryAnalysis };
+    const mergedKeys = [];
+
+    for (const key of scalarKeys) {
+        const currentValue = merged[key];
+        const fallbackValue = fallbackAnalysis?.[key];
+        const hasCurrentValue = hasMeaningfulAnalysisValue(currentValue);
+        const hasFallbackValue = hasMeaningfulAnalysisValue(fallbackValue);
+
+        if (!hasCurrentValue && hasFallbackValue) {
+            merged[key] = fallbackValue;
+            mergedKeys.push(key);
+        }
+    }
+
+    const mergedTags = mergeTagSections(primaryAnalysis.tags, fallbackAnalysis.tags);
+    if (Object.keys(mergedTags.value).length > 0) {
+        merged.tags = mergedTags.value;
+        if (mergedTags.changed) {
+            mergedKeys.push('tags');
+        }
+    }
+
+    const mergedSuggestions = mergeSuggestionSections(primaryAnalysis.suggestions, fallbackAnalysis.suggestions);
+    if (Object.keys(mergedSuggestions.value).length > 0) {
+        merged.suggestions = mergedSuggestions.value;
+        if (mergedSuggestions.changed) {
+            mergedKeys.push('suggestions');
+        }
+    }
+
+    return {
+        merged,
+        mergedFromFallback: mergedKeys.length > 0,
+        mergedKeys
+    };
+}
+
 async function analyzeImprovedResumeForPersistence(improvedText, job, item) {
     const { maxTokens } = await getConfiguredAiActionRuntimeConfig('resume.improvement');
 
@@ -74,7 +207,33 @@ async function analyzeImprovedResumeForPersistence(improvedText, job, item) {
 
 async function resolveImprovedAnalysisWithFallback(improvedResult, improvedText, job, item) {
     try {
-        return await analyzeImprovedResumeForPersistence(improvedText, job, item);
+        const persistedAnalysis = await analyzeImprovedResumeForPersistence(improvedText, job, item);
+        const { merged, mergedFromFallback, mergedKeys } = mergeImprovedAnalysis(persistedAnalysis, improvedResult?.analysis);
+
+        if (mergedFromFallback) {
+            safeLog('warn', 'Post-improvement analysis was sparse; merged missing fields from embedded improvement analysis', {
+                itemId: item.id,
+                resumeId: item.resume_id,
+                mergedKeys
+            });
+
+            metrics.trackImprovementActivity({
+                provider: 'batch-job',
+                event: 'post-analysis-merge',
+                postAnalysisMergeRuns: 1,
+                inputChars: improvedText.length,
+                outputChars: improvedText.length,
+                metadata: {
+                    source: 'embedded-analysis-merge',
+                    stage: 'post-analysis',
+                    mergedKeys,
+                    itemId: item.id,
+                    resumeId: item.resume_id || null
+                }
+            });
+        }
+
+        return merged;
     } catch (error) {
         if (!isInvalidImprovedAnalysisError(error) || !hasUsableFallbackAnalysis(improvedResult?.analysis)) {
             throw error;
@@ -94,6 +253,7 @@ async function resolveImprovedAnalysisWithFallback(improvedResult, improvedText,
             failedRuns: 0,
             fallbackRuns: 0,
             postAnalysisFallbackRuns: 1,
+            postAnalysisMergeRuns: 0,
             inputChars: improvedText.length,
             outputChars: improvedText.length,
             metadata: {

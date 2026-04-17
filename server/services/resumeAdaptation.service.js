@@ -74,6 +74,7 @@ export async function executeResumeAdaptation({
     const missionRecord = await findMissionRecord(missionId);
 
     const resumeText = resumeRecord.improved_text || resumeRecord.original_text;
+    const resumeSource = resumeRecord.improved_text ? 'improved_text' : 'original_text';
     const missionTitle = missionRecord.title || '';
     const missionContent = missionRecord.content || '';
 
@@ -104,8 +105,8 @@ export async function executeResumeAdaptation({
 
     const matchPrompt = settings['Match Analysis Prompt'] || DEFAULT_MATCH_ANALYSIS_PROMPT;
     const matchPromptMeta = buildPromptExecutionMetadata('DEFAULT_MATCH_ANALYSIS_PROMPT', settings['Match Analysis Prompt'] ? 'settings' : 'default');
-    const matchUserMetadata = { ...userMetadata, promptMetadata: matchPromptMeta };
-    const adaptationUserMetadata = { ...userMetadata, promptMetadata: adaptationPromptMeta };
+    const matchUserMetadata = { ...userMetadata, promptMetadata: matchPromptMeta, resumeSource };
+    const adaptationUserMetadata = { ...userMetadata, promptMetadata: adaptationPromptMeta, resumeSource };
 
     const { matchAnalysis, adaptationResult } = await runAiActionWithCredits({
         firmId: resumeRecord.firm_id || missionRecord.firm_id || userMetadata?.firmId || null,
@@ -187,6 +188,7 @@ export async function executeResumeAdaptation({
         missionId: missionRecord.id,
         adaptationId: adaptationRecord.id,
         model,
+        resumeSource,
         matchPrompt: matchPromptMeta,
         adaptationPrompt: adaptationPromptMeta
     });

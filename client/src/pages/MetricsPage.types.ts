@@ -206,6 +206,7 @@ export interface OperationsMetrics {
       failedRuns?: number;
       fallbackRuns?: number;
       postAnalysisFallbackRuns?: number;
+      postAnalysisMergeRuns?: number;
       structuredRuns?: number;
       inputChars?: number;
       outputChars?: number;
@@ -217,11 +218,14 @@ export interface OperationsMetrics {
         failedRuns?: number;
         fallbackRuns?: number;
         postAnalysisFallbackRuns?: number;
+        postAnalysisMergeRuns?: number;
         structuredRuns?: number;
         inputChars?: number;
         outputChars?: number;
         source?: string;
         stage?: string;
+        resumeSource?: string;
+        mergedKeys?: string[];
       }>;
       byProvider?: Record<string, {
         runs?: number;
@@ -229,6 +233,7 @@ export interface OperationsMetrics {
         failedRuns?: number;
         fallbackRuns?: number;
         postAnalysisFallbackRuns?: number;
+        postAnalysisMergeRuns?: number;
         structuredRuns?: number;
         inputChars?: number;
         outputChars?: number;
@@ -255,6 +260,7 @@ export interface OperationsMetrics {
         inputChars?: number;
         outputChars?: number;
         source?: string;
+        resumeSource?: string;
       }>;
       byProvider?: Record<string, {
         runs?: number;

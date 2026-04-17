@@ -802,6 +802,58 @@ describe('Batch Jobs Worker - Item Processors', () => {
             }));
         });
 
+        it('should merge sparse post-analysis fields with embedded improvement analysis when the persistence analysis succeeds but is incomplete', async () => {
+            mockQuery
+                .mockResolvedValueOnce({
+                    rows: [{
+                        id: 'res-1', original_text: 'Original CV text', global_rating: 70,
+                        skills_score: 65, experience_score: 72, education_score: 68,
+                        ats_score: 70, executive_summary_score: 75, hobbies_languages_score: 60,
+                        name: 'Bob', title: 'PM', key_improvements: '{}'
+                    }]
+                })
+                .mockResolvedValueOnce({ rows: [] });
+
+            mockImprove.mockResolvedValueOnce({
+                text: '<p>improved text</p>',
+                analysis: {
+                    globalRating: 84,
+                    skillsRating: 80,
+                    title: 'Senior PM',
+                    summary: 'Résumé embarqué',
+                    tags: { skills: ['Leadership'], industries: ['Tech'], tools: ['Jira'], softSkills: ['Communication'] },
+                    suggestions: { skills: ['Mettre en avant le leadership'] }
+                }
+            });
+            mockAnalyzeImproved.mockResolvedValueOnce({
+                globalRating: 90,
+                skillsRating: 88,
+                tags: { skills: [], industries: [], tools: [], softSkills: [] },
+                suggestions: {}
+            });
+
+            await processImproveItem({ id: 'i2c', resume_id: 'res-1', file_name: 'bob.pdf' }, job, {});
+
+            expect(mockUpdateResume).toHaveBeenCalledWith('res-1', expect.objectContaining({
+                improved_text: '<p>improved text</p>',
+                title: 'Senior PM',
+                improved_skills: JSON.stringify(['Leadership']),
+                improved_tools: JSON.stringify(['Jira'])
+            }));
+            expect(mockTrackImprovementActivity).toHaveBeenCalledWith(expect.objectContaining({
+                provider: 'batch-job',
+                event: 'post-analysis-merge',
+                postAnalysisMergeRuns: 1,
+                metadata: expect.objectContaining({
+                    source: 'embedded-analysis-merge',
+                    stage: 'post-analysis',
+                    mergedKeys: expect.arrayContaining(['title', 'summary', 'tags', 'suggestions']),
+                    itemId: 'i2c',
+                    resumeId: 'res-1'
+                })
+            }));
+        });
+
         it('should throw after retries if improvement keeps failing', async () => {
             mockQuery.mockResolvedValueOnce({
                 rows: [{

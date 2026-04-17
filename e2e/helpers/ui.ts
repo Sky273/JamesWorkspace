@@ -64,6 +64,17 @@ export async function gotoAndWaitForVisible(
   await expect(locator).toBeVisible({ timeout });
 }
 
+export async function setInputFilesWhenReady(
+  page: Page,
+  files: string | string[] | { name: string; mimeType: string; buffer: Buffer },
+  selector = 'input[type="file"]',
+  timeout = 30_000,
+): Promise<void> {
+  const input = page.locator(selector);
+  await expect(input).toBeVisible({ timeout });
+  await input.setInputFiles(files);
+}
+
 export async function clickRefreshButton(page: Page): Promise<void> {
   const button = page
     .locator('button[title*="Actualiser" i], button[title*="Refresh" i], button[title*="Rafra" i], button[aria-label*="Actualiser" i], button[aria-label*="Refresh" i], button[aria-label*="Rafra" i]')
