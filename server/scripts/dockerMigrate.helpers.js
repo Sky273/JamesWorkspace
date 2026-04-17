@@ -29,3 +29,11 @@ export function hasExactSupportedProviders(definition = '', expectedProviders = 
 
     return actual.every((provider, index) => provider === expected[index]);
 }
+
+export function sanitizeSqlForPgExecution(sql = '') {
+    return String(sql ?? '')
+        .replace(/^\uFEFF/, '')
+        .split(/\r?\n/)
+        .filter((line) => !/^\s*\\[A-Za-z]/.test(line))
+        .join('\n');
+}

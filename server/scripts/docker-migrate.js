@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { hasExactSupportedProviders, SUPPORTED_LLM_PROVIDERS_FOR_CONSTRAINT } from './dockerMigrate.helpers.js';
+import { hasExactSupportedProviders, sanitizeSqlForPgExecution, SUPPORTED_LLM_PROVIDERS_FOR_CONSTRAINT } from './dockerMigrate.helpers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,6 +10,7 @@ const ROOT_DIR = path.resolve(__dirname, '..', '..');
 const DOCKER_DIR = path.join(ROOT_DIR, 'docker');
 const FALLBACK_DOCKER_DIR = '/docker-entrypoint-initdb.d';
 const MIGRATION_TABLE = 'schema_migrations';
+const MIGRATION_TABLE_REFERENCE = `public.${MIGRATION_TABLE}`;
 const MINIMAX_PROVIDER_MIGRATION = 'add_minimax_provider.sql';
 const DEEPSEEK_PROVIDER_MIGRATION = 'add_deepseek_provider.sql';
 const HUGGINGFACE_PROVIDER_MIGRATION = 'add_huggingface_provider.sql';
@@ -265,12 +266,14 @@ async function getLlmProviderConstraintDefinition() {
 }
 
 async function readSqlFile(filePath) {
-    return fs.readFile(filePath, 'utf8');
+    const sql = await fs.readFile(filePath, 'utf8');
+    return sanitizeSqlForPgExecution(sql);
 }
 
 async function runSqlFile(filePath) {
     const sql = await readSqlFile(filePath);
     await query(sql);
+    await query(`SELECT pg_catalog.set_config('search_path', 'public', false)`);
 }
 
 async function getMigrationFiles() {
@@ -282,14 +285,14 @@ async function getMigrationFiles() {
 }
 
 async function getAppliedMigrationNames() {
-    const result = await query(`SELECT migration_name FROM ${MIGRATION_TABLE}`);
+    const result = await query(`SELECT migration_name FROM ${MIGRATION_TABLE_REFERENCE}`);
     return new Set(result.rows.map(row => row.migration_name));
 }
 
 async function markMigrationApplied(migrationName) {
     await query(
         `
-            INSERT INTO ${MIGRATION_TABLE} (migration_name)
+            INSERT INTO ${MIGRATION_TABLE_REFERENCE} (migration_name)
             VALUES ($1)
             ON CONFLICT (migration_name) DO NOTHING
         `,
@@ -299,7 +302,7 @@ async function markMigrationApplied(migrationName) {
 
 async function unmarkMigrationApplied(migrationName) {
     await query(
-        `DELETE FROM ${MIGRATION_TABLE} WHERE migration_name = $1`,
+        `DELETE FROM ${MIGRATION_TABLE_REFERENCE} WHERE migration_name = $1`,
         [migrationName]
     );
 }
@@ -428,7 +431,7 @@ async function verifyBootstrapState() {
     }
 
     const [migrationCountResult, adminResult] = await Promise.all([
-        query(`SELECT COUNT(*)::int AS cnt FROM ${MIGRATION_TABLE}`),
+        query(`SELECT COUNT(*)::int AS cnt FROM ${MIGRATION_TABLE_REFERENCE}`),
         query(
             `
                 SELECT id
@@ -461,12 +464,11 @@ export async function runDockerMigrate() {
         throw new Error('Failed to connect to PostgreSQL database');
     }
 
-    await ensureSchemaMigrationsTable();
-
     const hasUsersTable = await tableExists('users');
     if (!hasUsersTable) {
         await applyFreshSchema();
     } else {
+        await ensureSchemaMigrationsTable();
         await applyPendingSqlMigrations();
     }
     await seedIndustryAliases();
