@@ -2,7 +2,14 @@ import path from 'path';
 import { expect, test, type Page } from '@playwright/test';
 import { signInAsE2EUser } from './helpers/auth';
 import { ensureLongResumeFixture } from './helpers/docx';
-import { fillProseMirror, getJsonViaApi, putJsonViaApi } from './helpers/ui';
+import {
+  CONTINUE_TO_UPLOAD_LABEL_REGEX,
+  EMPLOYEE_LABEL_REGEX,
+  fillProseMirror,
+  getJsonViaApi,
+  putJsonViaApi,
+  setInputFilesWhenReady,
+} from './helpers/ui';
 
 const FALLBACK_DOCX_FIXTURE = path.resolve('node_modules/mammoth/test/test-data/tables.docx');
 
@@ -10,15 +17,15 @@ async function uploadResumeAndOpenAnalysis(page: Page, candidateName: string) {
   const docxFixture = await ensureLongResumeFixture().catch(() => FALLBACK_DOCX_FIXTURE);
 
   await page.goto('/upload');
-  await page.getByRole('button', { name: /employee|collaborateur/i }).click();
+  await page.getByRole('button', { name: EMPLOYEE_LABEL_REGEX }).click();
   await page.locator('#candidateName').fill(candidateName);
-  await page.getByRole('button', { name: /continue to upload|continuer vers l'upload/i }).click();
+  await page.getByRole('button', { name: CONTINUE_TO_UPLOAD_LABEL_REGEX }).click();
 
   const createJobResponsePromise = page.waitForResponse((response) =>
     response.url().includes('/api/batch-jobs') && response.request().method() === 'POST'
   );
 
-  await page.locator('input[type="file"]').setInputFiles(docxFixture);
+  await setInputFilesWhenReady(page, docxFixture);
 
   const createJobResponse = await createJobResponsePromise;
   expect(createJobResponse.status()).toBe(201);
@@ -61,7 +68,7 @@ test.describe('Resume save editing', () => {
     await signInAsE2EUser(page);
     await uploadResumeAndOpenAnalysis(page, `Analyse Save E2E ${Date.now()}`);
     const resumeId = extractResumeIdFromAnalysisUrl(page);
-    const updatedExtractedText = `Texte extrait modifie E2E ${Date.now()}`;
+    const updatedExtractedText = `Texte extrait modifié E2E ${Date.now()}`;
     await waitForResumeToBeEditable(page, resumeId);
 
     await page.getByRole('button', { name: /contenu extrait/i }).click();
@@ -91,7 +98,7 @@ test.describe('Resume save editing', () => {
     await signInAsE2EUser(page);
     await uploadResumeAndOpenAnalysis(page, `Improve Save E2E ${Date.now()}`);
     const resumeId = extractResumeIdFromAnalysisUrl(page);
-    const improvedBodyText = `Version amelioree sauvegardee E2E ${Date.now()}`;
+    const improvedBodyText = `Version améliorée sauvegardée E2E ${Date.now()}`;
     await waitForResumeToBeEditable(page, resumeId);
 
     const updatedViaApi = await putJsonViaApi<Record<string, unknown>>(page, `/api/resumes/${resumeId}`, {
@@ -121,7 +128,7 @@ test.describe('Resume save editing', () => {
     await improvedPage.goto(`/resumes/${resumeId}`);
     await expect(improvedPage).toHaveURL(new RegExp(`/resumes/${resumeId}/improve$`), { timeout: 30000 });
 
-    const savedImprovedText = `${improvedBodyText} mise a jour`;
+    const savedImprovedText = `${improvedBodyText} mise à jour`;
     await fillProseMirror(improvedPage, 0, savedImprovedText);
     const saveButton = improvedPage.getByRole('button', { name: /enregistrer les modifications|save changes|save/i });
     await expect(saveButton).toBeEnabled({ timeout: 15000 });

@@ -158,6 +158,13 @@
     "fallbacks": "Fallbacks",
     "postAnalysisFallbacks": "Fallbacks post-analyse",
     "postAnalysisMerges": "Fusions post-analyse",
+    "degradation": "Dégradation",
+    "nominalFlow": "Flux nominal",
+    "generationFallbackDegradation": "Fallback de génération",
+    "postAnalysisFallbackDegradation": "Fallback post-analyse",
+    "postAnalysisMergeDegradation": "Fusion post-analyse",
+    "adaptationFallbackDegradation": "Fallback adaptation",
+    "failedRunDegradation": "Exécution en échec",
     "embeddedAnalysisFallbackSource": "Analyse embarquée conservée",
     "embeddedAnalysisMergeSource": "Analyse embarquée fusionnée",
     "structuredJsonSource": "JSON structuré",
@@ -190,6 +197,20 @@
     "avgMs": "Moy.",
     "maxMs": "Max",
     "noData": "Aucune donnée",
-    "exportSuccess": "Métriques exportées avec succès"
+    "exportSuccess": "Métriques exportées avec succès",
+    "viewRefreshDebug": {
+      "badge": "Debug",
+      "title": "Rafraîchissement des vues",
+      "description": "Portées de rafraîchissement transverses produites et consommées par les écrans en cache.",
+      "refresh": "Recharger l'instantané",
+      "marks": "Marques",
+      "deliveries": "Livraisons",
+      "consumes": "Consommations",
+      "dirtyScopes": "Portées invalidées",
+      "activeScopes": "Portées invalidées actives",
+      "recentEvents": "Événements récents",
+      "noDirtyScopes": "Aucune portée invalide n'est actuellement en attente.",
+      "noEvents": "Aucun événement de rafraîchissement récent enregistré."
+    }
   }
 }

@@ -3,11 +3,14 @@ import { describe, expect, it } from 'vitest';
 import OperationLLMCard from './OperationLLMCard';
 
 describe('OperationLLMCard', () => {
-  it('renders post-analysis fallback metrics for improvement runs', () => {
+  it('renders post-analysis fallback and merge diagnostics for improvement runs', () => {
     const translations: Record<string, string> = {
       'metrics.source': 'Source',
       'metrics.stage': 'Étape',
       'metrics.resumeSource': 'Source CV',
+      'metrics.degradation': 'Dégradation',
+      'metrics.postAnalysisFallbackDegradation': 'Fallback post-analyse',
+      'metrics.postAnalysisMergeDegradation': 'Fusion post-analyse',
     };
 
     render(
@@ -50,15 +53,18 @@ describe('OperationLLMCard', () => {
     expect(screen.getByText('openai/gpt-5.4-mini')).toBeInTheDocument();
     expect(screen.getByText(/Fallbacks post-analyse: 1/)).toBeInTheDocument();
     expect(screen.getByText(/Fusions post-analyse: 1/)).toBeInTheDocument();
+    expect(screen.getByText(/Dégradation: Fallback post-analyse/)).toBeInTheDocument();
     expect(screen.getByText(/Source: Analyse embarquée conservée/)).toBeInTheDocument();
     expect(screen.getByText(/Étape: Post-analyse/)).toBeInTheDocument();
     expect(screen.getByText(/Champs fusionnés: title, tags/)).toBeInTheDocument();
   });
 
-  it('renders adaptation source and resume source labels for recent entries', () => {
+  it('renders adaptation source, degradation and resume source labels for recent entries', () => {
     const translations: Record<string, string> = {
       'metrics.source': 'Source',
       'metrics.resumeSource': 'Source CV',
+      'metrics.degradation': 'Dégradation',
+      'metrics.adaptationFallbackDegradation': 'Fallback adaptation',
     };
 
     render(
@@ -93,6 +99,7 @@ describe('OperationLLMCard', () => {
       />
     );
 
+    expect(screen.getByText(/Dégradation: Fallback adaptation/)).toBeInTheDocument();
     expect(screen.getByText(/Source: Fallback texte brut/)).toBeInTheDocument();
     expect(screen.getByText(/Source CV: CV amélioré/)).toBeInTheDocument();
   });

@@ -132,6 +132,30 @@ export default function OperationLLMCard({
     return entry.resumeSource;
   };
 
+  const renderDegradationLabel = (entry: OperationRecentEntry): string => {
+    if (!isAdaptation) {
+      if (safeNumber(entry.postAnalysisFallbackRuns) > 0) {
+        return t('metrics.postAnalysisFallbackDegradation', { defaultValue: 'Fallback post-analyse' });
+      }
+      if (safeNumber(entry.postAnalysisMergeRuns) > 0) {
+        return t('metrics.postAnalysisMergeDegradation', { defaultValue: 'Fusion post-analyse' });
+      }
+      if (safeNumber(entry.fallbackRuns) > 0) {
+        return t('metrics.generationFallbackDegradation', { defaultValue: 'Fallback de génération' });
+      }
+    }
+
+    if (isAdaptation && safeNumber(entry.fallbackRuns) > 0) {
+      return t('metrics.adaptationFallbackDegradation', { defaultValue: 'Fallback adaptation' });
+    }
+
+    if (safeNumber(entry.failedRuns) > 0) {
+      return t('metrics.failedRunDegradation', { defaultValue: 'Exécution en échec' });
+    }
+
+    return t('metrics.nominalFlow', { defaultValue: 'Flux nominal' });
+  };
+
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }} className={`rounded-xl border dark:bg-gray-800 p-6 ${accentClasses}`}>
       <div className="flex items-center justify-between mb-4">
@@ -230,48 +254,46 @@ export default function OperationLLMCard({
         <div>
           <p className="text-xs font-semibold opacity-70 mb-2">{t(recentKey)}</p>
           <div className="space-y-2 max-h-32 overflow-y-auto">
-            {metrics.recent.slice().reverse().map((entry, index) => (
-              <div key={`${entry.timestamp || 'entry'}-${index}`} className={`${recentTile} rounded-lg p-2 text-xs`}>
-                {(() => {
-                  const sourceLabel = renderRecentSource(entry);
-                  const stageLabel = renderRecentStage(entry);
-                  const resumeSourceLabel = renderRecentResumeSource(entry);
+            {metrics.recent.slice().reverse().map((entry, index) => {
+              const sourceLabel = renderRecentSource(entry);
+              const stageLabel = renderRecentStage(entry);
+              const resumeSourceLabel = renderRecentResumeSource(entry);
+              const degradationLabel = renderDegradationLabel(entry);
 
-                  return (
-                    <>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono">{entry.provider || 'unknown'}</span>
-                  <span className="opacity-60">{entry.timestamp ? formatDateTime(entry.timestamp) : 'N/A'}</span>
-                </div>
-                <div className="mt-1 opacity-80">
-                  {entry.event || 'run'} | {t('metrics.successFailures')}: {safeNumber(entry.successfulRuns)} / {safeNumber(entry.failedRuns)}
-                  {isAdaptation ? ` | ${t('metrics.matchRuns')}: ${safeNumber(entry.matchRuns)}` : ''}
-                </div>
-                <div className="mt-1 opacity-70">
-                  {t('metrics.structuredFallback')}: {safeNumber(entry.structuredRuns)} / {safeNumber(entry.fallbackRuns)}
-                  {!isAdaptation ? ` | ${t('metrics.postAnalysisFallbacks', { defaultValue: 'Fallbacks post-analyse' })}: ${safeNumber(entry.postAnalysisFallbackRuns)}` : ''}
-                  {!isAdaptation ? ` | ${t('metrics.postAnalysisMerges', { defaultValue: 'Fusions post-analyse' })}: ${safeNumber(entry.postAnalysisMergeRuns)}` : ''}
-                  {sourceLabel ? ` | ${t('metrics.source')}: ${sourceLabel}` : ''}
-                  {stageLabel ? ` | ${t('metrics.stage')}: ${stageLabel}` : ''}
-                  {resumeSourceLabel ? ` | ${t('metrics.resumeSource', { defaultValue: 'Source CV' })}: ${resumeSourceLabel}` : ''}
-                </div>
-                {!isAdaptation && entry.mergedKeys && entry.mergedKeys.length > 0 && (
-                  <div className="mt-1 opacity-70">
-                    {t('metrics.mergedFields', { defaultValue: 'Champs fusionnés' })}: {entry.mergedKeys.join(', ')}
+              return (
+                <div key={`${entry.timestamp || 'entry'}-${index}`} className={`${recentTile} rounded-lg p-2 text-xs`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono">{entry.provider || 'unknown'}</span>
+                    <span className="opacity-60">{entry.timestamp ? formatDateTime(entry.timestamp) : 'N/A'}</span>
                   </div>
-                )}
-                {(entry.promptId || entry.contractId) && (
-                  <div className="mt-1 opacity-70">
-                    {entry.promptId ? `${t('metrics.prompt')}: ${entry.promptId}${entry.promptVersion ? `@${entry.promptVersion}` : ''}` : ''}
-                    {entry.contractId ? `${entry.promptId ? ' | ' : ''}${t('metrics.contract')}: ${entry.contractId}${entry.contractVersion ? `@${entry.contractVersion}` : ''}` : ''}
-                    {entry.promptSource ? ` | ${t('metrics.promptSource')}: ${entry.promptSource}` : ''}
+                  <div className="mt-1 opacity-80">
+                    {entry.event || 'run'} | {t('metrics.successFailures')}: {safeNumber(entry.successfulRuns)} / {safeNumber(entry.failedRuns)}
+                    {isAdaptation ? ` | ${t('metrics.matchRuns')}: ${safeNumber(entry.matchRuns)}` : ''}
                   </div>
-                )}
-                    </>
-                  );
-                })()}
-              </div>
-            ))}
+                  <div className="mt-1 opacity-70">
+                    {t('metrics.structuredFallback')}: {safeNumber(entry.structuredRuns)} / {safeNumber(entry.fallbackRuns)}
+                    {!isAdaptation ? ` | ${t('metrics.postAnalysisFallbacks', { defaultValue: 'Fallbacks post-analyse' })}: ${safeNumber(entry.postAnalysisFallbackRuns)}` : ''}
+                    {!isAdaptation ? ` | ${t('metrics.postAnalysisMerges', { defaultValue: 'Fusions post-analyse' })}: ${safeNumber(entry.postAnalysisMergeRuns)}` : ''}
+                    {degradationLabel ? ` | ${t('metrics.degradation', { defaultValue: 'Dégradation' })}: ${degradationLabel}` : ''}
+                    {sourceLabel ? ` | ${t('metrics.source')}: ${sourceLabel}` : ''}
+                    {stageLabel ? ` | ${t('metrics.stage')}: ${stageLabel}` : ''}
+                    {resumeSourceLabel ? ` | ${t('metrics.resumeSource', { defaultValue: 'Source CV' })}: ${resumeSourceLabel}` : ''}
+                  </div>
+                  {!isAdaptation && entry.mergedKeys && entry.mergedKeys.length > 0 && (
+                    <div className="mt-1 opacity-70">
+                      {t('metrics.mergedFields', { defaultValue: 'Champs fusionnés' })}: {entry.mergedKeys.join(', ')}
+                    </div>
+                  )}
+                  {(entry.promptId || entry.contractId) && (
+                    <div className="mt-1 opacity-70">
+                      {entry.promptId ? `${t('metrics.prompt')}: ${entry.promptId}${entry.promptVersion ? `@${entry.promptVersion}` : ''}` : ''}
+                      {entry.contractId ? `${entry.promptId ? ' | ' : ''}${t('metrics.contract')}: ${entry.contractId}${entry.contractVersion ? `@${entry.contractVersion}` : ''}` : ''}
+                      {entry.promptSource ? ` | ${t('metrics.promptSource')}: ${entry.promptSource}` : ''}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

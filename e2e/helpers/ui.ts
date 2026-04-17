@@ -1,6 +1,6 @@
 import { expect, type APIResponse, type Locator, type Page } from '@playwright/test';
 
-export const REFRESH_LABEL_REGEX = /actualiser|rafra[iî]chir|refresh/i;
+export const REFRESH_LABEL_REGEX = /actualiser|rafraîchir|refresh/i;
 export const EDIT_LABEL_REGEX = /modifier|edit/i;
 export const DELETE_LABEL_REGEX = /supprimer|delete/i;
 export const SAVE_LABEL_REGEX = /enregistrer|save|sauvegarder/i;
@@ -9,9 +9,12 @@ export const CANCEL_LABEL_REGEX = /annuler|cancel/i;
 export const SIGNIN_HEADING_REGEX = /connectez-vous à votre compte|sign in to your account|connect|sign in|login/i;
 export const REGISTER_ACCOUNT_LABEL_REGEX = /créer un compte|create an account/i;
 export const RESET_PASSWORD_LABEL_REGEX = /réinitialiser|reset|modifier/i;
-export const IMPROVE_LABEL_REGEX = /improve|ameliorer|améliorer/i;
+export const IMPROVE_LABEL_REGEX = /improve|améliorer|ameliorer/i;
 export const LIST_VIEW_LABEL_REGEX = /liste|list/i;
 export const BY_DEAL_VIEW_LABEL_REGEX = /par affaire|by deal/i;
+export const EMPLOYEE_LABEL_REGEX = /employee|collaborateur/i;
+export const CONTINUE_TO_UPLOAD_LABEL_REGEX = /continue to upload|continuer vers l'upload/i;
+export const EXPORT_LABEL_REGEX = /export|exporter/i;
 
 export function uniqueName(prefix: string): string {
   return `${prefix} ${Date.now()} ${Math.floor(Math.random() * 1000)}`;

@@ -1,7 +1,15 @@
 import path from 'path';
 import { expect, type Page } from '@playwright/test';
 import { ensureLongResumeFixture } from './docx';
-import { getCsrfToken, getJsonViaApi, postJsonViaApi, putJsonViaApi } from './ui';
+import {
+  CONTINUE_TO_UPLOAD_LABEL_REGEX,
+  EMPLOYEE_LABEL_REGEX,
+  getCsrfToken,
+  getJsonViaApi,
+  postJsonViaApi,
+  putJsonViaApi,
+  setInputFilesWhenReady,
+} from './ui';
 
 const FALLBACK_DOCX_FIXTURE = path.resolve('node_modules/mammoth/test/test-data/tables.docx');
 
@@ -81,15 +89,15 @@ export async function uploadResumeAndWaitForAnalysis(
   const docxFixture = await ensureLongResumeFixture(candidateName).catch(() => FALLBACK_DOCX_FIXTURE);
 
   await page.goto('/upload');
-  await page.getByRole('button', { name: /employee|collaborateur/i }).click();
+  await page.getByRole('button', { name: EMPLOYEE_LABEL_REGEX }).click();
   await page.locator('#candidateName').fill(candidateName);
-  await page.getByRole('button', { name: /continue to upload|continuer vers l'upload/i }).click();
+  await page.getByRole('button', { name: CONTINUE_TO_UPLOAD_LABEL_REGEX }).click();
 
   const createJobResponsePromise = page.waitForResponse((response) =>
     response.url().includes('/api/batch-jobs') && response.request().method() === 'POST'
   );
 
-  await page.locator('input[type="file"]').setInputFiles(docxFixture);
+  await setInputFilesWhenReady(page, docxFixture);
 
   const createJobResponse = await createJobResponsePromise;
   expect(createJobResponse.status()).toBe(201);
