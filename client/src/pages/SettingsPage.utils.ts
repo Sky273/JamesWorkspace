@@ -195,6 +195,22 @@ function stringifyLlmModelParameters(value?: LLMModelParameters): string {
   return JSON.stringify(value || {}, null, 2);
 }
 
+function getStringSetting(value: string | undefined, fallback = ''): string {
+  return value ?? fallback;
+}
+
+function getNumberSetting(value: number | undefined, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function getModelSetting(settings?: Settings | null): string {
+  if (typeof settings?.llmModel === 'string') {
+    return settings.llmModel;
+  }
+
+  return getDefaultModelForProvider(settings?.llmProvider);
+}
+
 function parseLlmModelParametersJson(value: string): LLMModelParameters {
   const parsed = JSON.parse(value || '{}') as unknown;
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
@@ -271,36 +287,36 @@ export const getDefaultModelForProvider = (provider?: LLMProvider): string => {
 };
 
 export const toFormData = (settings?: Settings | null): SettingsFormData => ({
-  llmProvider: settings?.llmProvider || 'openai',
-  llmModel: settings?.llmModel || getDefaultModelForProvider(settings?.llmProvider),
-  ollamaBaseUrl: settings?.ollamaBaseUrl || '',
-  ollamaVisionModel: settings?.ollamaVisionModel || '',
-  ollamaKeepAlive: settings?.ollamaKeepAlive || '5m',
-  ollamaNumCtx: settings?.ollamaNumCtx || 8192,
+  llmProvider: settings?.llmProvider ?? 'openai',
+  llmModel: getModelSetting(settings),
+  ollamaBaseUrl: getStringSetting(settings?.ollamaBaseUrl),
+  ollamaVisionModel: getStringSetting(settings?.ollamaVisionModel),
+  ollamaKeepAlive: getStringSetting(settings?.ollamaKeepAlive, '5m'),
+  ollamaNumCtx: getNumberSetting(settings?.ollamaNumCtx, 8192),
   llmModelParametersJson: stringifyLlmModelParameters(settings?.llmModelParameters),
-  cvMode: settings?.cvMode || 'nominative',
-  chatbotEnabled: settings?.chatbotEnabled || 'on',
-  webglEnabled: settings?.webglEnabled || 'on',
+  cvMode: settings?.cvMode ?? 'nominative',
+  chatbotEnabled: settings?.chatbotEnabled ?? 'on',
+  webglEnabled: settings?.webglEnabled ?? 'on',
   publicHomeEnabled: settings?.publicHomeEnabled ?? getDefaultPublicHomeEnabled(),
-  preAnalysisEnabled: settings?.preAnalysisEnabled || false,
-  'Pre Analysis Prompt': settings?.['Pre Analysis Prompt'] || '',
-  'Analysis Prompt': settings?.['Analysis Prompt'] || '',
-  'Improvement Prompt': settings?.['Improvement Prompt'] || '',
-  'Match Analysis Prompt': settings?.['Match Analysis Prompt'] || '',
-  'Adaptation Prompt': settings?.['Adaptation Prompt'] || '',
-  'Executive Summary Weight': settings?.['Executive Summary Weight'] || 20,
-  'Skills Weight': settings?.['Skills Weight'] || 20,
-  'Experience Weight': settings?.['Experience Weight'] || 20,
-  'Education Weight': settings?.['Education Weight'] || 15,
-  'ATS Weight': settings?.['ATS Weight'] || 15,
-  'Hobbies Languages Weight': settings?.['Hobbies Languages Weight'] || 10,
-  'Profile Matching Local Skill Weight': settings?.['Profile Matching Local Skill Weight'] || 6,
-  'Profile Matching Local Tool Weight': settings?.['Profile Matching Local Tool Weight'] || 4,
-  'Profile Matching Local Industry Weight': settings?.['Profile Matching Local Industry Weight'] || 3,
-  'Profile Matching Local Soft Skill Weight': settings?.['Profile Matching Local Soft Skill Weight'] || 2,
-  'Profile Matching Local Title Exact Weight': settings?.['Profile Matching Local Title Exact Weight'] || 5,
-  'Profile Matching Local Title Token Weight': settings?.['Profile Matching Local Title Token Weight'] || 2,
-  'Profile Matching Local Coverage Multiplier': settings?.['Profile Matching Local Coverage Multiplier'] || 3,
+  preAnalysisEnabled: settings?.preAnalysisEnabled ?? false,
+  'Pre Analysis Prompt': getStringSetting(settings?.['Pre Analysis Prompt']),
+  'Analysis Prompt': getStringSetting(settings?.['Analysis Prompt']),
+  'Improvement Prompt': getStringSetting(settings?.['Improvement Prompt']),
+  'Match Analysis Prompt': getStringSetting(settings?.['Match Analysis Prompt']),
+  'Adaptation Prompt': getStringSetting(settings?.['Adaptation Prompt']),
+  'Executive Summary Weight': getNumberSetting(settings?.['Executive Summary Weight'], 20),
+  'Skills Weight': getNumberSetting(settings?.['Skills Weight'], 20),
+  'Experience Weight': getNumberSetting(settings?.['Experience Weight'], 20),
+  'Education Weight': getNumberSetting(settings?.['Education Weight'], 15),
+  'ATS Weight': getNumberSetting(settings?.['ATS Weight'], 15),
+  'Hobbies Languages Weight': getNumberSetting(settings?.['Hobbies Languages Weight'], 10),
+  'Profile Matching Local Skill Weight': getNumberSetting(settings?.['Profile Matching Local Skill Weight'], 6),
+  'Profile Matching Local Tool Weight': getNumberSetting(settings?.['Profile Matching Local Tool Weight'], 4),
+  'Profile Matching Local Industry Weight': getNumberSetting(settings?.['Profile Matching Local Industry Weight'], 3),
+  'Profile Matching Local Soft Skill Weight': getNumberSetting(settings?.['Profile Matching Local Soft Skill Weight'], 2),
+  'Profile Matching Local Title Exact Weight': getNumberSetting(settings?.['Profile Matching Local Title Exact Weight'], 5),
+  'Profile Matching Local Title Token Weight': getNumberSetting(settings?.['Profile Matching Local Title Token Weight'], 2),
+  'Profile Matching Local Coverage Multiplier': getNumberSetting(settings?.['Profile Matching Local Coverage Multiplier'], 3),
   allowUserRegistrationWithoutApproval: settings?.allowUserRegistrationWithoutApproval ?? false,
   firmInitialCredits: settings?.firmInitialCredits ?? 1000,
   aiCreditChatbotMessage: settings?.aiCreditChatbotMessage ?? 1,
@@ -321,9 +337,9 @@ export const toFormData = (settings?: Settings | null): SettingsFormData => ({
   aiMaxTokensResumeMatch: settings?.aiMaxTokensResumeMatch ?? 4096,
   aiMaxTokensProfileSearch: settings?.aiMaxTokensProfileSearch ?? 2048,
   aiMaxTokensProfileAnalysis: settings?.aiMaxTokensProfileAnalysis ?? 3072,
-  'DPO Name': settings?.['DPO Name'] || '',
-  'DPO Email': settings?.['DPO Email'] || '',
-  'DPO Phone': settings?.['DPO Phone'] || '',
+  'DPO Name': getStringSetting(settings?.['DPO Name']),
+  'DPO Email': getStringSetting(settings?.['DPO Email']),
+  'DPO Phone': getStringSetting(settings?.['DPO Phone']),
 });
 
 export const createSavePayload = (

@@ -58,9 +58,13 @@ interface User {
   role?: string;
   status?: string;
   firmId?: string;
+  firm_id?: string;
   firm?: string;
   firmName?: string;
   firm_name?: string;
+  customerId?: string;
+  customerName?: string;
+  customer?: string;
   invitationSent?: boolean;
 }
 
@@ -116,7 +120,14 @@ interface StripeCreditPacksResponse {
 // ============================================
 
 const userService = {
+  firstNonEmptyString(...values: Array<string | undefined>): string | undefined {
+    return values.find((value) => typeof value === 'string' && value.length > 0);
+  },
+
   normalizeUser(user: Partial<User> | null | undefined): User {
+    const firmId = this.firstNonEmptyString(user?.firmId, user?.firm_id, user?.customerId);
+    const firmName = this.firstNonEmptyString(user?.firmName, user?.firm_name, user?.firm, user?.customerName, user?.customer);
+
     return {
       id: user?.id || '',
       name: user?.name || '',
@@ -126,10 +137,14 @@ const userService = {
       phone: user?.phone,
       role: user?.role,
       status: user?.status,
-      firmId: user?.firmId,
-      firm: user?.firm,
-      firmName: user?.firmName || user?.firm_name || user?.firm,
-      firm_name: user?.firm_name || user?.firmName || user?.firm,
+      firmId,
+      firm_id: firmId,
+      firm: firmName,
+      firmName,
+      firm_name: firmName,
+      customerId: firmId,
+      customerName: firmName,
+      customer: firmName,
       invitationSent: user?.invitationSent
     };
   },

@@ -35,6 +35,24 @@ describe('SettingsPage helpers', () => {
     }));
   });
 
+  it('preserves explicit off/zero settings instead of falling back to defaults', () => {
+    expect(toFormData({
+      chatbotEnabled: 'off',
+      webglEnabled: 'off',
+      preAnalysisEnabled: false,
+      ollamaNumCtx: 0,
+      'Executive Summary Weight': 0,
+      'Skills Weight': 0,
+    })).toEqual(expect.objectContaining({
+      chatbotEnabled: 'off',
+      webglEnabled: 'off',
+      preAnalysisEnabled: false,
+      ollamaNumCtx: 0,
+      'Executive Summary Weight': 0,
+      'Skills Weight': 0,
+    }));
+  });
+
   it('normalizes numeric values and chatbot status in the save payload', () => {
     const payload = createSavePayload({
       ...defaultFormData,

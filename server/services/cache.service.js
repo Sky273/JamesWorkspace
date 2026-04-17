@@ -5,6 +5,15 @@ import {
     getCacheScopeVersion,
     publishCacheInvalidation
 } from './cacheVersion.service.js';
+import {
+    clearRedisInitPromise,
+    getRedisConnectionSnapshot,
+    getRedisState,
+    markRedisConnected,
+    markRedisUnavailable,
+    setRedisInitPromise,
+    shutdownRedisClient
+} from './cacheRedisState.service.js';
 
 const DEFAULT_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
 const DEFAULT_MAX_SIZE = 1000;
@@ -12,13 +21,6 @@ const DEFAULT_SCOPE_VERSION_REFRESH_MS = 60 * 1000;
 const REDIS_URL_CONFIGURED_BY_ENV = Boolean(process.env.CACHE_REDIS_URL);
 
 const cacheRegistry = new Map();
-
-const redisState = {
-    initPromise: null,
-    client: null,
-    available: false,
-    disabledReason: null
-};
 
 function createStats(name, backend, ttl) {
     return {
@@ -383,6 +385,7 @@ class MemoryCacheNamespace extends VersionedCacheNamespace {
 }
 
 async function ensureRedisClient() {
+    const redisState = getRedisState();
     if (CACHE_BACKEND !== 'redis') {
         return null;
     }
@@ -399,11 +402,11 @@ async function ensureRedisClient() {
         return redisState.initPromise;
     }
 
-    redisState.initPromise = (async () => {
+    return setRedisInitPromise((async () => {
         try {
             const redisModule = await import('redis').catch(() => null);
             if (!redisModule?.createClient) {
-                redisState.disabledReason = 'redis_package_missing';
+                markRedisUnavailable('redis_package_missing');
                 safeLog('warn', 'Redis cache backend requested but redis package is not installed. Falling back to memory cache.', {
                     cacheBackend: CACHE_BACKEND
                 });
@@ -416,25 +419,22 @@ async function ensureRedisClient() {
             });
 
             await client.connect();
-            redisState.client = client;
-            redisState.available = true;
+            markRedisConnected(client);
             safeLog('info', 'Redis cache backend connected', {
                 redisUrl: CACHE_REDIS_URL
             });
             return client;
         } catch (error) {
-            redisState.disabledReason = error.message;
+            markRedisUnavailable(error.message);
             safeLog('warn', 'Redis cache backend unavailable. Falling back to memory cache.', {
                 error: error.message,
                 redisUrl: CACHE_REDIS_URL
             });
             return null;
         } finally {
-            redisState.initPromise = null;
+            clearRedisInitPromise();
         }
-    })();
-
-    return redisState.initPromise;
+    })());
 }
 
 class RedisCacheNamespace extends VersionedCacheNamespace {
@@ -550,21 +550,21 @@ class RedisCacheNamespace extends VersionedCacheNamespace {
 
     async getStats() {
         const size = await this.size();
-        const effectiveBackend = (!!redisState.client && redisState.available) ? 'redis' : 'memory';
+        const redisSnapshot = getRedisConnectionSnapshot();
         return {
             ...this.stats,
             size,
             maxSize: this.maxSize,
             trackedScopes: this.scopeVersions.size,
             configuredBackend: CACHE_BACKEND,
-            connected: !!redisState.client && redisState.available,
-            disabledReason: redisState.disabledReason || null,
-            effectiveBackend,
+            connected: redisSnapshot.connected,
+            disabledReason: redisSnapshot.disabledReason,
+            effectiveBackend: redisSnapshot.effectiveBackend,
             ...buildCacheUsageMode({
                 configuredBackend: CACHE_BACKEND,
-                effectiveBackend,
-                connected: !!redisState.client && redisState.available,
-                disabledReason: redisState.disabledReason || null
+                effectiveBackend: redisSnapshot.effectiveBackend,
+                connected: redisSnapshot.connected,
+                disabledReason: redisSnapshot.disabledReason
             })
         };
     }
@@ -830,18 +830,11 @@ safeLog('info', 'Cache system initialized', {
 export const cleanupAllCaches = async () => {
     await Promise.all(Array.from(cacheRegistry.values()).map(cache => cache.destroy()));
 
-    if (redisState.client) {
-        try {
-            await redisState.client.quit();
-        } catch (error) {
+    await shutdownRedisClient((error) => {
             safeLog('warn', 'Failed to close Redis cache client cleanly', {
                 error: error.message
             });
-        } finally {
-            redisState.client = null;
-            redisState.available = false;
-        }
-    }
+    });
 
     safeLog('info', 'All caches destroyed');
 };
