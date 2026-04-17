@@ -66,10 +66,12 @@ vi.mock('../../services/settings.service.js', () => ({
 
 const mockTrackBatchImportActivity = vi.fn();
 const mockTrackOcrActivity = vi.fn();
+const mockTrackImprovementActivity = vi.fn();
 vi.mock('../../services/metrics.service.js', () => ({
     metrics: {
         trackBatchImportActivity: (...args) => mockTrackBatchImportActivity(...args),
-        trackOcrActivity: (...args) => mockTrackOcrActivity(...args)
+        trackOcrActivity: (...args) => mockTrackOcrActivity(...args),
+        trackImprovementActivity: (...args) => mockTrackImprovementActivity(...args)
     }
 }));
 
@@ -153,6 +155,7 @@ describe('Batch Jobs Worker - Item Processors', () => {
         mockExecuteResumeAdaptation.mockReset();
         mockTrackBatchImportActivity.mockReset();
         mockTrackOcrActivity.mockReset();
+        mockTrackImprovementActivity.mockReset();
         mockPersistResumeSkillEvidence.mockReset();
         mockInsertResume.mockClear();
         mockUpdateResume.mockClear();
@@ -785,6 +788,17 @@ describe('Batch Jobs Worker - Item Processors', () => {
                 title: 'Senior PM',
                 improved_skills: JSON.stringify(['Leadership']),
                 improved_tools: JSON.stringify(['Jira'])
+            }));
+            expect(mockTrackImprovementActivity).toHaveBeenCalledWith(expect.objectContaining({
+                provider: 'batch-job',
+                event: 'post-analysis-fallback',
+                postAnalysisFallbackRuns: 1,
+                metadata: expect.objectContaining({
+                    source: 'embedded-analysis-fallback',
+                    stage: 'post-analysis',
+                    itemId: 'i2b',
+                    resumeId: 'res-1'
+                })
             }));
         });
 

@@ -114,6 +114,7 @@ export function createOperationsState() {
             successfulRuns: 0,
             failedRuns: 0,
             fallbackRuns: 0,
+            postAnalysisFallbackRuns: 0,
             structuredRuns: 0,
             inputChars: 0,
             outputChars: 0,

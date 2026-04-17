@@ -9,6 +9,7 @@ import { updateResume } from '../../resumes.service.js';
 import { getConfiguredAiActionRuntimeConfig, runAiActionWithCredits } from '../../aiCredits.service.js';
 import { getBatchJobActionCreditReservation, markBatchJobActionCreditConsumed } from '../../batchJobCredits.service.js';
 import { isNonRetryableLlmProviderError, normalizeNonRetryableLlmProviderError } from '../../llmGateway.service.js';
+import { metrics } from '../../metrics.service.js';
 
 const IMPROVEMENT_PROVIDER_CONFIGURATION_MESSAGE = "L'amélioration du CV est indisponible car le fournisseur IA est mal configuré ou son jeton a expiré.";
 
@@ -80,6 +81,23 @@ async function resolveImprovedAnalysisWithFallback(improvedResult, improvedText,
             resumeId: item.resume_id,
             error: error.message,
             fallbackKeys: Object.keys(improvedResult.analysis || {})
+        });
+
+        metrics.trackImprovementActivity({
+            provider: 'batch-job',
+            event: 'post-analysis-fallback',
+            successfulRuns: 0,
+            failedRuns: 0,
+            fallbackRuns: 0,
+            postAnalysisFallbackRuns: 1,
+            inputChars: improvedText.length,
+            outputChars: improvedText.length,
+            metadata: {
+                source: 'embedded-analysis-fallback',
+                stage: 'post-analysis',
+                itemId: item.id,
+                resumeId: item.resume_id || null
+            }
         });
 
         return improvedResult.analysis;
