@@ -14,7 +14,7 @@ import {
     isLikelyGlmModel,
     isLikelyMiniMaxModel
 } from '../llmConfiguration.service.js';
-import { cleanupHtml, normalizeUtf8Text, parseJsonFromLlmResponse, salvageResumeAnalysisFromText, stripLlmThinkingContent } from './textUtils.js';
+import { cleanupHtml, normalizeUtf8Text, parseJsonFromLlmResponse, salvageResumeAnalysisFromTextDetailed, stripLlmThinkingContent } from './textUtils.js';
 import {
     normalizeAnalysisResponse,
     extractImprovementEnvelope,
@@ -57,6 +57,14 @@ function buildJsonRepairPrompt(invalidPayload, operationType) {
         '',
         truncatedPayload
     ].join('\n');
+}
+
+function buildSalvageSourceEntries(initialContent, compactRetryContent, repairContent) {
+    return [
+        { source: 'repair', content: repairContent },
+        { source: 'compact-retry', content: compactRetryContent },
+        { source: 'initial', content: initialContent }
+    ].filter(entry => typeof entry.content === 'string' && entry.content.trim());
 }
 
 export async function analyzeResume(resumeText, model, analysisPrompt, userMetadata = null, isImprovedCV = false, originalFileName = null, options = {}) {
@@ -145,23 +153,31 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
                     throw normalizedError;
                 }
 
-                const recoveredAnalysis = [
-                    repairContent,
-                    compactRetryContent,
-                    initialContent
-                ]
-                    .map(candidate => salvageResumeAnalysisFromText(candidate))
-                    .find(Boolean);
+                const recoveredAnalysisAttempt = buildSalvageSourceEntries(initialContent, compactRetryContent, repairContent)
+                    .map((entry) => ({
+                        ...entry,
+                        salvage: salvageResumeAnalysisFromTextDetailed(entry.content)
+                    }))
+                    .find((entry) => entry.salvage);
 
-                if (recoveredAnalysis) {
+                if (recoveredAnalysisAttempt) {
+                    const { source, content, salvage } = recoveredAnalysisAttempt;
                     safeLog('warn', 'Recovered resume analysis from non-JSON LLM output using loose-text salvage', {
                         operationType,
+                        providerHint: inferMetricsProvider(model),
+                        model,
+                        salvageSource: source,
+                        salvageDetectedStructure: salvage.metadata.detectedStructure,
                         initialError: parseError.message,
                         compactRetryError: compactRetryError.message,
                         repairError: error.message,
-                        recoveredKeys: Object.keys(recoveredAnalysis)
+                        recoveredKeys: Object.keys(salvage.payload),
+                        recoveredFields: salvage.metadata.recoveredFields,
+                        missingFields: salvage.metadata.missingFields,
+                        recoveredCounts: salvage.metadata.counts,
+                        responsePreview: content.substring(0, 500)
                     });
-                    rawAnalysis = recoveredAnalysis;
+                    rawAnalysis = salvage.payload;
                     return normalizeAnalysisResponse(rawAnalysis);
                 }
 

@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { decodeHtmlEntities, cleanupText, cleanupHtml, stripLlmThinkingContent, extractJsonPayload, parseJsonFromLlmResponse, salvageResumeAnalysisFromText } from '../../services/openai/textUtils.js';
+import { decodeHtmlEntities, cleanupText, cleanupHtml, stripLlmThinkingContent, extractJsonPayload, parseJsonFromLlmResponse, salvageResumeAnalysisFromText, salvageResumeAnalysisFromTextDetailed } from '../../services/openai/textUtils.js';
 
 describe('OpenAI Text Utilities', () => {
     describe('decodeHtmlEntities', () => {
@@ -171,6 +171,32 @@ Executive Summary Improvements:
                 }),
                 suggestions: expect.objectContaining({
                     executiveSummary: ['Tighten the introduction', 'Add measurable impact']
+                })
+            }));
+        });
+
+        it('should expose salvage metadata for degraded resume analysis responses', () => {
+            const salvaged = salvageResumeAnalysisFromTextDetailed(`
+Name: Jane Doe
+Top Skills:
+- Java
+- Node.js
+            `);
+
+            expect(salvaged).toEqual(expect.objectContaining({
+                payload: expect.objectContaining({
+                    name: 'Jane Doe',
+                    tags: expect.objectContaining({
+                        skills: ['Java', 'Node.js']
+                    })
+                }),
+                metadata: expect.objectContaining({
+                    detectedStructure: 'key_value_with_bullets',
+                    recoveredFields: expect.arrayContaining(['name', 'skills']),
+                    missingFields: expect.arrayContaining(['title']),
+                    counts: expect.objectContaining({
+                        skills: 2
+                    })
                 })
             }));
         });

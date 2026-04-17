@@ -613,7 +613,85 @@ function dedupeLooseAnalysisPayload(payload) {
     };
 }
 
-export function salvageResumeAnalysisFromText(text) {
+function inferLooseAnalysisStructureKind(cleanedText) {
+    const normalized = normalizeUtf8Text(String(cleanedText || ''));
+    const hasBullets = /(^|\n)\s*[-*•]\s+/m.test(normalized);
+    const hasKeyValue = /(^|\n)\s*[^:\n]{2,60}\s*:\s*.+/m.test(normalized);
+    const hasMarkdownHeadings = /(^|\n)\s*#{1,6}\s+\S+/m.test(normalized);
+
+    if (hasKeyValue && hasBullets) return 'key_value_with_bullets';
+    if (hasKeyValue) return 'key_value';
+    if (hasMarkdownHeadings && hasBullets) return 'markdown_sections';
+    if (hasBullets) return 'bullet_list';
+    return 'plain_text';
+}
+
+function buildLooseAnalysisSalvageMetadata(payload, cleanedText) {
+    const recoveredFields = [];
+    const missingFields = [];
+
+    const scalarFields = [
+        ['name', payload.name],
+        ['title', payload.title],
+        ['summary', payload.Summary],
+        ['globalRating', payload.globalRating],
+        ['executiveSummaryRating', payload.executiveSummaryRating],
+        ['skillsRating', payload.skillsRating],
+        ['experiencesRating', payload.experiencesRating],
+        ['educationRating', payload.educationRating],
+        ['hobbiesLanguagesRating', payload.hobbiesLanguagesRating],
+        ['atsOptimizationRating', payload.atsOptimizationRating]
+    ];
+
+    for (const [field, value] of scalarFields) {
+        if (typeof value === 'string' && value.trim()) {
+            recoveredFields.push(field);
+        } else {
+            missingFields.push(field);
+        }
+    }
+
+    const collectionFields = [
+        ['skills', payload.tags.skills],
+        ['industries', payload.tags.industries],
+        ['tools', payload.tags.tools],
+        ['softSkills', payload.tags.softSkills],
+        ['suggestions.executiveSummary', payload.suggestions.executiveSummary],
+        ['suggestions.skills', payload.suggestions.skills],
+        ['suggestions.experiences', payload.suggestions.experiences],
+        ['suggestions.education', payload.suggestions.education],
+        ['suggestions.hobbiesLanguages', payload.suggestions.hobbiesLanguages],
+        ['suggestions.atsOptimization', payload.suggestions.atsOptimization]
+    ];
+
+    for (const [field, value] of collectionFields) {
+        if (Array.isArray(value) && value.length > 0) {
+            recoveredFields.push(field);
+        } else {
+            missingFields.push(field);
+        }
+    }
+
+    return {
+        detectedStructure: inferLooseAnalysisStructureKind(cleanedText),
+        recoveredFields,
+        missingFields,
+        counts: {
+            skills: payload.tags.skills.length,
+            industries: payload.tags.industries.length,
+            tools: payload.tags.tools.length,
+            softSkills: payload.tags.softSkills.length,
+            executiveSummarySuggestions: payload.suggestions.executiveSummary.length,
+            skillsSuggestions: payload.suggestions.skills.length,
+            experiencesSuggestions: payload.suggestions.experiences.length,
+            educationSuggestions: payload.suggestions.education.length,
+            hobbiesLanguagesSuggestions: payload.suggestions.hobbiesLanguages.length,
+            atsOptimizationSuggestions: payload.suggestions.atsOptimization.length
+        }
+    };
+}
+
+export function salvageResumeAnalysisFromTextDetailed(text) {
     const cleaned = normalizeUtf8Text(stripLlmThinkingContent(text || ''));
     if (!cleaned || !cleaned.trim()) {
         return null;
@@ -692,7 +770,18 @@ export function salvageResumeAnalysisFromText(text) {
         ].some(Boolean)
     );
 
-    return hasContent ? deduped : null;
+    if (!hasContent) {
+        return null;
+    }
+
+    return {
+        payload: deduped,
+        metadata: buildLooseAnalysisSalvageMetadata(deduped, cleaned)
+    };
+}
+
+export function salvageResumeAnalysisFromText(text) {
+    return salvageResumeAnalysisFromTextDetailed(text)?.payload || null;
 }
 
 export function cleanupText(text) {
