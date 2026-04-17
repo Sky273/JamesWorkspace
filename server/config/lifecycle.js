@@ -59,6 +59,11 @@ async function onServerStart(server, protocol, port) {
         safeLog('info', 'PostgreSQL database initialized successfully');
     } else {
         safeLog('error', 'PostgreSQL database initialization failed');
+        if (server?.gracefulShutdown) {
+            safeLog('error', 'Stopping proxy server because PostgreSQL initialization is required at startup');
+            server.gracefulShutdown('DB_INIT_FAILURE', 1);
+            return;
+        }
     }
 
     await startRuntimeMaintenance({ dbInitialized });

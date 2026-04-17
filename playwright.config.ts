@@ -34,8 +34,8 @@ export default defineConfig({
   webServer: {
     command: 'node scripts/start-playwright-webserver.mjs',
     url: 'http://localhost:3001/health',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
+    reuseExistingServer: process.env.PLAYWRIGHT_REUSE_EXISTING_SERVER === 'true',
+    timeout: 180 * 1000,
     env: {
       ...process.env,
       JWT_SECRET: process.env.JWT_SECRET || 'playwright-jwt-secret-minimum-32-characters',
