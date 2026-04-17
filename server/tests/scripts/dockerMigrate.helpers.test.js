@@ -60,4 +60,17 @@ describe('dockerMigrate.helpers', () => {
             'CREATE TABLE example (id integer);'
         ].join('\n'));
     });
+
+    it('removes pg18-only transaction_timeout settings for older postgres servers', () => {
+        const sql = [
+            'SET statement_timeout = 0;',
+            'SET transaction_timeout = 0;',
+            'CREATE TABLE example (id integer);'
+        ].join('\n');
+
+        expect(sanitizeSqlForPgExecution(sql)).toBe([
+            'SET statement_timeout = 0;',
+            'CREATE TABLE example (id integer);'
+        ].join('\n'));
+    });
 });

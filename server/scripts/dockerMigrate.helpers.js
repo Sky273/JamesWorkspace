@@ -35,5 +35,6 @@ export function sanitizeSqlForPgExecution(sql = '') {
         .replace(/^\uFEFF/, '')
         .split(/\r?\n/)
         .filter((line) => !/^\s*\\[A-Za-z]/.test(line))
+        .filter((line) => !/^\s*SET\s+transaction_timeout\s*=.*;?\s*$/i.test(line))
         .join('\n');
 }
