@@ -1,18 +1,18 @@
 import { test, expect } from '@playwright/test';
-import { gotoAndWaitForVisible } from './helpers/ui';
+import { gotoAndWaitForVisible, publicEntryLink } from './helpers/ui';
 
 test.describe('Public Navigation', () => {
   test('should navigate from the public home page to signin and register', async ({ page }) => {
-    await gotoAndWaitForVisible(page, '/welcome', page.locator('a[href="/signin"]').first());
+    await gotoAndWaitForVisible(page, '/welcome', publicEntryLink(page, 'signin'));
 
     await expect(page).toHaveURL(/\/welcome$/);
 
-    await page.locator('a[href="/signin"]').first().click();
+    await publicEntryLink(page, 'signin').click();
     await expect(page).toHaveURL(/\/signin$/);
     await expect(page.locator('#email-address')).toBeVisible();
 
-    await gotoAndWaitForVisible(page, '/welcome', page.locator('a[href="/register"]').first());
-    await page.locator('a[href="/register"]').first().click();
+    await gotoAndWaitForVisible(page, '/welcome', publicEntryLink(page, 'register'));
+    await publicEntryLink(page, 'register').click();
     await expect(page).toHaveURL(/\/register$/);
     await expect(page.locator('#name')).toBeVisible();
     await expect(page.locator('#email')).toBeVisible();

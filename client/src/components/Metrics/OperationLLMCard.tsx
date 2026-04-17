@@ -16,6 +16,7 @@ interface OperationRecentEntry {
   inputChars?: number;
   outputChars?: number;
   source?: string;
+  stage?: string;
   promptId?: string;
   promptVersion?: string;
   contractId?: string;
@@ -80,6 +81,22 @@ export default function OperationLLMCard({
   const icon = isAdaptation ? SparklesIcon : ArrowDownTrayIcon;
   const delay = isAdaptation ? 0.205 : 0.2;
   const Icon = icon;
+
+  const renderRecentSource = (entry: OperationRecentEntry): string | null => {
+    if (!entry.source) return null;
+    if (!isAdaptation && entry.source === 'embedded-analysis-fallback') {
+      return t('metrics.embeddedAnalysisFallbackSource', { defaultValue: 'Analyse embarquée conservée' });
+    }
+    return entry.source;
+  };
+
+  const renderRecentStage = (entry: OperationRecentEntry): string | null => {
+    if (!entry.stage) return null;
+    if (!isAdaptation && entry.stage === 'post-analysis') {
+      return t('metrics.postAnalysisStage', { defaultValue: 'Post-analyse' });
+    }
+    return entry.stage;
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }} className={`rounded-xl border dark:bg-gray-800 p-6 ${accentClasses}`}>
@@ -175,6 +192,12 @@ export default function OperationLLMCard({
           <div className="space-y-2 max-h-32 overflow-y-auto">
             {metrics.recent.slice().reverse().map((entry, index) => (
               <div key={`${entry.timestamp || 'entry'}-${index}`} className={`${recentTile} rounded-lg p-2 text-xs`}>
+                {(() => {
+                  const sourceLabel = renderRecentSource(entry);
+                  const stageLabel = renderRecentStage(entry);
+
+                  return (
+                    <>
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-mono">{entry.provider || 'unknown'}</span>
                   <span className="opacity-60">{entry.timestamp ? formatDateTime(entry.timestamp) : 'N/A'}</span>
@@ -186,7 +209,8 @@ export default function OperationLLMCard({
                 <div className="mt-1 opacity-70">
                   {t('metrics.structuredFallback')}: {safeNumber(entry.structuredRuns)} / {safeNumber(entry.fallbackRuns)}
                   {!isAdaptation ? ` | ${t('metrics.postAnalysisFallbacks', { defaultValue: 'Fallbacks post-analyse' })}: ${safeNumber(entry.postAnalysisFallbackRuns)}` : ''}
-                  {entry.source ? ` | ${t('metrics.source')}: ${entry.source}` : ''}
+                  {sourceLabel ? ` | ${t('metrics.source')}: ${sourceLabel}` : ''}
+                  {stageLabel ? ` | ${t('metrics.stage')}: ${stageLabel}` : ''}
                 </div>
                 {(entry.promptId || entry.contractId) && (
                   <div className="mt-1 opacity-70">
@@ -195,6 +219,9 @@ export default function OperationLLMCard({
                     {entry.promptSource ? ` | ${t('metrics.promptSource')}: ${entry.promptSource}` : ''}
                   </div>
                 )}
+                    </>
+                  );
+                })()}
               </div>
             ))}
           </div>

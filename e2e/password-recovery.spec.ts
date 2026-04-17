@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { RESET_PASSWORD_LABEL_REGEX } from './helpers/ui';
 
 test.describe('Password Recovery Flow', () => {
   test('should redirect reset-password without token back to forgot-password', async ({ page }) => {
@@ -16,7 +17,7 @@ test.describe('Password Recovery Flow', () => {
 
     await page.locator('#password').fill('password123');
     await page.locator('#confirm-password').fill('different123');
-    await page.getByRole('button', { name: /réinitialiser|reset|modifier/i }).click();
+    await page.getByRole('button', { name: RESET_PASSWORD_LABEL_REGEX }).click();
 
     await expect(page.locator('.bg-red-50, .dark\\:bg-red-900\\/50')).toBeVisible();
     await expect(page).toHaveURL(/\/reset-password\?token=fake-token$/);
@@ -27,7 +28,7 @@ test.describe('Password Recovery Flow', () => {
 
     await page.locator('#password').fill('short');
     await page.locator('#confirm-password').fill('short');
-    await page.getByRole('button', { name: /réinitialiser|reset|modifier/i }).click();
+    await page.getByRole('button', { name: RESET_PASSWORD_LABEL_REGEX }).click();
 
     const passwordValidity = await page.locator('#password').evaluate((input) => {
       const element = input as HTMLInputElement;

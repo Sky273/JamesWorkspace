@@ -156,6 +156,8 @@
     "successes": "Successes",
     "fallbacks": "Fallbacks",
     "postAnalysisFallbacks": "Post-analysis fallbacks",
+    "embeddedAnalysisFallbackSource": "Embedded analysis retained",
+    "postAnalysisStage": "Post-analysis",
     "resumeImprovementRecent": "Recent activity",
     "resumeAdaptationTitle": "Resume adaptation",
     "resumeAdaptationSubtitle": "Match analyses, adaptation calls and structured outputs",

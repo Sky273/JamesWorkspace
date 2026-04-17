@@ -221,6 +221,7 @@ export interface OperationsMetrics {
         inputChars?: number;
         outputChars?: number;
         source?: string;
+        stage?: string;
       }>;
       byProvider?: Record<string, {
         runs?: number;

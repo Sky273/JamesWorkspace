@@ -24,6 +24,7 @@ env:
   CACHE_BACKEND: memory
   E2E_QUIET_EXPECTED_WARNINGS: 'true'
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  NODE_OPTIONS: --disable-warning=DEP0040
 
 jobs:
   validate-core:

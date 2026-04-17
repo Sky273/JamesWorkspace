@@ -157,6 +157,8 @@
     "successes": "Succès",
     "fallbacks": "Fallbacks",
     "postAnalysisFallbacks": "Fallbacks post-analyse",
+    "embeddedAnalysisFallbackSource": "Analyse embarquée conservée",
+    "postAnalysisStage": "Post-analyse",
     "resumeImprovementRecent": "Activité récente",
     "resumeAdaptationTitle": "Adaptation de CV",
     "resumeAdaptationSubtitle": "Analyses de matching, appels d'adaptation et sorties structurées",

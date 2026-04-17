@@ -13,6 +13,8 @@ import {
   clickRefreshButton,
   deleteViaApi,
   postJsonViaApi,
+  switchToByDealView,
+  switchToListView,
   uniqueName,
 } from './helpers/ui';
 
@@ -45,7 +47,7 @@ test.describe('Resumes and adaptations refresh flows', () => {
     await page.goto('/resumes');
     await expect(page.getByRole('heading', { name: /cvth[eè]que|resumes/i }).first()).toBeVisible();
 
-    await page.getByRole('button', { name: /liste/i }).click();
+    await switchToListView(page);
 
     const resumeSearch = page.getByPlaceholder(/rechercher/i).first();
     await resumeSearch.fill(displayName);
@@ -58,7 +60,7 @@ test.describe('Resumes and adaptations refresh flows', () => {
       status: 'new',
     });
 
-    await page.getByRole('button', { name: /par affaire/i }).click();
+    await switchToByDealView(page);
     await clickRefreshButton(page);
     await expect(page.getByText(displayName).first()).toBeVisible();
 
@@ -67,18 +69,18 @@ test.describe('Resumes and adaptations refresh flows', () => {
     await expect(page).toHaveURL(/\/adaptations\/[^/]+$/, { timeout: 30_000 });
 
     await page.goto('/adaptations');
-    await page.getByRole('button', { name: /liste/i }).click();
+    await switchToListView(page);
     const adaptationSearch = page.getByPlaceholder(/rechercher/i).first();
     await adaptationSearch.fill(displayName);
     await expect(adaptationHeading(page, candidateName)).toBeVisible({ timeout: 30_000 });
     await clickRefreshButton(page);
     await expect(adaptationHeading(page, candidateName)).toBeVisible({ timeout: 30_000 });
 
-    await page.getByRole('button', { name: /par affaire/i }).click();
+    await switchToByDealView(page);
     await clickRefreshButton(page);
     await expect(page.getByText(displayName).first()).toBeVisible();
 
-    await page.getByRole('button', { name: /liste/i }).click();
+    await switchToListView(page);
     await adaptationSearch.fill(displayName);
     await expect(adaptationHeading(page, candidateName)).toBeVisible({ timeout: 30_000 });
     page.once('dialog', async (dialog) => {
@@ -89,14 +91,14 @@ test.describe('Resumes and adaptations refresh flows', () => {
     await expect(adaptationHeading(page, candidateName)).toHaveCount(0);
 
     await page.goto('/resumes');
-    await page.getByRole('button', { name: /liste/i }).click();
+    await switchToListView(page);
     await resumeSearch.fill(displayName);
     await clickButtonSafely(page.getByRole('button', { name: /supprimer|delete/i }).last());
     await clickConfirmButton(page);
     await clickRefreshButton(page);
     await expect(page.getByText(displayName)).toHaveCount(0);
 
-    await page.getByRole('button', { name: /par affaire/i }).click();
+    await switchToByDealView(page);
     await clickRefreshButton(page);
     await expect(page.getByText(displayName)).toHaveCount(0);
 

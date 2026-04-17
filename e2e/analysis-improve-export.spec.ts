@@ -2,7 +2,11 @@ import path from 'path';
 import { test, expect, type Page } from '@playwright/test';
 import { signInAsE2EUser } from './helpers/auth';
 import { ensureLongResumeFixture } from './helpers/docx';
-import { gotoAndWaitForVisible, putJsonViaApi } from './helpers/ui';
+import {
+  gotoAndWaitForVisible,
+  IMPROVE_LABEL_REGEX,
+  putJsonViaApi,
+} from './helpers/ui';
 
 const FALLBACK_DOCX_FIXTURE = path.resolve('node_modules/mammoth/test/test-data/tables.docx');
 
@@ -49,7 +53,7 @@ test.describe('Analysis Improve Export', () => {
 
     await expect(page.locator('body')).toContainText(/resume analysis|analyse du cv/i);
 
-    await page.getByRole('button', { name: /improve|ameliorer|améliorer/i }).first().click();
+    await page.getByRole('button', { name: IMPROVE_LABEL_REGEX }).first().click();
 
     const overlay = page.getByTestId('improvement-animation-fullscreen-overlay');
     await expect(overlay).toBeVisible({ timeout: 30000 });

@@ -364,9 +364,12 @@ Fichiers associés :
 - `docker-compose.redis.yml`
 - `docker-run.bat`
 - `docker-stop.bat`
+- Pour les procédures Docker détaillées et la vérité runtime/build, utilisez d'abord `docker/README.md`.
 
 ## 📚 Documentation
 
+- [INSTALL.md](./INSTALL.md) - document canonique pour l'installation locale, la configuration et les runbooks de démarrage
+- [docker/README.md](./docker/README.md) - document canonique pour Docker, `/.env.docker`, build et runtime
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - Architecture technique détaillée
 - [USER_GUIDE.md](./USER_GUIDE.md) - Guide utilisateur complet
 - [SECURITY.md](./SECURITY.md) - Politique de sécurité

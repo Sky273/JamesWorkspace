@@ -5,6 +5,7 @@ import {
   findUserByEmailForE2E,
   setSelfServiceRegistrationAutoApproval,
 } from './helpers/auth';
+import { REGISTER_ACCOUNT_LABEL_REGEX, signInHeading } from './helpers/ui';
 
 const DEFAULT_ADMIN_EMAIL = process.env.DEFAULT_ADMIN_EMAIL || 'admin@resumeconverter.local';
 const DEFAULT_ADMIN_PASSWORD = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123';
@@ -27,7 +28,7 @@ test.describe('Authentication', () => {
       return;
     }
 
-    await expect(page.getByRole('heading', { name: /connect|sign in|login/i })).toBeVisible();
+    await expect(signInHeading(page)).toBeVisible();
     await expect(page.locator('#email-address')).toBeVisible();
   });
 
@@ -107,7 +108,7 @@ test.describe('Authentication', () => {
       await page.locator('#email').fill(email);
       await page.locator('#password').fill(password);
       await page.locator('#confirmPassword').fill(password);
-      await page.getByRole('button', { name: /créer un compte|create an account/i }).click();
+      await page.getByRole('button', { name: REGISTER_ACCOUNT_LABEL_REGEX }).click();
 
       await expect(page).toHaveURL(/\/signin(\?.*)?$/);
 

@@ -4,6 +4,11 @@ import OperationLLMCard from './OperationLLMCard';
 
 describe('OperationLLMCard', () => {
   it('renders post-analysis fallback metrics for improvement runs', () => {
+    const translations: Record<string, string> = {
+      'metrics.source': 'Source',
+      'metrics.stage': 'Étape',
+    };
+
     render(
       <OperationLLMCard
         mode="improvement"
@@ -25,11 +30,12 @@ describe('OperationLLMCard', () => {
             structuredRuns: 1,
             fallbackRuns: 0,
             postAnalysisFallbackRuns: 1,
-            source: 'batch-job'
+            source: 'embedded-analysis-fallback',
+            stage: 'post-analysis',
           }]
         }}
         successRatio={0.75}
-        t={(key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key}
+        t={(key: string, options?: { defaultValue?: string }) => translations[key] ?? options?.defaultValue ?? key}
         safeNumber={(value: unknown, defaultValue = 0) => typeof value === 'number' ? value : defaultValue}
         formatNumber={(value?: number) => String(value ?? 0)}
       />
@@ -38,5 +44,7 @@ describe('OperationLLMCard', () => {
     expect(screen.getByText('Fallbacks post-analyse')).toBeInTheDocument();
     expect(screen.getByText('openai/gpt-5.4-mini')).toBeInTheDocument();
     expect(screen.getByText(/Fallbacks post-analyse: 1/)).toBeInTheDocument();
+    expect(screen.getByText(/Source: Analyse embarquée conservée/)).toBeInTheDocument();
+    expect(screen.getByText(/Étape: Post-analyse/)).toBeInTheDocument();
   });
 });

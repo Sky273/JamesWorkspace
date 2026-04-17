@@ -6,9 +6,23 @@ export const DELETE_LABEL_REGEX = /supprimer|delete/i;
 export const SAVE_LABEL_REGEX = /enregistrer|save|sauvegarder/i;
 export const CONFIRM_LABEL_REGEX = /confirmer|confirm|supprimer|delete/i;
 export const CANCEL_LABEL_REGEX = /annuler|cancel/i;
+export const SIGNIN_HEADING_REGEX = /connectez-vous à votre compte|sign in to your account|connect|sign in|login/i;
+export const REGISTER_ACCOUNT_LABEL_REGEX = /créer un compte|create an account/i;
+export const RESET_PASSWORD_LABEL_REGEX = /réinitialiser|reset|modifier/i;
+export const IMPROVE_LABEL_REGEX = /improve|ameliorer|améliorer/i;
+export const LIST_VIEW_LABEL_REGEX = /liste|list/i;
+export const BY_DEAL_VIEW_LABEL_REGEX = /par affaire|by deal/i;
 
 export function uniqueName(prefix: string): string {
   return `${prefix} ${Date.now()} ${Math.floor(Math.random() * 1000)}`;
+}
+
+export function publicEntryLink(page: Page, target: 'signin' | 'register'): Locator {
+  return page.locator(`a[href="/${target}"]`).first();
+}
+
+export function signInHeading(page: Page): Locator {
+  return page.getByRole('heading', { name: SIGNIN_HEADING_REGEX }).first();
 }
 
 export async function clickButtonSafely(button: Locator): Promise<void> {
@@ -70,6 +84,14 @@ export async function clickRefreshButton(page: Page): Promise<void> {
   }
 
   await page.getByRole('button', { name: REFRESH_LABEL_REGEX }).first().click({ timeout: 5_000 });
+}
+
+export async function switchToListView(page: Page): Promise<void> {
+  await clickNamedButton(page, LIST_VIEW_LABEL_REGEX);
+}
+
+export async function switchToByDealView(page: Page): Promise<void> {
+  await clickNamedButton(page, BY_DEAL_VIEW_LABEL_REGEX);
 }
 
 export async function deleteViaApi(page: Page, path: string): Promise<APIResponse> {
