@@ -6,45 +6,18 @@
 
 import { query } from '../config/database.js';
 import { invalidateClientsCaches } from './cache.service.js';
-
-// ============================================
-// SQL FRAGMENTS
-// ============================================
-
-const SUBMISSION_WITH_JOINS_SELECT = `
-    SELECT rs.*,
-           r.name as resume_name, r.title as resume_title,
-           c.name as client_name, c.type as client_type,
-           cc.name as contact_name, cc.email as contact_email,
-           m.title as mission_title,
-           u.name as sent_by_name,
-           f.name as firm_name
-    FROM resume_submissions rs
-    LEFT JOIN resumes r ON rs.resume_id = r.id
-    LEFT JOIN clients c ON rs.client_id = c.id
-    LEFT JOIN client_contacts cc ON rs.contact_id = cc.id
-    LEFT JOIN missions m ON rs.mission_id = m.id
-    LEFT JOIN users u ON rs.sent_by = u.id
-    LEFT JOIN firms f ON rs.firm_id = f.id
-`;
-
-const SUBMISSION_BY_ID_SELECT = `
-    SELECT rs.*,
-           r.name as resume_name, r.title as resume_title,
-           c.name as client_name, c.type as client_type,
-           cc.name as contact_name, cc.email as contact_email, cc.phone as contact_phone,
-           m.title as mission_title,
-           u.name as sent_by_name,
-           f.name as firm_name
-    FROM resume_submissions rs
-    LEFT JOIN resumes r ON rs.resume_id = r.id
-    LEFT JOIN clients c ON rs.client_id = c.id
-    LEFT JOIN client_contacts cc ON rs.contact_id = cc.id
-    LEFT JOIN missions m ON rs.mission_id = m.id
-    LEFT JOIN users u ON rs.sent_by = u.id
-    LEFT JOIN firms f ON rs.firm_id = f.id
-    WHERE rs.id = $1
-`;
+import {
+    countSubmissionRows,
+    createSubmissionRow,
+    deleteSubmissionRow,
+    deleteSubmissionRowsByResumeId,
+    findSubmissionRow,
+    getSubmissionRowById,
+    getSubmissionStatsRow,
+    getSubmissionWithJoinsById,
+    listSubmissionRows,
+    updateSubmissionRow
+} from './resumeSubmissionsPersistence.service.js';
 
 // ============================================
 // LIST SUBMISSIONS
@@ -63,57 +36,14 @@ const SUBMISSION_BY_ID_SELECT = `
  * @returns {Promise<{data: Array, pagination: Object}>}
  */
 export async function listSubmissions({ page = 1, limit = 20, clientId, resumeId, missionId, status, firmId }) {
-    const normalizedPage = Math.max(1, page);
-    const normalizedLimit = Math.max(1, Math.min(limit, 100));
-    const offset = (normalizedPage - 1) * normalizedLimit;
-    const whereConditions = [];
-    const params = [];
-    let paramIndex = 1;
-
-    // Firm segregation
-    if (firmId) {
-        whereConditions.push(`rs.firm_id = $${paramIndex}`);
-        params.push(firmId);
-        paramIndex++;
-    }
-
-    if (clientId) {
-        whereConditions.push(`rs.client_id = $${paramIndex}`);
-        params.push(clientId);
-        paramIndex++;
-    }
-
-    if (resumeId) {
-        whereConditions.push(`rs.resume_id = $${paramIndex}`);
-        params.push(resumeId);
-        paramIndex++;
-    }
-
-    if (missionId) {
-        whereConditions.push(`rs.mission_id = $${paramIndex}`);
-        params.push(missionId);
-        paramIndex++;
-    }
-
-    if (status) {
-        whereConditions.push(`rs.status = $${paramIndex}`);
-        params.push(status);
-        paramIndex++;
-    }
-
-    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
-
-    // Fetch submissions with limit+1 to detect hasMore
-    const submissionsQuery = `
-        ${SUBMISSION_WITH_JOINS_SELECT}
-        ${whereClause}
-        ORDER BY rs.sent_at DESC
-        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-    `;
-    params.push(normalizedLimit + 1, offset);
-
-    const result = await query(submissionsQuery, params);
-    const submissions = result.rows;
+    const {
+        rows,
+        normalizedPage,
+        normalizedLimit,
+        whereClause,
+        countParams
+    } = await listSubmissionRows({ page, limit, clientId, resumeId, missionId, status, firmId });
+    const submissions = [...rows];
 
     const hasMore = submissions.length > normalizedLimit;
     if (hasMore) {
@@ -123,10 +53,7 @@ export async function listSubmissions({ page = 1, limit = 20, clientId, resumeId
     // Get total count only on page 1
     let totalCount = null;
     if (normalizedPage === 1) {
-        const countParams = params.slice(0, -2);
-        const countQuery = `SELECT COUNT(*) as count FROM resume_submissions rs ${whereClause}`;
-        const countResult = await query(countQuery, countParams);
-        totalCount = parseInt(countResult.rows[0].count);
+        totalCount = await countSubmissionRows(whereClause, countParams);
     }
 
     return {
@@ -151,8 +78,7 @@ export async function listSubmissions({ page = 1, limit = 20, clientId, resumeId
  * @returns {Promise<Object|null>}
  */
 export async function getSubmissionById(id) {
-    const result = await query(SUBMISSION_BY_ID_SELECT, [id]);
-    return result.rows.length > 0 ? result.rows[0] : null;
+    return getSubmissionRowById(id);
 }
 
 // ============================================
@@ -228,33 +154,10 @@ export async function validateMission(missionId, expectedFirmId = null) {
  * @returns {Promise<Object>}
  */
 export async function createSubmission(data) {
-    const { resume_id, client_id, contact_id, mission_id, firm_id, sent_by, notes, sent_at, status } = data;
-
-    const result = await query(
-        `INSERT INTO resume_submissions (resume_id, client_id, contact_id, mission_id, firm_id, sent_by, notes, sent_at, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-         RETURNING *`,
-        [
-            resume_id,
-            client_id,
-            contact_id,
-            mission_id || null,
-            firm_id,
-            sent_by,
-            notes || null,
-            sent_at || new Date().toISOString(),
-            status || 'sent'
-        ]
-    );
-
-    // Fetch full submission with joins
-    const fullResult = await query(
-        `${SUBMISSION_WITH_JOINS_SELECT} WHERE rs.id = $1`,
-        [result.rows[0].id]
-    );
-
+    const createdSubmission = await createSubmissionRow(data);
+    const fullSubmission = await getSubmissionWithJoinsById(createdSubmission.id);
     await invalidateClientsCaches();
-    return fullResult.rows[0];
+    return fullSubmission;
 }
 
 /**
@@ -263,8 +166,7 @@ export async function createSubmission(data) {
  * @returns {Promise<Object|null>}
  */
 export async function findSubmission(id) {
-    const result = await query('SELECT * FROM resume_submissions WHERE id = $1', [id]);
-    return result.rows.length > 0 ? result.rows[0] : null;
+    return findSubmissionRow(id);
 }
 
 /**
@@ -274,16 +176,9 @@ export async function findSubmission(id) {
  * @returns {Promise<Object>}
  */
 export async function updateSubmission(id, { status, notes }) {
-    const result = await query(
-        `UPDATE resume_submissions 
-         SET status = COALESCE($1, status),
-             notes = COALESCE($2, notes)
-         WHERE id = $3
-         RETURNING *`,
-        [status, notes, id]
-    );
+    const result = await updateSubmissionRow(id, { status, notes });
     await invalidateClientsCaches();
-    return result.rows[0];
+    return result;
 }
 
 /**
@@ -291,7 +186,7 @@ export async function updateSubmission(id, { status, notes }) {
  * @param {string} id
  */
 export async function deleteSubmission(id) {
-    await query('DELETE FROM resume_submissions WHERE id = $1', [id]);
+    await deleteSubmissionRow(id);
     await invalidateClientsCaches();
 }
 
@@ -302,7 +197,7 @@ export async function deleteSubmissionsByResumeId(resumeId, { executor } = {}) {
             ? executor.query.bind(executor)
             : query;
 
-    await run('DELETE FROM resume_submissions WHERE resume_id = $1', [resumeId]);
+    await deleteSubmissionRowsByResumeId(resumeId, run);
     if (!executor) {
         await invalidateClientsCaches();
     }
@@ -318,28 +213,5 @@ export async function deleteSubmissionsByResumeId(resumeId, { executor } = {}) {
  * @returns {Promise<Object>}
  */
 export async function getStatsSummary(firmId) {
-    let firmFilter = '';
-    let params = [];
-
-    if (firmId) {
-        firmFilter = 'WHERE firm_id = $1';
-        params = [firmId];
-    }
-
-    const statsQuery = `
-        SELECT 
-            COUNT(*) as total_submissions,
-            COUNT(CASE WHEN status = 'sent' THEN 1 END) as sent,
-            COUNT(CASE WHEN status = 'viewed' THEN 1 END) as viewed,
-            COUNT(CASE WHEN status = 'accepted' THEN 1 END) as accepted,
-            COUNT(CASE WHEN status = 'rejected' THEN 1 END) as rejected,
-            COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending,
-            COUNT(DISTINCT client_id) as unique_clients,
-            COUNT(DISTINCT resume_id) as unique_resumes
-        FROM resume_submissions
-        ${firmFilter}
-    `;
-
-    const result = await query(statsQuery, params);
-    return result.rows[0];
+    return getSubmissionStatsRow(firmId);
 }

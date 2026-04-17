@@ -5,19 +5,18 @@ import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '..
 import { settingsCache, CACHE_KEYS } from '../services/cache.service.js';
 import { metrics } from '../services/metrics.service.js';
 import { invalidateSettingsCache, getSettings, getLLMSettings, upsertSettings, createSettings } from '../services/settings.service.js';
-import { normalizeWeights } from '../config/prompts.backend.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { mapSettingsToFrontend } from '../utils/mappers.js';
 import { getProviderAvailabilityFlags } from '../services/llmAvailability.service.js';
-import { discoverOllamaModels, validateOllamaModelExists } from '../services/ollamaAdmin.service.js';
-import { sanitizeLlmModelParameters } from '../services/llmAdminParameters.service.js';
+import { discoverOllamaModels } from '../services/ollamaAdmin.service.js';
 import { testLlmSettingsConnection } from '../services/llmSettingsValidation.service.js';
-import { normalizeBaseUrl } from '../services/ollama.request.js';
 import { getProviderDefaultModel } from '../services/llmConfiguration.service.js';
 import {
     buildDefaultSettingsPayload,
     buildPersistedSettingsResponse,
     buildPresentationSettingsResponse,
+    prepareSettingsConnectionTestPayload,
+    resolveConfiguredOllamaBaseUrl,
     buildPublicHomeSettingsResponse,
     buildSettingsCreateFields,
     buildSettingsUpdateFields,
@@ -41,15 +40,6 @@ function createSettingsRouteHandler(logMessage, errorMessage, handler) {
             });
         }
     };
-}
-
-function resolveConfiguredOllamaBaseUrl(settings = {}) {
-    const candidate = settings?.ollamaBaseUrl;
-    if (!candidate || !String(candidate).trim()) {
-        throw Object.assign(new Error('Ollama base URL is not configured.'), { statusCode: 400 });
-    }
-
-    return normalizeBaseUrl(candidate);
 }
 
 // GET /api/settings - Get settings
@@ -119,7 +109,7 @@ router.get('/ollama/models', authenticateToken, requireAdmin, createSettingsRout
         const selectedModel = String(req.query.model || '').trim();
         const canonicalLlmSettings = await getLLMSettings();
         const configuredBaseUrl = resolveConfiguredOllamaBaseUrl(canonicalLlmSettings);
-        const baseUrl = normalizeBaseUrl(requestedBaseUrl);
+        const baseUrl = resolveConfiguredOllamaBaseUrl({ ollamaBaseUrl: requestedBaseUrl });
 
         if (baseUrl !== configuredBaseUrl) {
             return res.status(400).json({ error: 'Ollama model discovery is limited to the configured Ollama URL.' });
@@ -135,34 +125,7 @@ router.get('/ollama/models', authenticateToken, requireAdmin, createSettingsRout
     }));
 
 router.post('/test-llm', authenticateToken, requireAdmin, validateBody(updateSettingsSchema), createSettingsRouteHandler('Error testing LLM settings', 'Failed to test LLM settings', async (req, res) => {
-        let settingsData = normalizeRequestedSettingsModel(normalizeWeights(req.body));
-        let ollamaDiscovery = null;
-
-        if (settingsData.llmProvider === 'ollama') {
-            const selectedOllamaModel = String(settingsData.llmModel || '').trim();
-            if (selectedOllamaModel) {
-                try {
-                    const validation = await validateOllamaModelExists(settingsData.ollamaBaseUrl, selectedOllamaModel);
-                    ollamaDiscovery = validation.discovery;
-                } catch (error) {
-                    safeLog('warn', 'Failed to refresh Ollama catalog before testing LLM settings', {
-                        baseUrl: settingsData.ollamaBaseUrl,
-                        model: settingsData.llmModel,
-                        error: error.message
-                    });
-                }
-            }
-        }
-
-        if (settingsData.llmModelParameters) {
-            settingsData = {
-                ...settingsData,
-                llmModelParameters: sanitizeLlmModelParameters(settingsData.llmModelParameters, getProviderAvailabilityFlags(), {
-                    ollamaModels: ollamaDiscovery?.modelCatalog || []
-                })
-            };
-        }
-
+        const settingsData = await prepareSettingsConnectionTestPayload(req.body, { getProviderAvailabilityFlags });
         const result = await testLlmSettingsConnection(settingsData, req.user);
         return res.json({
             success: true,

@@ -3,6 +3,7 @@ import { getProviderDefaultModel, normalizeModelForProvider } from '../services/
 import { buildLlmAdminMetadataWithOptions, sanitizeLlmModelParameters } from '../services/llmAdminParameters.service.js';
 import { getPromptContract, getPromptDefinition } from '../config/llmGovernance.js';
 import { validateOllamaModelExists } from '../services/ollamaAdmin.service.js';
+import { normalizeBaseUrl } from '../services/ollama.request.js';
 import {
     normalizeWeights,
     DEFAULT_ANALYSIS_PROMPT,
@@ -274,6 +275,47 @@ export function buildSettingsCreateFields(settingsData) {
 
 export function buildSettingsUpdateFields(settingsData) {
     return mapSettingsFromFrontend(settingsData);
+}
+
+export function resolveConfiguredOllamaBaseUrl(settings = {}) {
+    const candidate = settings?.ollamaBaseUrl;
+    if (!candidate || !String(candidate).trim()) {
+        throw Object.assign(new Error('Ollama base URL is not configured.'), { statusCode: 400 });
+    }
+
+    return normalizeBaseUrl(candidate);
+}
+
+export async function prepareSettingsConnectionTestPayload(rawSettings, { getProviderAvailabilityFlags }) {
+    let settingsData = normalizeRequestedSettingsModel(normalizeWeights(rawSettings));
+    let ollamaDiscovery = null;
+
+    if (settingsData.llmProvider === 'ollama') {
+        const selectedOllamaModel = String(settingsData.llmModel || '').trim();
+        if (selectedOllamaModel) {
+            try {
+                const validation = await validateOllamaModelExists(settingsData.ollamaBaseUrl, selectedOllamaModel);
+                ollamaDiscovery = validation.discovery;
+            } catch (error) {
+                safeLog('warn', 'Failed to refresh Ollama catalog before testing LLM settings', {
+                    baseUrl: settingsData.ollamaBaseUrl,
+                    model: settingsData.llmModel,
+                    error: error.message
+                });
+            }
+        }
+    }
+
+    if (!settingsData.llmModelParameters) {
+        return settingsData;
+    }
+
+    return {
+        ...settingsData,
+        llmModelParameters: sanitizeLlmModelParameters(settingsData.llmModelParameters, getProviderAvailabilityFlags(), {
+            ollamaModels: ollamaDiscovery?.modelCatalog || []
+        })
+    };
 }
 
 function buildNextPromptTexts(currentSettingsRecord = {}, incomingSettings = {}) {
