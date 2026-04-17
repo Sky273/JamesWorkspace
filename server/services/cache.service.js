@@ -14,6 +14,12 @@ import {
     setRedisInitPromise,
     shutdownRedisClient
 } from './cacheRedisState.service.js';
+import {
+    buildInvalidationKeySet,
+    invalidateCacheKeys,
+    invalidateGroupedViewNamespace,
+    invalidateNamespaceEntries
+} from './cacheInvalidation.service.js';
 
 const DEFAULT_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
 const DEFAULT_MAX_SIZE = 1000;
@@ -685,39 +691,6 @@ export function buildGroupedViewScopeKey({ firmId = null, isAdmin = false } = {}
     return isAdmin ? CACHE_KEYS.groupedViews.ADMIN : `firm:${firmId}`;
 }
 
-function buildInvalidationKeySet(defaultKey, scopeKeys = null) {
-    const keys = new Set([defaultKey]);
-    if (!scopeKeys) {
-        return keys;
-    }
-
-    if (Array.isArray(scopeKeys) || scopeKeys instanceof Set) {
-        for (const scopeKey of scopeKeys) {
-            if (scopeKey) {
-                keys.add(scopeKey);
-            }
-        }
-        return keys;
-    }
-
-    keys.add(scopeKeys);
-    return keys;
-}
-
-async function invalidateNamespaceEntries(cacheNamespace, defaultKey, scopeKeys = null) {
-    const keys = buildInvalidationKeySet(defaultKey, scopeKeys);
-    await Promise.all(Array.from(keys).map((key) => cacheNamespace.invalidate(key)));
-}
-
-async function invalidateGroupedViewNamespace(cacheNamespace, scopeKey = null) {
-    const keys = new Set([CACHE_KEYS.groupedViews.ADMIN]);
-    if (scopeKey) {
-        keys.add(scopeKey);
-    }
-
-    await Promise.all(Array.from(keys).map((key) => cacheNamespace.invalidate(key)));
-}
-
 export async function invalidateSettingsCaches() {
     await Promise.all([
         settingsCache.invalidate(CACHE_KEYS.settings.UI_SETTINGS),
@@ -783,7 +756,7 @@ export async function invalidateGdprAuditCaches(scopeKey = null) {
         CACHE_KEYS.gdprAudit.EXPORTS,
         scopeKey
     ]);
-    await Promise.all(Array.from(keys).map((key) => gdprAuditCache.invalidate(key)));
+    await invalidateCacheKeys(gdprAuditCache, keys);
 }
 
 export async function invalidateTagsCaches() {
@@ -795,15 +768,15 @@ export async function invalidateTagsCaches() {
 }
 
 export async function invalidateResumeGroupedViewCaches(scopeKey = null) {
-    await invalidateGroupedViewNamespace(resumeGroupedViewCache, scopeKey);
+    await invalidateGroupedViewNamespace(resumeGroupedViewCache, CACHE_KEYS.groupedViews.ADMIN, scopeKey);
 }
 
 export async function invalidateMissionGroupedViewCaches(scopeKey = null) {
-    await invalidateGroupedViewNamespace(missionGroupedViewCache, scopeKey);
+    await invalidateGroupedViewNamespace(missionGroupedViewCache, CACHE_KEYS.groupedViews.ADMIN, scopeKey);
 }
 
 export async function invalidateAdaptationGroupedViewCaches(scopeKey = null) {
-    await invalidateGroupedViewNamespace(adaptationGroupedViewCache, scopeKey);
+    await invalidateGroupedViewNamespace(adaptationGroupedViewCache, CACHE_KEYS.groupedViews.ADMIN, scopeKey);
 }
 
 export async function getNamedCacheStats(cacheName) {
@@ -831,9 +804,9 @@ export const cleanupAllCaches = async () => {
     await Promise.all(Array.from(cacheRegistry.values()).map(cache => cache.destroy()));
 
     await shutdownRedisClient((error) => {
-            safeLog('warn', 'Failed to close Redis cache client cleanly', {
-                error: error.message
-            });
+        safeLog('warn', 'Failed to close Redis cache client cleanly', {
+            error: error.message
+        });
     });
 
     safeLog('info', 'All caches destroyed');
