@@ -350,6 +350,23 @@ describe('authService', () => {
             expect(authService.getCurrentUser()).toBeNull();
             expect(mockResetSessionState).toHaveBeenCalled();
         });
+
+        it('should fail closed when session restore hangs', async () => {
+            vi.useFakeTimers();
+            vi.stubGlobal('fetch', vi.fn((_input: unknown, init?: RequestInit) => new Promise((_, reject) => {
+                init?.signal?.addEventListener('abort', () => {
+                    reject(new DOMException('The operation was aborted.', 'AbortError'));
+                }, { once: true });
+            })));
+
+            const restorePromise = authService.restoreSession();
+            await vi.advanceTimersByTimeAsync(10001);
+
+            await expect(restorePromise).resolves.toBeNull();
+            expect(authService.getCurrentUser()).toBeNull();
+
+            vi.useRealTimers();
+        });
     });
 
     describe('getCurrentUser / setCurrentUser / isAuthenticated', () => {

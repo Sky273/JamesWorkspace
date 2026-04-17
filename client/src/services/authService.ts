@@ -15,6 +15,8 @@ import {
 } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
 
+const SESSION_RESTORE_TIMEOUT_MS = 10000;
+
 // ============================================
 // TYPES
 // ============================================
@@ -149,6 +151,33 @@ const fetchPublicAuth = (url: string, options: RequestInit = {}): Promise<Respon
     credentials: 'include',
     cache: 'no-store',
   });
+};
+
+const fetchPublicAuthWithTimeout = async (
+  url: string,
+  options: RequestInit = {},
+  timeoutMs: number = SESSION_RESTORE_TIMEOUT_MS
+): Promise<Response> => {
+  const controller = new AbortController();
+  const timeoutId = globalThis.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetchPublicAuth(url, {
+      ...options,
+      signal: options.signal ?? controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      logger.warn(`Public auth request timed out after ${timeoutMs}ms`, { url });
+      throw new AuthenticationError('Authentication request timed out.', {
+        code: 'auth_timeout',
+      });
+    }
+
+    throw error;
+  } finally {
+    globalThis.clearTimeout(timeoutId);
+  }
 };
 
 // ============================================
@@ -346,9 +375,9 @@ export const authService = {
 
   async restoreSession(): Promise<User | null> {
     try {
-      const response = await fetch('/api/auth/me', {
+      const response = await fetchPublicAuthWithTimeout('/api/auth/me', {
         method: 'GET',
-        credentials: 'include'
+        credentials: 'include',
       });
 
       if (response.ok) {
@@ -383,10 +412,10 @@ export const authService = {
         return null;
       }
 
-      const refreshResponse = await fetch('/api/auth/refresh', {
+      const refreshResponse = await fetchPublicAuthWithTimeout('/api/auth/refresh', {
         method: 'POST',
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!refreshResponse.ok) {
@@ -394,9 +423,9 @@ export const authService = {
         return null;
       }
 
-      const retryResponse = await fetch('/api/auth/me', {
+      const retryResponse = await fetchPublicAuthWithTimeout('/api/auth/me', {
         method: 'GET',
-        credentials: 'include'
+        credentials: 'include',
       });
 
       if (!retryResponse.ok) {
