@@ -162,7 +162,7 @@ async function getAccessToken() {
     `);
 
     if (result.rows.length === 0) {
-        throw new Error('Gmail RGPD non configure. Un administrateur doit connecter un compte Gmail dans Parametres > RGPD Mail.');
+        throw new Error('Gmail RGPD non configuré. Un administrateur doit connecter un compte Gmail dans Paramètres > RGPD Mail.');
     }
 
     const tokenData = result.rows[0];
@@ -177,7 +177,7 @@ async function getAccessToken() {
     safeLog('info', 'GDPR access token expired, attempting refresh');
     
     if (!tokenData.refresh_token_encrypted) {
-        throw new Error('Token expire et pas de refresh token. Un administrateur doit reconnecter Gmail.');
+        throw new Error('Token expiré et pas de refresh token. Un administrateur doit reconnecter Gmail.');
     }
 
     const refreshToken = decryptToken(tokenData.refresh_token_encrypted);
@@ -228,10 +228,10 @@ async function getAccessToken() {
                               error.message?.includes('invalid authentication credentials');
         
         if (isRevokedToken) {
-            throw new Error('Le token Gmail RGPD a ete revoque par Google. Un administrateur doit reconnecter Gmail dans Parametres > RGPD Mail.');
+            throw new Error('Le token Gmail RGPD a été révoqué par Google. Un administrateur doit reconnecter Gmail dans Paramètres > RGPD Mail.');
         }
         
-        throw new Error('Echec du rafraichissement du token Gmail RGPD. Un administrateur doit reconnecter Gmail.');
+        throw new Error('Échec du rafraîchissement du token Gmail RGPD. Un administrateur doit reconnecter Gmail.');
     }
 }
 

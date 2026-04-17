@@ -16,23 +16,23 @@ interface ImprovementAnimationProps {
 }
 
 const IMPROVING_MESSAGES = [
-  'Restructuration du resume professionnel...',
-  'Optimisation des competences techniques...',
-  'Amelioration de la lisibilite ATS...',
-  'Renforcement des experiences cles...',
-  'Harmonisation du style redactionnel...',
-  'Ajustement des mots-cles sectoriels...',
-  'Factualisation des realisations...',
+  'Restructuration du résumé professionnel...',
+  'Optimisation des compétences techniques...',
+  'Amélioration de la lisibilité ATS...',
+  'Renforcement des expériences clés...',
+  'Harmonisation du style rédactionnel...',
+  'Ajustement des mots-clés sectoriels...',
+  'Factualisation des réalisations...',
   'Polissage de la mise en forme...',
 ];
 
 const ANALYZING_MESSAGES = [
-  'Calcul des scores de qualite...',
-  'Evaluation de la compatibilite ATS...',
-  'Analyse des competences identifiees...',
-  'Comparaison avant / apres...',
-  'Extraction des axes d\'amelioration...',
-  'Verification de la coherence globale...',
+  'Calcul des scores de qualité...',
+  'Évaluation de la compatibilité ATS...',
+  'Analyse des compétences identifiées...',
+  'Comparaison avant / après...',
+  "Extraction des axes d'amélioration...",
+  'Vérification de la cohérence globale...',
 ];
 
 const PARTICLES = Array.from({ length: 12 }, (_, i) => ({
@@ -152,12 +152,12 @@ const ImprovementAnimation = ({ currentStep = 'improving', fullscreen = false }:
   const steps = [
     {
       id: 'improving',
-      label: t('improvementAnimation.steps.improving.label', 'Amelioration du CV'),
+      label: t('improvementAnimation.steps.improving.label', 'Amélioration du CV'),
       icon: SparklesIcon,
     },
     {
       id: 'analyzing',
-      label: t('improvementAnimation.steps.analyzing.label', 'Analyse de qualite'),
+      label: t('improvementAnimation.steps.analyzing.label', 'Analyse de qualité'),
       icon: ChartBarIcon,
     },
   ];
@@ -195,8 +195,8 @@ const ImprovementAnimation = ({ currentStep = 'improving', fullscreen = false }:
             className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2 text-center"
           >
             {isImproving
-              ? t('improvementAnimation.steps.improving.label', 'Amelioration du CV en cours...')
-              : t('improvementAnimation.steps.analyzing.label', 'Analyse de qualite en cours...')}
+              ? t('improvementAnimation.steps.improving.label', 'Amélioration du CV en cours...')
+              : t('improvementAnimation.steps.analyzing.label', 'Analyse de qualité en cours...')}
           </motion.h3>
         </AnimatePresence>
 

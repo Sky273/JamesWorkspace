@@ -51,26 +51,26 @@ export function useResumeAdaptPage() {
 
   const analyzingMessages = useMemo(
     () => [
-      'Comparaison des competences requises...',
-      "Evaluation de l'experience pertinente...",
-      'Analyse des mots-cles de la mission...',
-      "Calcul du score d'adequation...",
+      'Comparaison des compétences requises...',
+      "Évaluation de l'expérience pertinente...",
+      'Analyse des mots-clés de la mission...',
+      "Calcul du score d'adéquation...",
       'Identification des points forts...',
-      'Detection des ecarts de competences...'
+      'Détection des écarts de compétences...'
     ],
     []
   );
 
   const adaptingMessages = useMemo(
     () => [
-      'Reformulation du resume professionnel...',
-      'Mise en avant des competences cles...',
-      "Adaptation de l'experience a la mission...",
-      'Optimisation pour les mots-cles cibles...',
+      'Reformulation du résumé professionnel...',
+      'Mise en avant des compétences clés...',
+      "Adaptation de l'expérience à la mission...",
+      'Optimisation pour les mots-clés cibles...',
       'Renforcement de la pertinence ATS...',
       'Harmonisation du profil candidat...',
       'Ajustement du vocabulaire sectoriel...',
-      'Polissage final du CV adapte...'
+      'Polissage final du CV adapté...'
     ],
     []
   );

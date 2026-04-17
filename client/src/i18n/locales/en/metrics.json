@@ -155,6 +155,7 @@
     "successRatio": "Success ratio",
     "successes": "Successes",
     "fallbacks": "Fallbacks",
+    "postAnalysisFallbacks": "Post-analysis fallbacks",
     "resumeImprovementRecent": "Recent activity",
     "resumeAdaptationTitle": "Resume adaptation",
     "resumeAdaptationSubtitle": "Match analyses, adaptation calls and structured outputs",

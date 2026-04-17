@@ -156,6 +156,7 @@
     "successRatio": "Taux de succès",
     "successes": "Succès",
     "fallbacks": "Fallbacks",
+    "postAnalysisFallbacks": "Fallbacks post-analyse",
     "resumeImprovementRecent": "Activité récente",
     "resumeAdaptationTitle": "Adaptation de CV",
     "resumeAdaptationSubtitle": "Analyses de matching, appels d'adaptation et sorties structurées",

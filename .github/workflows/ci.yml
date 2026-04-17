@@ -23,6 +23,7 @@ env:
   ANTHROPIC_API_KEY: test-anthropic-key
   CACHE_BACKEND: memory
   E2E_QUIET_EXPECTED_WARNINGS: 'true'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   validate-core:

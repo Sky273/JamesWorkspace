@@ -34,7 +34,7 @@ export const MetiersCollectionOverlay = ({
           <>
             <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto mb-4 animate-bounce" />
             <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-              Collecte lancee !
+              Collecte lancée !
             </h3>
             <p className="text-gray-600 dark:text-gray-400">Redirection vers les jobs...</p>
           </>
@@ -62,11 +62,11 @@ export const MetiersPageHeader = ({
         <div className="flex items-center gap-3 mb-1">
           <div className="w-1 h-8 rounded-full bg-primary-500" />
           <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
-            Metiers et Competences
+            Métiers et Compétences
           </h1>
         </div>
         <p className="text-gray-500 dark:text-gray-400 ml-[1.75rem]">
-          Referentiel ROME 4.0 - Informatique et Telecommunications
+          Référentiel ROME 4.0 - Informatique et Télécommunications
         </p>
       </div>
 
@@ -77,7 +77,7 @@ export const MetiersPageHeader = ({
           className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-lg transition-colors"
         >
           <ArrowPathIcon className={`h-5 w-5 ${collecting ? 'animate-spin' : ''}`} />
-          Collecter les metiers IT
+          Collecter les métiers IT
         </button>
       )}
     </div>
@@ -157,7 +157,7 @@ export const MetiersStatsCards = ({ stats }: { stats: MetiersStats }) => (
           <BriefcaseIcon className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
         </div>
         <div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Metiers IT</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Métiers IT</p>
           <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.metiersCount}</p>
         </div>
       </div>
@@ -169,7 +169,7 @@ export const MetiersStatsCards = ({ stats }: { stats: MetiersStats }) => (
           <AcademicCapIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
         </div>
         <div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Competences totales</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Compétences totales</p>
           <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.competencesCount}</p>
         </div>
       </div>
@@ -277,7 +277,7 @@ const MetierCard = ({
         </div>
         <div className="flex items-center gap-4">
           <span className="text-sm text-gray-500 dark:text-gray-400">
-            {totalCompetences} competences
+            {totalCompetences} compétences
           </span>
           {expanded ? (
             <ChevronUpIcon className="h-5 w-5 text-gray-400" />
@@ -311,7 +311,7 @@ const MetierCard = ({
           )}
 
           <MetierSection
-            title="Competences Detaillees"
+            title="Compétences détaillées"
             count={metier.CompetencesDetaillees?.length || 0}
             items={metier.CompetencesDetaillees || []}
             bgClassName="bg-green-50 dark:bg-green-900/20"
@@ -340,11 +340,11 @@ const MetierCard = ({
           <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
             {metier.Obsolete && (
               <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded">
-                Obsolete
+                Obsolète
               </span>
             )}
             {metier.LastUpdated && (
-              <span>Mis a jour: {formatDateTime(metier.LastUpdated)}</span>
+              <span>Mise à jour: {formatDateTime(metier.LastUpdated)}</span>
             )}
           </div>
         </div>
@@ -382,12 +382,12 @@ export const MetiersEmptyState = ({
   <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
     <BriefcaseIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
     <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-      Aucun metier trouve
+      Aucun métier trouvé
     </h3>
     <p className="text-gray-500 dark:text-gray-400 mb-4">
       {searchQuery
-        ? 'Aucun resultat pour cette recherche.'
-        : 'Lancez une collecte pour recuperer les metiers IT.'}
+        ? 'Aucun résultat pour cette recherche.'
+        : 'Lancez une collecte pour récupérer les métiers IT.'}
     </p>
     {isAdmin && !searchQuery && (
       <button
@@ -395,7 +395,7 @@ export const MetiersEmptyState = ({
         className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
       >
         <ArrowPathIcon className="h-4 w-4" />
-        Collecter les metiers IT
+        Collecter les métiers IT
       </button>
     )}
   </div>
@@ -404,6 +404,6 @@ export const MetiersEmptyState = ({
 export const MetiersLoadingState = () => (
   <div className="flex items-center justify-center py-12">
     <ArrowPathIcon className="h-8 w-8 text-indigo-600 dark:text-indigo-400 animate-spin" />
-    <span className="ml-3 text-gray-600 dark:text-gray-400">Chargement des metiers...</span>
+    <span className="ml-3 text-gray-600 dark:text-gray-400">Chargement des métiers...</span>
   </div>
 );

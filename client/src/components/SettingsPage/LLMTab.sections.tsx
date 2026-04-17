@@ -45,7 +45,7 @@ function renderOllamaField(
           onChange={(event) => onFieldChange(sectionKey, definition.key, event.target.value || undefined)}
           className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
         >
-          <option value="">Utiliser la valeur par defaut</option>
+          <option value="">Utiliser la valeur par défaut</option>
           {definition.options.map((option) => (
             <option key={option.value} value={option.value}>{option.label}</option>
           ))}
@@ -119,18 +119,18 @@ export function OllamaParametersSection({
   return (
     <div className="space-y-4 rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20">
       <div>
-        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Parametres Ollama</h3>
+        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Paramètres Ollama</h3>
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          Cette vue pilote le JSON de configuration Ollama. Les valeurs globales s appliquent a tous les modeles,
-          puis les valeurs du modele distant selectionne viennent les completer.
+          Cette vue pilote le JSON de configuration Ollama. Les valeurs globales s'appliquent à tous les modèles,
+          puis les valeurs du modèle distant sélectionné viennent les compléter.
         </p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-3 rounded-md border border-emerald-200/80 bg-white/70 p-4 dark:border-emerald-900/70 dark:bg-gray-900/40">
           <div>
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Parametres globaux</h4>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Stockes sous `ollama.__global__`.</p>
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Paramètres globaux</h4>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Stockés sous `ollama.__global__`.</p>
           </div>
           <div className="grid gap-3">
             {Object.values(globalDefinitions).map((definition) =>
@@ -141,9 +141,9 @@ export function OllamaParametersSection({
 
         <div className="space-y-3 rounded-md border border-emerald-200/80 bg-white/70 p-4 dark:border-emerald-900/70 dark:bg-gray-900/40">
           <div>
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Parametres du modele</h4>
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Paramètres du modèle</h4>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              {currentModel ? `Stockes sous \`ollama.${currentModel}\`.` : 'Selectionnez d abord un modele distant.'}
+              {currentModel ? `Stockés sous \`ollama.${currentModel}\`.` : 'Sélectionnez d’abord un modèle distant.'}
             </p>
           </div>
           {currentModel ? (
@@ -153,7 +153,7 @@ export function OllamaParametersSection({
               )}
             </div>
           ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400">Aucun modele Ollama selectionne.</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Aucun modèle Ollama sélectionné.</p>
           )}
         </div>
       </div>
@@ -190,7 +190,7 @@ export function AdvancedJsonEditorSection({
     <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50/70 p-4 dark:border-gray-700 dark:bg-gray-900/40">
       <div>
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">JSON avance</h3>
+          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">JSON avancé</h3>
           <button
             type="button"
             onClick={onToggleOpen}
@@ -200,9 +200,9 @@ export function AdvancedJsonEditorSection({
           </button>
         </div>
         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          Ce JSON definit les valeurs par defaut par provider et modele. Pour Ollama, utilisez `ollama.__global__`
-          pour les defaults globaux et `ollama.nom-du-modele` pour les overrides par modele. Il est sanitize et
-          normalise cote serveur avant persistance puis applique aux appels LLM.
+          Ce JSON définit les valeurs par défaut par provider et modèle. Pour Ollama, utilisez `ollama.__global__`
+          pour les valeurs globales et `ollama.nom-du-modele` pour les surcharges par modèle. Il est sanitizé et
+          normalisé côté serveur avant persistance puis appliqué aux appels LLM.
         </p>
       </div>
 
@@ -212,7 +212,7 @@ export function AdvancedJsonEditorSection({
             <button type="button" onClick={onFormatJson} className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">Formatter</button>
             <button type="button" onClick={onValidateJson} className="rounded-md border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-700 dark:bg-blue-900/30 dark:text-blue-200 dark:hover:bg-blue-900/50">Valider</button>
             <button type="button" onClick={onInjectExample} className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200 dark:hover:bg-emerald-900/50">Injecter un exemple</button>
-            <button type="button" onClick={onResetJson} className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">Reinitialiser</button>
+            <button type="button" onClick={onResetJson} className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600">Réinitialiser</button>
             <span className={`text-sm ${jsonValidationState === 'valid' ? 'text-green-700 dark:text-green-300' : jsonValidationState === 'invalid' ? 'text-red-700 dark:text-red-300' : 'text-gray-500 dark:text-gray-400'}`}>
               {jsonValidationState === 'valid' ? 'JSON valide' : jsonValidationState === 'invalid' ? 'JSON invalide' : 'Validation locale avant sauvegarde'}
             </span>

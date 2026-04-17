@@ -11,6 +11,7 @@ interface OperationRecentEntry {
   successfulRuns?: number;
   failedRuns?: number;
   fallbackRuns?: number;
+  postAnalysisFallbackRuns?: number;
   structuredRuns?: number;
   inputChars?: number;
   outputChars?: number;
@@ -28,6 +29,7 @@ interface OperationMetrics {
   successfulRuns?: number;
   failedRuns?: number;
   fallbackRuns?: number;
+  postAnalysisFallbackRuns?: number;
   structuredRuns?: number;
   inputChars?: number;
   outputChars?: number;
@@ -38,6 +40,7 @@ interface OperationMetrics {
     successfulRuns?: number;
     failedRuns?: number;
     fallbackRuns?: number;
+    postAnalysisFallbackRuns?: number;
     structuredRuns?: number;
     inputChars?: number;
     outputChars?: number;
@@ -102,6 +105,12 @@ export default function OperationLLMCard({
           <div className={`${tileClasses} rounded-lg p-3`}>
             <p className="opacity-70">{t('metrics.structuredFallback')}</p>
             <p className="font-semibold">{safeNumber(metrics.structuredRuns)} / {safeNumber(metrics.fallbackRuns)}</p>
+          </div>
+        )}
+        {!isAdaptation && (
+          <div className={`${tileClasses} rounded-lg p-3`}>
+            <p className="opacity-70">{t('metrics.postAnalysisFallbacks', { defaultValue: 'Fallbacks post-analyse' })}</p>
+            <p className="font-semibold">{safeNumber(metrics.postAnalysisFallbackRuns)}</p>
           </div>
         )}
         {isAdaptation && (
@@ -176,6 +185,7 @@ export default function OperationLLMCard({
                 </div>
                 <div className="mt-1 opacity-70">
                   {t('metrics.structuredFallback')}: {safeNumber(entry.structuredRuns)} / {safeNumber(entry.fallbackRuns)}
+                  {!isAdaptation ? ` | ${t('metrics.postAnalysisFallbacks', { defaultValue: 'Fallbacks post-analyse' })}: ${safeNumber(entry.postAnalysisFallbackRuns)}` : ''}
                   {entry.source ? ` | ${t('metrics.source')}: ${entry.source}` : ''}
                 </div>
                 {(entry.promptId || entry.contractId) && (

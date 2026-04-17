@@ -240,10 +240,10 @@ export function useSettingsPage() {
   const totalWeight = useMemo(() => getSettingsTotalWeight(formData), [formData]);
 
   const tabs = useMemo<ResponsivePageTabOption<string>[]>(() => ([
-    { value: 'llm', label: getFallbackText('settings.tabs.llm', 'Modele LLM'), icon: SparklesIcon },
+    { value: 'llm', label: getFallbackText('settings.tabs.llm', 'Modèle LLM'), icon: SparklesIcon },
     { value: 'prompts', label: getFallbackText('settings.tabs.prompts', 'Prompts'), icon: Cog6ToothIcon },
     { value: 'weights', label: getFallbackText('settings.tabs.weights', 'Poids'), icon: ScaleIcon },
-    { value: 'credits', label: getFallbackText('settings.tabs.credits', 'Credits IA'), icon: BanknotesIcon },
+    { value: 'credits', label: getFallbackText('settings.tabs.credits', 'Crédits IA'), icon: BanknotesIcon },
     { value: 'chatbot', label: getFallbackText('settings.tabs.chatbot', 'Chatbot'), icon: ChatBubbleLeftRightIcon },
     { value: 'gdpr', label: getFallbackText('settings.tabs.gdpr', 'RGPD'), icon: ShieldCheckIcon },
     { value: 'dpo', label: getFallbackText('settings.tabs.dpo', 'Contact DPO'), icon: UserCircleIcon },

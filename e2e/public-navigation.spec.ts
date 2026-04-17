@@ -1,8 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { gotoAndWaitForVisible } from './helpers/ui';
 
 test.describe('Public Navigation', () => {
   test('should navigate from the public home page to signin and register', async ({ page }) => {
-    await page.goto('/welcome');
+    await gotoAndWaitForVisible(page, '/welcome', page.locator('a[href="/signin"]').first());
 
     await expect(page).toHaveURL(/\/welcome$/);
 
@@ -10,7 +11,7 @@ test.describe('Public Navigation', () => {
     await expect(page).toHaveURL(/\/signin$/);
     await expect(page.locator('#email-address')).toBeVisible();
 
-    await page.goto('/welcome');
+    await gotoAndWaitForVisible(page, '/welcome', page.locator('a[href="/register"]').first());
     await page.locator('a[href="/register"]').first().click();
     await expect(page).toHaveURL(/\/register$/);
     await expect(page.locator('#name')).toBeVisible();
@@ -18,7 +19,7 @@ test.describe('Public Navigation', () => {
   });
 
   test('should expose legal pages from the footer and allow returning to the public shell', async ({ page }) => {
-    await page.goto('/signin');
+    await gotoAndWaitForVisible(page, '/signin', page.locator('a[href="/privacy"]'));
 
     await page.locator('a[href="/privacy"]').click();
     await expect(page).toHaveURL(/\/privacy$/);
@@ -26,14 +27,14 @@ test.describe('Public Navigation', () => {
     await page.locator('a[href="/"]').first().click();
     await expect(page).toHaveURL(/\/(welcome|signin)$/);
 
-    await page.goto('/signin');
+    await gotoAndWaitForVisible(page, '/signin', page.locator('a[href="/terms"]'));
     await page.locator('a[href="/terms"]').click();
     await expect(page).toHaveURL(/\/terms$/);
     await expect(page.locator('text=legal@aptea.net')).toBeVisible();
   });
 
   test('should navigate from signin to forgot password and back', async ({ page }) => {
-    await page.goto('/signin');
+    await gotoAndWaitForVisible(page, '/signin', page.locator('a[href="/forgot-password"]'));
 
     await page.locator('a[href="/forgot-password"]').click();
     await expect(page).toHaveURL(/\/forgot-password$/);

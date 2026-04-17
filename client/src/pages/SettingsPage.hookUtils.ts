@@ -60,6 +60,6 @@ export function buildSettingsSavePayload(
     return { payload: createSavePayload(formData) };
   } catch (error) {
     logger.error('Invalid LLM parameters JSON:', error);
-    return { error: 'JSON invalide dans les parametres LLM' };
+    return { error: 'JSON invalide dans les paramètres LLM' };
   }
 }

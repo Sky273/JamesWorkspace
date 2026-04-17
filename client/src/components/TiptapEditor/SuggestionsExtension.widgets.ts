@@ -104,7 +104,7 @@ export function createGlobalPanel(
   headerIcon.textContent = '!';
 
   const headerText = document.createElement('span');
-  headerText.textContent = "Suggestions d'amelioration";
+  headerText.textContent = "Suggestions d'amélioration";
 
   const headerCount = document.createElement('span');
   headerCount.className = 'suggestion-deco-panel-count';

@@ -325,7 +325,7 @@ export async function previewTemplate(mjmlContent, subjectTemplate, context = nu
     const sampleContext = context || {
         client: { name: 'Entreprise ABC', type: 'prospect', industry: 'Technologies' },
         contact: { name: 'Jean Dupont', role: 'Directeur RH' },
-        resume: { name: 'Marie Martin', title: 'DÃ©veloppeur Full Stack', version: 3 },
+        resume: { name: 'Marie Martin', title: 'Développeur Full Stack', version: 3 },
         firm: { name: 'Mon Cabinet' },
         user: { name: 'Pierre Durand' }
     };

@@ -205,6 +205,7 @@ export interface OperationsMetrics {
       successfulRuns?: number;
       failedRuns?: number;
       fallbackRuns?: number;
+      postAnalysisFallbackRuns?: number;
       structuredRuns?: number;
       inputChars?: number;
       outputChars?: number;
@@ -215,6 +216,7 @@ export interface OperationsMetrics {
         successfulRuns?: number;
         failedRuns?: number;
         fallbackRuns?: number;
+        postAnalysisFallbackRuns?: number;
         structuredRuns?: number;
         inputChars?: number;
         outputChars?: number;
@@ -225,6 +227,7 @@ export interface OperationsMetrics {
         successfulRuns?: number;
         failedRuns?: number;
         fallbackRuns?: number;
+        postAnalysisFallbackRuns?: number;
         structuredRuns?: number;
         inputChars?: number;
         outputChars?: number;

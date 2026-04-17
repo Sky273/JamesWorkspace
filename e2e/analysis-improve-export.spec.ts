@@ -2,14 +2,14 @@ import path from 'path';
 import { test, expect, type Page } from '@playwright/test';
 import { signInAsE2EUser } from './helpers/auth';
 import { ensureLongResumeFixture } from './helpers/docx';
-import { putJsonViaApi } from './helpers/ui';
+import { gotoAndWaitForVisible, putJsonViaApi } from './helpers/ui';
 
 const FALLBACK_DOCX_FIXTURE = path.resolve('node_modules/mammoth/test/test-data/tables.docx');
 
 async function uploadResumeAndOpenAnalysis(page: Page) {
   const docxFixture = await ensureLongResumeFixture().catch(() => FALLBACK_DOCX_FIXTURE);
 
-  await page.goto('/upload');
+  await gotoAndWaitForVisible(page, '/upload', page.getByRole('button', { name: /employee|collaborateur/i }));
 
   await page.getByRole('button', { name: /employee|collaborateur/i }).click();
   await page.locator('#candidateName').fill('Jeanne Export E2E');

@@ -8,13 +8,13 @@ interface CreditsTabProps {
 
 const CREDIT_ACTION_FIELDS = [
   { creditKey: 'aiCreditResumeAnalysis', maxTokensKey: 'aiMaxTokensResumeAnalysis', labelKey: 'settings.credits.actions.resumeAnalysis', fallback: 'Upload / analyse de CV' },
-  { creditKey: 'aiCreditResumeImprovement', maxTokensKey: 'aiMaxTokensResumeImprovement', labelKey: 'settings.credits.actions.resumeImprovement', fallback: 'Amelioration / analyse post-amelioration' },
-  { creditKey: 'aiCreditResumeAdaptation', maxTokensKey: 'aiMaxTokensResumeAdaptation', labelKey: 'settings.credits.actions.resumeAdaptation', fallback: 'Adaptation a une mission' },
-  { creditKey: 'aiCreditProfileAnalysis', maxTokensKey: 'aiMaxTokensProfileAnalysis', labelKey: 'settings.credits.actions.profileAnalysis', fallback: 'Market radar : analyse detaillee de profil' },
+  { creditKey: 'aiCreditResumeImprovement', maxTokensKey: 'aiMaxTokensResumeImprovement', labelKey: 'settings.credits.actions.resumeImprovement', fallback: 'Amélioration / analyse post-amélioration' },
+  { creditKey: 'aiCreditResumeAdaptation', maxTokensKey: 'aiMaxTokensResumeAdaptation', labelKey: 'settings.credits.actions.resumeAdaptation', fallback: 'Adaptation à une mission' },
+  { creditKey: 'aiCreditProfileAnalysis', maxTokensKey: 'aiMaxTokensProfileAnalysis', labelKey: 'settings.credits.actions.profileAnalysis', fallback: 'Market radar : analyse détaillée de profil' },
   { creditKey: 'aiCreditProfileSearch', maxTokensKey: 'aiMaxTokensProfileSearch', labelKey: 'settings.credits.actions.profileSearch', fallback: 'Market radar : recherche de profils' },
   { creditKey: 'aiCreditResumeMatch', maxTokensKey: 'aiMaxTokensResumeMatch', labelKey: 'settings.credits.actions.resumeMatch', fallback: 'Matching CV / mission' },
-  { creditKey: 'aiCreditResumeAiModify', maxTokensKey: 'aiMaxTokensResumeAiModify', labelKey: 'settings.credits.actions.resumeAiModify', fallback: 'Edition IA de CV' },
-  { creditKey: 'aiCreditTemplateExtract', maxTokensKey: 'aiMaxTokensTemplateExtract', labelKey: 'settings.credits.actions.templateExtract', fallback: 'Extraction de modele depuis CV' },
+  { creditKey: 'aiCreditResumeAiModify', maxTokensKey: 'aiMaxTokensResumeAiModify', labelKey: 'settings.credits.actions.resumeAiModify', fallback: 'Édition IA de CV' },
+  { creditKey: 'aiCreditTemplateExtract', maxTokensKey: 'aiMaxTokensTemplateExtract', labelKey: 'settings.credits.actions.templateExtract', fallback: 'Extraction de modèle depuis CV' },
   { creditKey: 'aiCreditChatbotMessage', maxTokensKey: 'aiMaxTokensChatbotMessage', labelKey: 'settings.credits.actions.chatbotMessage', fallback: 'Message du chatbot' }
 ];
 
@@ -59,10 +59,10 @@ export default function CreditsTab({
     <div className="space-y-6">
       <div>
         <h2 className="mb-2 text-xl font-semibold text-gray-900 dark:text-gray-100">
-          {tx('settings.credits.title', 'Credits IA')}
+          {tx('settings.credits.title', 'Crédits IA')}
         </h2>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          {tx('settings.credits.description', 'Parametrez le credit initial offert a chaque cabinet et le cout des actions IA facturees.')}
+          {tx('settings.credits.description', 'Paramétrez le crédit initial offert à chaque cabinet et le coût des actions IA facturées.')}
         </p>
       </div>
 
@@ -73,16 +73,16 @@ export default function CreditsTab({
           </div>
           <div>
             <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-              {tx('settings.credits.initialGrantTitle', 'Credit initial par cabinet')}
+              {tx('settings.credits.initialGrantTitle', 'Crédit initial par cabinet')}
             </h3>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              {tx('settings.credits.initialGrantDescription', "Ce montant est applique lors de la creation d'un nouveau cabinet.")}
+              {tx('settings.credits.initialGrantDescription', "Ce montant est appliqué lors de la création d'un nouveau cabinet.")}
             </p>
           </div>
         </div>
 
         <NumericInput
-          label={tx('settings.credits.initialGrantField', 'Credits offerts a la creation')}
+          label={tx('settings.credits.initialGrantField', 'Crédits offerts à la création')}
           value={Number(formData.firmInitialCredits || 0)}
           onChange={(value) => onInputChange('firmInitialCredits', value)}
           testId="firm-initial-credits"
@@ -96,10 +96,10 @@ export default function CreditsTab({
           </div>
           <div>
             <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-              {tx('settings.credits.aiActionsTitle', 'Cout des actions IA')}
+              {tx('settings.credits.aiActionsTitle', 'Coût des actions IA')}
             </h3>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              {tx('settings.credits.aiActionsDescription', 'Chaque action ci-dessous correspond a un flux metier qui declenche un ou plusieurs appels LLM.')}
+              {tx('settings.credits.aiActionsDescription', 'Chaque action ci-dessous correspond à un flux métier qui déclenche un ou plusieurs appels LLM.')}
             </p>
           </div>
         </div>
@@ -112,7 +112,7 @@ export default function CreditsTab({
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <NumericInput
-                  label={tx('settings.credits.costField', 'Cout en credits')}
+                  label={tx('settings.credits.costField', 'Coût en crédits')}
                   value={Number(formData[field.creditKey] || 0)}
                   onChange={(value) => onInputChange(field.creditKey, value)}
                   testId={field.creditKey}

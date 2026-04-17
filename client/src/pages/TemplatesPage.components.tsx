@@ -60,7 +60,7 @@ function TemplateCard({
     <AnimatedCard index={index} className="shadow-md overflow-hidden">
       <div className="relative group cursor-pointer" onClick={() => onPreviewClick(template)}>
         <div className="h-48 bg-gray-50 dark:bg-gray-900 overflow-hidden">
-          <Suspense fallback={<div className="flex h-full min-h-48 items-center justify-center text-xs text-gray-400 dark:text-gray-500">Chargement de l'apercu...</div>}>
+          <Suspense fallback={<div className="flex h-full min-h-48 items-center justify-center text-xs text-gray-400 dark:text-gray-500">Chargement de l'aperçu...</div>}>
           <TemplatePreviewFrame
             title={template.Name}
             stylesheet={template.Stylesheet}
@@ -442,7 +442,7 @@ export function TemplatesPreviewModal({
         </div>
         <div className="p-6 overflow-auto max-h-[70vh] bg-gray-50 dark:bg-gray-900">
           <div className="rounded-lg border border-gray-200 bg-white shadow dark:border-gray-700">
-            <Suspense fallback={<div className="flex h-full min-h-48 items-center justify-center text-xs text-gray-400 dark:text-gray-500">Chargement de l'apercu...</div>}>
+            <Suspense fallback={<div className="flex h-full min-h-48 items-center justify-center text-xs text-gray-400 dark:text-gray-500">Chargement de l'aperçu...</div>}>
           <TemplatePreviewFrame
               title={template.Name}
               stylesheet={template.Stylesheet}

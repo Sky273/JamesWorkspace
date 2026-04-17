@@ -77,12 +77,12 @@ export function createBackupFailureEmailContent(type, error, duration) {
     const typeLabel = getBackupTypeLabel(type);
 
     return {
-        subject: `Echec de la sauvegarde ${typeLabel} - ResumeConverter`,
+        subject: `Échec de la sauvegarde ${typeLabel} - ResumeConverter`,
         html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 20px; margin-bottom: 20px;">
-                    <h2 style="color: #991b1b; margin: 0 0 10px 0;">Echec de sauvegarde planifiee</h2>
-                    <p style="color: #374151; margin: 0;">La sauvegarde <strong>${typeLabel}</strong> de la base de donnees a echoue.</p>
+                    <h2 style="color: #991b1b; margin: 0 0 10px 0;">Échec de sauvegarde planifiée</h2>
+                    <p style="color: #374151; margin: 0;">La sauvegarde <strong>${typeLabel}</strong> de la base de données a échoué.</p>
                 </div>
                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
                     <tr style="border-bottom: 1px solid #e5e7eb;">
@@ -94,7 +94,7 @@ export function createBackupFailureEmailContent(type, error, duration) {
                         <td style="padding: 8px 12px; color: #6b7280;">${timestamp}</td>
                     </tr>
                     <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 8px 12px; font-weight: bold; color: #374151;">Duree</td>
+                        <td style="padding: 8px 12px; font-weight: bold; color: #374151;">Durée</td>
                         <td style="padding: 8px 12px; color: #6b7280;">${duration}s</td>
                     </tr>
                     <tr>
@@ -102,10 +102,10 @@ export function createBackupFailureEmailContent(type, error, duration) {
                         <td style="padding: 8px 12px; color: #dc2626;">${error.message}</td>
                     </tr>
                 </table>
-                <p style="color: #6b7280; font-size: 13px;">Veuillez verifier la configuration de la sauvegarde dans les parametres de ResumeConverter et relancer une sauvegarde manuelle si necessaire.</p>
-                <p style="color: #9ca3af; font-size: 12px; margin-top: 20px;">Email envoye automatiquement par ResumeConverter.</p>
+                <p style="color: #6b7280; font-size: 13px;">Veuillez vérifier la configuration de la sauvegarde dans les paramètres de ResumeConverter et relancer une sauvegarde manuelle si nécessaire.</p>
+                <p style="color: #9ca3af; font-size: 12px; margin-top: 20px;">Email envoyé automatiquement par ResumeConverter.</p>
             </div>
         `,
-        text: `Echec de la sauvegarde ${typeLabel}\nErreur: ${error.message}\nDuree: ${duration}s\nDate/Heure: ${timestamp}`
+        text: `Échec de la sauvegarde ${typeLabel}\nErreur: ${error.message}\nDurée: ${duration}s\nDate/Heure: ${timestamp}`
     };
 }

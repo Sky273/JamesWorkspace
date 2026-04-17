@@ -144,7 +144,7 @@ export const ColorPicker = ({ editor, type }: ColorPickerProps) => {
               close();
             }}
           >
-            {type === 'text' ? 'Reinitialiser' : 'Supprimer'}
+            {type === 'text' ? 'Réinitialiser' : 'Supprimer'}
           </button>
         </div>
       )}

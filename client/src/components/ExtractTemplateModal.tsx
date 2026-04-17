@@ -41,7 +41,7 @@ function getExtractionMethodLabel(method: string): string {
 }
 
 function getConfidenceLabel(level?: 'low' | 'medium' | 'high'): string {
-  if (level === 'high') return 'Confiance elevee';
+  if (level === 'high') return 'Confiance élevée';
   if (level === 'medium') return 'Confiance moyenne';
   if (level === 'low') return 'Confiance faible';
   return 'Confiance inconnue';
@@ -267,7 +267,7 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
                 <div className="text-center">
                   <p className="text-lg font-medium text-gray-900 dark:text-gray-100">{t('templates.extract.analyzing')}</p>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('templates.extract.pleaseWait')}</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">Cette operation peut prendre 1 a 3 minutes selon la complexite du document.</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">Cette opération peut prendre 1 à 3 minutes selon la complexité du document.</p>
                 </div>
               </div>
             )}
@@ -296,11 +296,11 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
                       <div className="flex items-center justify-between gap-3 flex-wrap">
                         <div>
                           <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Revue et correction</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">Ajuste le template final avant creation.</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Ajuste le template final avant création.</div>
                         </div>
                         {review && (
                           <button type="button" onClick={applyDetectedLayout} className="px-3 py-1.5 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 text-sm">
-                            Utiliser toute la detection
+                            Utiliser toute la détection
                           </button>
                         )}
                       </div>
@@ -320,28 +320,28 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
                         <div>
                           <div className="flex items-center justify-between mb-1 gap-2">
                             <label htmlFor="extract-template-header" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Header final</label>
-                            {review?.headerHtml && <button type="button" onClick={() => applyDetectedField('headerContent', 'headerHtml')} className="text-xs text-purple-700 dark:text-purple-300">Utiliser le header detecte</button>}
+                            {review?.headerHtml && <button type="button" onClick={() => applyDetectedField('headerContent', 'headerHtml')} className="text-xs text-purple-700 dark:text-purple-300">Utiliser le header détecté</button>}
                           </div>
                           <textarea id="extract-template-header" value={extractedTemplate.headerContent} onChange={(event) => handleFieldChange('headerContent', event.target.value)} rows={5} className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs font-mono dark:bg-gray-900 dark:border-gray-600 dark:text-gray-100" />
                         </div>
                         <div>
                           <div className="flex items-center justify-between mb-1 gap-2">
                             <label htmlFor="extract-template-content" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Contenu final</label>
-                            {review?.contentHtml && <button type="button" onClick={() => applyDetectedField('templateContent', 'contentHtml')} className="text-xs text-purple-700 dark:text-purple-300">Utiliser le contenu detecte</button>}
+                            {review?.contentHtml && <button type="button" onClick={() => applyDetectedField('templateContent', 'contentHtml')} className="text-xs text-purple-700 dark:text-purple-300">Utiliser le contenu détecté</button>}
                           </div>
                           <textarea id="extract-template-content" value={extractedTemplate.templateContent} onChange={(event) => handleFieldChange('templateContent', event.target.value)} rows={10} className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs font-mono dark:bg-gray-900 dark:border-gray-600 dark:text-gray-100" />
                         </div>
                         <div>
                           <div className="flex items-center justify-between mb-1 gap-2">
                             <label htmlFor="extract-template-footer" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Footer final</label>
-                            {review?.footerHtml && <button type="button" onClick={() => applyDetectedField('footerContent', 'footerHtml')} className="text-xs text-purple-700 dark:text-purple-300">Utiliser le footer detecte</button>}
+                            {review?.footerHtml && <button type="button" onClick={() => applyDetectedField('footerContent', 'footerHtml')} className="text-xs text-purple-700 dark:text-purple-300">Utiliser le footer détecté</button>}
                           </div>
                           <textarea id="extract-template-footer" value={extractedTemplate.footerContent} onChange={(event) => handleFieldChange('footerContent', event.target.value)} rows={5} className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs font-mono dark:bg-gray-900 dark:border-gray-600 dark:text-gray-100" />
                         </div>
                         <div>
                           <div className="flex items-center justify-between mb-1 gap-2">
                             <label htmlFor="extract-template-stylesheet" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Feuille de style finale</label>
-                            {review?.stylesheet && <button type="button" onClick={() => applyDetectedField('stylesheet', 'stylesheet')} className="text-xs text-purple-700 dark:text-purple-300">Utiliser le CSS detecte</button>}
+                            {review?.stylesheet && <button type="button" onClick={() => applyDetectedField('stylesheet', 'stylesheet')} className="text-xs text-purple-700 dark:text-purple-300">Utiliser le CSS détecté</button>}
                           </div>
                           <textarea id="extract-template-stylesheet" value={extractedTemplate.stylesheet} onChange={(event) => handleFieldChange('stylesheet', event.target.value)} rows={8} className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs font-mono dark:bg-gray-900 dark:border-gray-600 dark:text-gray-100" />
                         </div>
@@ -349,15 +349,15 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
                     </div>
 
                     <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Diagnostic extraction</div>
+                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Diagnostic d'extraction</div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                        <div className="rounded bg-gray-50 dark:bg-gray-900 p-3"><div className="text-gray-500 dark:text-gray-400">Methode</div><div className="mt-1 font-medium text-gray-900 dark:text-gray-100">{getExtractionMethodLabel(review?.extractionMethod || extractionMethod)}</div></div>
-                        <div className="rounded bg-gray-50 dark:bg-gray-900 p-3"><div className="text-gray-500 dark:text-gray-400">Texte detecte</div><div className="mt-1 font-medium text-gray-900 dark:text-gray-100">{review?.textLength ?? 0} caracteres</div></div>
+                        <div className="rounded bg-gray-50 dark:bg-gray-900 p-3"><div className="text-gray-500 dark:text-gray-400">Méthode</div><div className="mt-1 font-medium text-gray-900 dark:text-gray-100">{getExtractionMethodLabel(review?.extractionMethod || extractionMethod)}</div></div>
+                        <div className="rounded bg-gray-50 dark:bg-gray-900 p-3"><div className="text-gray-500 dark:text-gray-400">Texte détecté</div><div className="mt-1 font-medium text-gray-900 dark:text-gray-100">{review?.textLength ?? 0} caractères</div></div>
                         <div className="rounded bg-gray-50 dark:bg-gray-900 p-3"><div className="text-gray-500 dark:text-gray-400">Blocs visuels</div><div className="mt-1 font-medium text-gray-900 dark:text-gray-100">{metricValue(visualBlockCount)}</div></div>
                         <div className="rounded bg-gray-50 dark:bg-gray-900 p-3"><div className="text-gray-500 dark:text-gray-400">Zones image</div><div className="mt-1 font-medium text-gray-900 dark:text-gray-100">{metricValue(imageRegionCount)}</div></div>
                       </div>
                       <div className="mt-3 rounded bg-gray-50 dark:bg-gray-900 p-3 text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                        <div>Lignes detectees: {metricValue(metrics.totalLines)}</div>
+                        <div>Lignes détectées: {metricValue(metrics.totalLines)}</div>
                         <div>Header lines: {metricValue(metrics.headerLines)}</div>
                         <div>Content lines: {metricValue(metrics.contentLines)}</div>
                         <div>Footer lines: {metricValue(metrics.footerLines)}</div>
@@ -366,11 +366,11 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
 
                     {review && (
                       <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                        <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Fragments detectes</div>
+                        <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Fragments détectés</div>
                         <div className="space-y-3">
-                          <div><div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Header detecte</div><pre className="max-h-32 overflow-auto rounded bg-gray-50 dark:bg-gray-900 p-2 text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-all">{review.headerHtml || '(vide)'}</pre></div>
-                          <div><div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Content detecte</div><pre className="max-h-40 overflow-auto rounded bg-gray-50 dark:bg-gray-900 p-2 text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-all">{review.contentHtml || '(vide)'}</pre></div>
-                          <div><div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Footer detecte</div><pre className="max-h-32 overflow-auto rounded bg-gray-50 dark:bg-gray-900 p-2 text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-all">{review.footerHtml || '(vide)'}</pre></div>
+                          <div><div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Header détecté</div><pre className="max-h-32 overflow-auto rounded bg-gray-50 dark:bg-gray-900 p-2 text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-all">{review.headerHtml || '(vide)'}</pre></div>
+                          <div><div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Contenu détecté</div><pre className="max-h-40 overflow-auto rounded bg-gray-50 dark:bg-gray-900 p-2 text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-all">{review.contentHtml || '(vide)'}</pre></div>
+                          <div><div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Footer détecté</div><pre className="max-h-32 overflow-auto rounded bg-gray-50 dark:bg-gray-900 p-2 text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-all">{review.footerHtml || '(vide)'}</pre></div>
                         </div>
                       </div>
                     )}
@@ -380,7 +380,7 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
                     <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 max-h-[32rem] overflow-auto">
                       <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('templates.extract.preview')}</div>
                       <div className="overflow-hidden rounded border border-gray-200 bg-white dark:border-gray-700">
-                        <Suspense fallback={<div className="flex h-80 items-center justify-center text-sm text-gray-500 dark:text-gray-400">Chargement de l apercu...</div>}>
+                        <Suspense fallback={<div className="flex h-80 items-center justify-center text-sm text-gray-500 dark:text-gray-400">Chargement de l'aperçu...</div>}>
                           <TemplatePreviewFrame
                             title={extractedTemplate.name}
                             stylesheet={extractedTemplate.stylesheet}

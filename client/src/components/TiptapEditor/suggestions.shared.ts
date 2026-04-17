@@ -17,8 +17,8 @@ export const SUGGESTION_SECTION_ORDER: (keyof SuggestionsBySection)[] = [
 ];
 
 export const SUGGESTION_SECTION_LABELS: Record<keyof SuggestionsBySection, string> = {
-  executiveSummary: 'Resume executif',
-  skills: 'Competences',
+  executiveSummary: 'Résumé exécutif',
+  skills: 'Compétences',
   experiences: 'Experience',
   education: 'Formation',
   hobbiesLanguages: 'Langues & Loisirs',

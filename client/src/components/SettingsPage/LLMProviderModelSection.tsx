@@ -137,7 +137,7 @@ export default function LLMProviderModelSection({
             ))}
           </datalist>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            Renseignez un modele Hugging Face compatible OpenAI router. La valeur par defaut est <span className="font-semibold">MiniMaxAI/MiniMax-M2.7</span>.
+            Renseignez un modèle Hugging Face compatible OpenAI router. La valeur par défaut est <span className="font-semibold">MiniMaxAI/MiniMax-M2.7</span>.
           </p>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
             {t('settings.currentModel')} : <span className="font-semibold">{currentModelLabel}</span>
@@ -172,17 +172,17 @@ export default function LLMProviderModelSection({
               onChange={onModelChange}
               className="w-full px-4 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
             >
-              <option value="">Selectionner un modele distant</option>
+              <option value="">Sélectionner un modèle distant</option>
               {modelOptions.map((model) => (
                 <option key={model.value} value={model.value}>{model.label}</option>
               ))}
             </select>
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
               {ollamaDiscoveryLoading
-                ? 'Interrogation de l instance Ollama distante...'
+                ? 'Interrogation de l’instance Ollama distante...'
                 : modelOptions.length > 0
-                  ? `Modeles detectes: ${modelOptions.length}`
-                  : 'Aucun modele detecte sur cette instance.'}
+                  ? `Modèles détectés : ${modelOptions.length}`
+                  : 'Aucun modèle détecté sur cette instance.'}
             </p>
           </div>
 
@@ -204,7 +204,7 @@ export default function LLMProviderModelSection({
           disabled={!canTestConnection || testingConnection}
           className="inline-flex min-h-11 items-center rounded-xl border border-blue-500/40 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-200 transition hover:bg-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {testingConnection ? 'Test en cours...' : 'Tester le modele'}
+          {testingConnection ? 'Test en cours...' : 'Tester le modèle'}
         </button>
       </div>
     </>

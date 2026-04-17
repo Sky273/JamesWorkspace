@@ -11,14 +11,14 @@ import { useAuth } from '../context/AuthContext';
 const ACTION_LABELS: Record<string, string> = {
   'chatbot.message': 'Chatbot',
   'resume.upload': 'Upload et analyse de CV',
-  'resume.ai_modify': 'Edition IA de CV',
-  'template.extract': 'Extraction de modele',
+  'resume.ai_modify': 'Édition IA de CV',
+  'template.extract': 'Extraction de modèle',
   'resume.analysis': 'Analyse de CV',
-  'resume.improvement': 'Amelioration de CV',
+  'resume.improvement': 'Amélioration de CV',
   'resume.adaptation': 'Adaptation de CV',
   'resume.match': 'Matching CV / mission',
   'profile.search': 'Recherche de profils',
-  'profile.analysis': 'Analyse detaillee de profil',
+  'profile.analysis': 'Analyse détaillée de profil',
 };
 
 const primaryLinkClassName = 'app-button-primary inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium transition-all';
