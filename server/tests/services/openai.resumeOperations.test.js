@@ -427,6 +427,37 @@ describe('OpenAI Resume Operations', () => {
             }));
         });
 
+        it('should forward an explicit timeout override for analysis requests', async () => {
+            callBusinessChatCompletion.mockResolvedValueOnce({
+                choices: [{ message: { content: JSON.stringify(mockAnalysis) } }]
+            });
+
+            await analyzeResume('text', 'gpt-4o', '{TEXT} {FILENAME}', null, false, 'cv.pdf', {
+                timeoutMs: 54321
+            });
+
+            expect(callBusinessChatCompletion.mock.calls[0][0]).toEqual(expect.objectContaining({
+                timeout: 54321
+            }));
+        });
+
+        it('should stop analysis recovery attempts when the deadline is already expired', async () => {
+            const nowSpy = vi.spyOn(Date, 'now');
+            nowSpy.mockReturnValueOnce(1_000).mockReturnValue(2_000);
+            callBusinessChatCompletion.mockResolvedValueOnce({
+                choices: [{ message: { content: 'not valid json' } }]
+            });
+
+            await expect(
+                analyzeResume('text', 'gpt-4o', '{TEXT} {FILENAME}', null, false, 'cv.pdf', {
+                    deadlineAt: 1_500
+                })
+            ).rejects.toThrow('deadline exceeded');
+
+            expect(callBusinessChatCompletion).toHaveBeenCalledTimes(1);
+            nowSpy.mockRestore();
+        });
+
         it('should throw on invalid JSON response', async () => {
             callBusinessChatCompletion
                 .mockResolvedValueOnce({
@@ -949,6 +980,33 @@ Executive Summary Improvements:
             expect(metrics.trackImprovementActivity).toHaveBeenCalledWith(expect.objectContaining({
                 metadata: expect.objectContaining({ source: 'structured-json-retry-success' })
             }));
+        });
+
+        it('should stop improvement retry when the deadline is already expired', async () => {
+            const nowSpy = vi.spyOn(Date, 'now');
+            nowSpy.mockReturnValueOnce(1_000).mockReturnValue(2_000);
+            callBusinessChatCompletion.mockResolvedValueOnce({
+                choices: [{
+                    message: {
+                        content: '{"improvedText":"<p>Improved CV</p>","summary":{"title":"Lead'
+                    }
+                }]
+            });
+
+            await expect(improveResume(
+                'A'.repeat(200),
+                { name: 'John' },
+                'gpt-4o',
+                '{TEXT} {ANALYSIS} {FILENAME}',
+                null,
+                null,
+                {
+                    deadlineAt: 1_500
+                }
+            )).rejects.toThrow('deadline exceeded');
+
+            expect(callBusinessChatCompletion).toHaveBeenCalledTimes(1);
+            nowSpy.mockRestore();
         });
     });
 });

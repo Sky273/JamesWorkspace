@@ -40,6 +40,7 @@ const DEFAULT_MAX_VARIANTS_PER_PAGE = 18;
 const DEFAULT_MAX_OCR_TIME_PER_PAGE_MS = 20_000;
 const DEFAULT_EARLY_ACCEPT_SCORE = 260;
 const DEFAULT_ADVANCED_OCR_BACKEND = process.env.OCR_ADVANCED_BACKEND || 'paddleocr';
+const DEFAULT_MAX_FORCED_DOCUMENT_OCR_PAGES = 10;
 
 let ocrIoService;
 
@@ -107,6 +108,27 @@ async function writeTempVariantBuffer(variantName, variantBuffer, pageNum) {
     return tempPath;
 }
 
+export function getForcedDocumentOcrDecision({
+    normalizedTextLength = 0,
+    forceDocumentOcrTextLength = DEFAULT_FORCE_DOCUMENT_OCR_TEXT_LENGTH,
+    totalPages = 0,
+    maxForcedDocumentOcrPages = DEFAULT_MAX_FORCED_DOCUMENT_OCR_PAGES
+} = {}) {
+    if (!Number.isFinite(forceDocumentOcrTextLength) || forceDocumentOcrTextLength <= 0) {
+        return { shouldRun: false, reason: 'disabled' };
+    }
+
+    if (normalizedTextLength >= forceDocumentOcrTextLength) {
+        return { shouldRun: false, reason: 'threshold_met' };
+    }
+
+    if (Number.isFinite(maxForcedDocumentOcrPages) && maxForcedDocumentOcrPages > 0 && totalPages > maxForcedDocumentOcrPages) {
+        return { shouldRun: false, reason: 'page_budget_exceeded' };
+    }
+
+    return { shouldRun: true, reason: 'threshold_unmet' };
+}
+
 export async function extractPdfTextWithOcr(buffer, options = {}) {
     const {
         maxPdfPages = DEFAULT_MAX_PDF_EXTRACTION_PAGES,
@@ -114,6 +136,7 @@ export async function extractPdfTextWithOcr(buffer, options = {}) {
         maxOcrRenderPixels = DEFAULT_MAX_OCR_RENDER_PIXELS,
         minOcrTextLength = DEFAULT_MIN_OCR_TEXT_LENGTH,
         forceDocumentOcrTextLength = DEFAULT_FORCE_DOCUMENT_OCR_TEXT_LENGTH,
+        maxForcedDocumentOcrPages = DEFAULT_MAX_FORCED_DOCUMENT_OCR_PAGES,
         advancedOcrTriggerTextLength = DEFAULT_ADVANCED_OCR_TRIGGER_TEXT_LENGTH,
         ocrRenderScale = DEFAULT_OCR_RENDER_SCALE,
         onOcrProgress,
@@ -225,8 +248,18 @@ export async function extractPdfTextWithOcr(buffer, options = {}) {
         }
 
         let normalizedText = normalizeExtractedText(fullText);
+        let forcedDocumentOcrAttempted = false;
+        let forcedDocumentOcrSkipped = false;
+        let forcedDocumentOcrSkipReason = null;
+        const forcedDocumentOcrDecision = getForcedDocumentOcrDecision({
+            normalizedTextLength: normalizedText.length,
+            forceDocumentOcrTextLength,
+            totalPages: pdf.numPages,
+            maxForcedDocumentOcrPages
+        });
 
-        if (normalizedText.length < forceDocumentOcrTextLength) {
+        if (forcedDocumentOcrDecision.shouldRun) {
+            forcedDocumentOcrAttempted = true;
             fullText = '';
             ocrState.ocrUsed = false;
             ocrState.ocrPageCount = 0;
@@ -257,6 +290,9 @@ export async function extractPdfTextWithOcr(buffer, options = {}) {
             }
 
             normalizedText = normalizeExtractedText(fullText);
+        } else if (forcedDocumentOcrDecision.reason === 'page_budget_exceeded') {
+            forcedDocumentOcrSkipped = true;
+            forcedDocumentOcrSkipReason = forcedDocumentOcrDecision.reason;
         }
 
         const successfulResults = ocrState.recentResults
@@ -270,6 +306,9 @@ export async function extractPdfTextWithOcr(buffer, options = {}) {
             ocrPageCount: ocrState.ocrPageCount,
             failedOcrPages: ocrState.failedOcrPages,
             avgOcrConfidence: ocrState.ocrPageCount > 0 ? ocrState.totalOcrConfidence / ocrState.ocrPageCount : null,
+            forcedDocumentOcrAttempted,
+            forcedDocumentOcrSkipped,
+            forcedDocumentOcrSkipReason,
             primaryResult: successfulResults[0] || null,
             recentResults: ocrState.recentResults.slice(-5)
         };

@@ -389,4 +389,39 @@ describe('Lifecycle config', () => {
         expect(mockClosePool).not.toHaveBeenCalled();
         expect(process.exit).toHaveBeenCalledWith(2);
     });
+
+    it('should continue shutdown cleanup when one runtime cleanup step fails', async () => {
+        mockInitializeDatabase.mockResolvedValue(true);
+        mockStopBatchJobsWorker.mockRejectedValueOnce(new Error('worker stop failed'));
+
+        const server = {
+            timeout: 0,
+            keepAliveTimeout: 0,
+            headersTimeout: 0,
+            close: vi.fn((callback) => callback())
+        };
+
+        const app = {
+            listen: listenMock(server)
+        };
+
+        const startedServer = startServer(app, 'C:\\Users\\mail\\CascadeProjects\\ResumeConverter\\server');
+        await flushImmediate();
+        await flushImmediate();
+        vi.clearAllMocks();
+        process.exit = vi.fn();
+
+        await startedServer.gracefulShutdown('SIGTERM', 0);
+        await flushImmediate();
+        await flushImmediate();
+
+        expect(mockStopBatchJobsWorker).toHaveBeenCalled();
+        expect(mockUnsubscribeFromCacheInvalidations).toHaveBeenCalled();
+        expect(mockClosePool).toHaveBeenCalled();
+        expect(mockSafeLog).toHaveBeenCalledWith('warn', 'Runtime shutdown cleanup step failed', expect.objectContaining({
+            stepName: 'stopBatchJobsWorker',
+            error: 'worker stop failed'
+        }));
+        expect(process.exit).toHaveBeenCalledWith(0);
+    });
 });

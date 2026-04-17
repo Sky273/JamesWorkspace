@@ -23,6 +23,11 @@ import { normalizeArchiveRelativePath } from '../../utils/archiveRelativePath.js
 import { assertTrustedInternalServiceUrl } from '../../utils/networkHostSecurity.js';
 import { getBatchExportPdfTimeoutMs } from '../../utils/pdfServiceTimeouts.js';
 import { buildFirmLogoMarkup, replaceExportTemplatePlaceholders } from '../../utils/exportTemplatePlaceholders.js';
+import {
+    buildBatchExportArchiveBudgetError,
+    getBatchExportMaxArchiveBytes,
+    getGeneratedArtifactByteLength
+} from '../../utils/batchExportArchiveBudget.js';
 
 const MAX_LOGGED_EXPORT_ERRORS = 10;
 let lastBatchExportSummary = null;
@@ -260,6 +265,9 @@ export async function generateJobExport(jobId, options) {
     const exportErrors = [];
     const itemResults = new Map();
     const firmLogoMarkupCache = new Map();
+    const maxArchiveBytes = getBatchExportMaxArchiveBytes();
+    let totalGeneratedArtifactBytes = 0;
+    let archiveBudgetExceededMessage = null;
     
     // Create folders for each format in the ZIP
     const formatFolders = {};
@@ -277,7 +285,14 @@ export async function generateJobExport(jobId, options) {
     /**
      * Helper: generate a document via PDF server with retry
      */
-    const generateDocumentWithRetry = async (processedBody, processedHeader, processedFooter, candidateName, format) => {
+    const generateDocumentWithRetry = async (
+        processedBody,
+        processedHeader,
+        processedFooter,
+        candidateName,
+        format,
+        diagnostics = {}
+    ) => {
         const endpoint = format === 'pdf' ? '/generate-pdf' : '/generate-docx';
         const fileExtension = format === 'pdf' ? 'pdf' : format;
         const MAX_RETRIES = 3;
@@ -311,6 +326,16 @@ export async function generateJobExport(jobId, options) {
                 if (!response.ok) {
                     const errorText = await response.text().catch(() => 'Unknown error');
                     lastError = `${format.toUpperCase()} generation failed (status ${response.status}): ${errorText}`;
+                    safeLog('warn', 'Batch export document generation attempt failed', {
+                        jobId,
+                        endpoint,
+                        attempt,
+                        maxRetries: MAX_RETRIES,
+                        candidateName,
+                        format,
+                        status: response.status,
+                        ...diagnostics
+                    });
                     if (attempt < MAX_RETRIES) {
                         await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
                         continue;
@@ -325,6 +350,16 @@ export async function generateJobExport(jobId, options) {
                     return { success: false, error: 'PDF server authentication is not configured on the backend.' };
                 }
                 lastError = fetchErr.message;
+                safeLog('warn', 'Batch export document generation request errored', {
+                    jobId,
+                    endpoint,
+                    attempt,
+                    maxRetries: MAX_RETRIES,
+                    candidateName,
+                    format,
+                    error: fetchErr.message,
+                    ...diagnostics
+                });
                 if (attempt < MAX_RETRIES) {
                     await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
                     continue;
@@ -410,7 +445,19 @@ export async function generateJobExport(jobId, options) {
             });
             
             // Generate document
-            const result = await generateDocumentWithRetry(processedBody, processedHeader, processedFooter, candidateName, format);
+            const result = await generateDocumentWithRetry(
+                processedBody,
+                processedHeader,
+                processedFooter,
+                candidateName,
+                format,
+                {
+                    itemId: item.id,
+                    resumeId: item.resume_id || null,
+                    adaptationId: item.adaptation_id || null,
+                    sourceType
+                }
+            );
             
             if (!result.success) {
                 return { success: false, itemId: item.id, error: result.error, resumeId: item.resume_id, format, sourceType };
@@ -508,6 +555,24 @@ export async function generateJobExport(jobId, options) {
             for (const result of batchResults) {
                 if (result.success) {
                     const itemResult = itemResults.get(result.itemId);
+                    const artifactBytes = getGeneratedArtifactByteLength(result.content);
+                    if (totalGeneratedArtifactBytes + artifactBytes > maxArchiveBytes) {
+                        archiveBudgetExceededMessage = buildBatchExportArchiveBudgetError({
+                            currentBytes: totalGeneratedArtifactBytes,
+                            nextBytes: artifactBytes,
+                            maxBytes: maxArchiveBytes
+                        }).message;
+                        safeLog('warn', 'Batch export archive budget exceeded', {
+                            jobId,
+                            format,
+                            itemId: result.itemId,
+                            currentBytes: totalGeneratedArtifactBytes,
+                            nextBytes: artifactBytes,
+                            maxArchiveBytes
+                        });
+                        break;
+                    }
+
                     let filePath;
                     try {
                         filePath = buildSafeArchiveFilePath(result.relativePath, result.fileName);
@@ -541,6 +606,7 @@ export async function generateJobExport(jobId, options) {
                     fileNameCounts.set(result.relativePath ? filePath.split('/').slice(0, -1).join('/') + '/' + result.fileName : filePath, count + 1);
                     
                     const artifactPath = await persistGeneratedArtifact(tempExportDir, result.itemId, result.format, result.content);
+                    totalGeneratedArtifactBytes += artifactBytes;
 
                     // Add to the format-specific folder
                     safeLog('debug', 'Adding file to ZIP', { format, filePath, sourceType: result.sourceType });
@@ -570,6 +636,10 @@ export async function generateJobExport(jobId, options) {
                 failedFiles: batchErrorCount,
                 durationMs: Date.now() - batchStartedAt
             });
+
+            if (archiveBudgetExceededMessage) {
+                break;
+            }
         }
         
         // Log duplicates for this format
@@ -587,6 +657,39 @@ export async function generateJobExport(jobId, options) {
             failedFiles: formatErrorCount,
             skippedItems
         });
+
+        if (archiveBudgetExceededMessage) {
+            break;
+        }
+    }
+
+    if (archiveBudgetExceededMessage) {
+        await markExportItemsAsError(successfulItems, archiveBudgetExceededMessage);
+        updateLastBatchExportSummary({
+            operation: 'generateJobExport',
+            jobId,
+            status: 'rejected',
+            format: exportFormats.length === 1 ? exportFormats[0] : 'multi',
+            totalItems: items.length,
+            exportableItems: successfulItems.length,
+            skippedItems,
+            generatedArtifactBytes: totalGeneratedArtifactBytes,
+            maxArchiveBytes,
+            reason: 'max_archive_bytes_exceeded',
+            durationMs: Date.now() - startedAt
+        });
+        trackBatchExport({
+            format: exportFormats.length === 1 ? exportFormats[0] : 'multi',
+            requestedResumes: successfulItems.length,
+            failedRuns: 1,
+            metadata: {
+                jobId,
+                reason: 'max_archive_bytes_exceeded',
+                generatedArtifactBytes: totalGeneratedArtifactBytes,
+                maxArchiveBytes
+            }
+        });
+        throw new Error(archiveBudgetExceededMessage);
     }
     
     // Log export statistics - count only actual files, not directories
@@ -601,6 +704,7 @@ export async function generateJobExport(jobId, options) {
         filesInZip: actualFilesInZip,
         totalZipEntries: Object.keys(zip.files).length,
         errors: exportErrors.length > 0 ? exportErrors.slice(0, MAX_LOGGED_EXPORT_ERRORS) : undefined,
+        generatedArtifactBytes: totalGeneratedArtifactBytes,
         durationMs: Date.now() - startedAt
     });
 
@@ -667,6 +771,7 @@ export async function generateJobExport(jobId, options) {
             resolvedResumes: successfulItems.length,
             generatedFiles: actualFilesInZip,
             failedFiles: exportErrorCount,
+            generatedArtifactBytes: totalGeneratedArtifactBytes,
             archiveBytes: exportedSize,
             successfulRuns: 1,
             metadata: { jobId }
@@ -689,6 +794,7 @@ export async function generateJobExport(jobId, options) {
             skippedItems,
             generatedFiles: actualFilesInZip,
             failedFiles: exportErrorCount,
+            generatedArtifactBytes: totalGeneratedArtifactBytes,
             archiveBytes: exportedSize,
             durationMs: Date.now() - startedAt
         });
@@ -704,6 +810,7 @@ export async function generateJobExport(jobId, options) {
             exportableItems: successfulItems.length,
             skippedItems,
             failedFiles: exportErrorCount,
+            generatedArtifactBytes: totalGeneratedArtifactBytes,
             error: error.message,
             durationMs: Date.now() - startedAt
         });

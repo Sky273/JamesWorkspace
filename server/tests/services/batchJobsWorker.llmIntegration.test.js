@@ -39,6 +39,7 @@ import {
     releaseLLMSlot,
     resetLLMQueue
 } from '../../services/batchJobsWorker/llmIntegration.js';
+import { analyzeResume, improveResume } from '../../services/openai.service.js';
 
 describe('Batch Jobs Worker - LLM Integration', () => {
     beforeEach(() => {
@@ -137,6 +138,55 @@ describe('Batch Jobs Worker - LLM Integration', () => {
             const result = await analyzeImprovedResumeWithLLM('<p>CV amélioré</p>', 'firm-1', 'candidate.docx');
 
             expect(result.globalRating).toBe(88);
+        });
+    });
+
+    describe('deadline handling', () => {
+        it('should reject immediately when the analysis deadline is already expired', async () => {
+            await expect(
+                analyzeResumeWithLLM('cv', 'firm-1', 'candidate.docx', { deadlineAt: Date.now() - 1 })
+            ).rejects.toThrow('deadline exceeded');
+
+            expect(analyzeResume).not.toHaveBeenCalled();
+        });
+
+        it('should forward timeout and deadline options to downstream analysis', async () => {
+            analyzeResume.mockResolvedValueOnce({ globalRating: 80 });
+
+            await analyzeResumeWithLLM('cv', 'firm-1', 'candidate.docx', {
+                timeoutMs: 12345,
+                deadlineAt: Date.now() + 12345,
+                maxTokens: 456
+            });
+
+            expect(analyzeResume).toHaveBeenCalledWith(
+                expect.any(String),
+                'gpt-4o',
+                expect.any(String),
+                expect.any(Object),
+                false,
+                'candidate.docx',
+                expect.objectContaining({
+                    timeoutMs: 12345,
+                    deadlineAt: expect.any(Number),
+                    maxTokens: 456
+                })
+            );
+        });
+
+        it('should release the semaphore slot when downstream improvement throws a deadline error', async () => {
+            improveResume.mockRejectedValueOnce(Object.assign(new Error('Batch LLM item deadline exceeded'), {
+                code: 'LLM_ITEM_DEADLINE_EXCEEDED'
+            }));
+
+            await expect(
+                improveResumeWithLLM('<p>cv</p>', {}, 'firm-1', 'candidate.docx', {
+                    deadlineAt: Date.now() + 1000
+                })
+            ).rejects.toThrow('deadline exceeded');
+
+            await acquireLLMSlot();
+            releaseLLMSlot();
         });
     });
 });

@@ -4,6 +4,7 @@
  */
 
 import { safeLog } from '../../utils/logger.backend.js';
+import { LLM_OPERATION_TIMEOUT_MS } from '../../config/constants.js';
 
 // ============================================
 // LLM RATE LIMITING (Semaphore)
@@ -70,6 +71,35 @@ function looksLikeHtml(value) {
     return typeof value === 'string' && /<\/?[a-z][^>]*>/i.test(value);
 }
 
+function buildLlmDeadlineExceededError() {
+    const error = new Error('Batch LLM item deadline exceeded');
+    error.code = 'LLM_ITEM_DEADLINE_EXCEEDED';
+    error.statusCode = 504;
+    return error;
+}
+
+function resolveLlmDeadlineOptions(options = {}) {
+    const timeoutMs = Number.isFinite(Number(options.timeoutMs)) && Number(options.timeoutMs) > 0
+        ? Number(options.timeoutMs)
+        : LLM_OPERATION_TIMEOUT_MS;
+    const deadlineAt = Number.isFinite(Number(options.deadlineAt))
+        ? Number(options.deadlineAt)
+        : Date.now() + timeoutMs;
+
+    return {
+        ...options,
+        timeoutMs,
+        deadlineAt
+    };
+}
+
+function assertLlmDeadlineNotExpired(options = {}) {
+    const resolvedDeadlineAt = Number(options.deadlineAt);
+    if (Number.isFinite(resolvedDeadlineAt) && resolvedDeadlineAt <= Date.now()) {
+        throw buildLlmDeadlineExceededError();
+    }
+}
+
 /**
  * Acquire a slot for LLM request (rate limiting)
  * @returns {Promise<void>}
@@ -134,6 +164,8 @@ export async function analyzeResumeWithLLM(text, _firmId, originalFileName = nul
     const { getAcceptedIndustriesString, getIndustryMappingString } = await import('../industry.service.js');
     const { DEFAULT_ANALYSIS_PROMPT, ANONYMIZATION_RULES_ANONYMOUS, ANONYMIZATION_RULES_NOMINATIVE } = await import('../../config/prompts.backend.js');
     const { buildPromptExecutionMetadata } = await import('../../config/llmGovernance.js');
+    const resolvedOptions = resolveLlmDeadlineOptions(options);
+    assertLlmDeadlineNotExpired(resolvedOptions);
 
     const settings = await getLLMSettings();
     const model = settings.llmModel;
@@ -172,7 +204,9 @@ export async function analyzeResumeWithLLM(text, _firmId, originalFileName = nul
         // Analyze with original filename for name extraction hint
         safeLog('debug', 'Batch analysis using governed prompt', { ...analysisPromptMeta, originalFileName });
         analysis = await analyzeResume(cleanedText, model, `${analysisPrompt}${ocrHint}`, { promptMetadata: analysisPromptMeta }, false, originalFileName, {
-            maxTokens: options.maxTokens
+            maxTokens: resolvedOptions.maxTokens,
+            timeoutMs: resolvedOptions.timeoutMs,
+            deadlineAt: resolvedOptions.deadlineAt
         });
     } finally {
         releaseLLMSlot();
@@ -194,6 +228,8 @@ export async function preAnalyzeResumeWithLLM(text, _firmId, originalFileName = 
     const { getLLMSettings } = await import('../settings.service.js');
     const { DEFAULT_PRE_ANALYSIS_PROMPT } = await import('../../config/prompts.backend.js');
     const { buildPromptExecutionMetadata } = await import('../../config/llmGovernance.js');
+    const resolvedOptions = resolveLlmDeadlineOptions({});
+    assertLlmDeadlineNotExpired(resolvedOptions);
 
     const settings = await getLLMSettings();
     const model = settings.llmModel;
@@ -207,7 +243,10 @@ export async function preAnalyzeResumeWithLLM(text, _firmId, originalFileName = 
     await acquireLLMSlot();
     try {
         safeLog('debug', 'Batch pre-analysis using governed prompt', { ...promptMetadata, originalFileName });
-        return await preAnalyzeResumeText(text, model, preAnalysisPrompt, { promptMetadata }, originalFileName);
+        return await preAnalyzeResumeText(text, model, preAnalysisPrompt, { promptMetadata }, originalFileName, {
+            timeoutMs: resolvedOptions.timeoutMs,
+            deadlineAt: resolvedOptions.deadlineAt
+        });
     } finally {
         releaseLLMSlot();
     }
@@ -234,6 +273,8 @@ export async function improveResumeWithLLM(text, analysis, _firmId, originalFile
     const { getAcceptedIndustriesString } = await import('../industry.service.js');
     const { DEFAULT_IMPROVEMENT_PROMPT, ANONYMIZATION_RULES_ANONYMOUS, ANONYMIZATION_RULES_NOMINATIVE } = await import('../../config/prompts.backend.js');
     const { buildPromptExecutionMetadata } = await import('../../config/llmGovernance.js');
+    const resolvedOptions = resolveLlmDeadlineOptions(options);
+    assertLlmDeadlineNotExpired(resolvedOptions);
 
     const settings = await getLLMSettings();
     const model = settings.llmModel;
@@ -260,7 +301,9 @@ export async function improveResumeWithLLM(text, analysis, _firmId, originalFile
     try {
         safeLog('debug', 'Batch improvement using governed prompt', { ...improvementPromptMeta, originalFileName });
         improveResult = await improveResume(improvementInput, analysis, model, improvementPrompt, originalFileName, { promptMetadata: improvementPromptMeta }, {
-            maxTokens: options.maxTokens
+            maxTokens: resolvedOptions.maxTokens,
+            timeoutMs: resolvedOptions.timeoutMs,
+            deadlineAt: resolvedOptions.deadlineAt
         });
     } finally {
         releaseLLMSlot();
@@ -302,6 +345,8 @@ export async function analyzeImprovedResumeWithLLM(text, _firmId, originalFileNa
     const { getAcceptedIndustriesString, getIndustryMappingString } = await import('../industry.service.js');
     const { DEFAULT_ANALYSIS_PROMPT, ANONYMIZATION_RULES_ANONYMOUS, ANONYMIZATION_RULES_NOMINATIVE } = await import('../../config/prompts.backend.js');
     const { buildPromptExecutionMetadata } = await import('../../config/llmGovernance.js');
+    const resolvedOptions = resolveLlmDeadlineOptions(options);
+    assertLlmDeadlineNotExpired(resolvedOptions);
 
     const settings = await getLLMSettings();
     const model = settings.llmModel;
@@ -328,7 +373,9 @@ export async function analyzeImprovedResumeWithLLM(text, _firmId, originalFileNa
     try {
         safeLog('debug', 'Batch post-improvement analysis using governed prompt', { ...analysisPromptMeta, originalFileName });
         improvedAnalysis = await analyzeResume(text, model, analysisPrompt, { promptMetadata: analysisPromptMeta }, true, originalFileName, {
-            maxTokens: options.maxTokens
+            maxTokens: resolvedOptions.maxTokens,
+            timeoutMs: resolvedOptions.timeoutMs,
+            deadlineAt: resolvedOptions.deadlineAt
         });
     } finally {
         releaseLLMSlot();

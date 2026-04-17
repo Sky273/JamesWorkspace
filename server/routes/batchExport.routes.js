@@ -20,6 +20,11 @@ import { getUserFirmId } from '../utils/firmHelpers.js';
 import { assertTrustedInternalServiceUrl } from '../utils/networkHostSecurity.js';
 import { getBatchExportPdfTimeoutMs } from '../utils/pdfServiceTimeouts.js';
 import { buildFirmLogoMarkup, replaceExportTemplatePlaceholders } from '../utils/exportTemplatePlaceholders.js';
+import {
+    buildBatchExportArchiveBudgetError,
+    getBatchExportMaxArchiveBytes,
+    getGeneratedArtifactByteLength
+} from '../utils/batchExportArchiveBudget.js';
 
 const router = express.Router();
 const MAX_BATCH_EXPORT_RESUMES = 100;
@@ -178,6 +183,8 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
         const batchExportConcurrency = getBatchExportConcurrency();
         const batchExportBatchDelayMs = getBatchExportBatchDelayMs();
         const totalBatches = Math.ceil(resumeIds.length / batchExportConcurrency);
+        const maxArchiveBytes = getBatchExportMaxArchiveBytes();
+        let totalGeneratedArtifactBytes = 0;
         safeLog('info', 'Starting batch export', { 
             requestId,
             resumeCount: resumeIds.length, 
@@ -185,7 +192,8 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
             format: exportFormat,
             pdfServerUrl: PDF_SERVER_URL,
             batchExportConcurrency,
-            totalBatches
+            totalBatches,
+            maxArchiveBytes
         });
 
         try {
@@ -352,8 +360,38 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
                     continue;
                 }
 
+                const artifactBytes = getGeneratedArtifactByteLength(result.data);
+                if (totalGeneratedArtifactBytes + artifactBytes > maxArchiveBytes) {
+                    const budgetError = buildBatchExportArchiveBudgetError({
+                        currentBytes: totalGeneratedArtifactBytes,
+                        nextBytes: artifactBytes,
+                        maxBytes: maxArchiveBytes
+                    });
+                    safeLog('warn', 'Batch export archive budget exceeded', {
+                        requestId,
+                        resumeId: result.resumeId,
+                        currentBytes: totalGeneratedArtifactBytes,
+                        nextBytes: artifactBytes,
+                        maxArchiveBytes
+                    });
+                    trackBatchExport({
+                        format: exportFormat,
+                        requestedResumes: resumeIds.length,
+                        resolvedResumes: resumesById.size,
+                        inaccessibleResumes: inaccessibleResumeCount,
+                        generatedFiles: Object.keys(zip.files).length,
+                        generatedArtifactBytes: totalGeneratedArtifactBytes,
+                        failedRuns: 1
+                    });
+                    return res.status(413).json({
+                        error: budgetError.message,
+                        requestId
+                    });
+                }
+
                 const artifactPath = await persistBatchExportArtifact(tempExportDir, result.fileName, result.data);
                 zip.file(result.fileName, fs.createReadStream(artifactPath));
+                totalGeneratedArtifactBytes += artifactBytes;
             }
 
             if (batchExportBatchDelayMs > 0 && batchIndex < resumeBatches.length - 1) {
@@ -420,6 +458,7 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
                 inaccessibleResumeCount,
                 filesCount: Object.keys(zip.files).length,
                 errorsCount: errors.length,
+                generatedArtifactBytes: totalGeneratedArtifactBytes,
                 streaming: true,
                 durationMs: Date.now() - startedAt
             });
@@ -436,6 +475,7 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
             inaccessibleResumes: inaccessibleResumeCount,
             generatedFiles: Object.keys(zip.files).length,
             failedFiles: errors.length,
+            generatedArtifactBytes: totalGeneratedArtifactBytes,
             archiveBytes: zipBuffer.length,
             successfulRuns: 1
         });
@@ -448,6 +488,7 @@ router.post('/', authenticateToken, validateBody(batchExportSchema), async (req,
             inaccessibleResumeCount,
             filesCount: Object.keys(zip.files).length,
             errorsCount: errors.length,
+            generatedArtifactBytes: totalGeneratedArtifactBytes,
             streaming: false,
             zipSize: zipBuffer.length,
             durationMs: Date.now() - startedAt

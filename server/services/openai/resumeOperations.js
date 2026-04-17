@@ -67,6 +67,36 @@ function buildSalvageSourceEntries(initialContent, compactRetryContent, repairCo
     ].filter(entry => typeof entry.content === 'string' && entry.content.trim());
 }
 
+function buildDeadlineExceededError(operationType) {
+    const error = new Error(`${operationType} deadline exceeded`);
+    error.code = 'LLM_ITEM_DEADLINE_EXCEEDED';
+    error.statusCode = 504;
+    return error;
+}
+
+function resolveRemainingBudgetMs(options = {}, fallbackTimeoutMs = LLM_OPERATION_TIMEOUT_MS, operationType = 'LLM operation') {
+    const explicitDeadlineAt = Number(options.deadlineAt);
+    if (Number.isFinite(explicitDeadlineAt)) {
+        const remainingMs = explicitDeadlineAt - Date.now();
+        if (remainingMs <= 0) {
+            throw buildDeadlineExceededError(operationType);
+        }
+
+        return remainingMs;
+    }
+
+    const explicitTimeoutMs = Number(options.timeoutMs);
+    if (Number.isFinite(explicitTimeoutMs) && explicitTimeoutMs > 0) {
+        return explicitTimeoutMs;
+    }
+
+    return fallbackTimeoutMs;
+}
+
+function isDeadlineExceededError(error) {
+    return error?.code === 'LLM_ITEM_DEADLINE_EXCEEDED';
+}
+
 export async function analyzeResume(resumeText, model, analysisPrompt, userMetadata = null, isImprovedCV = false, originalFileName = null, options = {}) {
     let prompt = analysisPrompt.replace('{TEXT}', resumeText);
     
@@ -101,6 +131,7 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
                 : (requestedMaxTokens !== undefined ? { maxTokens: requestedMaxTokens } : {})),
             temperature: 0,
             responseFormat: { type: "json_object" },
+            timeout: resolveRemainingBudgetMs(options, LLM_OPERATION_TIMEOUT_MS, operationType),
             maxPromptLength: 120000,
             userMetadata,
             operationType
@@ -129,6 +160,7 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
         });
 
         try {
+            resolveRemainingBudgetMs(options, LLM_OPERATION_TIMEOUT_MS, operationType);
             response = await requestAnalysis({ compactRetry: true });
             compactRetryContent = getAssistantContent(response);
             rawAnalysis = parseJsonFromLlmResponse(compactRetryContent);
@@ -137,6 +169,9 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
             if (normalizedCompactRetryError !== compactRetryError) {
                 throw normalizedCompactRetryError;
             }
+            if (isDeadlineExceededError(compactRetryError)) {
+                throw compactRetryError;
+            }
 
             safeLog('warn', 'Resume analysis compact JSON retry failed, attempting JSON repair', {
                 error: compactRetryError.message,
@@ -144,6 +179,7 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
             });
 
             try {
+                resolveRemainingBudgetMs(options, LLM_OPERATION_TIMEOUT_MS, operationType);
                 response = await requestAnalysis({ repairPayload: compactRetryContent || initialContent });
                 repairContent = getAssistantContent(response);
                 rawAnalysis = parseJsonFromLlmResponse(repairContent);
@@ -151,6 +187,9 @@ export async function analyzeResume(resumeText, model, analysisPrompt, userMetad
                 const normalizedError = normalizeNonRetryableLlmProviderError(error);
                 if (normalizedError !== error) {
                     throw normalizedError;
+                }
+                if (isDeadlineExceededError(error)) {
+                    throw error;
                 }
 
                 const recoveredAnalysisAttempt = buildSalvageSourceEntries(initialContent, compactRetryContent, repairContent)
@@ -239,7 +278,7 @@ export async function preAnalyzeResumeText(text, model, preAnalysisPrompt, userM
         ],
         maxTokens: options.maxTokens ?? 12000,
         temperature: 0,
-        timeout: 20 * 60 * 1000,
+        timeout: resolveRemainingBudgetMs(options, 20 * 60 * 1000, 'Resume Pre-Analysis'),
         maxPromptLength: 120000,
         userMetadata,
         operationType: 'Resume Pre-Analysis'
@@ -293,7 +332,7 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
             maxTokens: options.maxTokens ?? 16384,
             temperature: 0.3,
             responseFormat: { type: "json_object" },
-            timeout: LLM_OPERATION_TIMEOUT_MS,
+            timeout: resolveRemainingBudgetMs(options, LLM_OPERATION_TIMEOUT_MS, 'Resume Improvement'),
             userMetadata,
             operationType: 'Resume Improvement'
         });
@@ -370,6 +409,7 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
                 });
 
                 try {
+                    resolveRemainingBudgetMs(options, LLM_OPERATION_TIMEOUT_MS, 'Resume Improvement');
                     response = await requestImprovement(true);
                     const retriedRawContent = stripLlmThinkingContent(response.choices[0].message.content);
                     const improvementPayload = extractImprovementEnvelope(parseJsonFromLlmResponse(retriedRawContent));
@@ -399,6 +439,9 @@ export async function improveResume(text, analysis, model, improvementPromptTemp
                     const normalizedRetryError = normalizeNonRetryableLlmProviderError(retryError);
                     if (normalizedRetryError !== retryError) {
                         throw normalizedRetryError;
+                    }
+                    if (isDeadlineExceededError(retryError)) {
+                        throw retryError;
                     }
                     safeLog('error', 'Resume improvement retry failed', {
                         error: retryError.message,

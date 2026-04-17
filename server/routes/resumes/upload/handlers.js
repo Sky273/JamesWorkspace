@@ -222,7 +222,10 @@ function createExtractPdfHandler() {
                 ocrUsed,
                 ocrPageCount,
                 failedOcrPages,
-                avgOcrConfidence
+                avgOcrConfidence,
+                forcedDocumentOcrAttempted,
+                forcedDocumentOcrSkipped,
+                forcedDocumentOcrSkipReason
             } = result;
 
             await cleanupTempFile(req.file.path);
@@ -236,7 +239,15 @@ function createExtractPdfHandler() {
                 fileSize: req.file.size,
                 mimeType: validationMimeType || 'application/pdf',
                 success: true,
-                metadata: { pages: numPages, ocrUsed, ocrPageCount, extractionTimeMs: extractionTime }
+                metadata: {
+                    pages: numPages,
+                    ocrUsed,
+                    ocrPageCount,
+                    extractionTimeMs: extractionTime,
+                    forcedDocumentOcrAttempted,
+                    forcedDocumentOcrSkipped,
+                    forcedDocumentOcrSkipReason
+                }
             });
             if (ocrUsed) {
                 metrics.trackOcrActivity({
@@ -267,6 +278,9 @@ function createExtractPdfHandler() {
                 ocrUsed,
                 ocrPageCount,
                 avgOcrConfidence: roundedAvgOcrConfidence,
+                forcedDocumentOcrAttempted,
+                forcedDocumentOcrSkipped,
+                forcedDocumentOcrSkipReason,
                 extractionTimeMs: extractionTime
             });
 
@@ -283,6 +297,9 @@ function createExtractPdfHandler() {
                 ocrUsed,
                 ocrPageCount,
                 avgOcrConfidence: roundedAvgOcrConfidence,
+                forcedDocumentOcrAttempted,
+                forcedDocumentOcrSkipped,
+                forcedDocumentOcrSkipReason,
                 extractionTimeMs: extractionTime
             });
         } catch (error) {

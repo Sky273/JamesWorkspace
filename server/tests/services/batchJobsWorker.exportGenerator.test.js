@@ -130,6 +130,7 @@ describe('Batch Jobs Worker - Export Generator', () => {
         delete process.env.PDF_SERVER_URL;
         delete process.env.BATCH_EXPORT_MAX_OPERATIONS;
         delete process.env.BATCH_EXPORT_BATCH_SIZE;
+        delete process.env.BATCH_EXPORT_MAX_ARCHIVE_BYTES;
     });
 
     const template = {
@@ -530,6 +531,37 @@ describe('Batch Jobs Worker - Export Generator', () => {
         ).rejects.toThrow('Batch export exceeds configured workload limit (301/300 operations)');
 
         expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('should reject batch exports above the configured archive budget', async () => {
+        process.env.BATCH_EXPORT_MAX_ARCHIVE_BYTES = '16';
+        mockGetJob.mockResolvedValueOnce({ id: 'j1' });
+        mockGetJobItems.mockResolvedValueOnce([
+            { id: 'i1', status: 'success', resume_id: 'r1', file_name: 'cv.pdf' }
+        ]);
+        mockQuery
+            .mockResolvedValueOnce({ rows: [template] })
+            .mockResolvedValueOnce({ rows: [{ id: 'r1', improved_text: '<p>CV</p>', name: 'Alice', title: 'Dev', trigram: 'ALI' }] });
+
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(32))
+        });
+
+        await expect(
+            generateJobExport('j1', { templateId: 'tpl-1', exportFormats: ['pdf'] })
+        ).rejects.toThrow('Batch export exceeds configured archive budget');
+
+        expect(mockUpdateJobItemStatus).toHaveBeenCalledWith('i1', 'error', expect.objectContaining({
+            error_message: expect.stringContaining('archive budget')
+        }));
+        expect(mockTrackBatchExportActivity).toHaveBeenCalledWith(expect.objectContaining({
+            failedRuns: 1,
+            metadata: expect.objectContaining({
+                reason: 'max_archive_bytes_exceeded',
+                maxArchiveBytes: 16
+            })
+        }));
     });
 
     it('should process exports in batches of 100 by default', async () => {

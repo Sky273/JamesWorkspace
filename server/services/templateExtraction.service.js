@@ -14,6 +14,11 @@ import {
 const TEMPLATE_EXTRACTION_OPERATION_TYPE = 'Template Extraction';
 const TEMPLATE_EXTRACTION_VISION_OPERATION_TYPE = 'Template Extraction Vision Fallback';
 const TEMPLATE_EXTRACTION_HTML_TIMEOUT_MS = Number.parseInt(process.env.TEMPLATE_EXTRACTION_HTML_TIMEOUT_MS || '120000', 10);
+const DEFAULT_TEMPLATE_EXTRACTION_PROMPT_BUDGET_CHARS = Number.parseInt(process.env.TEMPLATE_EXTRACTION_PROMPT_BUDGET_CHARS || '50000', 10);
+const DEFAULT_TEMPLATE_EXTRACTION_HTML_SEGMENT_CHARS = 20000;
+const DEFAULT_TEMPLATE_EXTRACTION_FRAGMENT_SEGMENT_CHARS = 6000;
+const DEFAULT_TEMPLATE_EXTRACTION_STYLESHEET_SEGMENT_CHARS = 8000;
+const DEFAULT_TEMPLATE_EXTRACTION_IMAGE_LINES = 10;
 
 const HTML_EXTRACTION_PROMPT = [
     'Tu es un expert en creation de templates de CV reutilisables.',
@@ -103,7 +108,32 @@ function buildLayoutContext(layoutAnalysis = {}) {
     ].join('\n');
 }
 
-function buildImageContext(images = []) {
+function truncatePromptSegment(value = '', maxChars = 0) {
+    const normalized = String(value || '');
+    if (!Number.isFinite(maxChars) || maxChars <= 0 || normalized.length <= maxChars) {
+        return normalized;
+    }
+
+    const suffix = '\n...[truncated]';
+    const sliceLength = Math.max(0, maxChars - suffix.length);
+    return normalized.slice(0, sliceLength) + suffix;
+}
+
+function buildBoundedLayoutContext(layoutAnalysis = {}, { fragmentChars, stylesheetChars } = {}) {
+    if (!layoutAnalysis || Object.keys(layoutAnalysis).length === 0) {
+        return '';
+    }
+
+    return buildLayoutContext({
+        ...layoutAnalysis,
+        headerHtml: truncatePromptSegment(layoutAnalysis.headerHtml || '', fragmentChars),
+        contentHtml: truncatePromptSegment(layoutAnalysis.contentHtml || '', fragmentChars),
+        footerHtml: truncatePromptSegment(layoutAnalysis.footerHtml || '', fragmentChars),
+        stylesheet: truncatePromptSegment(layoutAnalysis.stylesheet || '', stylesheetChars)
+    });
+}
+
+function buildImageContext(images = [], { maxItems = DEFAULT_TEMPLATE_EXTRACTION_IMAGE_LINES } = {}) {
     if (images.length === 0) {
         return '';
     }
@@ -115,9 +145,13 @@ function buildImageContext(images = []) {
         'Ces images sont deja presentes dans le HTML ou disponibles pour remplacer un logo.'
     ];
 
-    images.forEach((img, index) => {
+    images.slice(0, maxItems).forEach((img, index) => {
         lines.push(`Image ${index + 1}: ${img.name} (${img.contentType}, ${Math.round((img.base64?.length || 0) / 1024)}KB)`);
     });
+
+    if (images.length > maxItems) {
+        lines.push(`... ${images.length - maxItems} image(s) supplementaire(s) omise(s) du prompt`);
+    }
 
     return lines.join('\n');
 }
@@ -389,6 +423,46 @@ function processLLMResponse(response, fileName, images = []) {
     };
 }
 
+function buildTemplateExtractionUserInstruction({
+    fileName,
+    htmlContent,
+    images,
+    extractedStyles,
+    layoutAnalysis,
+    promptBudgetChars
+}) {
+    const layoutAware = !!layoutAnalysis;
+    const htmlSegment = truncatePromptSegment(htmlContent, DEFAULT_TEMPLATE_EXTRACTION_HTML_SEGMENT_CHARS);
+    const boundedLayoutContext = buildBoundedLayoutContext(layoutAnalysis, {
+        fragmentChars: DEFAULT_TEMPLATE_EXTRACTION_FRAGMENT_SEGMENT_CHARS,
+        stylesheetChars: DEFAULT_TEMPLATE_EXTRACTION_STYLESHEET_SEGMENT_CHARS
+    });
+    const imageContext = buildImageContext(images, {
+        maxItems: DEFAULT_TEMPLATE_EXTRACTION_IMAGE_LINES
+    });
+    const stylesContext = buildStylesContext(extractedStyles);
+
+    const sections = [
+        `Voici le HTML du CV "${fileName}" a convertir en template:`,
+        '',
+        layoutAware && htmlContent.length > DEFAULT_TEMPLATE_EXTRACTION_HTML_SEGMENT_CHARS
+            ? '[HTML complet omis du prompt car des fragments de layout structures sont disponibles et priorises]'
+            : htmlSegment,
+        imageContext,
+        stylesContext,
+        boundedLayoutContext,
+        '',
+        'Retourne le JSON du template avec tous les champs requis (name, description, headerContent, templateContent, footerContent, stylesheet, footerHeight, tags, extractedColors, extractedFonts).'
+    ];
+
+    const userInstruction = sections.filter((section) => typeof section === 'string').join('\n');
+    if (userInstruction.length > promptBudgetChars) {
+        throw new Error(`Template extraction payload too large (${userInstruction.length}/${promptBudgetChars} chars)`);
+    }
+
+    return userInstruction;
+}
+
 export async function extractTemplateFromHTML(htmlContent, images = [], fileName = 'cv.docx', extractedStyles = {}, options = {}) {
     try {
         safeLog('info', 'Starting HTML-based template extraction', {
@@ -398,17 +472,15 @@ export async function extractTemplateFromHTML(htmlContent, images = [], fileName
             hasExtractedStyles: !!extractedStyles.colors?.length,
             hasLayoutAnalysis: !!options.layoutAnalysis
         });
-
-        const userInstruction = [
-            `Voici le HTML du CV "${fileName}" a convertir en template:`,
-            '',
+        const promptBudgetChars = options.promptBudgetChars ?? DEFAULT_TEMPLATE_EXTRACTION_PROMPT_BUDGET_CHARS;
+        const userInstruction = buildTemplateExtractionUserInstruction({
+            fileName,
             htmlContent,
-            buildImageContext(images),
-            buildStylesContext(extractedStyles),
-            buildLayoutContext(options.layoutAnalysis),
-            '',
-            'Retourne le JSON du template avec tous les champs requis (name, description, headerContent, templateContent, footerContent, stylesheet, footerHeight, tags, extractedColors, extractedFonts).'
-        ].join('\n');
+            images,
+            extractedStyles,
+            layoutAnalysis: options.layoutAnalysis,
+            promptBudgetChars
+        });
 
         const response = await callLLM([
             { role: 'system', content: HTML_EXTRACTION_PROMPT },

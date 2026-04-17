@@ -10,33 +10,9 @@ import fs from 'fs';
 import { safeLog } from '../utils/logger.backend.js';
 import { PORT, ALLOWED_ORIGINS } from './constants.js';
 import { httpAgent, httpsAgent } from './axios.js';
+import { startRuntimeMaintenance, stopRuntimeMaintenance } from './lifecycle/runtimeMaintenance.js';
 
-// Import cleanup/destroy functions
-import { cleanupRateLimitStore, startRateLimitCleanup } from '../middleware/rateLimit.middleware.js';
-import { cleanupAllCaches } from '../services/cache.service.js';
-import { startPeriodicCleanup, stopPeriodicCleanup } from '../utils/fileCleanup.js';
-import { startBlacklistCleanup, destroyBlacklist } from '../services/tokenBlacklist.service.js';
-import { cleanupFactsCache, destroyFactsCache, startFactsCacheCleanup } from '../services/marketFacts.service.js';
-import { cleanupTrendsCache, destroyTrendsCache, startTrendsCacheCleanup } from '../services/marketTrends.service.js';
-import { cleanupMetiersCache, destroyMetiersCache } from '../services/rome.service.js';
-import { invalidateTagsCache, destroyTagsCache, startTagsCacheCleanup } from '../services/tagsCache.service.js';
-import { destroyEscoCache, startEscoCacheCleanup } from '../services/escoService.js';
-import { registerCacheCleanupFunctions, startMemoryMonitor, stopMemoryMonitor } from '../services/memoryMonitor.service.js';
 import { initializeDatabase, closePool } from '../services/database.service.js';
-import { startScheduler, stopScheduler } from '../services/scheduler.service.js';
-import { initBackupScheduler, stopBackupScheduler } from '../services/backup-scheduler.service.js';
-import { initializeWorker as initBatchJobsWorker, startWorker as startBatchJobsWorker, stopWorker as stopBatchJobsWorker } from '../services/batchJobsWorker/workerLifecycle.js';
-import { destroyCalendarService } from '../services/calendar.service.js';
-import { destroyAuthOauthStates, startAuthOauthStatesCleanup } from '../services/authOauthState.service.js';
-import { destroyMailStatesCleanup, startMailStatesCleanup } from '../services/mailOauthState.service.js';
-import { destroyGdprMailStatesCleanup, startGdprMailStatesCleanup } from '../services/gdprMailOauthState.service.js';
-import { destroyGoogleapis } from '../services/mail/gmailProvider.js';
-import { destroyMjml } from '../services/emailTemplates.service.js';
-import { metrics } from '../services/metrics.service.js';
-import { destroySettingsCache } from '../services/settings.service.js';
-import { initializeLLMAvailabilityState } from '../services/llmAvailability.service.js';
-import { subscribeToCacheInvalidations, unsubscribeFromCacheInvalidations } from '../services/cacheVersion.service.js';
-import { handleCacheInvalidationNotification } from '../services/cache.service.js';
 
 // ============================================
 // MEMORY MONITORING
@@ -47,10 +23,6 @@ function getPositiveTimeout(envName, defaultValue) {
     return Number.isInteger(parsed) && parsed > 0 ? parsed : defaultValue;
 }
 
-function isEnvFlagEnabled(envName) {
-    return String(process.env[envName] || '').toLowerCase() === 'true';
-}
-
 // ============================================
 // SERVER STARTUP
 // ============================================
@@ -59,29 +31,6 @@ function isEnvFlagEnabled(envName) {
  * Called after the HTTP(S) server starts listening
  */
 async function onServerStart(server, protocol, port) {
-    startRateLimitCleanup();
-    startAuthOauthStatesCleanup();
-    startMailStatesCleanup();
-
-    // Clean all caches on startup
-    safeLog('info', 'Cleaning all caches on startup');
-    try {
-        await cleanupAllCaches();
-        cleanupFactsCache();
-        cleanupTrendsCache();
-        cleanupMetiersCache();
-        await invalidateTagsCache();
-        safeLog('info', 'All caches cleaned successfully');
-    } catch (error) {
-        safeLog('error', 'Error cleaning caches on startup', { error: error.message });
-    }
-
-    registerCacheCleanupFunctions([
-        cleanupFactsCache,
-        cleanupTrendsCache,
-        cleanupMetiersCache
-    ]);
-    
     // Keep request timeout configurable for long-running collection jobs, but keep idle connection
     // timeouts short to reduce socket retention and slow-client exposure.
     const requestTimeoutMs = getPositiveTimeout('SERVER_REQUEST_TIMEOUT_MS', 70 * 60 * 1000);
@@ -108,71 +57,11 @@ async function onServerStart(server, protocol, port) {
     const dbInitialized = await initializeDatabase();
     if (dbInitialized) {
         safeLog('info', 'PostgreSQL database initialized successfully');
-
-        try {
-            await subscribeToCacheInvalidations(handleCacheInvalidationNotification);
-            safeLog('info', 'Cache invalidation listener started');
-        } catch (error) {
-            safeLog('warn', 'Failed to start cache invalidation listener', { error: error.message });
-        }
-
-        try {
-            await initializeLLMAvailabilityState();
-            safeLog('info', 'LLM availability state initialized');
-        } catch (error) {
-            safeLog('error', 'Failed to initialize LLM availability state', { error: error.message });
-        }
-
-        // Start backup scheduler (scheduled database backups via FTP/SFTP)
-        // Requires schema to be prepared separately via docker-migrate.
-        if (isEnvFlagEnabled('E2E_DISABLE_BACKUP_SCHEDULER')) {
-            safeLog('info', 'Backup Scheduler disabled by environment flag', { envName: 'E2E_DISABLE_BACKUP_SCHEDULER' });
-        } else {
-            try {
-                await initBackupScheduler();
-                safeLog('info', 'Backup Scheduler initialized');
-            } catch (error) {
-                safeLog('error', 'Failed to initialize Backup Scheduler', { error: error.message });
-            }
-        }
-        
-        // Start GDPR consent scheduler (checks for expired consents, sends reminders, purges)
-        if (isEnvFlagEnabled('E2E_DISABLE_GDPR_SCHEDULER')) {
-            safeLog('info', 'GDPR Consent Scheduler disabled by environment flag', { envName: 'E2E_DISABLE_GDPR_SCHEDULER' });
-        } else {
-            startScheduler();
-            safeLog('info', 'GDPR Consent Scheduler started');
-        }
-        
-        // Initialize and start batch jobs worker
-        try {
-            await initBatchJobsWorker();
-            startBatchJobsWorker();
-            safeLog('info', 'Batch Jobs Worker started');
-        } catch (error) {
-            safeLog('error', 'Failed to start Batch Jobs Worker', { error: error.message });
-        }
     } else {
         safeLog('error', 'PostgreSQL database initialization failed');
     }
 
-    // Start periodic cleanup of temporary files.
-    // When PostgreSQL is unavailable, keep filesystem cleanup active but skip DB-backed cleanup tasks.
-    startPeriodicCleanup(60 * 60 * 1000, 60 * 60 * 1000, { enableDatabaseTasks: dbInitialized });
-    
-    // Start periodic cleanup of expired blacklisted tokens only when PostgreSQL is available.
-    if (dbInitialized) {
-        startBlacklistCleanup(60 * 60 * 1000); // Every hour
-    }
-    
-    startFactsCacheCleanup();
-    startTrendsCacheCleanup();
-    startTagsCacheCleanup();
-    startEscoCacheCleanup();
-    startGdprMailStatesCleanup();
-    
-    // Start memory monitoring
-    startMemoryMonitor();
+    await startRuntimeMaintenance({ dbInitialized });
 }
 
 // ============================================
@@ -275,33 +164,7 @@ export function startServer(app, serverDir) {
             }
 
             safeLog('info', 'HTTP server closed');
-            
-            // Cleanup intervals and caches
-            stopMemoryMonitor();
-            cleanupRateLimitStore();
-            await cleanupAllCaches();
-            destroyBlacklist();
-            stopPeriodicCleanup();
-            metrics.stopPeriodicSave();
-            
-            // Destroy all caches (clears data AND intervals)
-            destroyFactsCache();
-            destroyTrendsCache();
-            destroyMetiersCache();
-            destroyTagsCache();
-            destroyEscoCache();
-            destroyMailStatesCleanup();
-            destroyGdprMailStatesCleanup();
-            destroyAuthOauthStates();
-            destroyGoogleapis();
-            destroyCalendarService();
-            await stopBatchJobsWorker();
-            destroyMjml();
-            await destroySettingsCache();
-            stopScheduler();
-            stopBackupScheduler();
-            await unsubscribeFromCacheInvalidations();
-            safeLog('info', 'All caches destroyed');
+            await stopRuntimeMaintenance();
             
             // Close PostgreSQL connection pool
             try {

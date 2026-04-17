@@ -159,6 +159,7 @@ describe('Batch Export Routes', () => {
 
     afterEach(() => {
         process.env.PDF_SERVER_INTERNAL_TOKEN = originalPdfToken;
+        delete process.env.BATCH_EXPORT_MAX_ARCHIVE_BYTES;
     });
 
     describe('POST /', () => {
@@ -401,6 +402,44 @@ describe('Batch Export Routes', () => {
 
             expect(res.status).toBe(500);
             expect(res.body.error).toContain('No files');
+        });
+
+        it('should return 413 when generated files exceed the configured archive budget', async () => {
+            process.env.BATCH_EXPORT_MAX_ARCHIVE_BYTES = '16';
+            mockFetch.mockResolvedValueOnce({ ok: true });
+            mockGetTemplateByIdForExport.mockResolvedValueOnce(
+                { id: TEMPLATE_UUID, template_content: '<div>-content-</div>', header_content: '', footer_content: '', stylesheet: '', footer_height: 25 }
+            );
+            mockGetResumesByIdsForExport.mockResolvedValueOnce([
+                {
+                    id: RESUME_UUID,
+                    name: 'John Doe',
+                    title: 'Dev',
+                    improved_text: 'CV content',
+                    firm_id: '00000000-0000-0000-0000-000000000010'
+                }
+            ]);
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                arrayBuffer: () => Promise.resolve(new ArrayBuffer(32))
+            });
+
+            const res = await request(app)
+                .post('/api/batch-export')
+                .set(AUTH)
+                .set('x-request-id', 'batch-req-budget')
+                .send({ resumeIds: [RESUME_UUID], templateId: TEMPLATE_UUID });
+
+            expect(res.status).toBe(413);
+            expect(res.body.requestId).toBe('batch-req-budget');
+            expect(res.body.error).toContain('archive budget');
+            expect(mockGenerateNodeStream).not.toHaveBeenCalled();
+            expect(mockTrackBatchExportActivity).toHaveBeenCalledWith(expect.objectContaining({
+                source: 'http',
+                format: 'pdf',
+                failedRuns: 1,
+                generatedArtifactBytes: 0
+            }));
         });
 
         it('should handle PDF generation failure gracefully', async () => {

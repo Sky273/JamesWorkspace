@@ -228,6 +228,45 @@ describe('Template Extraction Service', () => {
             expect(userMsg).toContain('totalLines');
         });
 
+        it('should omit full raw html from the prompt when it is huge and layout fragments are available', async () => {
+            callLLM.mockResolvedValueOnce({ content: validTemplateJSON, model: 'gpt-4', usage: {} });
+            const hugeHtml = `<div>${'X'.repeat(30000)}</div>`;
+
+            await extractTemplateFromHTML(hugeHtml, [], 'cv.pdf', {}, {
+                layoutAnalysis: {
+                    headerHtml: '<div>Header</div>',
+                    contentHtml: '<div>Content</div>',
+                    footerHtml: '<div>Footer</div>',
+                    stylesheet: '.template-page{width:600px;}',
+                    metrics: { totalLines: 3 }
+                }
+            });
+
+            const userMsg = callLLM.mock.calls[0][0][1].content;
+            expect(userMsg).toContain('HTML complet omis du prompt');
+            expect(userMsg).not.toContain('X'.repeat(1000));
+            expect(userMsg).toContain('FRAGMENTS DE LAYOUT PRE-DECOUPES');
+        });
+
+        it('should bound layout fragments in the prompt', async () => {
+            callLLM.mockResolvedValueOnce({ content: validTemplateJSON, model: 'gpt-4', usage: {} });
+            const hugeFragment = 'Y'.repeat(10000);
+
+            await extractTemplateFromHTML('<div>small</div>', [], 'cv.pdf', {}, {
+                layoutAnalysis: {
+                    headerHtml: hugeFragment,
+                    contentHtml: hugeFragment,
+                    footerHtml: hugeFragment,
+                    stylesheet: hugeFragment,
+                    metrics: { totalLines: 3 }
+                }
+            });
+
+            const userMsg = callLLM.mock.calls[0][0][1].content;
+            expect(userMsg.length).toBeLessThan(50000);
+            expect(userMsg).toContain('[truncated]');
+        });
+
         it('should fall back to a deterministic layout template when the LLM call fails and layout data exists', async () => {
             callLLM.mockRejectedValueOnce(new Error('Upstream timeout after 120000ms'));
 
@@ -252,6 +291,23 @@ describe('Template Extraction Service', () => {
             expect(result.template.stylesheet).toContain('.template-layout-fallback');
             expect(result.template.extractedColors).toEqual(['#123456']);
             expect(result.template.extractedFonts).toEqual(['Inter']);
+        });
+
+        it('should fall back to deterministic layout extraction when the prompt budget is exceeded before the LLM call', async () => {
+            const result = await extractTemplateFromHTML('<div>small</div>', [], 'cv.pdf', { colors: ['#123456'] }, {
+                promptBudgetChars: 200,
+                layoutAnalysis: {
+                    headerHtml: 'H'.repeat(1000),
+                    contentHtml: 'C'.repeat(1000),
+                    footerHtml: 'F'.repeat(1000),
+                    stylesheet: 'S'.repeat(1000),
+                    metrics: { totalLines: 3 }
+                }
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.model).toBe('deterministic-layout-fallback');
+            expect(callLLM).not.toHaveBeenCalled();
         });
 
         it('sanitizes returned HTML and stylesheet fragments', async () => {
