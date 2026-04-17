@@ -27,7 +27,7 @@ test.describe('Authentication', () => {
       return;
     }
 
-    await expect(page.getByRole('heading', { name: /connexion|se connecter|login/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /connect|sign in|login/i })).toBeVisible();
     await expect(page.locator('#email-address')).toBeVisible();
   });
 

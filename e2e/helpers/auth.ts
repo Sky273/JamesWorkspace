@@ -15,6 +15,8 @@ const DEFAULT_APP_ADMIN_EMAIL = 'admin@resumeconverter.local';
 const DEFAULT_APP_ADMIN_PASSWORD = 'admin123';
 const DEFAULT_APP_ADMIN_NAME = 'Default Administrator';
 const DEFAULT_APP_ADMIN_FIRM_NAME = 'Default Firm';
+const DEFAULT_E2E_LLM_PROVIDER = 'openai';
+const DEFAULT_E2E_LLM_MODEL = 'gpt-4o-mini';
 const E2E_TEMPLATE_NAME = '000 Playwright Export Template';
 const E2E_TEMPLATE_CONTENT = '<section><h1>-name-</h1><h2>-title-</h2><div>-content-</div></section>';
 const E2E_TEMPLATE_STYLESHEET = 'body { font-family: Arial, sans-serif; } h1 { font-size: 20px; } h2 { font-size: 14px; color: #555; }';
@@ -141,22 +143,91 @@ async function invalidateSettingsCachesForE2E(pool: pg.Pool): Promise<void> {
   }
 }
 
-export async function setSelfServiceRegistrationAutoApproval(enabled: boolean): Promise<void> {
-  const pool = createPool();
+async function ensureE2ESettings(
+  pool: pg.Pool,
+  overrides: {
+    allowUserRegistrationWithoutApproval?: boolean;
+    publicHomeEnabled?: boolean;
+  } = {},
+): Promise<void> {
+  const existingSettings = await pool.query(
+    `
+      SELECT id
+      FROM llm_settings
+      WHERE settings_key = 'default'
+      LIMIT 1
+    `
+  );
 
-  try {
+  const fields = {
+    name: 'Default Settings',
+    status: 'active',
+    llm_provider: DEFAULT_E2E_LLM_PROVIDER,
+    llm_model: DEFAULT_E2E_LLM_MODEL,
+    public_home_enabled: overrides.publicHomeEnabled ?? true,
+    allow_user_registration_without_approval: overrides.allowUserRegistrationWithoutApproval ?? false,
+  };
+
+  if (existingSettings.rows.length > 0) {
     await pool.query(
       `
         UPDATE llm_settings
         SET
-          allow_user_registration_without_approval = $1,
+          name = $2,
+          status = $3,
+          llm_provider = $4,
+          llm_model = $5,
+          public_home_enabled = $6,
+          allow_user_registration_without_approval = $7,
           updated_at = CURRENT_TIMESTAMP
-        WHERE settings_key = 'default'
+        WHERE id = $1
       `,
-      [enabled]
+      [
+        existingSettings.rows[0].id as string,
+        fields.name,
+        fields.status,
+        fields.llm_provider,
+        fields.llm_model,
+        fields.public_home_enabled,
+        fields.allow_user_registration_without_approval,
+      ]
     );
+  } else {
+    await pool.query(
+      `
+        INSERT INTO llm_settings (
+          settings_key,
+          name,
+          status,
+          llm_provider,
+          llm_model,
+          public_home_enabled,
+          allow_user_registration_without_approval
+        )
+        VALUES ('default', $1, $2, $3, $4, $5, $6)
+      `,
+      [
+        fields.name,
+        fields.status,
+        fields.llm_provider,
+        fields.llm_model,
+        fields.public_home_enabled,
+        fields.allow_user_registration_without_approval,
+      ]
+    );
+  }
 
-    await invalidateSettingsCachesForE2E(pool);
+  await invalidateSettingsCachesForE2E(pool);
+}
+
+export async function setSelfServiceRegistrationAutoApproval(enabled: boolean): Promise<void> {
+  const pool = createPool();
+
+  try {
+    await ensureE2ESettings(pool, {
+      allowUserRegistrationWithoutApproval: enabled,
+      publicHomeEnabled: true,
+    });
   } finally {
     await pool.end();
   }
@@ -253,6 +324,8 @@ export async function ensureDefaultAdminCanSignInForE2E(): Promise<void> {
   const pool = createPool();
 
   try {
+    await ensureE2ESettings(pool, { publicHomeEnabled: true });
+
     const firmResult = await pool.query(
       `
         SELECT id, name
@@ -327,6 +400,8 @@ async function ensureActivePlaywrightUser(): Promise<void> {
       const pool = createPool();
 
       try {
+        await ensureE2ESettings(pool, { publicHomeEnabled: true });
+
         const firmResult = await pool.query(
           'SELECT id FROM firms ORDER BY created_at ASC NULLS LAST, id ASC LIMIT 1'
         );
@@ -527,6 +602,16 @@ async function ensureActivePlaywrightUser(): Promise<void> {
   }
 
   await bootstrapPromise;
+}
+
+export async function getE2EAdminFirmId(): Promise<string> {
+  await ensureActivePlaywrightUser();
+
+  if (!bootstrappedAdmin?.firm_id) {
+    throw new Error('Playwright admin bootstrap did not produce a firm id');
+  }
+
+  return bootstrappedAdmin.firm_id;
 }
 
 export async function signInAsE2EUser(page: Page): Promise<void> {

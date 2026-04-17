@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { signInAsE2EAdmin } from './helpers/auth';
+import { getE2EAdminFirmId, signInAsE2EAdmin } from './helpers/auth';
 import { expectHiddenAfterRefresh, expectVisibleAfterRefresh } from './helpers/refresh';
 import {
   cardContaining,
@@ -29,6 +29,7 @@ test.describe('Admin CRUD flows', () => {
     const userName = uniqueName('User E2E');
     const updatedUserName = `${userName} Updated`;
     const userEmail = `e2e-${Date.now()}@example.com`;
+    const adminFirmId = await getE2EAdminFirmId();
 
     await page.goto('/admin?tab=firms');
     await expect(page).toHaveURL(/\/admin\?tab=firms$/);
@@ -83,7 +84,7 @@ test.describe('Admin CRUD flows', () => {
       email: userEmail,
       jobTitle: 'QA E2E',
       phone: '',
-      firmId: '01a31f67-818c-4a19-bec4-f6b30562c452',
+      firmId: adminFirmId,
       role: 'localAdmin',
       status: 'active',
     });
@@ -112,7 +113,7 @@ test.describe('Admin CRUD flows', () => {
       email: userEmail,
       jobTitle: 'QA E2E',
       phone: '',
-      firmId: createdUserPayload.firmId || createdUser?.firmId || '01a31f67-818c-4a19-bec4-f6b30562c452',
+      firmId: createdUserPayload.firmId || createdUser?.firmId || adminFirmId,
       role: 'localAdmin',
       status: 'active',
     });

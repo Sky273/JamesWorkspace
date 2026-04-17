@@ -48,6 +48,6 @@ test.describe('Admin Quality Pages', () => {
     await expect(page.locator('#email-address')).toHaveCount(0);
     await expect(page.getByRole('heading', { name: /journal d'audit rgpd|gdpr/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /filtres|filters/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /actualiser|refresh/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /actualiser|refresh/i }).first()).toBeVisible();
   });
 });
