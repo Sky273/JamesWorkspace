@@ -375,6 +375,7 @@ Fichiers associés :
 - [SECURITY.md](./SECURITY.md) - Politique de sécurité
 - [MEMORY_AUDIT.md](./MEMORY_AUDIT.md) - Audit mémoire et optimisations
 - [docs/ANALYSE_ALTERNATIVES_LLM.md](./docs/ANALYSE_ALTERNATIVES_LLM.md) - Analyse des alternatives LLM
+- [docs/LLM_COST_MODEL_AND_PRICING.md](./docs/LLM_COST_MODEL_AND_PRICING.md) - coûts LLM, option modèle local et projection tarifaire rentable
 
 ## 🔄 Changelog
 
