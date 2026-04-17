@@ -98,13 +98,22 @@ describe('mapSettingsToFrontend', () => {
         expect(result['DPO Phone']).toBe('');
     });
 
-    it('should preserve zero values for weights', () => {
-        const row = { id: 'set-3', executive_summary_weight: 0, skills_weight: 0 };
+    it('should preserve explicit zero and off values instead of falling back to defaults', () => {
+        const row = {
+            id: 'set-3',
+            executive_summary_weight: 0,
+            skills_weight: 0,
+            ollama_num_ctx: 0,
+            chatbot_enabled: 'off',
+            webgl_enabled: 'off'
+        };
         const result = mapSettingsToFrontend(row);
 
-        // 0 is falsy, so || will use default — this is existing behavior
-        expect(result['Executive Summary Weight']).toBe(20);
-        expect(result['Skills Weight']).toBe(20);
+        expect(result['Executive Summary Weight']).toBe(0);
+        expect(result['Skills Weight']).toBe(0);
+        expect(result.ollamaNumCtx).toBe(0);
+        expect(result.chatbotEnabled).toBe('off');
+        expect(result.webglEnabled).toBe('off');
     });
 });
 

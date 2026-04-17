@@ -15,6 +15,14 @@ import {
     DEFAULT_ALLOW_USER_REGISTRATION_WITHOUT_APPROVAL
 } from '../config/aiCredits.js';
 
+function getStringSetting(value, fallback = '') {
+    return value ?? fallback;
+}
+
+function getNumberSetting(value, fallback) {
+    return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
 /**
  * Map a PostgreSQL llm_settings row to frontend format
  * @param {Object} row - Database row
@@ -24,36 +32,36 @@ export function mapSettingsToFrontend(row) {
     const creditDefaults = buildAiCreditSettingsDefaults();
     return {
         id: row.id,
-        llmProvider: row.llm_provider || 'openai',
-        llmModel: row.llm_model || null,
-        ollamaBaseUrl: row.ollama_base_url || '',
-        ollamaVisionModel: row.ollama_vision_model || '',
-        ollamaKeepAlive: row.ollama_keep_alive || '5m',
-        ollamaNumCtx: row.ollama_num_ctx || 8192,
-        llmModelParameters: row.llm_model_parameters || {},
-        cvMode: row.cv_mode || 'nominative',
-        chatbotEnabled: row.chatbot_enabled || 'on',
-        webglEnabled: row.webgl_enabled || 'on',
+        llmProvider: row.llm_provider ?? 'openai',
+        llmModel: row.llm_model ?? null,
+        ollamaBaseUrl: getStringSetting(row.ollama_base_url),
+        ollamaVisionModel: getStringSetting(row.ollama_vision_model),
+        ollamaKeepAlive: getStringSetting(row.ollama_keep_alive, '5m'),
+        ollamaNumCtx: getNumberSetting(row.ollama_num_ctx, 8192),
+        llmModelParameters: row.llm_model_parameters ?? {},
+        cvMode: row.cv_mode ?? 'nominative',
+        chatbotEnabled: row.chatbot_enabled ?? 'on',
+        webglEnabled: row.webgl_enabled ?? 'on',
         publicHomeEnabled: row.public_home_enabled ?? undefined,
         preAnalysisEnabled: row.pre_analysis_enabled ?? false,
-        'Pre Analysis Prompt': row.pre_analysis_prompt || DEFAULT_PRE_ANALYSIS_PROMPT,
-        'Analysis Prompt': row.analysis_prompt || DEFAULT_ANALYSIS_PROMPT,
-        'Improvement Prompt': row.improvement_prompt || DEFAULT_IMPROVEMENT_PROMPT,
-        'Match Analysis Prompt': row.match_analysis_prompt || DEFAULT_MATCH_ANALYSIS_PROMPT,
-        'Adaptation Prompt': row.adaptation_prompt || DEFAULT_ADAPTATION_PROMPT,
-        'Executive Summary Weight': row.executive_summary_weight || 20,
-        'Skills Weight': row.skills_weight || 20,
-        'Experience Weight': row.experience_weight || 20,
-        'Education Weight': row.education_weight || 15,
-        'ATS Weight': row.ats_weight || 15,
-        'Hobbies Languages Weight': row.hobbies_languages_weight || 10,
-        'Profile Matching Local Skill Weight': row.profile_matching_local_skill_weight || 6,
-        'Profile Matching Local Tool Weight': row.profile_matching_local_tool_weight || 4,
-        'Profile Matching Local Industry Weight': row.profile_matching_local_industry_weight || 3,
-        'Profile Matching Local Soft Skill Weight': row.profile_matching_local_softskill_weight || 2,
-        'Profile Matching Local Title Exact Weight': row.profile_matching_local_title_exact_weight || 5,
-        'Profile Matching Local Title Token Weight': row.profile_matching_local_title_token_weight || 2,
-        'Profile Matching Local Coverage Multiplier': row.profile_matching_local_coverage_multiplier || 3,
+        'Pre Analysis Prompt': row.pre_analysis_prompt ?? DEFAULT_PRE_ANALYSIS_PROMPT,
+        'Analysis Prompt': row.analysis_prompt ?? DEFAULT_ANALYSIS_PROMPT,
+        'Improvement Prompt': row.improvement_prompt ?? DEFAULT_IMPROVEMENT_PROMPT,
+        'Match Analysis Prompt': row.match_analysis_prompt ?? DEFAULT_MATCH_ANALYSIS_PROMPT,
+        'Adaptation Prompt': row.adaptation_prompt ?? DEFAULT_ADAPTATION_PROMPT,
+        'Executive Summary Weight': getNumberSetting(row.executive_summary_weight, 20),
+        'Skills Weight': getNumberSetting(row.skills_weight, 20),
+        'Experience Weight': getNumberSetting(row.experience_weight, 20),
+        'Education Weight': getNumberSetting(row.education_weight, 15),
+        'ATS Weight': getNumberSetting(row.ats_weight, 15),
+        'Hobbies Languages Weight': getNumberSetting(row.hobbies_languages_weight, 10),
+        'Profile Matching Local Skill Weight': getNumberSetting(row.profile_matching_local_skill_weight, 6),
+        'Profile Matching Local Tool Weight': getNumberSetting(row.profile_matching_local_tool_weight, 4),
+        'Profile Matching Local Industry Weight': getNumberSetting(row.profile_matching_local_industry_weight, 3),
+        'Profile Matching Local Soft Skill Weight': getNumberSetting(row.profile_matching_local_softskill_weight, 2),
+        'Profile Matching Local Title Exact Weight': getNumberSetting(row.profile_matching_local_title_exact_weight, 5),
+        'Profile Matching Local Title Token Weight': getNumberSetting(row.profile_matching_local_title_token_weight, 2),
+        'Profile Matching Local Coverage Multiplier': getNumberSetting(row.profile_matching_local_coverage_multiplier, 3),
         allowUserRegistrationWithoutApproval: row.allow_user_registration_without_approval ?? DEFAULT_ALLOW_USER_REGISTRATION_WITHOUT_APPROVAL,
         firmInitialCredits: row.firm_initial_credits ?? creditDefaults.firmInitialCredits,
         aiCreditChatbotMessage: row.ai_credit_chatbot_message ?? creditDefaults.aiCreditChatbotMessage,
@@ -74,10 +82,10 @@ export function mapSettingsToFrontend(row) {
         aiMaxTokensResumeMatch: row.ai_max_tokens_resume_match ?? creditDefaults.aiMaxTokensResumeMatch,
         aiMaxTokensProfileSearch: row.ai_max_tokens_profile_search ?? creditDefaults.aiMaxTokensProfileSearch,
         aiMaxTokensProfileAnalysis: row.ai_max_tokens_profile_analysis ?? creditDefaults.aiMaxTokensProfileAnalysis,
-        promptVersionState: row.prompt_versions || {},
-        'DPO Name': row.dpo_name || '',
-        'DPO Email': row.dpo_email || '',
-        'DPO Phone': row.dpo_phone || ''
+        promptVersionState: row.prompt_versions ?? {},
+        'DPO Name': getStringSetting(row.dpo_name),
+        'DPO Email': getStringSetting(row.dpo_email),
+        'DPO Phone': getStringSetting(row.dpo_phone)
     };
 }
 
