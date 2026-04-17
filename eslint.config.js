@@ -143,4 +143,16 @@ export default tseslint.config(
       ],
     },
   },
+
+  // Playwright E2E TypeScript files use a dedicated tsconfig at the repo root.
+  {
+    files: ['e2e/**/*.ts', 'playwright.config.ts'],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        project: ['./tsconfig.e2e.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
 );
