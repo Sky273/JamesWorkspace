@@ -7,26 +7,13 @@ import {
 } from '../config/aiCredits.js';
 import { escapeLike } from '../utils/postgresHelpers.js';
 import {
-    invalidateClientsCaches,
-    invalidateDealsCaches,
-    invalidateFirmsCaches,
-    invalidateMissionsCaches
-} from './cache.service.js';
+    getLockedFirmCredits,
+    insertCreditTransaction,
+    invalidateCreditDependentCaches,
+    updateFirmCreditsBalance
+} from './aiCreditsLedger.service.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getLLMSettings } from './settings.service.js';
-
-function normalizeMetadata(metadata = {}) {
-    return metadata && typeof metadata === 'object' ? metadata : {};
-}
-
-async function invalidateCreditDependentCaches() {
-    await Promise.all([
-        invalidateFirmsCaches(),
-        invalidateClientsCaches(),
-        invalidateDealsCaches(),
-        invalidateMissionsCaches()
-    ]);
-}
 
 function buildInsufficientCreditsError({ firmId, available, required, actionType }) {
     const error = new Error('Insufficient firm credits');
@@ -39,40 +26,6 @@ function buildInsufficientCreditsError({ firmId, available, required, actionType
         actionType
     };
     return error;
-}
-
-async function insertTransaction(client, {
-    firmId,
-    userId = null,
-    actionType,
-    creditsDelta,
-    balanceAfter,
-    metadata = {},
-    relatedTransactionId = null
-}) {
-    const result = await client.query(
-        `INSERT INTO firm_credit_transactions (
-            firm_id,
-            user_id,
-            action_type,
-            credits_delta,
-            balance_after,
-            metadata,
-            related_transaction_id
-        ) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)
-        RETURNING *`,
-        [
-            firmId,
-            userId,
-            actionType,
-            creditsDelta,
-            balanceAfter,
-            JSON.stringify(normalizeMetadata(metadata)),
-            relatedTransactionId
-        ]
-    );
-
-    return result.rows[0];
 }
 
 async function withManagedClient(existingClient, operation) {
@@ -93,7 +46,7 @@ export async function addInitialFirmCreditGrant(firmId, { client = null, amount 
         return null;
     }
 
-    return withManagedClient(client, async (dbClient) => insertTransaction(dbClient, {
+    return withManagedClient(client, async (dbClient) => insertCreditTransaction(dbClient, {
         firmId,
         userId: null,
         actionType: 'firm.initial_grant',
@@ -145,14 +98,7 @@ export async function reserveFirmCredits({
     try {
         await client.query('BEGIN');
 
-        const firmResult = await client.query('SELECT id, credits FROM firms WHERE id = $1 FOR UPDATE', [firmId]);
-        if (firmResult.rows.length === 0) {
-            const error = new Error('Firm not found');
-            error.statusCode = 404;
-            throw error;
-        }
-
-        const currentCredits = Number(firmResult.rows[0].credits || 0);
+        const currentCredits = await getLockedFirmCredits(client, firmId);
         if (currentCredits < numericAmount) {
             throw buildInsufficientCreditsError({
                 firmId,
@@ -163,15 +109,9 @@ export async function reserveFirmCredits({
         }
 
         const balanceAfter = currentCredits - numericAmount;
-        await client.query(
-            `UPDATE firms
-             SET credits = $1,
-                 updated_at = CURRENT_TIMESTAMP
-             WHERE id = $2`,
-            [balanceAfter, firmId]
-        );
+        await updateFirmCreditsBalance(client, firmId, balanceAfter);
 
-        const transaction = await insertTransaction(client, {
+        const transaction = await insertCreditTransaction(client, {
             firmId,
             userId,
             actionType,
@@ -281,7 +221,7 @@ export async function reserveImportJobCredits({
             improve: Boolean(improve),
             analysisCostPerItem: analysisCost,
             improvementCostPerItem: improvementCost,
-            ...normalizeMetadata(metadata)
+            ...metadata
         }
     });
 
@@ -320,26 +260,12 @@ export async function addFirmCreditsTransaction({
             await client.query('BEGIN');
         }
 
-        const firmResult = await client.query('SELECT id, credits FROM firms WHERE id = $1 FOR UPDATE', [firmId]);
-        if (firmResult.rows.length === 0) {
-            const error = new Error('Firm not found');
-            error.statusCode = 404;
-            throw error;
-        }
-
-        const currentCredits = Number(firmResult.rows[0].credits || 0);
+        const currentCredits = await getLockedFirmCredits(client, firmId);
         const balanceAfter = currentCredits + numericAmount;
 
-        const updateResult = await client.query(
-            `UPDATE firms
-             SET credits = $1,
-                 updated_at = CURRENT_TIMESTAMP
-             WHERE id = $2
-             RETURNING *`,
-            [balanceAfter, firmId]
-        );
+        const updatedFirm = await updateFirmCreditsBalance(client, firmId, balanceAfter, { returning: true });
 
-        const transaction = await insertTransaction(client, {
+        const transaction = await insertCreditTransaction(client, {
             firmId,
             userId,
             actionType,
@@ -354,7 +280,7 @@ export async function addFirmCreditsTransaction({
         }
 
         return {
-            firm: updateResult.rows[0],
+            firm: updatedFirm,
             transaction
         };
     } catch (error) {
@@ -439,7 +365,7 @@ export async function reserveAiWorkflowCredits({
         amount: totalReserved,
         metadata: {
             plan,
-            ...normalizeMetadata(metadata)
+                ...metadata
         }
     });
 
@@ -521,25 +447,12 @@ export async function refundCreditsAmount(reservation, amount, metadata = {}) {
     try {
         await client.query('BEGIN');
 
-        const firmResult = await client.query('SELECT id, credits FROM firms WHERE id = $1 FOR UPDATE', [reservation.firm_id]);
-        if (firmResult.rows.length === 0) {
-            const error = new Error('Firm not found');
-            error.statusCode = 404;
-            throw error;
-        }
-
-        const currentCredits = Number(firmResult.rows[0].credits || 0);
+        const currentCredits = await getLockedFirmCredits(client, reservation.firm_id);
         const balanceAfter = currentCredits + refundAmount;
 
-        await client.query(
-            `UPDATE firms
-             SET credits = $1,
-                 updated_at = CURRENT_TIMESTAMP
-             WHERE id = $2`,
-            [balanceAfter, reservation.firm_id]
-        );
+        await updateFirmCreditsBalance(client, reservation.firm_id, balanceAfter);
 
-        const transaction = await insertTransaction(client, {
+        const transaction = await insertCreditTransaction(client, {
             firmId: reservation.firm_id,
             userId: reservation.user_id || null,
             actionType: 'credit.refund',
@@ -547,7 +460,7 @@ export async function refundCreditsAmount(reservation, amount, metadata = {}) {
             balanceAfter,
             metadata: {
                 originalActionType: reservation.action_type,
-                ...normalizeMetadata(metadata)
+                ...metadata
             },
             relatedTransactionId: reservation.id
         });
