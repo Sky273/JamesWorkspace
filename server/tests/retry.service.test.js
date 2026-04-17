@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Mock the logger
-vi.mock('../src/utils/logger.backend.js', () => ({
+vi.mock('../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 

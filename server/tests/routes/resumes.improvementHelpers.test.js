@@ -61,6 +61,7 @@ import { persistDeferredPostImprovementAnalysis } from '../../routes/resumes/cru
 describe('resumes improvementHelpers', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        delete process.env.E2E_DISABLE_EXTERNAL_LLM;
         mockGetLLMSettings.mockResolvedValue({
             llmModel: 'gpt-5.4',
             cvMode: 'nominative',
@@ -144,5 +145,45 @@ describe('resumes improvementHelpers', () => {
             phase: 'improved'
         });
         expect(mockUpdateVersionPostAnalysis).not.toHaveBeenCalled();
+    });
+
+    it('skips external LLM calls during deferred post analysis in E2E mode', async () => {
+        process.env.E2E_DISABLE_EXTERNAL_LLM = 'true';
+
+        await persistDeferredPostImprovementAnalysis({
+            resumeId: 'resume-1',
+            improvedText: 'Improved CV text',
+            fileName: 'cv.pdf',
+            userMetadata: { userId: 'user-1', firmId: 'firm-1' },
+            currentVersion: 'version-2'
+        });
+
+        expect(mockRunAiActionWithCredits).not.toHaveBeenCalled();
+        expect(mockGetLLMSettings).not.toHaveBeenCalled();
+        expect(mockAnalyzeResume).not.toHaveBeenCalled();
+        expect(mockUpdateResume).toHaveBeenCalledWith(
+            'resume-1',
+            expect.objectContaining({
+                improved_text: 'Improved CV text',
+                improved_global_rating: 88,
+                improved_skills: JSON.stringify(['JavaScript', 'TypeScript', 'React'])
+            })
+        );
+        expect(mockPersistResumeSkillEvidence).toHaveBeenCalledWith({
+            candidateId: 'resume-1',
+            analysis: expect.objectContaining({
+                tags: expect.objectContaining({
+                    skills: ['JavaScript', 'TypeScript', 'React']
+                })
+            }),
+            phase: 'improved'
+        });
+        expect(mockUpdateVersionPostAnalysis).toHaveBeenCalledWith(
+            'resume-1',
+            'version-2',
+            expect.objectContaining({
+                globalRating: '88%'
+            })
+        );
     });
 });

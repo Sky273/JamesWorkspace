@@ -13,6 +13,10 @@ import {
     workflowReservationCoversAction
 } from '../../../services/aiCredits.service.js';
 
+function isExternalLlmDisabledForE2E() {
+    return process.env.E2E_DISABLE_EXTERNAL_LLM === 'true';
+}
+
 function hasSuggestionContent(suggestions) {
     if (!suggestions || typeof suggestions !== 'object') return false;
     return Object.values(suggestions).some((value) => Array.isArray(value) ? value.length > 0 : Boolean(value));
@@ -80,6 +84,42 @@ function buildImprovedResumeUpdateData(improvedText, analysis) {
     };
 }
 
+function buildMockImprovedAnalysis(improvedText, fileName = null) {
+    const normalizedText = typeof improvedText === 'string' && improvedText.trim().length > 0
+        ? improvedText.trim()
+        : '<p>CV amélioré automatiquement pour les tests E2E.</p>';
+    const inferredTitle = fileName
+        ? String(fileName).replace(/\.[^.]+$/, '')
+        : 'Consultant IT confirmé';
+
+    return {
+        title: inferredTitle || 'Consultant IT confirmé',
+        globalRating: '88%',
+        skillsRating: '90%',
+        experiencesRating: '86%',
+        educationRating: '82%',
+        atsOptimizationRating: '89%',
+        executiveSummaryRating: '85%',
+        hobbiesLanguagesRating: '70%',
+        summary: 'Version améliorée simulée pour les tests E2E.',
+        tags: {
+            skills: ['JavaScript', 'TypeScript', 'React'],
+            industries: ['IT'],
+            tools: ['Node.js', 'PostgreSQL'],
+            softSkills: ['Communication'],
+            skillsEvidence: [{ name: 'JavaScript', evidenceScore: 0.86, confidence: 0.92 }],
+            toolsEvidence: [{ name: 'Node.js', evidenceScore: 0.8, confidence: 0.9 }],
+            softSkillsEvidence: [{ name: 'Communication', evidenceScore: 0.72, confidence: 0.84 }]
+        },
+        suggestions: {
+            critical: [],
+            recommended: ['Version optimisée E2E'],
+            optional: []
+        },
+        structuredText: normalizedText
+    };
+}
+
 async function updateResumeVersionWithPostAnalysis(resumeId, versionNumber, analysis) {
     await updateVersionPostAnalysis(resumeId, versionNumber, analysis);
 }
@@ -92,6 +132,30 @@ async function persistDeferredPostImprovementAnalysisInternal({
     currentVersion,
     workflowReservation = null
 }) {
+    if (isExternalLlmDisabledForE2E()) {
+        const improvedAnalysis = buildMockImprovedAnalysis(improvedText, fileName);
+        const updatedResume = await resumesService.updateResume(resumeId, buildImprovedResumeUpdateData(improvedText, improvedAnalysis));
+        await persistResumeSkillEvidence({
+            candidateId: resumeId,
+            analysis: improvedAnalysis,
+            phase: 'improved'
+        });
+
+        if (currentVersion) {
+            await updateResumeVersionWithPostAnalysis(resumeId, currentVersion, improvedAnalysis);
+        }
+
+        safeLog('info', 'Deferred post-improvement analysis mocked for E2E', {
+            resumeId,
+            currentVersion
+        });
+
+        return {
+            updatedResume,
+            improvedAnalysis
+        };
+    }
+
     const settings = await getLLMSettings();
     const model = settings.llmModel;
     const cvMode = settings.cvMode || 'nominative';
