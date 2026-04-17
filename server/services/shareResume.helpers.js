@@ -43,6 +43,12 @@ export function isManagedSharedPdfPath(filePath) {
         return false;
     }
 
+    // Reject Windows absolute paths even when running on POSIX, otherwise
+    // `path.resolve()` would reinterpret them as relative paths under the managed directory.
+    if (path.win32.isAbsolute(filePath) && !path.isAbsolute(filePath)) {
+        return false;
+    }
+
     const resolvedPath = resolveManagedSharedPdfPath(filePath);
     return resolvedPath === RESOLVED_SHARED_PDF_DIR || resolvedPath.startsWith(`${RESOLVED_SHARED_PDF_DIR}${path.sep}`);
 }
