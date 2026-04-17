@@ -4,6 +4,7 @@ import { validateBody, validateParams, updateUserProfileSchema } from '../utils/
 import { safeLog } from '../utils/logger.backend.js';
 import * as usersService from '../services/users.service.js';
 import { getUserFirmId } from '../utils/firmHelpers.js';
+import { mapUserToFrontend } from '../utils/mappers.js';
 import { shouldBypassCache } from '../utils/requestCacheControl.js';
 
 const router = express.Router();
@@ -56,22 +57,11 @@ router.get('/', authenticateToken, requireUserManager, async (req, res) => {
         });
 
         // Map to frontend format (exclude password)
-        const mappedUsers = users.map(user => ({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            jobTitle: user.job_title || '',
-            phone: user.phone || '',
-            firmId: user.firm_id,
-            firmName: user.firm_name,
-            firm: user.firm_name,
-            customerId: user.firm_id,
-            customerName: user.firm_name,
-            customer: user.firm_name,
-            role: user.role || 'user',
-            status: user.status || 'active',
-            createdAt: user.created_at,
-            lastLogin: user.last_login
+        const mappedUsers = users.map((user) => mapUserToFrontend(user, {
+            overrides: {
+                createdAt: user.created_at,
+                lastLogin: user.last_login
+            }
         }));
 
         const response = {
@@ -127,19 +117,7 @@ router.put('/:id', authenticateToken, validateParams('id'), validateBody(updateU
         return res.json({
             success: true,
             user: {
-                id: updatedUser.id,
-                name: updatedUser.name,
-                email: updatedUser.email,
-                jobTitle: updatedUser.job_title,
-                phone: updatedUser.phone,
-                firmId: updatedUser.firm_id,
-                firmName: updatedUser.firm_name,
-                firm: updatedUser.firm_name,
-                customerId: updatedUser.firm_id,
-                customerName: updatedUser.firm_name,
-                customer: updatedUser.firm_name,
-                role: updatedUser.role,
-                status: updatedUser.status
+                ...mapUserToFrontend(updatedUser)
             }
         });
     } catch (error) {

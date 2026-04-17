@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import { authenticateToken } from '../../middleware/auth.middleware.js';
 import { authLimiter } from '../../middleware/rateLimit.middleware.js';
 import { validateBody, googleTokenSchema } from '../../utils/validation.js';
+import { mapUserToFrontend } from '../../utils/mappers.js';
 import { generateAccessToken, generateRefreshToken, verifyToken } from '../../services/jwt.service.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../services/security.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
@@ -221,23 +222,10 @@ router.get('/google/callback', async (req, res) => {
         
         await authService.updateLastLogin(user.id);
         
-        const userData = {
-            id: user.id,
-            email: user.email,
-            name: user.name || '',
-            jobTitle: user.job_title || '',
-            phone: user.phone || '',
-            status: user.status,
-            role: user.role,
-            firmId: user.firm_id,
-            firm_id: user.firm_id,
-            firmName: user.firm_name,
-            firm: user.firm_name,
-            firmLogo: user.firm_logo || '',
-            customerId: user.firm_id,
-            customerName: user.firm_name,
-            customer: user.firm_name
-        };
+        const userData = mapUserToFrontend(user, {
+            includeLegacyAliases: true,
+            includeGoogleFields: true
+        });
         
         const accessToken = generateAccessToken(userData);
         const refreshToken = generateRefreshToken(userData);
@@ -330,23 +318,10 @@ router.post('/google/token', authLimiter, validateBody(googleTokenSchema), async
         
         await authService.updateLastLogin(user.id);
         
-        const userData = {
-            id: user.id,
-            email: user.email,
-            name: user.name || '',
-            jobTitle: user.job_title || '',
-            phone: user.phone || '',
-            status: user.status,
-            role: user.role,
-            firmId: user.firm_id,
-            firm_id: user.firm_id,
-            firmName: user.firm_name,
-            firm: user.firm_name,
-            firmLogo: user.firm_logo || '',
-            customerId: user.firm_id,
-            customerName: user.firm_name,
-            customer: user.firm_name
-        };
+        const userData = mapUserToFrontend(user, {
+            includeLegacyAliases: true,
+            includeGoogleFields: true
+        });
         
         const accessToken = generateAccessToken(userData);
         const refreshToken = generateRefreshToken(userData);

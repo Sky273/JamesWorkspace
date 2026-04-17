@@ -171,6 +171,8 @@ describe('Users Routes', () => {
             expect(res.body.email).toBe('new@example.com');
             expect(res.body.firmId).toBe('f-1');
             expect(res.body.firmName).toBe('Acme Corp');
+            expect(res.body.customerId).toBeUndefined();
+            expect(res.body.firm).toBeUndefined();
             expect(res.body.invitationSent).toBe(true);
             expect(mockRequestPasswordReset).toHaveBeenCalledWith('new@example.com', expect.objectContaining({
                 emailType: 'invite',

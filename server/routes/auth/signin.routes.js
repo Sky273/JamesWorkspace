@@ -10,6 +10,7 @@ import { validateBody, signInSchema, registerSchema, isValidEmail } from '../../
 import { consumeRefreshToken, generateAccessToken, generateRefreshToken, verifyRefreshToken, verifyToken, revokeToken } from '../../services/jwt.service.js';
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../../services/security.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
+import { mapUserToFrontend } from '../../utils/mappers.js';
 import { is2FAEnabled, verifyTotpCode } from '../../services/totp.service.js';
 import * as authService from '../../services/auth.service.js';
 import { enforceRegistrationProtection } from '../../services/registrationProtection.service.js';
@@ -36,29 +37,11 @@ const AUTH_REVALIDATE_CACHE_HEADERS = {
 // SHARED HELPERS
 // ============================================
 
-/**
- * Format a raw DB user row into a consistent API response shape.
- */
 function formatUserResponse(user) {
-    return {
-        id: user.id,
-        email: user.email,
-        name: user.name || '',
-        jobTitle: user.job_title || '',
-        phone: user.phone || '',
-        status: user.status,
-        role: user.role,
-        firmId: user.firm_id,
-        firm_id: user.firm_id,
-        firmName: user.firm_name,
-        firm: user.firm_name,
-        firmLogo: user.firm_logo || '',
-        customerId: user.firm_id,
-        customerName: user.firm_name,
-        customer: user.firm_name,
-        google_id: user.google_id || null,
-        google_email: user.google_email || null
-    };
+    return mapUserToFrontend(user, {
+        includeLegacyAliases: true,
+        includeGoogleFields: true
+    });
 }
 
 /**

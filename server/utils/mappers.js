@@ -147,6 +147,41 @@ export function mapTemplateFromFrontend(data) {
     return fields;
 }
 
+export function mapUserToFrontend(row, {
+    includeLegacyAliases = false,
+    includeGoogleFields = false,
+    overrides = {}
+} = {}) {
+    const mappedUser = {
+        id: row.id,
+        email: row.email,
+        name: row.name || '',
+        jobTitle: row.job_title || row.jobTitle || '',
+        phone: row.phone || '',
+        status: row.status,
+        role: row.role,
+        firmId: row.firm_id || row.firmId || null,
+        firmName: row.firm_name || row.firmName || null,
+        firmLogo: row.firm_logo || row.firmLogo || '',
+        ...overrides
+    };
+
+    if (includeLegacyAliases) {
+        mappedUser.firm_id = mappedUser.firmId;
+        mappedUser.firm = mappedUser.firmName;
+        mappedUser.customerId = mappedUser.firmId;
+        mappedUser.customerName = mappedUser.firmName;
+        mappedUser.customer = mappedUser.firmName;
+    }
+
+    if (includeGoogleFields) {
+        mappedUser.google_id = row.google_id || null;
+        mappedUser.google_email = row.google_email || null;
+    }
+
+    return mappedUser;
+}
+
 /**
  * Map frontend settings data to PostgreSQL llm_settings columns
  * @param {Object} data - Frontend data (after normalizeWeights)

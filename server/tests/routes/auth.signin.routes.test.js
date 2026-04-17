@@ -350,6 +350,10 @@ describe('Auth Routes - POST /api/auth/signin', () => {
             expect(res.body.user).toBeDefined();
             expect(res.body.user.email).toBe('test@example.com');
             expect(res.body.user.id).toBe('user-123');
+            expect(res.body.user.firmId).toBe('firm-123');
+            expect(res.body.user.firm_id).toBe('firm-123');
+            expect(res.body.user.customerId).toBe('firm-123');
+            expect(res.body.user.firmName).toBe('Test Firm');
             
             // Check cookies are set
             const cookies = res.headers['set-cookie'];
@@ -601,6 +605,8 @@ describe('Auth Routes - POST /api/auth/refresh', () => {
         expect(res.headers['cache-control']).toBe('private, no-cache, max-age=0, must-revalidate');
         expect(res.body.user).toBeDefined();
         expect(res.body.user.id).toBe('user-123');
+        expect(res.body.user.firm_id).toBe('firm-123');
+        expect(res.body.user.customerName).toBe('Test Firm');
         
         // Verify both cookies are set (token rotation)
         const cookies = res.headers['set-cookie'];
@@ -737,6 +743,8 @@ describe('Auth Routes - GET /api/auth/me', () => {
         expect(res.body.user.email).toBe('test@example.com');
         expect(res.body.user.name).toBe('Test User');
         expect(res.body.user.role).toBe('user');
+        expect(res.body.user.firm_id).toBe('firm-123');
+        expect(res.body.user.customerId).toBe('firm-123');
     });
 
     it('should return 404 if user not found', async () => {

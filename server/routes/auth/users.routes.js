@@ -13,6 +13,7 @@ import { safeLog } from '../../utils/logger.backend.js';
 import * as usersService from '../../services/users.service.js';
 import { PASSWORD_RESET_EMAIL_TYPES, requestPasswordReset } from '../../services/passwordReset.service.js';
 import { getUserFirmIdFromUser } from '../../utils/firmHelpers.js';
+import { mapUserToFrontend } from '../../utils/mappers.js';
 import {
     buildAdminUserUpdateData,
     normalizeAdminUserPayload,
@@ -156,18 +157,18 @@ router.post('/users', authenticateToken, requireUserManager, validateBody(create
                 : 'New user created by admin but invitation email failed'
         });
 
-        res.status(201).json({
-            id: newUser.id,
-            email: newUser.email,
-            name: newUser.name || userData.name,
-            role: newUser.role || userData.role,
-            status: newUser.status || userData.status,
-            jobTitle: newUser.job_title || newUser.jobTitle || userData.job_title || null,
-            phone: newUser.phone || userData.phone || null,
-            firmId: newUser.firm_id || newUser.firmId || foundFirm.id,
-            firmName: newUser.firm_name || newUser.firmName || foundFirm.name,
-            invitationSent
-        });
+        res.status(201).json(mapUserToFrontend(newUser, {
+            overrides: {
+                name: newUser.name || userData.name,
+                role: newUser.role || userData.role,
+                status: newUser.status || userData.status,
+                jobTitle: newUser.job_title || newUser.jobTitle || userData.job_title || null,
+                phone: newUser.phone || userData.phone || null,
+                firmId: newUser.firm_id || newUser.firmId || foundFirm.id,
+                firmName: newUser.firm_name || newUser.firmName || foundFirm.name,
+                invitationSent
+            }
+        }));
     } catch (error) {
         safeLog('error', 'Create user error', { error: error.message });
         res.status(500).json({ error: 'Failed to create user' });
@@ -285,17 +286,14 @@ router.put('/users/:id', authenticateToken, requireUserManager, validateParams('
             message: 'User updated by admin'
         });
 
-        res.json({
-            id: updatedUser.id,
-            email: updatedUser.email,
-            name: updatedUser.name,
-            role: updatedUser.role,
-            status: updatedUser.status,
-            jobTitle: updatedUser.job_title || updatedUser.jobTitle || null,
-            phone: updatedUser.phone || null,
-            firmId: updatedUser.firm_id || updatedUser.firmId || foundFirm.id,
-            firmName: updatedUser.firm_name || updatedUser.firmName || foundFirm.name
-        });
+        res.json(mapUserToFrontend(updatedUser, {
+            overrides: {
+                jobTitle: updatedUser.job_title || updatedUser.jobTitle || null,
+                phone: updatedUser.phone || null,
+                firmId: updatedUser.firm_id || updatedUser.firmId || foundFirm.id,
+                firmName: updatedUser.firm_name || updatedUser.firmName || foundFirm.name
+            }
+        }));
     } catch (error) {
         if (error.statusCode === 404) {
             return res.status(404).json({ error: 'User not found' });
