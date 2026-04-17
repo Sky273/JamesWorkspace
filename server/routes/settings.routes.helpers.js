@@ -4,12 +4,34 @@ import { buildLlmAdminMetadataWithOptions, sanitizeLlmModelParameters } from '..
 import { getPromptContract, getPromptDefinition } from '../config/llmGovernance.js';
 import { validateOllamaModelExists } from '../services/ollamaAdmin.service.js';
 import {
+    normalizeWeights,
+    DEFAULT_ANALYSIS_PROMPT,
+    DEFAULT_IMPROVEMENT_PROMPT,
+    DEFAULT_MATCH_ANALYSIS_PROMPT,
+    DEFAULT_ADAPTATION_PROMPT,
+    DEFAULT_PRE_ANALYSIS_PROMPT
+} from '../config/prompts.backend.js';
+import {
+    PROFILE_MATCHING_LOCAL_SKILL_WEIGHT,
+    PROFILE_MATCHING_LOCAL_TOOL_WEIGHT,
+    PROFILE_MATCHING_LOCAL_INDUSTRY_WEIGHT,
+    PROFILE_MATCHING_LOCAL_SOFTSKILL_WEIGHT,
+    PROFILE_MATCHING_LOCAL_TITLE_EXACT_WEIGHT,
+    PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT,
+    PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER
+} from '../config/constants.js';
+import {
+    buildAiCreditSettingsDefaults,
+    DEFAULT_ALLOW_USER_REGISTRATION_WITHOUT_APPROVAL
+} from '../config/aiCredits.js';
+import {
     computeUpdatedPromptVersionState,
     extractPromptTextsFromFrontendSettings,
     extractPromptTextsFromSettingsRecord,
     resolvePromptVersionState
 } from '../services/promptVersioning.service.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { mapSettingsFromFrontend, mapSettingsToFrontend } from '../utils/mappers.js';
 
 export const GOVERNED_PROMPT_KEYS = Object.freeze({
     'Pre Analysis Prompt': 'DEFAULT_PRE_ANALYSIS_PROMPT',
@@ -18,6 +40,56 @@ export const GOVERNED_PROMPT_KEYS = Object.freeze({
     'Match Analysis Prompt': 'DEFAULT_MATCH_ANALYSIS_PROMPT',
     'Adaptation Prompt': 'DEFAULT_ADAPTATION_PROMPT'
 });
+
+export function buildDefaultSettingsPayload(defaultModel) {
+    const aiCreditDefaults = buildAiCreditSettingsDefaults();
+    return {
+        llmProvider: 'openai',
+        llmModel: defaultModel,
+        cvMode: 'nominative',
+        chatbotEnabled: 'on',
+        webglEnabled: 'on',
+        preAnalysisEnabled: false,
+        'Pre Analysis Prompt': DEFAULT_PRE_ANALYSIS_PROMPT,
+        'Analysis Prompt': DEFAULT_ANALYSIS_PROMPT,
+        'Improvement Prompt': DEFAULT_IMPROVEMENT_PROMPT,
+        'Match Analysis Prompt': DEFAULT_MATCH_ANALYSIS_PROMPT,
+        'Adaptation Prompt': DEFAULT_ADAPTATION_PROMPT,
+        'Executive Summary Weight': 20,
+        'Skills Weight': 20,
+        'Experience Weight': 20,
+        'Education Weight': 15,
+        'ATS Weight': 15,
+        'Hobbies Languages Weight': 10,
+        'Profile Matching Local Skill Weight': PROFILE_MATCHING_LOCAL_SKILL_WEIGHT,
+        'Profile Matching Local Tool Weight': PROFILE_MATCHING_LOCAL_TOOL_WEIGHT,
+        'Profile Matching Local Industry Weight': PROFILE_MATCHING_LOCAL_INDUSTRY_WEIGHT,
+        'Profile Matching Local Soft Skill Weight': PROFILE_MATCHING_LOCAL_SOFTSKILL_WEIGHT,
+        'Profile Matching Local Title Exact Weight': PROFILE_MATCHING_LOCAL_TITLE_EXACT_WEIGHT,
+        'Profile Matching Local Title Token Weight': PROFILE_MATCHING_LOCAL_TITLE_TOKEN_WEIGHT,
+        'Profile Matching Local Coverage Multiplier': PROFILE_MATCHING_LOCAL_COVERAGE_MULTIPLIER,
+        allowUserRegistrationWithoutApproval: DEFAULT_ALLOW_USER_REGISTRATION_WITHOUT_APPROVAL,
+        firmInitialCredits: aiCreditDefaults.firmInitialCredits,
+        aiCreditChatbotMessage: aiCreditDefaults.aiCreditChatbotMessage,
+        aiCreditResumeAiModify: aiCreditDefaults.aiCreditResumeAiModify,
+        aiCreditTemplateExtract: aiCreditDefaults.aiCreditTemplateExtract,
+        aiCreditResumeAnalysis: aiCreditDefaults.aiCreditResumeAnalysis,
+        aiCreditResumeImprovement: aiCreditDefaults.aiCreditResumeImprovement,
+        aiCreditResumeAdaptation: aiCreditDefaults.aiCreditResumeAdaptation,
+        aiCreditResumeMatch: aiCreditDefaults.aiCreditResumeMatch,
+        aiCreditProfileSearch: aiCreditDefaults.aiCreditProfileSearch,
+        aiCreditProfileAnalysis: aiCreditDefaults.aiCreditProfileAnalysis,
+        aiMaxTokensChatbotMessage: aiCreditDefaults.aiMaxTokensChatbotMessage,
+        aiMaxTokensResumeAiModify: aiCreditDefaults.aiMaxTokensResumeAiModify,
+        aiMaxTokensTemplateExtract: aiCreditDefaults.aiMaxTokensTemplateExtract,
+        aiMaxTokensResumeAnalysis: aiCreditDefaults.aiMaxTokensResumeAnalysis,
+        aiMaxTokensResumeImprovement: aiCreditDefaults.aiMaxTokensResumeImprovement,
+        aiMaxTokensResumeAdaptation: aiCreditDefaults.aiMaxTokensResumeAdaptation,
+        aiMaxTokensResumeMatch: aiCreditDefaults.aiMaxTokensResumeMatch,
+        aiMaxTokensProfileSearch: aiCreditDefaults.aiMaxTokensProfileSearch,
+        aiMaxTokensProfileAnalysis: aiCreditDefaults.aiMaxTokensProfileAnalysis
+    };
+}
 
 export function normalizeRequestedSettingsModel(settingsData = {}) {
     if (!settingsData.llmProvider || !settingsData.llmModel) {
@@ -149,6 +221,59 @@ export function mergeCanonicalLlmSettings(settingsData, canonicalLlmSettings = {
         llmParameterDefinitions: canonicalLlmSettings.llmParameterDefinitions ?? settingsData.llmParameterDefinitions,
         promptVersionState: canonicalLlmSettings.promptVersionState ?? settingsData.promptVersionState
     };
+}
+
+export function buildPresentationSettingsResponse(settings) {
+    if (!settings) {
+        return {
+            chatbotEnabled: 'on',
+            webglEnabled: 'on'
+        };
+    }
+
+    const mapped = mapSettingsToFrontend(settings);
+    return {
+        chatbotEnabled: mapped.chatbotEnabled ?? 'on',
+        webglEnabled: mapped.webglEnabled ?? 'on'
+    };
+}
+
+export function buildPublicHomeSettingsResponse(settings) {
+    if (!settings) {
+        return {
+            publicHomeEnabled: null
+        };
+    }
+
+    const mapped = mapSettingsToFrontend(settings);
+    return {
+        publicHomeEnabled: typeof mapped.publicHomeEnabled === 'boolean' ? mapped.publicHomeEnabled : null
+    };
+}
+
+export async function buildPersistedSettingsResponse(settingsRecord, getProviderAvailabilityFlags) {
+    return decorateSettingsResponse(mapSettingsToFrontend(settingsRecord), getProviderAvailabilityFlags);
+}
+
+export async function prepareRouteSettingsMutation(rawSettings, { getProviderAvailabilityFlags, reqUser, currentSettingsRecord }) {
+    const normalizedSettings = normalizeRequestedSettingsModel(normalizeWeights(rawSettings));
+    return prepareSettingsMutationPayload(normalizedSettings, {
+        getProviderAvailabilityFlags,
+        reqUser,
+        currentSettingsRecord
+    });
+}
+
+export function buildSettingsCreateFields(settingsData) {
+    return {
+        name: settingsData.llmModel || 'Default Settings',
+        ...mapSettingsFromFrontend(settingsData),
+        status: 'active'
+    };
+}
+
+export function buildSettingsUpdateFields(settingsData) {
+    return mapSettingsFromFrontend(settingsData);
 }
 
 function buildNextPromptTexts(currentSettingsRecord = {}, incomingSettings = {}) {
