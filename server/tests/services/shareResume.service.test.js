@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import path from 'path';
 
 vi.mock('../../config/database.js', () => ({
     query: vi.fn()
@@ -116,7 +117,7 @@ describe('shareResume.service', () => {
         expect(result.expiresAt).toBeInstanceOf(Date);
         const ttlDays = (result.expiresAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000);
         expect(ttlDays).toBeGreaterThan(SHARE_LINK_TTL_DAYS - 0.01);
-        expect(fs.writeFile).toHaveBeenCalledWith(expect.stringContaining('uploads\\shared\\aaaaaaaa'), pdfBuffer);
+        expect(fs.writeFile).toHaveBeenCalledWith(expect.stringContaining(path.join('uploads', 'shared', 'aaaaaaaa')), pdfBuffer);
         expect(query.mock.calls[1][0]).toContain('shared_pdf_token');
         expect(query.mock.calls[1][1]).toEqual([
             'a'.repeat(64),
@@ -148,7 +149,7 @@ describe('shareResume.service', () => {
     });
 
     it('returns shared PDF info when token is valid', async () => {
-        const expectedPath = 'C:\\Users\\mail\\CascadeProjects\\ResumeConverter\\uploads\\shared\\pdf.pdf';
+        const expectedPath = path.resolve(process.cwd(), 'uploads', 'shared', 'pdf.pdf');
         query.mockResolvedValueOnce({
             rows: [{
                 id: 'resume-123',
@@ -426,7 +427,7 @@ describe('shareResume.service', () => {
 
         await expect(revokeShareLinks('resume-123')).resolves.toBe(true);
         expect(query.mock.calls[1][0]).toContain('shared_file_token = NULL');
-        expect(fs.unlink).toHaveBeenCalledWith(expect.stringContaining('uploads\\shared\\shared.pdf'));
+        expect(fs.unlink).toHaveBeenCalledWith(expect.stringContaining(path.join('uploads', 'shared', 'shared.pdf')));
     });
 
     it('cleans up expired share tokens and PDF files', async () => {
@@ -449,7 +450,7 @@ describe('shareResume.service', () => {
             expiredPdfFilesDeleted: 1
         });
 
-        expect(fs.unlink).toHaveBeenCalledWith(expect.stringContaining('uploads\\shared\\expired.pdf'));
+        expect(fs.unlink).toHaveBeenCalledWith(expect.stringContaining(path.join('uploads', 'shared', 'expired.pdf')));
         expect(query.mock.calls[1][0]).toContain('shared_pdf_path = NULL');
         expect(query.mock.calls[1][0]).toContain('shared_file_token = NULL');
     });
