@@ -6,21 +6,13 @@
 
 import { query } from '../config/database.js';
 import { findWithTimeout, createWithTimeout } from '../utils/postgresHelpers.js';
-import { stripNullCharacters } from '../utils/sanitizer.backend.js';
 import { invalidateDashboardAndGroupedViews } from './viewCacheInvalidation.service.js';
 import { invalidateClientsCaches, invalidateDealsCaches, invalidateResumesCaches, resumesCache } from './cache.service.js';
-
-function resolveExecutor(executor) {
-    if (typeof executor === 'function') {
-        return executor;
-    }
-
-    if (executor && typeof executor.query === 'function') {
-        return executor.query.bind(executor);
-    }
-
-    return query;
-}
+import {
+    resolveResumeExecutor,
+    sanitizeResumePersistenceValue,
+    buildResumeUpdateStatement
+} from './resumesPersistence.service.js';
 
 async function invalidateResumeMutationViews(resumeId, firmId = null) {
     await Promise.all([
@@ -29,10 +21,6 @@ async function invalidateResumeMutationViews(resumeId, firmId = null) {
         invalidateClientsCaches(),
         invalidateDealsCaches()
     ]);
-}
-
-function sanitizePersistenceValue(value) {
-    return typeof value === 'string' ? stripNullCharacters(value) : value;
 }
 
 /**
@@ -215,27 +203,15 @@ export async function listResumes({ conditions = [], params = [], dealId, dealPa
  * @returns {Promise<Object>} updated resume
  */
 export async function updateResume(id, updateData) {
-    const setClauses = [];
-    const params = [];
-    let idx = 1;
-
-    for (const [key, value] of Object.entries(updateData)) {
-        if (value !== undefined && ALLOWED_COLUMNS.has(key)) {
-            setClauses.push(`${key} = $${idx}`);
-            params.push(sanitizePersistenceValue(value));
-            idx++;
-        }
-    }
-
+    const { setClauses, params, idParamIndex } = buildResumeUpdateStatement(updateData, ALLOWED_COLUMNS);
     if (setClauses.length === 0) {
         return getResumeById(id);
     }
-
-    setClauses.push(`updated_at = CURRENT_TIMESTAMP`);
+    setClauses.push('updated_at = CURRENT_TIMESTAMP');
     params.push(id);
 
     const result = await query(
-        `UPDATE resumes SET ${setClauses.join(', ')} WHERE id = $${idx} RETURNING *`,
+        `UPDATE resumes SET ${setClauses.join(', ')} WHERE id = $${idParamIndex} RETURNING *`,
         params
     );
 
@@ -255,7 +231,7 @@ export async function updateResume(id, updateData) {
  * @returns {Promise<Object>}
  */
 export async function insertResume(data) {
-    const executor = resolveExecutor(data.executor);
+    const executor = resolveResumeExecutor(data.executor) || query;
     const result = await executor(
         `INSERT INTO resumes (
             name, title, file_name, relative_path, resume_file_data, resume_file_size, resume_file_type,
@@ -268,37 +244,38 @@ export async function insertResume(data) {
             $14, $15, $16, $17, $18, $19
         ) RETURNING *`,
         [
-            sanitizePersistenceValue(data.name),
-            sanitizePersistenceValue(data.title),
-            sanitizePersistenceValue(data.fileName),
-            sanitizePersistenceValue(data.relativePath) || null,
+            sanitizeResumePersistenceValue(data.name),
+            sanitizeResumePersistenceValue(data.title),
+            sanitizeResumePersistenceValue(data.fileName),
+            sanitizeResumePersistenceValue(data.relativePath) || null,
             data.fileBuffer,
             data.fileSize,
-            sanitizePersistenceValue(data.mimeType),
-            sanitizePersistenceValue(data.fileUrl),
-            sanitizePersistenceValue(data.status),
+            sanitizeResumePersistenceValue(data.mimeType),
+            sanitizeResumePersistenceValue(data.fileUrl),
+            sanitizeResumePersistenceValue(data.status),
             data.firmId,
-            sanitizePersistenceValue(data.firmName),
-            sanitizePersistenceValue(data.profileType) || null,
-            sanitizePersistenceValue(data.candidateName) || null,
-            sanitizePersistenceValue(data.candidateEmail) || null,
-            sanitizePersistenceValue(data.consentStatus) || null,
-            sanitizePersistenceValue(data.consentToken) || null,
+            sanitizeResumePersistenceValue(data.firmName),
+            sanitizeResumePersistenceValue(data.profileType) || null,
+            sanitizeResumePersistenceValue(data.candidateName) || null,
+            sanitizeResumePersistenceValue(data.candidateEmail) || null,
+            sanitizeResumePersistenceValue(data.consentStatus) || null,
+            sanitizeResumePersistenceValue(data.consentToken) || null,
             data.tokenExpiresAt || null,
             data.consentRequestedAt || null,
             data.retentionUntil || null
         ]
     );
+    const row = result.rows[0];
 
     if (data.invalidateCaches !== false) {
         await Promise.all([
-            invalidateDashboardAndGroupedViews(result.rows[0]?.firm_id || data.firmId || null),
+            invalidateDashboardAndGroupedViews(row?.firm_id || data.firmId || null),
             invalidateResumesCaches(),
             invalidateClientsCaches(),
             invalidateDealsCaches()
         ]);
     }
-    return result.rows[0];
+    return row;
 }
 
 /**
@@ -308,7 +285,7 @@ export async function insertResume(data) {
  * @returns {Promise<void>}
  */
 export async function updateResumeFileUrl(id, fileUrl, { executor } = {}) {
-    const run = resolveExecutor(executor);
+    const run = resolveResumeExecutor(executor) || query;
     await run(
         'UPDATE resumes SET resume_file_url = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
         [fileUrl, id]
@@ -322,7 +299,7 @@ export async function updateResumeFileUrl(id, fileUrl, { executor } = {}) {
  * @returns {Promise<void>}
  */
 export async function updateConsentStatus(id, consentStatus, { executor } = {}) {
-    const run = resolveExecutor(executor);
+    const run = resolveResumeExecutor(executor) || query;
     await run(
         'UPDATE resumes SET consent_status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
         [consentStatus, id]
@@ -338,7 +315,7 @@ export async function initializeResumeConsent({
     consentToken,
     tokenExpiresAt
 }, { executor } = {}) {
-    const run = resolveExecutor(executor);
+    const run = resolveResumeExecutor(executor) || query;
     const result = await run(`
         UPDATE resumes
         SET profile_type = $1,
@@ -370,7 +347,7 @@ export async function initializeResumeConsent({
 }
 
 export async function markResumeConsentRequested(resumeId, { executor } = {}) {
-    const run = resolveExecutor(executor);
+    const run = resolveResumeExecutor(executor) || query;
     const result = await run(`
         UPDATE resumes
         SET consent_requested_at = CURRENT_TIMESTAMP,
@@ -393,7 +370,7 @@ export async function recordResumeConsentResponse(
     retentionUntil,
     { executor } = {}
 ) {
-    const run = resolveExecutor(executor);
+    const run = resolveResumeExecutor(executor) || query;
     const result = await run(`
         UPDATE resumes
         SET consent_status = $1,
@@ -420,7 +397,7 @@ export async function resetResumeConsentForResend(
     tokenExpiresAt,
     { executor } = {}
 ) {
-    const run = resolveExecutor(executor);
+    const run = resolveResumeExecutor(executor) || query;
     const result = await run(`
         UPDATE resumes
         SET consent_token = $1,
@@ -440,7 +417,7 @@ export async function resetResumeConsentForResend(
 }
 
 export async function markResumeConsentError(resumeId, { executor, pendingOnly = false } = {}) {
-    const run = resolveExecutor(executor);
+    const run = resolveResumeExecutor(executor) || query;
     const params = [resumeId];
     const pendingClause = pendingOnly ? ' AND consent_status = $2' : '';
     if (pendingOnly) {
@@ -469,7 +446,7 @@ export async function markResumeConsentError(resumeId, { executor, pendingOnly =
  */
 export async function deleteResume(id) {
     const options = arguments[1] || {};
-    const executor = resolveExecutor(options.executor);
+    const executor = resolveResumeExecutor(options.executor) || query;
     const result = await executor('DELETE FROM resumes WHERE id = $1 RETURNING id, firm_id', [id]);
     if (result.rows.length === 0) {
         const err = new Error('Resume not found');

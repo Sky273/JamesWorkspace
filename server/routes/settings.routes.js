@@ -4,27 +4,24 @@ import { validateParams, validateBody, updateSettingsSchema } from '../utils/val
 import { securityLog, getRequestMetadata, LOG_LEVELS, SECURITY_EVENTS } from '../services/security.service.js';
 import { settingsCache, CACHE_KEYS } from '../services/cache.service.js';
 import { metrics } from '../services/metrics.service.js';
-import { invalidateSettingsCache, getSettings, getLLMSettings, upsertSettings, createSettings } from '../services/settings.service.js';
+import { invalidateSettingsCache, getSettings, getLLMSettings } from '../services/settings.service.js';
 import { safeLog } from '../utils/logger.backend.js';
-import { mapSettingsToFrontend } from '../utils/mappers.js';
 import { getProviderAvailabilityFlags } from '../services/llmAvailability.service.js';
 import { discoverOllamaModels } from '../services/ollamaAdmin.service.js';
 import { testLlmSettingsConnection } from '../services/llmSettingsValidation.service.js';
 import { getProviderDefaultModel } from '../services/llmConfiguration.service.js';
 import {
-    buildDefaultSettingsPayload,
-    buildPersistedSettingsResponse,
+    buildSettingsDefaultsResponse,
+    buildSettingsIndexResponse,
     buildPresentationSettingsResponse,
     prepareSettingsConnectionTestPayload,
     resolveConfiguredOllamaBaseUrl,
     buildPublicHomeSettingsResponse,
-    buildSettingsCreateFields,
-    buildSettingsUpdateFields,
-    decorateSettingsResponse,
-    mergeCanonicalLlmSettings,
-    normalizeRequestedSettingsModel,
-    prepareRouteSettingsMutation
 } from './settings.routes.helpers.js';
+import {
+    persistSettingsCreateRoute,
+    persistSettingsUpdateRoute
+} from './settings.routes.persistence.helpers.js';
 
 const router = express.Router();
 const DEFAULT_OPENAI_MODEL = getProviderDefaultModel('openai');
@@ -61,22 +58,20 @@ router.get('/', authenticateToken, createSettingsRouteHandler('Error fetching se
 
         if (!settings) {
             safeLog('info', 'No settings found, returning defaults');
-
-            const defaultSettings = mergeCanonicalLlmSettings(
-                await decorateSettingsResponse({
-                    id: null,
-                    ...buildDefaultSettingsPayload(DEFAULT_OPENAI_MODEL)
-                }, getProviderAvailabilityFlags),
-                canonicalLlmSettings
-            );
-
-            return res.json(defaultSettings);
+            return res.json(await buildSettingsIndexResponse({
+                settings,
+                canonicalLlmSettings,
+                getProviderAvailabilityFlags,
+                defaultModel: DEFAULT_OPENAI_MODEL
+            }));
         }
 
-        const responseData = mergeCanonicalLlmSettings(
-            await decorateSettingsResponse(normalizeRequestedSettingsModel(mapSettingsToFrontend(settings)), getProviderAvailabilityFlags),
-            canonicalLlmSettings
-        );
+        const responseData = await buildSettingsIndexResponse({
+            settings,
+            canonicalLlmSettings,
+            getProviderAvailabilityFlags,
+            defaultModel: DEFAULT_OPENAI_MODEL
+        });
 
         await settingsCache.set(CACHE_KEYS.settings.UI_SETTINGS, responseData);
 
@@ -95,12 +90,7 @@ router.get('/public-home', createSettingsRouteHandler('Error fetching public hom
 
 // GET /api/settings/defaults - Get default prompts and weights
 router.get('/defaults', authenticateToken, requireAdmin, createSettingsRouteHandler('Error building defaults', 'Failed to build defaults', async (req, res) => {
-    const payload = await decorateSettingsResponse({
-        ...buildDefaultSettingsPayload(DEFAULT_OPENAI_MODEL),
-        'DPO Name': '',
-        'DPO Email': '',
-        'DPO Phone': ''
-    }, getProviderAvailabilityFlags);
+    const payload = await buildSettingsDefaultsResponse(DEFAULT_OPENAI_MODEL, getProviderAvailabilityFlags);
     return res.json(payload);
 }));
 
@@ -141,16 +131,14 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
         safeLog('info', 'Updating settings', { settingsId: id });
 
         delete updateData.id;
-        const currentSettingsRecord = await getSettings();
-        updateData = await prepareRouteSettingsMutation(updateData, {
+        const { preparedSettings, response } = await persistSettingsUpdateRoute({
+            id,
+            rawSettings: updateData,
             getProviderAvailabilityFlags,
-            reqUser: req.user,
-            currentSettingsRecord
+            reqUser: req.user
         });
 
-        safeLog('debug', 'Settings normalized', { fields: Object.keys(updateData) });
-
-        const result = await upsertSettings(id, buildSettingsUpdateFields(updateData));
+        safeLog('debug', 'Settings normalized', { fields: Object.keys(preparedSettings) });
         await invalidateSettingsCache();
 
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.SETTINGS_CHANGED, {
@@ -159,24 +147,22 @@ router.put('/:id', authenticateToken, requireAdmin, validateParams('id'), valida
             changedBy: req.user.id,
             action: 'SETTINGS_UPDATED',
             message: 'LLM settings updated by admin',
-            metadata: { fields: Object.keys(updateData) }
+            metadata: { fields: Object.keys(preparedSettings) }
         });
 
-        return res.json(await buildPersistedSettingsResponse(result, getProviderAvailabilityFlags));
+        return res.json(response);
     }));
 
 // POST /api/settings - Create settings
 router.post('/', authenticateToken, requireAdmin, validateBody(updateSettingsSchema), createSettingsRouteHandler('Error creating settings', 'Failed to create settings', async (req, res) => {
         let settingsData = req.body;
 
-        const currentSettingsRecord = await getSettings();
-        settingsData = await prepareRouteSettingsMutation(settingsData, {
+        const { response } = await persistSettingsCreateRoute({
+            rawSettings: settingsData,
             getProviderAvailabilityFlags,
-            reqUser: req.user,
-            currentSettingsRecord
+            reqUser: req.user
         });
 
-        const result = await createSettings(buildSettingsCreateFields(settingsData));
         await invalidateSettingsCache();
 
         securityLog(LOG_LEVELS.SECURITY, SECURITY_EVENTS.SETTINGS_CHANGED, {
@@ -186,7 +172,7 @@ router.post('/', authenticateToken, requireAdmin, validateBody(updateSettingsSch
             message: 'LLM settings created by admin'
         });
 
-        return res.status(201).json(await buildPersistedSettingsResponse(result, getProviderAvailabilityFlags));
+        return res.status(201).json(response);
     }));
 
 export default router;

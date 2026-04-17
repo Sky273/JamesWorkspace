@@ -3,35 +3,26 @@
  * Handles database backup creation, restoration, and local file management
  */
 
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createGzip, createGunzip } from 'zlib';
-import { pipeline } from 'stream/promises';
 import { query } from '../../config/database.js';
 import { safeLog } from '../../utils/logger.backend.js';
 import { getBackupSettings } from './settings.service.js';
 import { createHistoryEntry, updateHistoryEntry } from './history.service.js';
 import { uploadFile, downloadFile, cleanupOldRemoteBackups } from './ftp.service.js';
-
-const execFileAsync = promisify(execFile);
+import {
+    safeUnlink,
+    createBackupArtifact,
+    restoreBackupArtifact,
+    cleanupBackupArtifacts
+} from './artifacts.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const BACKUP_DIR = path.join(__dirname, '..', '..', 'backups');
 export const TEMP_DIR = path.join(__dirname, '..', '..', 'temp');
-
-// PostgreSQL binary paths (Docker uses /usr/lib/postgresql/18/bin/)
-const PG_BIN_PATHS = [
-    '/usr/lib/postgresql/18/bin',
-    '/usr/lib/postgresql/17/bin',
-    '/usr/lib/postgresql/16/bin',
-    '/usr/bin',
-    ''  // System PATH
-];
 
 const SAFE_BACKUP_FILENAME_PATTERN = /^backup-(daily|weekly|monthly|manual)-[A-Za-z0-9_-]+-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.sql\.gz$/;
 
@@ -40,26 +31,6 @@ async function ensureBackupDirectories() {
         fs.promises.mkdir(BACKUP_DIR, { recursive: true }),
         fs.promises.mkdir(TEMP_DIR, { recursive: true })
     ]);
-}
-
-/**
- * Find PostgreSQL binary (pg_dump or psql)
- */
-async function findPgBinary(binaryName) {
-    for (const binPath of PG_BIN_PATHS) {
-        const fullPath = binPath ? path.join(binPath, binaryName) : binaryName;
-        try {
-            if (!binPath) {
-                return fullPath;
-            }
-
-            await fs.promises.access(fullPath);
-            return fullPath;
-        } catch {
-            // Continue to next path
-        }
-    }
-    return binaryName;
 }
 
 function assertSafeBackupFilename(filename) {
@@ -83,36 +54,6 @@ function buildSafePath(baseDir, filename) {
     }
 
     return resolvedPath;
-}
-
-async function readBackupFilePrefix(filePath, maxBytes = 5000) {
-    const fd = await fs.promises.open(filePath, 'r');
-    try {
-        const buffer = Buffer.alloc(maxBytes);
-        const { bytesRead } = await fd.read(buffer, 0, maxBytes, 0);
-        return buffer.subarray(0, bytesRead).toString('utf8');
-    } finally {
-        await fd.close();
-    }
-}
-
-async function fileExists(filePath) {
-    try {
-        await fs.promises.access(filePath);
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-async function safeUnlink(filePath) {
-    try {
-        await fs.promises.unlink(filePath);
-    } catch (error) {
-        if (error?.code !== 'ENOENT') {
-            throw error;
-        }
-    }
 }
 
 async function getBackupFilesMatching(pattern) {
@@ -201,34 +142,23 @@ export async function createBackup(type = 'manual') {
         
         safeLog('info', 'Starting database backup', { type, filename: compressedFilename });
         
-        const pgDumpBin = await findPgBinary('pg_dump');
-        
-        try {
-            await execFileAsync(pgDumpBin, ['--version']);
-        } catch {
-            throw new Error('pg_dump not found. Please install PostgreSQL client tools.');
-        }
-        
         const env = { ...process.env, PGPASSWORD: POSTGRES_PASSWORD };
-        await execFileAsync(pgDumpBin, [
-            '-h', POSTGRES_HOST,
-            '-p', POSTGRES_PORT,
-            '-U', POSTGRES_USER,
-            '-d', POSTGRES_DB,
-            '-F', 'p',
-            '--clean',
-            '--if-exists',
-            '-f', localPath
-        ], { env });
-        
-        // Compress the backup
-        const source = fs.createReadStream(localPath);
-        const destination = fs.createWriteStream(compressedPath);
-        const gzip = createGzip();
-        
-        await pipeline(source, gzip, destination);
-        
-        await safeUnlink(localPath);
+        await createBackupArtifact({
+            versionErrorMessage: 'pg_dump not found. Please install PostgreSQL client tools.',
+            dumpArgs: [
+                '-h', POSTGRES_HOST,
+                '-p', POSTGRES_PORT,
+                '-U', POSTGRES_USER,
+                '-d', POSTGRES_DB,
+                '-F', 'p',
+                '--clean',
+                '--if-exists',
+                '-f', localPath
+            ],
+            env,
+            localPath,
+            compressedPath
+        });
         
         const stats = await fs.promises.stat(compressedPath);
         const fileSize = stats.size;
@@ -326,12 +256,7 @@ export async function createBackup(type = 'manual') {
             }
         }
         
-        try {
-            if (await fileExists(localPath)) await safeUnlink(localPath);
-            if (await fileExists(compressedPath)) await safeUnlink(compressedPath);
-        } catch {
-            // Ignore cleanup errors
-        }
+        await cleanupBackupArtifacts([localPath, compressedPath]);
         
         throw error;
     }
@@ -365,56 +290,28 @@ export async function restoreBackup(filename) {
         
         await downloadFile(settings, remotePath, localCompressedPath);
         
-        // Decompress
-        const source = fs.createReadStream(localCompressedPath);
-        const destination = fs.createWriteStream(localPath);
-        const gunzip = createGunzip();
-        
-        await pipeline(source, gunzip, destination);
-        
-        await safeUnlink(localCompressedPath);
-        
-        const psqlBin = await findPgBinary('psql');
-        
-        try {
-            await execFileAsync(psqlBin, ['--version']);
-        } catch {
-            throw new Error('psql not found. Please install PostgreSQL client tools.');
-        }
-        
         const env = { ...process.env, PGPASSWORD: POSTGRES_PASSWORD };
-        
-        // Read only the prefix needed to detect legacy dumps without loading the full backup in memory.
-        const backupContent = await readBackupFilePrefix(localPath, 5000);
-        const hasDropCommands = backupContent.includes('DROP TABLE') || backupContent.includes('DROP SCHEMA');
-        
-        if (!hasDropCommands) {
-            safeLog('info', 'Old backup format detected, truncating tables before restore');
-            
-            try {
-                await execFileAsync(psqlBin, [
-                    '-h', POSTGRES_HOST,
-                    '-p', POSTGRES_PORT,
-                    '-U', POSTGRES_USER,
-                    '-d', POSTGRES_DB,
-                    '-c',
-                    "DO $$ DECLARE r RECORD; BEGIN FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' CASCADE'; END LOOP; END $$;"
-                ], { env });
-                safeLog('info', 'Tables truncated successfully');
-            } catch (truncateError) {
-                safeLog('warn', 'Failed to truncate tables, continuing with restore', { error: truncateError.message });
-            }
-        }
-
-        await execFileAsync(psqlBin, [
-            '-h', POSTGRES_HOST,
-            '-p', POSTGRES_PORT,
-            '-U', POSTGRES_USER,
-            '-d', POSTGRES_DB,
-            '-f', localPath
-        ], { env });
-        
-        await safeUnlink(localPath);
+        await restoreBackupArtifact({
+            versionErrorMessage: 'psql not found. Please install PostgreSQL client tools.',
+            env,
+            localCompressedPath,
+            localPath,
+            restoreArgs: [
+                '-h', POSTGRES_HOST,
+                '-p', POSTGRES_PORT,
+                '-U', POSTGRES_USER,
+                '-d', POSTGRES_DB,
+                '-f', localPath
+            ],
+            legacyTruncateArgs: [
+                '-h', POSTGRES_HOST,
+                '-p', POSTGRES_PORT,
+                '-U', POSTGRES_USER,
+                '-d', POSTGRES_DB,
+                '-c',
+                "DO $$ DECLARE r RECORD; BEGIN FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' CASCADE'; END LOOP; END $$;"
+            ]
+        });
         
         safeLog('info', 'Database restore completed', { filename });
         
@@ -423,12 +320,7 @@ export async function restoreBackup(filename) {
     } catch (error) {
         safeLog('error', 'Database restore failed', { filename, error: error.message });
         
-        try {
-            if (await fileExists(localCompressedPath)) await safeUnlink(localCompressedPath);
-            if (await fileExists(localPath)) await safeUnlink(localPath);
-        } catch {
-            // Ignore cleanup errors
-        }
+        await cleanupBackupArtifacts([localCompressedPath, localPath]);
         
         throw error;
     }

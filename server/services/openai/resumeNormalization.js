@@ -1,6 +1,11 @@
 import { safeLog } from '../../utils/logger.backend.js';
 import { cleanupHtml } from './textUtils.js';
 import { validateResumeAnalysisPayload, validateResumeImprovementEnvelope } from './contracts.js';
+import {
+    normalizeKeywordEvidenceArray,
+    pickFirstNonEmptyArray,
+    normalizeSuggestionsBySection
+} from './resumeNormalizationCollections.js';
 
 function _pickNumericScore(...values) {
     for (const value of values) {
@@ -20,50 +25,6 @@ export function pickNumericScoreOrUndefined(...values) {
         if (!Number.isNaN(parsed)) return parsed;
     }
     return undefined;
-}
-
-function extractSuggestionText(value) {
-    if (value === null || value === undefined) return [];
-
-    if (typeof value === 'string') {
-        const trimmed = value.trim();
-        return trimmed ? [trimmed] : [];
-    }
-
-    if (typeof value === 'number' || typeof value === 'boolean') {
-        return [String(value)];
-    }
-
-    if (Array.isArray(value)) {
-        return value.flatMap(extractSuggestionText);
-    }
-
-    if (typeof value === 'object') {
-        const directText = [
-            value.text,
-            value.suggestion,
-            value.content,
-            value.message,
-            value.label,
-            value.title,
-            value.value,
-            value.description
-        ].find(candidate => typeof candidate === 'string' && candidate.trim());
-
-        if (directText) {
-            return [directText.trim()];
-        }
-
-        return Object.values(value)
-            .filter(candidate => candidate !== null && candidate !== undefined)
-            .flatMap(extractSuggestionText);
-    }
-
-    return [];
-}
-
-function asSuggestionArray(value) {
-    return [...new Set(extractSuggestionText(value).filter(Boolean))];
 }
 
 function extractStructuredSummaryText(summary) {
@@ -93,63 +54,6 @@ function collectImprovementCandidates(...candidates) {
         .filter(candidate => typeof candidate === 'string')
         .map(candidate => candidate.trim())
         .filter(Boolean);
-}
-
-function normalizeStringArray(value) {
-    if (value === null || value === undefined) return [];
-
-    if (typeof value === 'string') {
-        const trimmed = value.trim();
-        return trimmed ? trimmed.split(/[;,]/).map(item => item.trim()).filter(Boolean) : [];
-    }
-
-    if (Array.isArray(value)) {
-        return [...new Set(value.flatMap(normalizeStringArray).filter(Boolean))];
-    }
-
-    if (typeof value === 'object') {
-        const directValues = ['label', 'name', 'title', 'text', 'value', 'skill', 'tool']
-            .map((key) => value[key])
-            .filter((candidate) => typeof candidate === 'string' && candidate.trim())
-            .map((candidate) => candidate.trim());
-
-        if (directValues.length > 0) {
-            return [...new Set(directValues)];
-        }
-
-        return [...new Set(Object.values(value).flatMap(normalizeStringArray).filter(Boolean))];
-    }
-
-    return [];
-}
-
-function normalizeKeywordEvidenceArray(value) {
-    if (!Array.isArray(value)) return [];
-
-    return value
-        .filter((item) => item && typeof item === 'object' && !Array.isArray(item))
-        .map((item) => ({
-            ...item,
-            name: typeof item.name === 'string'
-                ? item.name.trim()
-                : typeof item.skill === 'string'
-                    ? item.skill.trim()
-                    : typeof item.tool === 'string'
-                        ? item.tool.trim()
-                    : ''
-        }))
-        .filter((item) => item.name);
-}
-
-export function pickFirstNonEmptyArray(...values) {
-    for (const value of values) {
-        const normalized = normalizeStringArray(value);
-        if (normalized.length > 0) {
-            return normalized;
-        }
-    }
-
-    return [];
 }
 
 export function finalizeImprovedOutput({ sourceText, selectedText, htmlAlternatives = [], context = {} }) {
@@ -284,57 +188,7 @@ export function extractImprovementEnvelope(parsedInput) {
         educationLevel: parsed?.educationLevel ?? parsed?.education_level ?? envelope?.educationLevel ?? envelope?.education_level,
         certifications: parsed?.certifications ?? envelope?.certifications,
         languages: parsed?.languages ?? envelope?.languages,
-        suggestionsSource: parsed?.suggestions || parsed?.['Key Improvements'] || parsed?.keyImprovements || parsed?.recommendations || parsed?.sectionSuggestions || parsed?.section_improvements || envelope?.suggestions || envelope?.['Key Improvements'] || envelope?.keyImprovements || envelope?.recommendations || envelope?.sectionSuggestions || envelope?.section_improvements || null,
-    };
-}
-
-export function normalizeSuggestionsBySection(source) {
-    const suggestionsSource = source?.suggestions || source?.['Key Improvements'] || source?.keyImprovements || source?.recommendations || source?.sectionSuggestions || source?.section_improvements || source || {};
-    return {
-        executiveSummary: asSuggestionArray(
-            suggestionsSource.executiveSummary
-            ?? suggestionsSource.executive_summary
-            ?? suggestionsSource.executiveBrief
-            ?? suggestionsSource.executive_summary_suggestions
-            ?? suggestionsSource.summary
-            ?? suggestionsSource.resumeSummary
-        ),
-        skills: asSuggestionArray(
-            suggestionsSource.skills
-            ?? suggestionsSource.skillsKeywords
-            ?? suggestionsSource.competencies
-            ?? suggestionsSource.keywords
-            ?? suggestionsSource.skillSuggestions
-            ?? suggestionsSource.skills_and_keywords
-        ),
-        experiences: asSuggestionArray(
-            suggestionsSource.experiences
-            ?? suggestionsSource.experience
-            ?? suggestionsSource.professionalExperience
-            ?? suggestionsSource.workExperience
-            ?? suggestionsSource.projects
-            ?? suggestionsSource.missions
-        ),
-        education: asSuggestionArray(
-            suggestionsSource.education
-            ?? suggestionsSource.formation
-            ?? suggestionsSource.training
-        ),
-        hobbiesLanguages: asSuggestionArray(
-            suggestionsSource.hobbiesLanguages
-            ?? suggestionsSource.hobbies
-            ?? suggestionsSource.languages
-            ?? suggestionsSource.languagesAndHobbies
-            ?? suggestionsSource.languages_hobbies
-            ?? suggestionsSource.interests
-        ),
-        atsOptimization: asSuggestionArray(
-            suggestionsSource.atsOptimization
-            ?? suggestionsSource.ats
-            ?? suggestionsSource.atsCompatibility
-            ?? suggestionsSource.atsSuggestions
-            ?? suggestionsSource.formatting
-        )
+        suggestionsSource: parsed?.suggestions || parsed?.['Key Improvements'] || parsed?.keyImprovements || parsed?.recommendations || parsed?.sectionSuggestions || parsed?.section_improvements || envelope?.suggestions || envelope?.['Key Improvements'] || envelope?.keyImprovements || envelope?.recommendations || envelope?.sectionSuggestions || envelope?.section_improvements || null
     };
 }
 
@@ -342,11 +196,11 @@ export function normalizeAnalysisResponse(analysisInput) {
     const analysis = validateResumeAnalysisPayload(analysisInput);
     const hobbiesRating = analysis.hobbiesLanguagesRating
         || analysis['Hobbies Languages']
-        || analysis['hobbiesLanguages']
+        || analysis.hobbiesLanguages
         || analysis['Hobbies & Languages']
-        || analysis['hobbies_languages']
+        || analysis.hobbies_languages
         || analysis['Languages & Hobbies']
-        || analysis['languagesHobbiesRating']
+        || analysis.languagesHobbiesRating
         || '0%';
 
     const normalizedSuggestions = normalizeSuggestionsBySection(analysis);
@@ -356,11 +210,11 @@ export function normalizeAnalysisResponse(analysisInput) {
         title: analysis.title || analysis.Title || analysis['Professional Title'] || '',
         globalRating: analysis.globalRating || analysis['Global Rating'] || '0%',
         executiveSummaryRating: analysis.executiveSummaryRating || analysis['Executive Summary'] || '0%',
-        skillsRating: analysis.skillsRating || analysis['Skills'] || '0%',
-        experiencesRating: analysis.experiencesRating || analysis['Experience'] || '0%',
-        educationRating: analysis.educationRating || analysis['Education'] || '0%',
+        skillsRating: analysis.skillsRating || analysis.Skills || '0%',
+        experiencesRating: analysis.experiencesRating || analysis.Experience || '0%',
+        educationRating: analysis.educationRating || analysis.Education || '0%',
         hobbiesLanguagesRating: hobbiesRating,
-        atsOptimizationRating: analysis.atsOptimizationRating || analysis['ATS Compatibility'] || analysis['ATS'] || '0%',
+        atsOptimizationRating: analysis.atsOptimizationRating || analysis['ATS Compatibility'] || analysis.ATS || '0%',
         tags: {
             ...(analysis.tags || {}),
             skills: analysis.tags?.skills || analysis['Top Skills'] || [],
@@ -376,9 +230,9 @@ export function normalizeAnalysisResponse(analysisInput) {
 
     normalized['Global Rating'] = normalized.globalRating;
     normalized['Executive Summary'] = normalized.executiveSummaryRating;
-    normalized['Skills'] = normalized.skillsRating;
-    normalized['Experience'] = normalized.experiencesRating;
-    normalized['Education'] = normalized.educationRating;
+    normalized.Skills = normalized.skillsRating;
+    normalized.Experience = normalized.experiencesRating;
+    normalized.Education = normalized.educationRating;
     normalized['Hobbies Languages'] = normalized.hobbiesLanguagesRating;
     normalized['ATS Compatibility'] = normalized.atsOptimizationRating;
     normalized['Top Skills'] = normalized.tags.skills;
@@ -386,7 +240,7 @@ export function normalizeAnalysisResponse(analysisInput) {
     normalized['Top Tools'] = normalized.tags.tools;
     normalized['Top Soft Skills'] = normalized.tags.softSkills;
     normalized['Key Improvements'] = normalized.suggestions;
-    normalized['Summary'] = analysis['Summary'] || analysis.summary || '';
+    normalized.Summary = analysis.Summary || analysis.summary || '';
 
     if (analysis.structuredText) {
         normalized.structuredText = analysis.structuredText;

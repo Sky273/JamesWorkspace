@@ -248,6 +248,12 @@ export const authService = {
       }
 
       const signedInUser = normalizeUser(data.user as UserLike);
+      if (!signedInUser) {
+        throw new AuthenticationError('Authentication response did not include a valid user.', {
+          code: 'invalid_auth_response',
+          status: response.status,
+        });
+      }
 
       if (isActiveUser(signedInUser)) {
         setAuthenticatedUser(signedInUser);

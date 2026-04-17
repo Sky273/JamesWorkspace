@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Email Templates Service
  * Manages email templates with MJML compilation and keyword substitution
  * 
@@ -9,108 +9,10 @@
 import { query } from '../config/database.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { CACHE_KEYS, emailTemplatesCache, invalidateEmailTemplatesCaches } from './cache.service.js';
+import { TEMPLATE_KEYWORDS, substituteKeywords } from './emailTemplatesKeywords.service.js';
+import { compileMjml, destroyMjml } from './emailTemplatesMjml.service.js';
 
-// ============================================
-// LAZY LOADING FOR MJML (~10MB with mjml-core)
-// ============================================
-
-let mjml2html = null;
-let mjmlCoreModule = null;
-let mjmlPreset = null;
-let mjmlLastUsed = 0;
-let mjmlUnloadTimer = null;
-
-// Unload mjml after 10 minutes of inactivity
-const MJML_UNLOAD_TIMEOUT = 10 * 60 * 1000;
-
-/**
- * Schedule unloading of mjml module after inactivity
- */
-function scheduleMjmlUnload() {
-    if (mjmlUnloadTimer) {
-        clearTimeout(mjmlUnloadTimer);
-    }
-    
-    mjmlUnloadTimer = setTimeout(() => {
-        if (mjml2html && Date.now() - mjmlLastUsed >= MJML_UNLOAD_TIMEOUT) {
-            unloadMjml();
-        }
-    }, MJML_UNLOAD_TIMEOUT + 1000);
-    
-    if (mjmlUnloadTimer.unref) {
-        mjmlUnloadTimer.unref();
-    }
-}
-
-/**
- * Unload mjml module to free memory (~10MB)
- * Note: ES modules remain in cache, but we release our references
- * to allow GC to collect any temporary data
- */
-function unloadMjml() {
-    if (mjml2html || mjmlCoreModule) {
-        mjml2html = null;
-        mjmlCoreModule = null;
-        mjmlPreset = null;
-        mjmlLastUsed = 0;
-        
-        if (global.gc) {
-            global.gc();
-            safeLog('info', 'mjml-core references released and GC triggered (~10MB freed)');
-        } else {
-            safeLog('info', 'mjml-core references released (~10MB will be freed by GC)');
-        }
-    }
-}
-
-/**
- * Get mjml module (lazy load)
- */
-async function getMjml() {
-    mjmlLastUsed = Date.now();
-    
-    if (!mjml2html) {
-        mjmlCoreModule = await import('mjml-core');
-        const mjmlPresetModule = await import('mjml-preset-core');
-        mjmlPreset = mjmlPresetModule.default;
-        mjml2html = mjmlCoreModule.default.default;
-        safeLog('info', 'mjml-core module loaded lazily with preset support (~10MB)');
-    }
-    
-    scheduleMjmlUnload();
-    return mjml2html;
-}
-
-/**
- * Destroy mjml resources (for graceful shutdown)
- */
-export function destroyMjml() {
-    if (mjmlUnloadTimer) {
-        clearTimeout(mjmlUnloadTimer);
-        mjmlUnloadTimer = null;
-    }
-    unloadMjml();
-}
-
-/**
- * Get the base URL for the application
- * Used to construct absolute URLs for assets like logos
- */
-function getBaseUrl() {
-    return process.env.FRONTEND_URL || process.env.VITE_APP_URL || 'http://localhost:5173';
-}
-
-/**
- * Available keywords for template substitution
- */
-export const TEMPLATE_KEYWORDS = {
-    client: ['name', 'type', 'industry'],
-    contact: ['name', 'firstName', 'role'],
-    resume: ['name', 'title', 'version'],
-    firm: ['name', 'logo'],
-    user: ['name', 'email', 'jobTitle', 'phone'],
-    date: ['today', 'todayLong']
-};
+export { TEMPLATE_KEYWORDS, substituteKeywords, compileMjml, destroyMjml };
 
 /**
  * Get all templates for a firm
@@ -388,116 +290,6 @@ export async function duplicateTemplate(id, firmId, userId) {
 }
 
 /**
- * Compile MJML content to HTML
- * @param {string} mjmlContent - MJML content
- * @returns {Promise<string>} - Compiled HTML
- */
-export async function compileMjml(mjmlContent) {
-    try {
-        const mjml = await getMjml();
-        const result = mjml(mjmlContent, {
-            validationLevel: 'soft',
-            minify: false,
-            presets: mjmlPreset ? [mjmlPreset] : []
-        });
-        
-        if (result.errors && result.errors.length > 0) {
-            safeLog('warn', 'MJML compilation warnings', { errors: result.errors });
-        }
-        
-        let html = result.html;
-        
-        // Ensure UTF-8 charset is present in the HTML head
-        if (html && !html.includes('charset="UTF-8"') && !html.includes("charset='UTF-8'") && !html.includes('charset=UTF-8')) {
-            // Add charset meta tag after <head>
-            html = html.replace(/<head>/i, '<head>\n    <meta charset="UTF-8">');
-        }
-        
-        return html;
-    } catch (error) {
-        safeLog('error', 'MJML compilation failed', { error: error.message });
-        throw new Error(`MJML compilation failed: ${error.message}`);
-    }
-}
-
-/**
- * Extract first name from full name
- * @param {string} fullName - Full name
- * @returns {string}
- */
-function extractFirstName(fullName) {
-    if (!fullName) return '';
-    const parts = fullName.trim().split(/\s+/);
-    return parts[0] || '';
-}
-
-/**
- * Format date in French
- * @param {Date} date - Date object
- * @returns {Object} - { today, todayLong }
- */
-function formatDate(date = new Date()) {
-    const months = [
-        'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
-        'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
-    ];
-    
-    const day = date.getDate();
-    const month = date.getMonth();
-    const year = date.getFullYear();
-    
-    return {
-        today: `${day.toString().padStart(2, '0')}/${(month + 1).toString().padStart(2, '0')}/${year}`,
-        todayLong: `${day} ${months[month]} ${year}`
-    };
-}
-
-/**
- * Substitute keywords in content
- * @param {string} content - Content with {{keyword}} placeholders
- * @param {Object} context - Context data for substitution
- * @returns {string}
- */
-export function substituteKeywords(content, context) {
-    const { client, contact, resume, firm, user } = context;
-    const dateValues = formatDate();
-    
-    // Build absolute URL for logo if it's a relative path
-    let logoUrl = firm?.logo || '';
-    if (logoUrl && logoUrl.startsWith('/')) {
-        logoUrl = `${getBaseUrl()}${logoUrl}`;
-    }
-    
-    const replacements = {
-        'client.name': client?.name || '',
-        'client.type': client?.type === 'client' ? 'Client' : 'Prospect',
-        'client.industry': client?.industry || '',
-        'contact.name': contact?.name || '',
-        'contact.firstName': extractFirstName(contact?.name),
-        'contact.role': contact?.role || '',
-        'resume.name': resume?.name || '',
-        'resume.title': resume?.title || '',
-        'resume.version': resume?.version?.toString() || '1',
-        'firm.name': firm?.name || '',
-        'firm.logo': logoUrl,
-        'user.name': user?.name || '',
-        'user.email': user?.email || '',
-        'user.jobTitle': user?.jobTitle || '',
-        'user.phone': user?.phone || '',
-        'date.today': dateValues.today,
-        'date.todayLong': dateValues.todayLong
-    };
-    
-    let result = content;
-    for (const [key, value] of Object.entries(replacements)) {
-        const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-        result = result.replace(regex, value);
-    }
-    
-    return result;
-}
-
-/**
  * Render a template with context data
  * @param {string} templateId - Template ID
  * @param {Object} context - Context data for substitution
@@ -508,20 +300,17 @@ export async function renderTemplate(templateId, context) {
     if (!template) {
         throw new Error('Template not found');
     }
-    
-    // Debug: log user context
+
     safeLog('debug', 'EmailTemplates: renderTemplate context.user', { user: context?.user });
-    
-    // Get or compile HTML (async due to lazy loading)
+
     let html = template.html_content;
     if (!html) {
         html = await compileMjml(template.mjml_content);
     }
-    
-    // Substitute keywords
+
     const subject = substituteKeywords(template.subject_template, context);
     const body = substituteKeywords(html, context);
-    
+
     return { subject, html: body };
 }
 
@@ -533,19 +322,18 @@ export async function renderTemplate(templateId, context) {
  * @returns {Object} - { subject, html }
  */
 export async function previewTemplate(mjmlContent, subjectTemplate, context = null) {
-    // Use sample data if no context provided
     const sampleContext = context || {
         client: { name: 'Entreprise ABC', type: 'prospect', industry: 'Technologies' },
         contact: { name: 'Jean Dupont', role: 'Directeur RH' },
-        resume: { name: 'Marie Martin', title: 'Développeur Full Stack', version: 3 },
+        resume: { name: 'Marie Martin', title: 'DÃ©veloppeur Full Stack', version: 3 },
         firm: { name: 'Mon Cabinet' },
         user: { name: 'Pierre Durand' }
     };
-    
+
     const html = await compileMjml(mjmlContent);
     const subject = substituteKeywords(subjectTemplate, sampleContext);
     const body = substituteKeywords(html, sampleContext);
-    
+
     return { subject, html: body };
 }
 
@@ -573,3 +361,4 @@ export async function getFirmById(firmId) {
     );
     return result.rows[0] || null;
 }
+

@@ -338,8 +338,10 @@ export function useUsersManagementDashboard(options: { embedded?: boolean; force
   }, [canManageFirms, effectiveActiveTab, fetchFirms, firmModalOpen, userModalOpen]);
 
   useEffect(() => {
-    setLoading(usersLoading);
-  }, [usersLoading]);
+    if (!usersLoading && loading) {
+      setLoading(false);
+    }
+  }, [loading, usersLoading]);
 
   useEffect(() => {
     if (!canManageFirms && activeTab !== 'users') {

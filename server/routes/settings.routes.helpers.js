@@ -256,8 +256,39 @@ export async function buildPersistedSettingsResponse(settingsRecord, getProvider
     return decorateSettingsResponse(mapSettingsToFrontend(settingsRecord), getProviderAvailabilityFlags);
 }
 
+export async function buildSettingsIndexResponse({
+    settings,
+    canonicalLlmSettings,
+    getProviderAvailabilityFlags,
+    defaultModel
+}) {
+    if (!settings) {
+        return mergeCanonicalLlmSettings(
+            await decorateSettingsResponse({
+                id: null,
+                ...buildDefaultSettingsPayload(defaultModel)
+            }, getProviderAvailabilityFlags),
+            canonicalLlmSettings
+        );
+    }
+
+    return mergeCanonicalLlmSettings(
+        await decorateSettingsResponse(normalizeRequestedSettingsModel(mapSettingsToFrontend(settings)), getProviderAvailabilityFlags),
+        canonicalLlmSettings
+    );
+}
+
+export async function buildSettingsDefaultsResponse(defaultModel, getProviderAvailabilityFlags) {
+    return decorateSettingsResponse({
+        ...buildDefaultSettingsPayload(defaultModel),
+        'DPO Name': '',
+        'DPO Email': '',
+        'DPO Phone': ''
+    }, getProviderAvailabilityFlags);
+}
+
 export async function prepareRouteSettingsMutation(rawSettings, { getProviderAvailabilityFlags, reqUser, currentSettingsRecord }) {
-    const normalizedSettings = normalizeRequestedSettingsModel(normalizeWeights(rawSettings));
+    const normalizedSettings = normalizeAdminSettingsInput(rawSettings);
     return prepareSettingsMutationPayload(normalizedSettings, {
         getProviderAvailabilityFlags,
         reqUser,
@@ -277,6 +308,26 @@ export function buildSettingsUpdateFields(settingsData) {
     return mapSettingsFromFrontend(settingsData);
 }
 
+export async function persistSettingsMutation({
+    rawSettings,
+    currentSettingsRecord,
+    getProviderAvailabilityFlags,
+    reqUser,
+    persist
+}) {
+    const preparedSettings = await prepareRouteSettingsMutation(rawSettings, {
+        getProviderAvailabilityFlags,
+        reqUser,
+        currentSettingsRecord
+    });
+    const persistedRecord = await persist(preparedSettings);
+    return {
+        preparedSettings,
+        persistedRecord,
+        response: await buildPersistedSettingsResponse(persistedRecord, getProviderAvailabilityFlags)
+    };
+}
+
 export function resolveConfiguredOllamaBaseUrl(settings = {}) {
     const candidate = settings?.ollamaBaseUrl;
     if (!candidate || !String(candidate).trim()) {
@@ -286,26 +337,48 @@ export function resolveConfiguredOllamaBaseUrl(settings = {}) {
     return normalizeBaseUrl(candidate);
 }
 
-export async function prepareSettingsConnectionTestPayload(rawSettings, { getProviderAvailabilityFlags }) {
-    let settingsData = normalizeRequestedSettingsModel(normalizeWeights(rawSettings));
-    let ollamaDiscovery = null;
+export function normalizeAdminSettingsInput(rawSettings = {}) {
+    return normalizeRequestedSettingsModel(normalizeWeights(rawSettings));
+}
 
-    if (settingsData.llmProvider === 'ollama') {
-        const selectedOllamaModel = String(settingsData.llmModel || '').trim();
-        if (selectedOllamaModel) {
-            try {
-                const validation = await validateOllamaModelExists(settingsData.ollamaBaseUrl, selectedOllamaModel);
-                ollamaDiscovery = validation.discovery;
-            } catch (error) {
-                safeLog('warn', 'Failed to refresh Ollama catalog before testing LLM settings', {
-                    baseUrl: settingsData.ollamaBaseUrl,
-                    model: settingsData.llmModel,
-                    error: error.message
-                });
-            }
-        }
+async function resolveOllamaDiscoveryForSettings(settingsData, mode = 'persist') {
+    if (settingsData.llmProvider !== 'ollama') {
+        return null;
     }
 
+    const selectedOllamaModel = String(settingsData.llmModel || '').trim();
+    if (!selectedOllamaModel) {
+        return null;
+    }
+
+    try {
+        const validation = await validateOllamaModelExists(settingsData.ollamaBaseUrl, selectedOllamaModel);
+        if (mode === 'persist' && !validation.exists) {
+            safeLog('warn', 'Selected Ollama model is not currently available on the configured instance; persisting settings anyway', {
+                baseUrl: settingsData.ollamaBaseUrl,
+                model: selectedOllamaModel
+            });
+        }
+        return validation.discovery;
+    } catch (error) {
+        if (mode === 'test') {
+            safeLog('warn', 'Failed to refresh Ollama catalog before testing LLM settings', {
+                baseUrl: settingsData.ollamaBaseUrl,
+                model: settingsData.llmModel,
+                error: error.message
+            });
+        } else {
+            safeLog('warn', 'Failed to validate Ollama model during settings save; persisting settings anyway', {
+                baseUrl: settingsData.ollamaBaseUrl,
+                model: selectedOllamaModel,
+                error: error.message
+            });
+        }
+        return null;
+    }
+}
+
+function sanitizePreparedLlmModelParameters(settingsData, { getProviderAvailabilityFlags, ollamaDiscovery }) {
     if (!settingsData.llmModelParameters) {
         return settingsData;
     }
@@ -316,6 +389,12 @@ export async function prepareSettingsConnectionTestPayload(rawSettings, { getPro
             ollamaModels: ollamaDiscovery?.modelCatalog || []
         })
     };
+}
+
+export async function prepareSettingsConnectionTestPayload(rawSettings, { getProviderAvailabilityFlags }) {
+    const settingsData = normalizeAdminSettingsInput(rawSettings);
+    const ollamaDiscovery = await resolveOllamaDiscoveryForSettings(settingsData, 'test');
+    return sanitizePreparedLlmModelParameters(settingsData, { getProviderAvailabilityFlags, ollamaDiscovery });
 }
 
 function buildNextPromptTexts(currentSettingsRecord = {}, incomingSettings = {}) {
@@ -329,39 +408,8 @@ function buildNextPromptTexts(currentSettingsRecord = {}, incomingSettings = {})
 }
 
 export async function prepareSettingsMutationPayload(settingsData, { getProviderAvailabilityFlags, reqUser, currentSettingsRecord }) {
-    let preparedSettings = settingsData;
-    let ollamaDiscovery = null;
-
-    if (preparedSettings.llmProvider === 'ollama') {
-        const selectedOllamaModel = String(preparedSettings.llmModel || '').trim();
-        if (selectedOllamaModel) {
-            try {
-                const validation = await validateOllamaModelExists(preparedSettings.ollamaBaseUrl, selectedOllamaModel);
-                ollamaDiscovery = validation.discovery;
-                if (!validation.exists) {
-                    safeLog('warn', 'Selected Ollama model is not currently available on the configured instance; persisting settings anyway', {
-                        baseUrl: preparedSettings.ollamaBaseUrl,
-                        model: selectedOllamaModel
-                    });
-                }
-            } catch (error) {
-                safeLog('warn', 'Failed to validate Ollama model during settings save; persisting settings anyway', {
-                    baseUrl: preparedSettings.ollamaBaseUrl,
-                    model: selectedOllamaModel,
-                    error: error.message
-                });
-            }
-        }
-    }
-
-    if (preparedSettings.llmModelParameters) {
-        preparedSettings = {
-            ...preparedSettings,
-            llmModelParameters: sanitizeLlmModelParameters(preparedSettings.llmModelParameters, getProviderAvailabilityFlags(), {
-                ollamaModels: ollamaDiscovery?.modelCatalog || []
-            })
-        };
-    }
+    const ollamaDiscovery = await resolveOllamaDiscoveryForSettings(settingsData, 'persist');
+    const preparedSettings = sanitizePreparedLlmModelParameters(settingsData, { getProviderAvailabilityFlags, ollamaDiscovery });
 
     return {
         ...preparedSettings,
