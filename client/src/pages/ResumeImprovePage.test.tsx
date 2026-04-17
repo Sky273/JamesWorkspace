@@ -284,8 +284,8 @@ describe('ResumeImprovePage', () => {
     const improvedResume = {
       id: 'resume-1',
       Name: 'Ada Lovelace',
-      'Improved Text': 'Contenu amÃ©liorÃ©',
-      improvedText: 'Contenu amÃ©liorÃ©',
+      'Improved Text': 'Contenu amélioré',
+      improvedText: 'Contenu amélioré',
     };
     resumeContextState.currentResume = improvedResume;
     resumeContextState.resumes = [improvedResume];
