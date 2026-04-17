@@ -219,7 +219,7 @@ describe('Lifecycle config', () => {
         }
     });
 
-    it('should not start DB-dependent schedulers and workers when database init fails', async () => {
+    it('should fail fast and avoid runtime startup when database init fails', async () => {
         mockInitializeDatabase.mockResolvedValue(false);
 
         const server = {
@@ -233,39 +233,33 @@ describe('Lifecycle config', () => {
             listen: listenMock(server)
         };
 
+        process.exit = vi.fn();
         startServer(app, 'C:\\Users\\mail\\CascadeProjects\\ResumeConverter\\server');
         await new Promise(resolve => setImmediate(resolve));
         await new Promise(resolve => setImmediate(resolve));
 
         expect(mockInitializeDatabase).toHaveBeenCalled();
-        expect(mockStartRateLimitCleanup).toHaveBeenCalled();
-        expect(mockStartAuthOauthStatesCleanup).toHaveBeenCalled();
-        expect(mockStartMailStatesCleanup).toHaveBeenCalled();
+        expect(server.close).toHaveBeenCalled();
+        expect(mockStartRateLimitCleanup).not.toHaveBeenCalled();
+        expect(mockStartAuthOauthStatesCleanup).not.toHaveBeenCalled();
+        expect(mockStartMailStatesCleanup).not.toHaveBeenCalled();
         expect(mockInitBackupScheduler).not.toHaveBeenCalled();
         expect(mockStartScheduler).not.toHaveBeenCalled();
         expect(mockInitBatchJobsWorker).not.toHaveBeenCalled();
         expect(mockStartBatchJobsWorker).not.toHaveBeenCalled();
-        expect(mockStartFactsCacheCleanup).toHaveBeenCalled();
-        expect(mockStartTrendsCacheCleanup).toHaveBeenCalled();
-        expect(mockStartTagsCacheCleanup).toHaveBeenCalled();
-        expect(mockStartEscoCacheCleanup).toHaveBeenCalled();
-        expect(mockStartGdprMailStatesCleanup).toHaveBeenCalled();
-        expect(mockRegisterCacheCleanupFunctions).toHaveBeenCalledWith([
-            expect.any(Function),
-            expect.any(Function),
-            expect.any(Function)
-        ]);
-        expect(mockStartMemoryMonitor).toHaveBeenCalled();
-        expect(mockStartPeriodicCleanup).toHaveBeenCalledWith(
-            60 * 60 * 1000,
-            60 * 60 * 1000,
-            { enableDatabaseTasks: false }
-        );
+        expect(mockStartFactsCacheCleanup).not.toHaveBeenCalled();
+        expect(mockStartTrendsCacheCleanup).not.toHaveBeenCalled();
+        expect(mockStartTagsCacheCleanup).not.toHaveBeenCalled();
+        expect(mockStartEscoCacheCleanup).not.toHaveBeenCalled();
+        expect(mockStartGdprMailStatesCleanup).not.toHaveBeenCalled();
+        expect(mockRegisterCacheCleanupFunctions).not.toHaveBeenCalled();
+        expect(mockStartMemoryMonitor).not.toHaveBeenCalled();
+        expect(mockStartPeriodicCleanup).not.toHaveBeenCalled();
         expect(mockStartBlacklistCleanup).not.toHaveBeenCalled();
     });
 
     it('should run shutdown cleanup and exit cleanly when the server closes successfully', async () => {
-        mockInitializeDatabase.mockResolvedValue(false);
+        mockInitializeDatabase.mockResolvedValue(true);
 
         const server = {
             timeout: 0,
@@ -355,7 +349,7 @@ describe('Lifecycle config', () => {
     });
 
     it('should fail closed when server.close reports an error', async () => {
-        mockInitializeDatabase.mockResolvedValue(false);
+        mockInitializeDatabase.mockResolvedValue(true);
 
         const closeError = new Error('close failed');
         closeError.code = 'EFAIL';
