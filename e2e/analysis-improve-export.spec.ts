@@ -14,6 +14,7 @@ async function uploadResumeAndOpenAnalysis(page: Page) {
   await page.getByRole('button', { name: /employee|collaborateur/i }).click();
   await page.locator('#candidateName').fill('Jeanne Export E2E');
   await page.getByRole('button', { name: /continue to upload|continuer vers l'upload/i }).click();
+  await expect(page.locator('input[type="file"]')).toBeVisible({ timeout: 30000 });
 
   const createJobResponsePromise = page.waitForResponse((response) =>
     response.url().includes('/api/batch-jobs') && response.request().method() === 'POST',
