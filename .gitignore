@@ -12,6 +12,7 @@ server/node_modules/
 
 # Build outputs
 dist/
+client/dist-e2e/
 build/
 .vite/
 
