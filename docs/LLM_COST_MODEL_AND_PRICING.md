@@ -8,13 +8,19 @@
 
 ## 1. Résumé exécutif
 
-ResumeConverter facture l'IA en **crédits métier** et non en appels provider bruts. C'est la bonne granularité commerciale, car une même action utilisateur peut couvrir plusieurs sous-appels LLM.
+ResumeConverter facture l'IA en **crédits métier** et non en appels provider bruts. Cette logique tient toujours après mise à jour avec les modèles publics les plus récents.
 
-Constat principal :
+Au 17 avril 2026 :
 
-- les packs Stripe actuellement configurés sont déjà **très conservateurs** économiquement
-- ils restent confortables même si un provider premium comme **Claude Sonnet 4** est utilisé sur une partie des flux
-- si l'objectif devient la compétitivité commerciale plutôt que la marge de sécurité maximale, il existe une zone de prix plus agressive sans mettre en risque la rentabilité
+- **OpenAI** expose désormais `GPT-5.4`, `GPT-5.4 mini` et `GPT-5.4 nano`
+- **Anthropic** expose désormais `Claude Opus 4.7` et `Claude Haiku 4.5`, en plus de `Claude Sonnet 4`
+- **Z.AI** expose `GLM-5.1` côté catalogue et release notes, mais sans ligne tarifaire publique distincte ; `GLM-5` reste la meilleure base officielle de projection
+- **MiniMax** expose `M2.7` comme référence récente, au même prix token public que `M2.1`
+
+Conclusion commerciale :
+
+- la grille Stripe actuelle reste **premium-safe**
+- une grille plus agressive reste viable si le mix réel reste dominé par `DeepSeek`, `MiniMax`, `GLM`, `GPT-5.4 mini` ou du local `Ollama`
 
 ---
 
@@ -38,8 +44,8 @@ Source : `server/config/aiCredits.js`
 
 Important :
 
-- `resume.improvement` couvre à la fois la génération du CV amélioré et la post-analyse structurée
-- `profile.search` couvre l'extraction de mots-clés mission, le scoring batch et les explications associées
+- `resume.improvement` inclut génération + post-analyse
+- `profile.search` inclut extraction keywords + scoring + explications
 
 ### 2.2 Packs Stripe actuellement configurés
 
@@ -63,27 +69,33 @@ Source : `server/config/stripe.js`
 
 Snapshot pris le **2026-04-17** depuis les pages officielles publiques.
 
-| Provider / modèle | Input USD / 1M | Output USD / 1M | Source |
+| Provider / modèle | Input USD / 1M | Output USD / 1M | Notes |
 | --- | ---: | ---: | --- |
-| OpenAI GPT-5 mini | 0.25 | 2.00 | [OpenAI Pricing](https://openai.com/api/pricing) |
-| Anthropic Claude Sonnet 4 | 3.00 | 15.00 | [Anthropic Pricing](https://www.anthropic.com/pricing) |
-| DeepSeek V3.2 (`deepseek-chat`) | 0.28 | 0.42 | [DeepSeek Models & Pricing](https://api-docs.deepseek.com/quick_start/pricing/) |
-| Z.AI GLM-4.5-Air | 0.20 | 1.10 | [Z.AI Pricing](https://docs.z.ai/guides/overview/pricing) |
-| MiniMax M2.1 | 0.30 | 1.20 | [MiniMax Pricing](https://platform.minimax.io/docs/api-reference/anthropic-api-compatible-cache) |
-| Hugging Face routed inference | dépend du provider | dépend du provider | [HF Pricing](https://huggingface.co/docs/inference-providers/pricing) |
+| OpenAI GPT-5.4 | 2.50 | 15.00 | Latest public OpenAI flagship visible on 2026-04-17 |
+| OpenAI GPT-5.4 mini | 0.75 | 4.50 | Latest public OpenAI mini baseline |
+| OpenAI GPT-5.4 nano | 0.20 | 1.25 | Cheapest public GPT-5.4-class option |
+| Anthropic Claude Opus 4.7 | 5.00 | 25.00 | Latest public Anthropic premium model, published 2026-04-16 |
+| Anthropic Claude Sonnet 4 | 3.00 | 15.00 | Stable public mid-tier baseline |
+| Anthropic Claude Haiku 4.5 | 1.00 | 5.00 | Fast and cheaper recent option |
+| DeepSeek V3.2 (`deepseek-chat`) | 0.28 | 0.42 | Cache-hit input can be much lower |
+| Z.AI GLM-5 | 1.00 | 3.20 | Official public pricing proxy for GLM-5.1 |
+| Z.AI GLM-5-Turbo | 1.20 | 4.00 | Official public high-end visible row |
+| Z.AI GLM-4.7 | 0.60 | 2.20 | Still publicly priced |
+| MiniMax M2.7 | 0.30 | 1.20 | Latest public MiniMax flagship family row |
+| Hugging Face routed inference | provider-dependent | provider-dependent | Pas de markup selon HF |
 
-Notes :
+Notes importantes :
 
-- Hugging Face documente que les requêtes routées sont facturées **sans markup** ; ce n'est donc pas une base tarifaire autonome, mais un chemin de facturation vers d'autres providers.
-- Pour DeepSeek, le cache hit input peut être bien plus bas ; la projection ci-dessous reste volontairement prudente et utilise le **cache miss**.
+- `GLM-5.1` est visible dans le catalogue public Z.AI et dans les release notes du 7 avril 2026.
+- En revanche, la page de pricing publique Z.AI ne donne pas encore de ligne distincte `GLM-5.1`.
+- Cette note utilise donc **GLM-5 comme proxy officiel le plus proche** pour les projections liées à `GLM-5.1`.
+- C'est une **inférence à partir des sources**, pas un prix public distinct de `GLM-5.1`.
 
 ---
 
 ## 4. Hypothèses de consommation retenues
 
-Le code définit des plafonds de tokens, mais pas encore un historique stable de **médianes réelles par `actionType`**. Pour faire une projection économiquement exploitable, il faut donc poser une enveloppe opérationnelle raisonnable.
-
-Hypothèses retenues :
+Le code définit des plafonds de tokens, mais pas encore un historique stable de **médianes réelles par `actionType`**. La projection utilise donc une enveloppe opérationnelle raisonnable.
 
 | Action | Input tokens | Output tokens |
 | --- | ---: | ---: |
@@ -101,31 +113,26 @@ Ces valeurs sont des **hypothèses produit** destinées à la projection, pas de
 
 ---
 
-## 5. Coût variable indicatif par action
+## 5. Coût variable indicatif avec les derniers modèles
 
-### 5.1 Comparatif providers
+### 5.1 Coût par action sur des actions lourdes et visibles
 
-| Action | DeepSeek V3.2 | OpenAI GPT-5 mini | Claude Sonnet 4 |
-| --- | ---: | ---: | ---: |
-| `chatbot.message` | 0.0009 $ | 0.0019 $ | 0.0165 $ |
-| `resume.ai_modify` | 0.0025 $ | 0.0055 $ | 0.0480 $ |
-| `template.extract` | 0.0073 $ | 0.0130 $ | 0.1200 $ |
-| `resume.analysis` | 0.0060 $ | 0.0135 $ | 0.1170 $ |
-| `resume.improvement` | 0.0129 $ | 0.0310 $ | 0.2640 $ |
-| `resume.adaptation` | 0.0070 $ | 0.0160 $ | 0.1380 $ |
-| `resume.match` | 0.0029 $ | 0.0050 $ | 0.0465 $ |
-| `profile.search` | 0.0044 $ | 0.0080 $ | 0.0735 $ |
-| `profile.analysis` | 0.0033 $ | 0.0070 $ | 0.0615 $ |
+| Action | GPT-5.4 | GPT-5.4 mini | Claude Opus 4.7 | GLM-5 proxy pour 5.1 | MiniMax M2.7 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `chatbot.message` | 0.0155 $ | 0.0046 $ | 0.0275 $ | 0.0042 $ | 0.0014 $ |
+| `resume.analysis` | 0.1100 $ | 0.0330 $ | 0.1950 $ | 0.0300 $ | 0.0102 $ |
+| `resume.improvement` | 0.2500 $ | 0.0750 $ | 0.4400 $ | 0.0664 $ | 0.0228 $ |
+| `resume.adaptation` | 0.1300 $ | 0.0390 $ | 0.2300 $ | 0.0352 $ | 0.0120 $ |
+| `template.extract` | 0.1100 $ | 0.0330 $ | 0.2000 $ | 0.0328 $ | 0.0108 $ |
 
 Lecture :
 
-- DeepSeek / GLM / MiniMax sont dans une bande de coût très basse
-- OpenAI GPT-5 mini reste économiquement confortable
-- Claude Sonnet 4 est beaucoup plus cher, mais reste encore loin des prix de vente actuels des packs
+- `GPT-5.4` et `Claude Opus 4.7` augmentent fortement le coût variable
+- mais même sur `resume.improvement`, on reste loin d'une remise en cause de la rentabilité des packs actuels
 
 ### 5.2 Coût représentatif pour 1000 crédits
 
-Panier métier de référence retenu :
+Panier métier utilisé :
 
 - 4 améliorations
 - 6 analyses
@@ -136,39 +143,34 @@ Panier métier de référence retenu :
 - 6 modifications IA
 - 30 messages chatbot
 
-Résultat :
-
 | Politique LLM dominante | Coût variable IA pour 1000 crédits |
 | --- | ---: |
-| DeepSeek V3.2 | 0.27 $ |
-| Z.AI GLM-4.5-Air | 0.35 $ |
-| MiniMax M2.1 | 0.44 $ |
-| OpenAI GPT-5 mini | 0.57 $ |
-| Claude Sonnet 4 | 5.01 $ |
+| DeepSeek V3.2 | 0.2729 $ |
+| MiniMax M2.7 | 0.4416 $ |
+| Z.AI GLM-4.7 | 0.8434 $ |
+| Z.AI GLM-5 (proxy GLM-5.1) | 1.3128 $ |
+| OpenAI GPT-5.4 mini | 1.4025 $ |
+| Anthropic Claude Haiku 4.5 | 1.6710 $ |
+| OpenAI GPT-5.4 | 4.6750 $ |
+| Anthropic Claude Sonnet 4 | 5.0130 $ |
+| Anthropic Claude Opus 4.7 | 8.3550 $ |
 
-Conclusion intermédiaire :
+Cette lecture change la hiérarchie mais pas la conclusion :
 
-- même en scénario premium, on reste dans un coût variable IA de quelques dollars pour 1000 crédits
-- les packs actuels à ~100 € / 1000 crédits laissent une marge très large pour absorber :
-  - OCR
-  - stockage
-  - infrastructure applicative
-  - support
-  - incidents et croissance des prompts
+- les packs actuels sont toujours très sûrs
+- la vraie variable stratégique n'est pas la survie économique, mais le positionnement commercial
 
 ---
 
 ## 6. Option modèle local
 
-### 6.1 Nature du coût
+Pour **Ollama** ou un modèle local auto-hébergé, il n'existe pas de prix officiel au million de tokens comparable aux APIs SaaS.
 
-Pour **Ollama** ou un modèle local auto-hébergé, il n'existe pas de prix officiel au million de tokens comparable aux APIs SaaS. Le bon modèle économique est donc :
+Le bon modèle économique est donc :
 
 - coût d'infrastructure
 - coût d'exploitation
 - coût d'amortissement matériel
-
-### 6.2 Hypothèse locale illustrative
 
 Hypothèse raisonnable tout compris :
 
@@ -187,26 +189,22 @@ Hypothèse raisonnable tout compris :
 
 Lecture :
 
-- le local n'est pas automatiquement moins cher à faible volume
-- il devient très intéressant dès que le volume est stable
-- si le client héberge lui-même, la tarification peut se déplacer d'une logique “revente IA” vers une logique “logiciel + support + maintenance”
+- le local n'est pas forcément le moins cher à faible volume
+- il devient très intéressant si le volume est stable ou si le client porte lui-même l'infrastructure
 
 ---
 
 ## 7. Tableau de tarifs recommandé
 
-Trois stratégies cohérentes apparaissent.
+### Option A : budget / local-first
 
-### 7.1 Option A : budget / local-first
-
-À utiliser si le runtime standard est limité à :
+À utiliser si le runtime standard est dominé par :
 
 - DeepSeek
-- GLM
 - MiniMax
+- GLM
 - Ollama local
-
-et si les providers premium sont désactivés ou facturés à part.
+- GPT-5.4 mini ou nano
 
 | Pack | Crédits | Tarif recommandé |
 | --- | ---: | ---: |
@@ -214,13 +212,15 @@ et si les providers premium sont désactivés ou facturés à part.
 | Growth | 750 | 35 € |
 | Scale | 2000 | 89 € |
 
-### 7.2 Option B : universal hosted
+### Option B : universal hosted
 
-À utiliser si :
+À utiliser si le runtime standard reste surtout sur :
 
-- OpenAI GPT-5 mini est autorisé par défaut
-- Anthropic premium peut exister ponctuellement
-- on veut une politique plus compétitive que la grille actuelle
+- GPT-5.4 mini
+- GLM-5 / GLM-5.1
+- Claude Haiku 4.5
+- DeepSeek
+- MiniMax
 
 | Pack | Crédits | Tarif recommandé |
 | --- | ---: | ---: |
@@ -228,13 +228,13 @@ et si les providers premium sont désactivés ou facturés à part.
 | Growth | 750 | 55 € |
 | Scale | 2000 | 139 € |
 
-### 7.3 Option C : premium-safe
+### Option C : premium-safe
 
-À utiliser si :
+À utiliser si des workflows lourds peuvent basculer fréquemment sur :
 
-- on veut une seule grille très robuste
-- on accepte de payer la tranquillité de marge
-- Claude Sonnet 4 ou d'autres providers premium peuvent devenir fréquents
+- GPT-5.4
+- Claude Sonnet 4
+- Claude Opus 4.7
 
 | Pack | Crédits | Tarif recommandé |
 | --- | ---: | ---: |
@@ -242,49 +242,37 @@ et si les providers premium sont désactivés ou facturés à part.
 | Growth | 750 | 79 € |
 | Scale | 2000 | 199 € |
 
-Cette option correspond exactement à la configuration Stripe actuelle.
+Cette option correspond à la configuration Stripe actuelle.
 
 ---
 
 ## 8. Recommandation commerciale
 
-### Recommandation la plus pragmatique
+### Position la plus prudente
 
-Si l'objectif est de rester rentable tout en abaissant la friction d'achat, la meilleure zone de prix est :
+Conserver :
 
-| Pack | Crédits | Recommandation |
-| --- | ---: | ---: |
-| Starter | 250 | **19 €** |
-| Growth | 750 | **55 €** |
-| Scale | 2000 | **139 €** |
+- Starter 250 crédits : 29 €
+- Growth 750 crédits : 79 €
+- Scale 2000 crédits : 199 €
 
-Pourquoi :
+### Position la plus agressive mais encore saine
 
-- très rentable sur DeepSeek / GLM / MiniMax / GPT-5 mini
-- encore sûre si certains flux premium passent ponctuellement par Anthropic
-- commercialement plus accessible que la grille actuelle
-- cohérente avec un produit SaaS B2B premium mais pas “sur-margé” au premier regard
+Passer à :
 
-### Quand garder la grille actuelle
+- Starter 250 crédits : 19 €
+- Growth 750 crédits : 55 €
+- Scale 2000 crédits : 139 €
 
-Conserver `29 € / 79 € / 199 €` a du sens si :
-
-- le produit est vendu comme outil premium à forte valeur perçue
-- le support et l'accompagnement sont inclus
-- la stratégie privilégie la marge de sécurité à la conquête volume
-- le mix provider futur reste incertain
+uniquement si le mix réel reste dominé par les modèles budget/mid-tier récents.
 
 ---
 
 ## 9. Limites de cette projection
 
 - La projection repose sur des hypothèses de tokens par action, pas encore sur des médianes de production historisées.
-- Le vrai prochain cran de pilotage serait d'exposer des métriques durables par `actionType` :
-  - tokens input médians
-  - tokens output médians
-  - coût provider réel moyen
-  - distribution par provider
-- Si certains clients activent des providers premium et d'autres non, une future grille pourrait devoir dépendre d'une **politique provider par cabinet**.
+- `GLM-5.1` est bien un modèle public récent, mais sans ligne de prix publique distincte visible au 17 avril 2026.
+- Si certains cabinets activent des providers premium et d'autres non, une future grille pourra devoir dépendre d'une **politique provider par cabinet**.
 
 ---
 
@@ -293,9 +281,14 @@ Conserver `29 € / 79 € / 199 €` a du sens si :
 - `server/config/aiCredits.js`
 - `server/config/stripe.js`
 - [https://openai.com/api/pricing](https://openai.com/api/pricing)
+- [https://developers.openai.com/api/docs/models/gpt-5.4/](https://developers.openai.com/api/docs/models/gpt-5.4/)
 - [https://www.anthropic.com/pricing](https://www.anthropic.com/pricing)
-- [https://docs.anthropic.com/en/docs/about-claude/pricing](https://docs.anthropic.com/en/docs/about-claude/pricing)
+- [https://www.anthropic.com/claude/opus](https://www.anthropic.com/claude/opus)
+- [https://www.anthropic.com/claude/haiku](https://www.anthropic.com/claude/haiku)
 - [https://api-docs.deepseek.com/quick_start/pricing/](https://api-docs.deepseek.com/quick_start/pricing/)
+- [https://docs.z.ai/guides/overview/overview](https://docs.z.ai/guides/overview/overview)
 - [https://docs.z.ai/guides/overview/pricing](https://docs.z.ai/guides/overview/pricing)
+- [https://docs.z.ai/release-notes/new-released](https://docs.z.ai/release-notes/new-released)
+- [https://platform.minimax.io/docs/api-reference/text-anthropic-api](https://platform.minimax.io/docs/api-reference/text-anthropic-api)
 - [https://platform.minimax.io/docs/api-reference/anthropic-api-compatible-cache](https://platform.minimax.io/docs/api-reference/anthropic-api-compatible-cache)
 - [https://huggingface.co/docs/inference-providers/pricing](https://huggingface.co/docs/inference-providers/pricing)
