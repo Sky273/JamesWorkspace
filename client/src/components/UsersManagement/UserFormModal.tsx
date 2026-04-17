@@ -82,7 +82,7 @@ const UserFormModal = ({
   });
 
   useEffect(() => {
-    const currentUserFirmId = currentUser?.firmId || currentUser?.firm_id || '';
+    const currentUserFirmId = currentUser?.firmId || '';
 
     if (user) {
       const capitalizedStatus = user.status
@@ -108,7 +108,7 @@ const UserFormModal = ({
         status: 'Active',
       });
     }
-  }, [currentUser?.firmId, currentUser?.firm_id, isOpen, user]);
+  }, [currentUser?.firmId, isOpen, user]);
 
   useEffect(() => {
     if (!isOpen || user || canChangeFirm || firms.length === 0) {

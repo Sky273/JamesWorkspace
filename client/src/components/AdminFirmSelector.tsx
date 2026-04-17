@@ -53,9 +53,9 @@ const AdminFirmSelector = ({
   }, [providedFirms]);
 
   useEffect(() => {
-    const currentUserFirmId = user?.firmId || user?.firm_id || '';
+    const currentUserFirmId = user?.firmId || '';
     setUserFirmId(currentUserFirmId);
-  }, [user?.firmId, user?.firm_id]);
+  }, [user?.firmId]);
 
   useEffect(() => {
     const loadFirms = async () => {
@@ -108,7 +108,6 @@ const AdminFirmSelector = ({
     ? (!selectedFirmId || selectedFirmId === userFirmId ? currentFirmOptionValue : selectedFirmId)
     : (selectedFirmId || userFirmId);
   const currentUserFirmName = user?.firmName
-    || user?.firm
     || firms.find((firm) => firm.id === userFirmId)?.name
     || t('common.myFirm', 'Mon cabinet (par defaut)');
 

@@ -79,6 +79,33 @@ describe('authService', () => {
             expect(mockResetSessionState).toHaveBeenCalled();
         });
 
+        it('should normalize legacy firm aliases on successful sign in', async () => {
+            mockFetch.mockResolvedValueOnce(
+                mockResponse(true, {
+                    user: {
+                        id: '1',
+                        name: 'Test User',
+                        email: 'test@test.com',
+                        role: 'user',
+                        status: 'active',
+                        firm_id: 'firm-1',
+                        firm: 'Cabinet Alpha',
+                    },
+                })
+            );
+
+            const result = await authService.signIn('test@test.com', 'password123');
+
+            expect(result).toMatchObject({
+                firmId: 'firm-1',
+                firmName: 'Cabinet Alpha',
+            });
+            expect(authService.getCurrentUser()).toMatchObject({
+                firmId: 'firm-1',
+                firmName: 'Cabinet Alpha',
+            });
+        });
+
         it('should return 2FA response when required', async () => {
             mockFetch.mockResolvedValueOnce(
                 mockResponse(true, {
@@ -273,6 +300,31 @@ describe('authService', () => {
 
             expect(result).toEqual(restoredUser);
             expect(authService.getCurrentUser()).toEqual(restoredUser);
+        });
+
+        it('should normalize legacy firm aliases during session restore', async () => {
+            vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(mockResponse(true, {
+                user: {
+                    id: '1',
+                    name: 'Restored',
+                    email: 'restored@test.com',
+                    role: 'user',
+                    status: 'active',
+                    customerId: 'firm-2',
+                    customerName: 'Cabinet Beta',
+                },
+            })));
+
+            const result = await authService.restoreSession();
+
+            expect(result).toMatchObject({
+                firmId: 'firm-2',
+                firmName: 'Cabinet Beta',
+            });
+            expect(authService.getCurrentUser()).toMatchObject({
+                firmId: 'firm-2',
+                firmName: 'Cabinet Beta',
+            });
         });
 
         it('should refresh and retry when /api/auth/me returns 401', async () => {

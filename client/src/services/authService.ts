@@ -41,6 +41,12 @@ export interface User {
   google_email?: string;
 }
 
+type UserLike = Partial<User> & {
+  customerId?: string;
+  customerName?: string;
+  customer?: string;
+};
+
 export interface RegisterData {
   email: string;
   password: string;
@@ -118,6 +124,15 @@ const parseJsonResponseSafe = async (response: Response): Promise<Record<string,
 const isGatewayFailure = (status: number): boolean => [502, 503, 504].includes(status);
 const asString = (value: unknown, fallback = ''): string =>
   typeof value === 'string' ? value : fallback;
+const firstNonEmptyString = (...values: unknown[]): string | undefined => {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) {
+      return value;
+    }
+  }
+
+  return undefined;
+};
 
 const asRegistrationStatus = (value: unknown): RegisterResponse['registrationStatus'] =>
   value === 'active' || value === 'pending' ? value : undefined;
@@ -143,11 +158,44 @@ const fetchPublicAuth = (url: string, options: RequestInit = {}): Promise<Respon
 // In-memory user cache (no localStorage for security)
 let cachedUser: User | null = null;
 
+const normalizeUser = (user: UserLike | null | undefined): User | null => {
+  if (!user || typeof user !== 'object') {
+    return null;
+  }
+
+  const firmId = firstNonEmptyString(user.firmId, user.firm_id, user.customerId);
+  const firmName = firstNonEmptyString(user.firmName, user.firm, user.customerName, user.customer);
+
+  return {
+    id: asString(user.id),
+    name: asString(user.name),
+    email: asString(user.email),
+    jobTitle: firstNonEmptyString(user.jobTitle),
+    phone: firstNonEmptyString(user.phone),
+    role: (user.role === 'admin' || user.role === 'localAdmin' || user.role === 'user' || user.role === 'viewer')
+      ? user.role
+      : 'user',
+    status: (user.status === 'active' || user.status === 'inactive' || user.status === 'pending')
+      ? user.status
+      : 'inactive',
+    firmId,
+    firmName,
+    firm: firmName,
+    firmLogo: firstNonEmptyString(user.firmLogo),
+    firm_id: firmId,
+    customerId: firmId,
+    customerName: firmName,
+    customer: firmName,
+    google_id: firstNonEmptyString(user.google_id),
+    google_email: firstNonEmptyString(user.google_email),
+  };
+};
+
 const isActiveUser = (user: User | null | undefined): user is User =>
   Boolean(user && user.status === 'active');
 
 const setAuthenticatedUser = (user: User | null): User | null => {
-  cachedUser = user;
+  cachedUser = normalizeUser(user);
   return cachedUser;
 };
 
@@ -199,7 +247,7 @@ export const authService = {
         });
       }
 
-      const signedInUser = data.user as User;
+      const signedInUser = normalizeUser(data.user as UserLike);
 
       if (isActiveUser(signedInUser)) {
         setAuthenticatedUser(signedInUser);
@@ -299,7 +347,7 @@ export const authService = {
 
       if (response.ok) {
         const data = await response.json();
-        const restoredUser = (data.user as User) || null;
+        const restoredUser = normalizeUser(data.user as UserLike);
         if (!isActiveUser(restoredUser)) {
           clearAuthenticatedUser();
           return null;
@@ -351,7 +399,7 @@ export const authService = {
       }
 
       const retryData = await retryResponse.json();
-      const refreshedUser = (retryData.user as User) || null;
+      const refreshedUser = normalizeUser(retryData.user as UserLike);
       if (!isActiveUser(refreshedUser)) {
         clearAuthenticatedUser();
         return null;
@@ -380,8 +428,9 @@ export const authService = {
       }
 
       const data = await response.json();
-      if (isActiveUser(data.user as User)) {
-        setAuthenticatedUser(data.user as User);
+      const refreshedUser = normalizeUser(data.user as UserLike);
+      if (isActiveUser(refreshedUser)) {
+        setAuthenticatedUser(refreshedUser);
         return true;
       }
       clearAuthenticatedUser();

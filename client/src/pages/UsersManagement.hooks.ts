@@ -137,12 +137,12 @@ export function useUsersManagementDashboard(options: { embedded?: boolean; force
   const effectiveActiveTab = options.forcedTab || activeTab;
   const canManageFirms = user?.role === 'admin';
   const canAssignSuperAdmin = user?.role === 'admin';
-  const currentUserFirmId = user?.firmId || user?.firm_id || '';
+  const currentUserFirmId = user?.firmId || '';
   const currentUserFirm = useMemo(
     () => (currentUserFirmId
-      ? { id: currentUserFirmId, name: user?.firmName || user?.firm || 'Cabinet' }
+      ? { id: currentUserFirmId, name: user?.firmName || 'Cabinet' }
       : null),
-    [currentUserFirmId, user?.firm, user?.firmName],
+    [currentUserFirmId, user?.firmName],
   );
 
   useEffect(() => {
