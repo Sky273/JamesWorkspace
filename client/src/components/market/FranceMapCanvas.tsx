@@ -102,6 +102,7 @@ export default function FranceMapCanvas({
   const popupRef = useRef<Popup | null>(null);
   const navControlRef = useRef<NavigationControl | null>(null);
   const appliedStyleRef = useRef<string | null>(null);
+  const initialStyleRef = useRef(isDarkMode ? MAP_STYLES.dark : MAP_STYLES.light);
   const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
@@ -159,7 +160,7 @@ export default function FranceMapCanvas({
         document.head.appendChild(styleElement);
       }
 
-      const initialStyle = isDarkMode ? MAP_STYLES.dark : MAP_STYLES.light;
+      const initialStyle = initialStyleRef.current;
       const map = new maplibregl.Map({
         container: containerRef.current,
         style: initialStyle,
@@ -196,7 +197,7 @@ export default function FranceMapCanvas({
       }
       setMapReady(false);
     };
-  }, [isDarkMode, mapReady, mapRef, onMapLoad]);
+  }, [mapRef, onMapLoad]);
 
   useEffect(() => {
     const map = mapRef.current;
