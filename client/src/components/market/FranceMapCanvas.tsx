@@ -144,20 +144,10 @@ export default function FranceMapCanvas({
     let mountedMap: MaplibreMap | null = null;
     const regionButtons = regionButtonsRef.current;
     const initializeMap = async () => {
-      const [{ default: maplibregl, NavigationControl }, { default: maplibreCss }] = await Promise.all([
-        import('maplibre-gl'),
-        import('maplibre-gl/dist/maplibre-gl.css?inline'),
-      ]);
+      const { default: maplibregl, NavigationControl } = await import('maplibre-gl');
 
       if (cancelled || !containerRef.current || mapRef.current) {
         return;
-      }
-
-      if (typeof document !== 'undefined' && !document.getElementById(MAPLIBRE_STYLE_ID)) {
-        const styleElement = document.createElement('style');
-        styleElement.id = MAPLIBRE_STYLE_ID;
-        styleElement.textContent = maplibreCss;
-        document.head.appendChild(styleElement);
       }
 
       const initialStyle = initialStyleRef.current;

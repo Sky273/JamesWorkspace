@@ -100,4 +100,29 @@ describe('resumeAdaptation.service E2E mocked mode', () => {
         expect(result.matchAnalysis.matchScore).toBe('84');
         expect(result.adaptedText).toContain('Adaptation E2E');
     });
+
+    it('should prefer improved_text over original_text for downstream adaptation content', async () => {
+        process.env.E2E_DISABLE_EXTERNAL_LLM = 'true';
+        mockFindResumeRecord.mockResolvedValueOnce({
+            id: 'resume-1',
+            original_text: '<p>CV source</p>',
+            improved_text: '<p>CV amélioré</p>',
+            original_file_name: 'candidate.docx',
+            title: 'Consultant',
+            name: 'Candidate',
+            candidate_name: 'Candidate',
+            firm_name: 'Firm One'
+        });
+
+        const result = await executeResumeAdaptation({
+            resumeId: 'resume-1',
+            missionId: 'mission-1'
+        });
+
+        expect(result.adaptedText).toContain('<p>CV amélioré</p>');
+        expect(result.adaptedText).not.toContain('<p>CV source</p>');
+        expect(mockCreateAdaptation).toHaveBeenCalledWith(expect.objectContaining({
+            adapted_text: expect.stringContaining('<p>CV amélioré</p>')
+        }));
+    });
 });

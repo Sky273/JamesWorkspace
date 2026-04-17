@@ -12,6 +12,13 @@ import { isNonRetryableLlmProviderError, normalizeNonRetryableLlmProviderError }
 import { metrics } from '../../metrics.service.js';
 
 const IMPROVEMENT_PROVIDER_CONFIGURATION_MESSAGE = "L'amélioration du CV est indisponible car le fournisseur IA est mal configuré ou son jeton a expiré.";
+const INVALID_RESPONSE_MARKERS = [
+    'réponse invalide',
+    'rÃ©ponse invalide',
+    'rÃƒÂ©ponse invalide',
+    'reponse invalide',
+    'invalid response'
+];
 
 function normalizeImprovementExecutionError(error) {
     const normalizedError = normalizeNonRetryableLlmProviderError(error);
@@ -30,10 +37,7 @@ function isNonRetryableImprovementError(error) {
 
 function isInvalidImprovedAnalysisError(error) {
     const message = String(error?.message || '').toLowerCase();
-    return message.includes('réponse invalide')
-        || message.includes('rÃ©ponse invalide')
-        || message.includes('reponse invalide')
-        || message.includes('invalid response');
+    return INVALID_RESPONSE_MARKERS.some((marker) => message.includes(marker));
 }
 
 function hasUsableFallbackAnalysis(analysis) {
