@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { MemoryRouter } from 'react-router-dom';
 import Register from './Register';
 
@@ -106,19 +107,21 @@ describe('Register', () => {
     renderRegister();
 
     fireEvent.submit(screen.getByRole('button', { name: 'auth.register.registerButton' }).closest('form') as HTMLFormElement);
-    expect(await screen.findByText('errors.required')).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent('errors.required');
+    expect(screen.getByLabelText('auth.register.nameLabel')).toHaveAttribute('aria-invalid', 'true');
 
     fireEvent.change(screen.getByPlaceholderText('auth.register.namePlaceholder'), { target: { value: 'Test', name: 'name' } });
     fireEvent.change(screen.getByPlaceholderText('auth.register.emailPlaceholder'), { target: { value: 'test@test.com', name: 'email' } });
     fireEvent.change(screen.getByPlaceholderText('auth.register.passwordPlaceholder'), { target: { value: 'short', name: 'password' } });
     fireEvent.change(screen.getByPlaceholderText('auth.register.confirmPasswordPlaceholder'), { target: { value: 'short', name: 'confirmPassword' } });
     fireEvent.click(screen.getByRole('button', { name: 'auth.register.registerButton' }));
-    expect(await screen.findByText('errors.passwordLength')).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent('errors.passwordLength');
 
     fireEvent.change(screen.getByPlaceholderText('auth.register.passwordPlaceholder'), { target: { value: 'password123', name: 'password' } });
     fireEvent.change(screen.getByPlaceholderText('auth.register.confirmPasswordPlaceholder'), { target: { value: 'different123', name: 'confirmPassword' } });
     fireEvent.click(screen.getByRole('button', { name: 'auth.register.registerButton' }));
-    expect(await screen.findByText('errors.passwordMismatch')).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent('errors.passwordMismatch');
+    expect(screen.getByLabelText('auth.register.confirmPasswordLabel')).toHaveAttribute('aria-invalid', 'true');
   });
 
   it('submits normalized email and navigates to signin on success', async () => {
@@ -169,6 +172,7 @@ describe('Register', () => {
     fireEvent.click(screen.getByRole('button', { name: 'auth.register.registerButton' }));
 
     expect(await screen.findByText('Email déjà utilisé')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Email déjà utilisé');
   });
 
   it('shows Google auth bootstrap failure when authUrl is missing', async () => {
@@ -187,5 +191,12 @@ describe('Register', () => {
     fireEvent.click(screen.getByRole('button', { name: 'auth.register.registerWithGoogle' }));
 
     expect(await screen.findByText('auth.register.googleRegistrationFailed')).toBeInTheDocument();
+  });
+
+  it('has no critical accessibility violations on the default registration form', async () => {
+    const { container } = renderRegister();
+    const results = await axe(container);
+
+    expect(results.violations).toHaveLength(0);
   });
 });

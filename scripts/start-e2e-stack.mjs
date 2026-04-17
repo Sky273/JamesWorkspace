@@ -1,14 +1,22 @@
 /* global console, process, setInterval, setTimeout */
 import { spawn } from 'child_process';
 
-const childProcesses = [];
+const childProcesses = new Map();
 let shuttingDown = false;
+const restartCounts = new Map();
+const MAX_RESTARTS = 2;
+const RESTART_DELAY_MS = 1000;
 
 const sharedPdfServerToken =
   process.env.PDF_SERVER_INTERNAL_TOKEN || 'playwright-pdf-server-internal-token-32chars';
 const localPdfServerUrl = 'http://127.0.0.1:3002';
 
+function createChildKey(label) {
+  return label;
+}
+
 function spawnChild(label, command, args, extraEnv = {}) {
+  const childKey = createChildKey(label);
   const child = spawn(command, args, {
     stdio: 'inherit',
     shell: false,
@@ -18,7 +26,7 @@ function spawnChild(label, command, args, extraEnv = {}) {
     },
   });
 
-  childProcesses.push(child);
+  childProcesses.set(childKey, { child, command, args, extraEnv, label });
 
   child.on('exit', (code, signal) => {
     if (shuttingDown) {
@@ -26,7 +34,23 @@ function spawnChild(label, command, args, extraEnv = {}) {
     }
 
     const detail = signal ? `signal ${signal}` : `code ${code}`;
-    console.error(`[start-e2e-stack] ${label} exited with ${detail}`);
+    const restartCount = restartCounts.get(childKey) || 0;
+
+    if (restartCount < MAX_RESTARTS) {
+      restartCounts.set(childKey, restartCount + 1);
+      console.warn(
+        `[start-e2e-stack] ${label} exited with ${detail}; restarting ` +
+        `(${restartCount + 1}/${MAX_RESTARTS})...`
+      );
+      setTimeout(() => {
+        if (!shuttingDown) {
+          spawnChild(label, command, args, extraEnv);
+        }
+      }, RESTART_DELAY_MS).unref();
+      return;
+    }
+
+    console.error(`[start-e2e-stack] ${label} exited with ${detail} after ${MAX_RESTARTS} restart attempts`);
     shutdown(code ?? 1);
   });
 
@@ -48,14 +72,14 @@ function shutdown(exitCode = 0) {
   }
 
   shuttingDown = true;
-  for (const child of childProcesses) {
+  for (const { child } of childProcesses.values()) {
     if (!child.killed) {
       child.kill('SIGTERM');
     }
   }
 
   setTimeout(() => {
-    for (const child of childProcesses) {
+    for (const { child } of childProcesses.values()) {
       if (!child.killed) {
         child.kill('SIGKILL');
       }

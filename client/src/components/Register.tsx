@@ -36,6 +36,9 @@ interface FormData {
   website: string;
 }
 
+type FieldName = 'name' | 'email' | 'password' | 'confirmPassword';
+type FieldErrors = Partial<Record<FieldName, string>>;
+
 const TURNSTILE_SITE_KEY = (
   import.meta.env.CLOUDFLARE_TURNSTILE_SITE_KEY
   || import.meta.env.VITE_TURNSTILE_SITE_KEY
@@ -58,12 +61,15 @@ const Register = (): JSX.Element => {
   const [formRenderedAt] = useState<number>(() => Date.now());
   const [captchaToken, setCaptchaToken] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [loading, setLoading] = useState<boolean>(false);
   const [googleLoading, setGoogleLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
   const captchaContainerRef = useRef<HTMLDivElement | null>(null);
   const turnstileWidgetIdRef = useRef<string | null>(null);
+  const fieldRefs = useRef<Partial<Record<FieldName, HTMLInputElement | null>>>({});
+  const formErrorId = error ? 'register-form-error' : undefined;
 
   useEffect(() => {
     const regError = searchParams.get('error');
@@ -132,29 +138,53 @@ const Register = (): JSX.Element => {
       ...prev,
       [name]: value
     }));
+    if (name in fieldErrors) {
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[name as FieldName];
+        return next;
+      });
+    }
   };
 
-  const validateForm = (): string | null => {
-    if (!formData.name) return t('errors.required');
-    if (!formData.email) return t('errors.required');
-    if (!formData.password) return t('errors.required');
-    if (formData.password.length < 8) return t('errors.passwordLength');
-    if (formData.password !== formData.confirmPassword) return t('errors.passwordMismatch');
-    if (TURNSTILE_SITE_KEY && !captchaToken) {
-      return 'Captcha verification is required.';
+  const validateForm = (): FieldErrors => {
+    const errors: FieldErrors = {};
+    if (!formData.name) errors.name = t('errors.required');
+    if (!formData.email) errors.email = t('errors.required');
+    if (!formData.password) {
+      errors.password = t('errors.required');
+    } else if (formData.password.length < 8) {
+      errors.password = t('errors.passwordLength');
     }
-    return null;
+
+    if (!formData.confirmPassword) {
+      errors.confirmPassword = t('errors.required');
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = t('errors.passwordMismatch');
+    }
+
+    return errors;
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
-    const validationError = validateForm();
-    if (validationError) {
-      setError(validationError);
+    const validationErrors = validateForm();
+    const firstFieldWithError = (Object.keys(validationErrors)[0] as FieldName | undefined);
+    if (firstFieldWithError) {
+      setFieldErrors(validationErrors);
+      setError(validationErrors[firstFieldWithError] || '');
+      fieldRefs.current[firstFieldWithError]?.focus();
+      return;
+    }
+
+    if (TURNSTILE_SITE_KEY && !captchaToken) {
+      setFieldErrors({});
+      setError('Captcha verification is required.');
       return;
     }
 
     setError('');
+    setFieldErrors({});
     setLoading(true);
 
     try {
@@ -170,6 +200,7 @@ const Register = (): JSX.Element => {
       navigate(`/signin?success=${registrationResult.registrationStatus === 'active' ? 'registered_active_test' : 'registered_pending'}`);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : t('errors.serverError');
+      setFieldErrors({});
       setError(errorMessage);
       if (turnstileWidgetIdRef.current) {
         window.turnstile?.reset?.(turnstileWidgetIdRef.current);
@@ -217,7 +248,7 @@ const Register = (): JSX.Element => {
       <form className="space-y-6" onSubmit={handleSubmit}>
         {error ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 p-4 dark:border-red-900/60 dark:bg-red-950/40">
-            <div className="text-sm text-red-700 dark:text-red-200">{error}</div>
+            <div id="register-form-error" role="alert" aria-live="polite" className="text-sm text-red-700 dark:text-red-200">{error}</div>
           </div>
         ) : null}
 
@@ -246,8 +277,13 @@ const Register = (): JSX.Element => {
             required
             value={formData.name}
             onChange={handleChange}
+            ref={(node) => {
+              fieldRefs.current.name = node;
+            }}
             className="relative block w-full rounded-t-2xl border-0 bg-white px-3 py-3 text-gray-900 placeholder-gray-500 focus:z-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400"
             placeholder={t('auth.register.namePlaceholder')}
+            aria-invalid={fieldErrors.name ? 'true' : 'false'}
+            aria-describedby={fieldErrors.name ? 'register-name-error' : formErrorId}
           />
           <label htmlFor="email" className="sr-only">
             {t('auth.register.emailLabel')}
@@ -260,8 +296,13 @@ const Register = (): JSX.Element => {
             required
             value={formData.email}
             onChange={handleChange}
+            ref={(node) => {
+              fieldRefs.current.email = node;
+            }}
             className="relative block w-full border-0 bg-white px-3 py-3 text-gray-900 placeholder-gray-500 focus:z-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400"
             placeholder={t('auth.register.emailPlaceholder')}
+            aria-invalid={fieldErrors.email ? 'true' : 'false'}
+            aria-describedby={fieldErrors.email ? 'register-email-error' : formErrorId}
           />
           <div className="relative">
             <label htmlFor="password" className="sr-only">
@@ -275,8 +316,13 @@ const Register = (): JSX.Element => {
               required
               value={formData.password}
               onChange={handleChange}
+              ref={(node) => {
+                fieldRefs.current.password = node;
+              }}
               className="relative block w-full border-0 bg-white px-3 py-3 pr-11 text-gray-900 placeholder-gray-500 focus:z-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400"
               placeholder={t('auth.register.passwordPlaceholder')}
+              aria-invalid={fieldErrors.password ? 'true' : 'false'}
+              aria-describedby={fieldErrors.password ? 'register-password-error' : formErrorId}
             />
             <button
               type="button"
@@ -284,7 +330,7 @@ const Register = (): JSX.Element => {
               className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200"
               aria-label={showPassword ? t('auth.togglePassword.hide') : t('auth.togglePassword.show')}
             >
-              {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+              {showPassword ? <EyeSlashIcon aria-hidden="true" className="h-5 w-5" /> : <EyeIcon aria-hidden="true" className="h-5 w-5" />}
             </button>
           </div>
           <div className="relative">
@@ -299,8 +345,13 @@ const Register = (): JSX.Element => {
               required
               value={formData.confirmPassword}
               onChange={handleChange}
+              ref={(node) => {
+                fieldRefs.current.confirmPassword = node;
+              }}
               className="relative block w-full rounded-b-2xl border-0 bg-white px-3 py-3 pr-11 text-gray-900 placeholder-gray-500 focus:z-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400"
               placeholder={t('auth.register.confirmPasswordPlaceholder')}
+              aria-invalid={fieldErrors.confirmPassword ? 'true' : 'false'}
+              aria-describedby={fieldErrors.confirmPassword ? 'register-confirm-password-error' : formErrorId}
             />
             <button
               type="button"
@@ -312,10 +363,31 @@ const Register = (): JSX.Element => {
                   : t('auth.togglePassword.showConfirmation')
               }
             >
-              {showConfirmPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+              {showConfirmPassword ? <EyeSlashIcon aria-hidden="true" className="h-5 w-5" /> : <EyeIcon aria-hidden="true" className="h-5 w-5" />}
             </button>
           </div>
         </div>
+
+        {fieldErrors.name ? (
+          <p id="register-name-error" className="text-sm text-red-700 dark:text-red-200">
+            {fieldErrors.name}
+          </p>
+        ) : null}
+        {fieldErrors.email ? (
+          <p id="register-email-error" className="text-sm text-red-700 dark:text-red-200">
+            {fieldErrors.email}
+          </p>
+        ) : null}
+        {fieldErrors.password ? (
+          <p id="register-password-error" className="text-sm text-red-700 dark:text-red-200">
+            {fieldErrors.password}
+          </p>
+        ) : null}
+        {fieldErrors.confirmPassword ? (
+          <p id="register-confirm-password-error" className="text-sm text-red-700 dark:text-red-200">
+            {fieldErrors.confirmPassword}
+          </p>
+        ) : null}
 
         {TURNSTILE_SITE_KEY ? (
           <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm dark:border-white/10 dark:bg-gray-800">

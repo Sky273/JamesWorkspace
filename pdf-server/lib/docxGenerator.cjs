@@ -12,7 +12,8 @@ const { generatePdf } = require('./pdfGenerator.cjs');
 const {
   cleanupTempFiles,
   createTempArtifactPaths,
-  runExternalCommand
+  runExternalCommand,
+  isCommandAvailable
 } = require('./docxRuntime.cjs');
 const {
   escapeXml,
@@ -150,7 +151,7 @@ async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, f
         signal
       });
     } catch (cmdError) {
-      throw new Error(`Pandoc conversion failed: ${cmdError.message}`);
+      throw new Error(`Pandoc conversion failed: ${cmdError.message}`, { cause: cmdError });
     }
 
     throwIfAborted(signal);
@@ -159,7 +160,7 @@ async function generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, f
       docxBuffer = await fsPromises.readFile(docxFilePath);
     } catch (error) {
       if (error?.code === 'ENOENT') {
-        throw new Error('Pandoc did not generate the DOCX file');
+        throw new Error('Pandoc did not generate the DOCX file', { cause: error });
       }
       throw error;
     }
@@ -246,7 +247,7 @@ async function generateDocViaPdf({ htmlContent, stylesheet, headerContent, foote
         signal
       });
     } catch (cmdError) {
-      throw new Error(`LibreOffice conversion failed: ${cmdError.message}`);
+      throw new Error(`LibreOffice conversion failed: ${cmdError.message}`, { cause: cmdError });
     }
 
     throwIfAborted(signal);
@@ -255,7 +256,7 @@ async function generateDocViaPdf({ htmlContent, stylesheet, headerContent, foote
       outputBuffer = await fsPromises.readFile(outputFilePath);
     } catch (error) {
       if (error?.code === 'ENOENT') {
-        throw new Error(`LibreOffice did not generate the ${outputFormat.toUpperCase()} file`);
+        throw new Error(`LibreOffice did not generate the ${outputFormat.toUpperCase()} file`, { cause: error });
       }
       throw error;
     }
@@ -285,7 +286,27 @@ async function generateDocx({ htmlContent, stylesheet, headerContent, footerCont
     });
   }
 
-  return generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, footerContent, signal });
+  const hasPandoc = isCommandAvailable('pandoc');
+  const hasLibreOffice = isCommandAvailable('soffice') || isCommandAvailable('libreoffice');
+
+  if (hasPandoc) {
+    return generateDocxViaPandoc({ htmlContent, stylesheet, headerContent, footerContent, signal });
+  }
+
+  if (hasLibreOffice) {
+    log('warn', 'Pandoc unavailable; falling back to PDF + LibreOffice for DOCX generation');
+    return generateDocViaPdf({
+      htmlContent,
+      stylesheet,
+      headerContent,
+      footerContent,
+      footerHeight,
+      outputFormat: 'docx',
+      signal
+    });
+  }
+
+  throw new Error('No DOCX converter available. Install pandoc or LibreOffice/soffice.');
 }
 
 function getDocMimeType(format) {

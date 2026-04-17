@@ -118,6 +118,9 @@ const Layout = (): JSX.Element => {
 
   return (
     <div className="min-h-screen bg-app">
+      <a href="#main-content" className="skip-link">
+        {t('common.skipToContent', 'Aller au contenu principal')}
+      </a>
       <ScrollToTop />
       <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
 
@@ -126,8 +129,10 @@ const Layout = (): JSX.Element => {
         <header className="pointer-events-none sticky top-0 z-40 border-b border-slate-200/80 bg-white/92 shadow-[0_1px_0_rgba(15,23,42,0.04)] backdrop-blur-xl dark:border-white/6 dark:bg-[#0c1222]/95 dark:shadow-[0_1px_0_rgba(255,255,255,0.03)]">
           <div className="pointer-events-auto relative flex min-h-16 items-center justify-between gap-3 px-4 py-2 sm:h-16 sm:gap-4 sm:py-0 sm:px-6 lg:px-8">
             <button
+              type="button"
               className={`absolute left-4 top-1/2 z-10 -translate-y-1/2 shrink-0 lg:hidden ${headerIconButtonClassName}`}
               onClick={() => setIsMobileMenuOpen(true)}
+              aria-label={t('common.openMenu')}
             >
               <span className="sr-only">{t('common.openMenu')}</span>
               <Bars3Icon className={headerIconClassName} aria-hidden="true" />
@@ -142,7 +147,12 @@ const Layout = (): JSX.Element => {
 
             <div className="ml-auto flex w-full items-center justify-end gap-2 pl-14 text-slate-700 dark:text-slate-300 sm:gap-2.5 md:w-auto md:pl-0">
               <div className="flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50/80 px-1 py-1 shadow-sm shadow-slate-200/40 dark:border-white/8 dark:bg-white/[0.03] dark:shadow-none sm:gap-2 sm:px-1.5">
-                <button className={headerIconButtonClassName} onClick={toggleTheme}>
+                <button
+                  type="button"
+                  className={headerIconButtonClassName}
+                  onClick={toggleTheme}
+                  aria-label={theme === 'dark' ? t('header.theme.light') : t('header.theme.dark')}
+                >
                   <span className="sr-only">
                     {theme === 'dark' ? t('header.theme.light') : t('header.theme.dark')}
                   </span>
@@ -160,13 +170,19 @@ const Layout = (): JSX.Element => {
                     to="/settings"
                     className={headerIconButtonClassName}
                     title={t('navigation.settings')}
+                    aria-label={t('navigation.settings')}
                   >
                     <span className="sr-only">{t('navigation.settings')}</span>
                     <Cog6ToothIcon className={headerIconClassName} aria-hidden="true" />
                   </Link>
                 ) : null}
 
-                <button className={headerIconButtonClassName} onClick={() => setIsAboutOpen(true)}>
+                <button
+                  type="button"
+                  className={headerIconButtonClassName}
+                  onClick={() => setIsAboutOpen(true)}
+                  aria-label={t('common.about')}
+                >
                   <span className="sr-only">{t('common.about')}</span>
                   <InformationCircleIcon className={headerIconClassName} aria-hidden="true" />
                 </button>
@@ -202,10 +218,13 @@ const Layout = (): JSX.Element => {
                   </Link>
 
                   <button
+                    type="button"
                     onClick={signOut}
                     className={headerIconButtonClassName}
                     title={t('common.signOut')}
+                    aria-label={t('common.signOut')}
                   >
+                    <span className="sr-only">{t('common.signOut')}</span>
                     <ArrowRightOnRectangleSolidIcon className={headerSolidIconClassName} aria-hidden="true" />
                   </button>
                 </>
@@ -214,7 +233,7 @@ const Layout = (): JSX.Element => {
           </div>
         </header>
 
-        <main className="relative z-0 flex-1">
+        <main id="main-content" tabIndex={-1} className="relative z-0 flex-1">
           <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
             <Outlet />
           </div>

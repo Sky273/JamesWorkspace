@@ -62,6 +62,7 @@ const SignIn = (): JSX.Element => {
   const [requires2FA, setRequires2FA] = useState<boolean>(false);
   const [pending2FAUserId, setPending2FAUserId] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const formErrorId = error ? 'signin-form-error' : undefined;
 
   useEffect(() => {
     resetSessionState();
@@ -224,7 +225,7 @@ const SignIn = (): JSX.Element => {
       <form className="space-y-6" onSubmit={handleSubmit}>
         {error ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 p-4 dark:border-red-900/60 dark:bg-red-950/40">
-            <div className="text-sm text-red-700 dark:text-red-200">{error}</div>
+            <div id="signin-form-error" role="alert" aria-live="polite" className="text-sm text-red-700 dark:text-red-200">{error}</div>
           </div>
         ) : null}
 
@@ -242,6 +243,8 @@ const SignIn = (): JSX.Element => {
             onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
             className="relative block w-full rounded-t-2xl border-0 bg-white px-3 py-3 text-gray-900 placeholder-gray-500 focus:z-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400"
             placeholder={t('auth.signIn.emailPlaceholder')}
+            aria-invalid={error ? 'true' : 'false'}
+            aria-describedby={formErrorId}
           />
           <div className="relative">
             <label htmlFor="password" className="sr-only">
@@ -257,6 +260,8 @@ const SignIn = (): JSX.Element => {
               onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
               className="relative block w-full rounded-b-2xl border-0 bg-white px-3 py-3 pr-11 text-gray-900 placeholder-gray-500 focus:z-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400"
               placeholder={t('auth.signIn.passwordPlaceholder')}
+              aria-invalid={error ? 'true' : 'false'}
+              aria-describedby={formErrorId}
             />
             <button
               type="button"
@@ -264,7 +269,7 @@ const SignIn = (): JSX.Element => {
               className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200"
               aria-label={showPassword ? t('auth.togglePassword.hide') : t('auth.togglePassword.show')}
             >
-              {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+              {showPassword ? <EyeSlashIcon aria-hidden="true" className="h-5 w-5" /> : <EyeIcon aria-hidden="true" className="h-5 w-5" />}
             </button>
           </div>
         </div>

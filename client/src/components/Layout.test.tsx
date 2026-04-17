@@ -62,6 +62,8 @@ describe('Layout', () => {
     expect(screen.getByText('layout-outlet')).toBeInTheDocument();
     expect(screen.getByText('breadcrumbs')).toBeInTheDocument();
     expect(screen.getByText('LM')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Aller au contenu principal' })).toHaveAttribute('href', '#main-content');
+    expect(document.getElementById('main-content')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'common.openMenu' }));
     expect(screen.getByText('sidebar:true')).toBeInTheDocument();

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { MemoryRouter } from 'react-router-dom';
 import SignIn from './SignIn';
 
@@ -121,6 +122,16 @@ describe('SignIn', () => {
     fireEvent.submit(screen.getByRole('button', { name: 'auth.signIn.signInButton' }).closest('form') as HTMLFormElement);
 
     expect(await screen.findByText('errors.unauthorized')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('errors.unauthorized');
+    expect(screen.getByLabelText('auth.signIn.emailLabel')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('auth.signIn.passwordLabel')).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('has no critical accessibility violations on the default sign-in form', async () => {
+    const { container } = renderSignIn();
+    const results = await axe(container);
+
+    expect(results.violations).toHaveLength(0);
   });
 
   it('shows password replacement message when sign in is blocked for password renewal', async () => {

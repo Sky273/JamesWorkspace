@@ -1,6 +1,6 @@
 const path = require('path');
 const { promisify } = require('util');
-const { execFile } = require('child_process');
+const { execFile, spawnSync } = require('child_process');
 
 const execFileAsync = promisify(execFile);
 const TRANSIENT_CLEANUP_ERROR_CODES = new Set(['EBUSY', 'EPERM']);
@@ -29,6 +29,21 @@ async function runExternalCommand({ command, args = [], cwd, timeout, failureMes
     log('error', failureMessage, { error: error.message, ...logContext });
     throw error;
   }
+}
+
+function isCommandAvailable(command) {
+  if (!command || typeof command !== 'string') {
+    return false;
+  }
+
+  const locatorCommand = process.platform === 'win32' ? 'where' : 'which';
+  const result = spawnSync(locatorCommand, [command], {
+    stdio: 'ignore',
+    windowsHide: true,
+    shell: false,
+  });
+
+  return result.status === 0;
 }
 
 function isTransientCleanupError(error) {
@@ -87,8 +102,10 @@ module.exports = {
   cleanupTempFiles,
   createTempArtifactPaths,
   runExternalCommand,
+  isCommandAvailable,
   _internal: {
     isTransientCleanupError,
-    removeTempFileWithRetry
+    removeTempFileWithRetry,
+    isCommandAvailable
   }
 };

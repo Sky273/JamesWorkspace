@@ -4,7 +4,7 @@
  * Can render inline or as a fullscreen overlay.
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SparklesIcon, ChartBarIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
@@ -46,7 +46,7 @@ const PARTICLES = Array.from({ length: 12 }, (_, i) => ({
 
 const FloatingParticles = ({ color }: { color: string }) => (
   <>
-    {PARTICLES.map(p => (
+    {PARTICLES.map((p) => (
       <motion.div
         key={p.id}
         className={`absolute rounded-full ${color}`}
@@ -68,7 +68,7 @@ const MultiRingSpinner = ({ variant }: { variant: 'improving' | 'analyzing' }) =
   const Icon = isImproving ? SparklesIcon : ChartBarIcon;
 
   return (
-    <div className="relative w-32 h-32">
+    <div className="relative w-32 h-32" aria-hidden="true">
       <motion.div
         className={`absolute -inset-4 rounded-full ${isImproving
           ? 'bg-gradient-to-br from-blue-400/10 to-indigo-500/10'
@@ -136,15 +136,24 @@ const MultiRingSpinner = ({ variant }: { variant: 'improving' | 'analyzing' }) =
 
 const ImprovementAnimation = ({ currentStep = 'improving', fullscreen = false }: ImprovementAnimationProps): JSX.Element => {
   const { t } = useTranslation();
+  const headingId = useId();
+  const descriptionId = useId();
   const [messageIndex, setMessageIndex] = useState(0);
 
   const isImproving = currentStep === 'improving';
   const messages = useMemo(() => (isImproving ? IMPROVING_MESSAGES : ANALYZING_MESSAGES), [isImproving]);
+  const currentMessage = messages[messageIndex];
+  const currentStepLabel = isImproving
+    ? t('improvementAnimation.steps.improving.label', 'Amélioration du CV en cours...')
+    : t('improvementAnimation.steps.analyzing.label', 'Analyse de qualité en cours...');
+  const estimatedTimeLabel = isImproving
+    ? t('improvementAnimation.estimatedTime', 'Cela peut prendre 30-90 secondes')
+    : t('improvementAnimation.analyzingTime', 'Quelques secondes...');
 
   useEffect(() => {
     setMessageIndex(0);
     const interval = setInterval(() => {
-      setMessageIndex(prev => (prev + 1) % messages.length);
+      setMessageIndex((prev) => (prev + 1) % messages.length);
     }, 3500);
     return () => clearInterval(interval);
   }, [messages]);
@@ -162,7 +171,7 @@ const ImprovementAnimation = ({ currentStep = 'improving', fullscreen = false }:
     },
   ];
 
-  const currentStepIndex = steps.findIndex(step => step.id === currentStep);
+  const currentStepIndex = steps.findIndex((step) => step.id === currentStep);
 
   const content = (
     <motion.div
@@ -170,15 +179,25 @@ const ImprovementAnimation = ({ currentStep = 'improving', fullscreen = false }:
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.4 }}
-      className="relative bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
+      className="relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      aria-busy="true"
+      aria-labelledby={headingId}
+      aria-describedby={descriptionId}
     >
       <div className={`absolute inset-0 ${isImproving
         ? 'bg-gradient-to-br from-blue-50/60 via-transparent to-indigo-50/40 dark:from-blue-950/20 dark:via-transparent dark:to-indigo-950/15'
         : 'bg-gradient-to-br from-emerald-50/60 via-transparent to-teal-50/40 dark:from-emerald-950/20 dark:via-transparent dark:to-teal-950/15'
       }`} />
 
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
         <FloatingParticles color={isImproving ? 'bg-indigo-400/40' : 'bg-emerald-400/40'} />
+      </div>
+
+      <div className="sr-only" id={descriptionId}>
+        {`${currentStepLabel}. ${currentMessage}. ${estimatedTimeLabel}`}
       </div>
 
       <div className="relative flex flex-col items-center py-16 px-6">
@@ -188,15 +207,14 @@ const ImprovementAnimation = ({ currentStep = 'improving', fullscreen = false }:
 
         <AnimatePresence mode="wait">
           <motion.h3
+            id={headingId}
             key={currentStep}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2 text-center"
+            className="mb-2 text-center text-xl font-semibold text-gray-900 dark:text-gray-100"
           >
-            {isImproving
-              ? t('improvementAnimation.steps.improving.label', 'Amélioration du CV en cours...')
-              : t('improvementAnimation.steps.analyzing.label', 'Analyse de qualité en cours...')}
+            {currentStepLabel}
           </motion.h3>
         </AnimatePresence>
 
@@ -208,29 +226,31 @@ const ImprovementAnimation = ({ currentStep = 'improving', fullscreen = false }:
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.3 }}
-              className="text-sm text-gray-500 dark:text-gray-400 text-center"
+              className="text-center text-sm text-gray-500 dark:text-gray-400"
             >
-              {messages[messageIndex]}
+              {currentMessage}
             </motion.p>
           </AnimatePresence>
         </div>
 
-        <div className={`w-72 h-1.5 rounded-full overflow-hidden mb-8 ${isImproving
-          ? 'bg-indigo-100 dark:bg-indigo-900/30'
-          : 'bg-emerald-100 dark:bg-emerald-900/30'
-        }`}>
+        <div
+          className={`mb-8 h-1.5 w-72 overflow-hidden rounded-full ${isImproving
+            ? 'bg-indigo-100 dark:bg-indigo-900/30'
+            : 'bg-emerald-100 dark:bg-emerald-900/30'
+          }`}
+          aria-hidden="true"
+        >
           <motion.div
-            className={`h-full w-1/2 rounded-full ${isImproving
+            className={`relative h-full w-1/2 rounded-full ${isImproving
               ? 'bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500'
               : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500'
             }`}
             animate={{ left: ['-50%', '100%'] }}
             transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ position: 'relative' }}
           />
         </div>
 
-        <div className="flex items-center gap-0 mb-6">
+        <div className="mb-6 flex items-center gap-0" aria-hidden="true">
           {steps.map((step, i) => {
             const isActive = step.id === currentStep;
             const isPast = currentStepIndex > i;
@@ -240,7 +260,7 @@ const ImprovementAnimation = ({ currentStep = 'improving', fullscreen = false }:
               <div key={step.id} className="flex items-center">
                 <div className="flex flex-col items-center">
                   <motion.div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 ${
+                    className={`flex h-10 w-10 items-center justify-center rounded-full transition-all duration-500 ${
                       isPast
                         ? 'bg-gradient-to-br from-emerald-400 to-green-600 shadow-md shadow-green-500/20'
                         : isActive
@@ -273,7 +293,7 @@ const ImprovementAnimation = ({ currentStep = 'improving', fullscreen = false }:
                   </span>
                 </div>
                 {i < steps.length - 1 && (
-                  <div className="w-16 sm:w-24 h-[3px] mx-2 sm:mx-3 -mt-5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className="mx-2 -mt-5 h-[3px] w-16 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700 sm:mx-3 sm:w-24">
                     <motion.div
                       className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-green-500"
                       initial={false}
@@ -288,16 +308,14 @@ const ImprovementAnimation = ({ currentStep = 'improving', fullscreen = false }:
         </div>
 
         <p className="text-xs text-gray-400 dark:text-gray-500">
-          {isImproving
-            ? t('improvementAnimation.estimatedTime', 'Cela peut prendre 30-90 secondes')
-            : t('improvementAnimation.analyzingTime', 'Quelques secondes...')}
+          {estimatedTimeLabel}
         </p>
 
-        <div className="flex items-center gap-1.5 mt-4">
-          {[0, 1, 2, 3].map(i => (
+        <div className="mt-4 flex items-center gap-1.5" aria-hidden="true">
+          {[0, 1, 2, 3].map((i) => (
             <motion.div
               key={i}
-              className={`w-1.5 h-1.5 rounded-full ${isImproving ? 'bg-indigo-400' : 'bg-emerald-400'}`}
+              className={`h-1.5 w-1.5 rounded-full ${isImproving ? 'bg-indigo-400' : 'bg-emerald-400'}`}
               animate={{ y: [0, -6, 0], opacity: [0.3, 1, 0.3] }}
               transition={{ duration: 1, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
             />
@@ -315,13 +333,17 @@ const ImprovementAnimation = ({ currentStep = 'improving', fullscreen = false }:
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm"
         data-testid="improvement-animation-fullscreen-overlay"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={headingId}
+        aria-describedby={descriptionId}
       >
         <motion.div
           initial={{ scale: 0.92, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.92, opacity: 0 }}
           transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-          className="max-w-3xl w-full mx-4"
+          className="mx-4 w-full max-w-3xl"
         >
           {content}
         </motion.div>

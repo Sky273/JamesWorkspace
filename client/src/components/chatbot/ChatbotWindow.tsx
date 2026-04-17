@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   PaperAirplaneIcon,
@@ -74,6 +75,10 @@ export default function ChatbotWindow({
   onSend,
   onStartResize
 }: ChatbotWindowProps) {
+  const titleId = useId();
+  const subtitleId = useId();
+  const inputLabelId = useId();
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -85,12 +90,16 @@ export default function ChatbotWindow({
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           className="fixed bottom-8 right-8 z-50 flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800"
           style={{ width: size.width, height: size.height }}
+          role="dialog"
+          aria-modal="false"
+          aria-labelledby={titleId}
+          aria-describedby={subtitleId}
         >
-          <div className="absolute top-0 left-0 z-10 h-4 w-4 cursor-nw-resize group" onMouseDown={(e) => onStartResize(e, 'nw')}>
+          <div className="absolute top-0 left-0 z-10 h-4 w-4 cursor-nw-resize group" aria-hidden="true" onMouseDown={(e) => onStartResize(e, 'nw')}>
             <div className="absolute top-1 left-1 h-2 w-2 rounded-full bg-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
           </div>
-          <div className="absolute top-0 left-4 right-0 z-10 h-2 cursor-n-resize" onMouseDown={(e) => onStartResize(e, 'n')} />
-          <div className="absolute top-4 left-0 bottom-0 z-10 w-2 cursor-w-resize" onMouseDown={(e) => onStartResize(e, 'w')} />
+          <div className="absolute top-0 left-4 right-0 z-10 h-2 cursor-n-resize" aria-hidden="true" onMouseDown={(e) => onStartResize(e, 'n')} />
+          <div className="absolute top-4 left-0 bottom-0 z-10 w-2 cursor-w-resize" aria-hidden="true" onMouseDown={(e) => onStartResize(e, 'w')} />
 
           <div className="border-b border-white/10 bg-[linear-gradient(135deg,#6a5cff_0%,#5647ef_52%,#3f35c9_100%)] px-4 py-4">
             <div className="flex items-center justify-between gap-3">
@@ -119,10 +128,10 @@ export default function ChatbotWindow({
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h3 className="text-[1.65rem] font-semibold leading-8 tracking-[-0.03em] text-white">
+                    <h3 id={titleId} className="text-[1.65rem] font-semibold leading-8 tracking-[-0.03em] text-white">
                       {title}
                     </h3>
-                    <p className="mt-1 text-sm leading-5 text-white [text-shadow:0_1px_1px_rgba(0,0,0,0.18)]">
+                    <p id={subtitleId} className="mt-1 text-sm leading-5 text-white [text-shadow:0_1px_1px_rgba(0,0,0,0.18)]">
                       {subtitle}
                     </p>
                   </div>
@@ -136,9 +145,13 @@ export default function ChatbotWindow({
 
           <ChatbotMessages messages={messages} isLoading={isLoading} messagesEndRef={messagesEndRef} />
 
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="border-t border-gray-200 p-4 dark:border-gray-700">
             <div className="flex items-center space-x-2">
+              <label id={inputLabelId} htmlFor="chatbot-message-input" className="sr-only">
+                {placeholder}
+              </label>
               <input
+                id="chatbot-message-input"
                 ref={inputRef}
                 type="text"
                 value={inputValue}
@@ -146,15 +159,17 @@ export default function ChatbotWindow({
                 onKeyDown={onInputKeyDown}
                 placeholder={placeholder}
                 disabled={isLoading}
-                className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-700 border-0 rounded-full text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
+                aria-labelledby={inputLabelId}
+                className="flex-1 rounded-full border-0 bg-gray-100 px-4 py-2 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400"
               />
               <button
+                type="button"
                 onClick={onSend}
                 disabled={!inputValue.trim() || isLoading}
-                className="p-2 bg-primary-500 text-white rounded-full hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                aria-label={placeholder}
+                className="rounded-full bg-primary-500 p-2 text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Envoyer le message"
               >
-                <PaperAirplaneIcon className="h-5 w-5" />
+                <PaperAirplaneIcon className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
           </div>

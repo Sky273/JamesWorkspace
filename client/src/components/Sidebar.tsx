@@ -101,6 +101,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
       <Link
         key={item.name}
         to={item.href}
+        onClick={onClose}
         className={classNames(
           'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-[transform,background-color,border-color] duration-200',
           isActive
@@ -156,10 +157,6 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
     );
   };
 
-  const handleNavClick = () => {
-    if (onClose) onClose();
-  };
-
   const sidebarContent = (
     <div className="flex min-h-0 flex-1 flex-col border-r border-slate-200/80 bg-white/96 shadow-[1px_0_0_rgba(15,23,42,0.04)] dark:border-white/6 dark:bg-[#09111f] dark:shadow-[1px_0_0_rgba(255,255,255,0.03)]">
       <div className="flex flex-1 flex-col overflow-y-auto px-3 pb-4 pt-4 sidebar-scrollbar">
@@ -180,14 +177,16 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
+            aria-label={t('common.close', 'Fermer')}
             className="rounded-xl p-1.5 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-white/8 dark:hover:text-slate-200 lg:hidden"
           >
-            <XMarkIcon className="h-5 w-5" />
+            <XMarkIcon className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
 
-        <nav className="mt-5 flex flex-1 flex-col" onClick={handleNavClick}>
+        <nav className="mt-5 flex flex-1 flex-col">
           <div className="space-y-1">{renderNavItem(homeItem)}</div>
           {renderSection(gestionSection)}
           {canAccessManagerScreens && renderSection(adminSection)}
@@ -205,7 +204,11 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
     <>
       {isOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm transition-opacity" onClick={onClose} />
+          <div
+            className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm transition-opacity"
+            aria-hidden="true"
+            onClick={onClose}
+          />
           <div className="fixed inset-y-0 left-0 flex w-72 max-w-[88vw] flex-col">{sidebarContent}</div>
         </div>
       )}

@@ -3,7 +3,7 @@
  * Allows users to set a new password using a reset token from the email link
  */
 
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, FormEvent, useEffect, useRef } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
@@ -20,8 +20,12 @@ const ResetPasswordPage = (): JSX.Element => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ password?: string; confirmPassword?: string }>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const passwordRef = useRef<HTMLInputElement | null>(null);
+  const confirmPasswordRef = useRef<HTMLInputElement | null>(null);
+  const formErrorId = error ? 'reset-password-form-error' : undefined;
 
   useEffect(() => {
     if (!token) {
@@ -32,14 +36,21 @@ const ResetPasswordPage = (): JSX.Element => {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
 
     if (password !== confirmPassword) {
-      setError(t('auth.resetPassword.passwordMismatch'));
+      const nextError = t('auth.resetPassword.passwordMismatch');
+      setFieldErrors({ confirmPassword: nextError });
+      setError(nextError);
+      confirmPasswordRef.current?.focus();
       return;
     }
 
     if (password.length < 8) {
-      setError(t('auth.resetPassword.passwordMinLength'));
+      const nextError = t('auth.resetPassword.passwordMinLength');
+      setFieldErrors({ password: nextError });
+      setError(nextError);
+      passwordRef.current?.focus();
       return;
     }
 
@@ -98,7 +109,7 @@ const ResetPasswordPage = (): JSX.Element => {
         <form className="space-y-6" onSubmit={handleSubmit}>
           {error ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 p-4 dark:border-red-900/60 dark:bg-red-950/40">
-              <div className="text-sm text-red-700 dark:text-red-200">{error}</div>
+              <div id="reset-password-form-error" role="alert" aria-live="polite" className="text-sm text-red-700 dark:text-red-200">{error}</div>
             </div>
           ) : null}
 
@@ -112,14 +123,27 @@ const ResetPasswordPage = (): JSX.Element => {
                 autoComplete="new-password"
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (fieldErrors.password) {
+                    setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                  }
+                }}
+                ref={passwordRef}
                 className="block w-full rounded-2xl border border-gray-300 bg-white px-3 py-3 pr-11 text-gray-900 placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400"
                 placeholder={t('auth.resetPassword.newPasswordPlaceholder')}
                 minLength={8}
+                aria-invalid={fieldErrors.password ? 'true' : 'false'}
+                aria-describedby={fieldErrors.password ? 'reset-password-password-error' : formErrorId}
               />
               <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute inset-y-0 right-0 top-7 flex items-center px-3 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200" aria-label={showPassword ? t('auth.togglePassword.hide') : t('auth.togglePassword.show')}>
-                {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                {showPassword ? <EyeSlashIcon aria-hidden="true" className="h-5 w-5" /> : <EyeIcon aria-hidden="true" className="h-5 w-5" />}
               </button>
+              {fieldErrors.password ? (
+                <p id="reset-password-password-error" className="mt-2 text-sm text-red-700 dark:text-red-200">
+                  {fieldErrors.password}
+                </p>
+              ) : null}
             </div>
 
             <div className="relative">
@@ -131,14 +155,27 @@ const ResetPasswordPage = (): JSX.Element => {
                 autoComplete="new-password"
                 required
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  if (fieldErrors.confirmPassword) {
+                    setFieldErrors((prev) => ({ ...prev, confirmPassword: undefined }));
+                  }
+                }}
+                ref={confirmPasswordRef}
                 className="block w-full rounded-2xl border border-gray-300 bg-white px-3 py-3 pr-11 text-gray-900 placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400"
                 placeholder={t('auth.resetPassword.confirmPasswordPlaceholder')}
                 minLength={8}
+                aria-invalid={fieldErrors.confirmPassword ? 'true' : 'false'}
+                aria-describedby={fieldErrors.confirmPassword ? 'reset-password-confirm-error' : formErrorId}
               />
               <button type="button" onClick={() => setShowConfirmPassword((value) => !value)} className="absolute inset-y-0 right-0 top-7 flex items-center px-3 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200" aria-label={showConfirmPassword ? t('auth.togglePassword.hideConfirmation') : t('auth.togglePassword.showConfirmation')}>
-                {showConfirmPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                {showConfirmPassword ? <EyeSlashIcon aria-hidden="true" className="h-5 w-5" /> : <EyeIcon aria-hidden="true" className="h-5 w-5" />}
               </button>
+              {fieldErrors.confirmPassword ? (
+                <p id="reset-password-confirm-error" className="mt-2 text-sm text-red-700 dark:text-red-200">
+                  {fieldErrors.confirmPassword}
+                </p>
+              ) : null}
             </div>
           </div>
 

@@ -63,8 +63,26 @@ export async function gotoAndWaitForVisible(
   locator: Locator,
   timeout = 30_000,
 ): Promise<void> {
-  await page.goto(path, { waitUntil: 'domcontentloaded' });
-  await expect(locator).toBeVisible({ timeout });
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      await page.goto(path, { waitUntil: 'domcontentloaded' });
+      await expect(locator).toBeVisible({ timeout });
+      return;
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error);
+      const isTransientConnectionRefusal = message.includes('ERR_CONNECTION_REFUSED');
+      if (!isTransientConnectionRefusal || attempt === 2) {
+        throw error;
+      }
+
+      await page.waitForTimeout(1_000);
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
 export async function setInputFilesWhenReady(

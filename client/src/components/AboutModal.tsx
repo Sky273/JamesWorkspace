@@ -19,7 +19,7 @@ const AboutModalMarkdown = lazy(() => import('./AboutModalMarkdown'));
 function LoadingState({ label }: { label: string }): JSX.Element {
   return (
     <div className="flex items-center justify-center py-8">
-      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500"></div>
+      <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary-500"></div>
       <span className="ml-2 text-gray-500">{label}</span>
     </div>
   );
@@ -31,7 +31,6 @@ const AboutModal = ({ isOpen, onClose }: AboutModalProps): JSX.Element => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const loadingLabel = t('common.loading') || 'Loading...';
 
-  // Lazy load CHANGELOG.md only when modal is opened
   useEffect(() => {
     if (isOpen && !changelogText) {
       setIsLoading(true);
@@ -73,44 +72,45 @@ const AboutModal = ({ isOpen, onClose }: AboutModalProps): JSX.Element => {
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 text-left align-middle shadow-2xl transition-all border border-gray-200 dark:border-gray-700">
+              <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl border border-gray-200 bg-white text-left align-middle shadow-2xl transition-all dark:border-gray-700 dark:bg-gray-800">
                 <div className="bg-gradient-to-r from-primary-500 to-primary-600 px-6 py-4">
-                  <div className="flex justify-between items-center">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="bg-white/20 p-2 rounded-lg">
-                        <SparklesIcon className="h-6 w-6 text-white" />
+                      <div className="rounded-lg bg-white/20 p-2">
+                        <SparklesIcon className="h-6 w-6 text-white" aria-hidden="true" />
                       </div>
                       <div>
                         <Dialog.Title as="h3" className="text-lg font-semibold text-white">
                           {t('about.title')}
                         </Dialog.Title>
-                        <p className="text-white/80 text-sm">Version v{packageJson.version}</p>
+                        <p className="text-sm text-white/80">Version v{packageJson.version}</p>
                       </div>
                     </div>
                     <button
                       type="button"
-                      className="text-white/70 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-colors"
+                      className="rounded-lg p-1.5 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
                       onClick={onClose}
+                      aria-label={t('common.close', 'Fermer')}
                     >
-                      <XMarkIcon className="h-5 w-5" />
+                      <XMarkIcon className="h-5 w-5" aria-hidden="true" />
                     </button>
                   </div>
                 </div>
 
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                  <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                  <p className="leading-relaxed text-gray-600 dark:text-gray-300">
                     {t('about.description')}
                   </p>
                 </div>
 
                 <div className="px-6 py-4">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <DocumentTextIcon className="h-5 w-5 text-primary-500" />
+                  <div className="mb-3 flex items-center space-x-2">
+                    <DocumentTextIcon className="h-5 w-5 text-primary-500" aria-hidden="true" />
                     <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                       {t('about.changelog')}
                     </h4>
                   </div>
-                  <div className="max-h-80 overflow-y-auto rounded-lg bg-gray-50 dark:bg-gray-900/50 p-4 border border-gray-200 dark:border-gray-700">
+                  <div className="max-h-80 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50">
                     <div className="changelog-markdown text-sm">
                       {isLoading ? (
                         <LoadingState label={loadingLabel} />
@@ -123,8 +123,8 @@ const AboutModal = ({ isOpen, onClose }: AboutModalProps): JSX.Element => {
                   </div>
                 </div>
 
-                <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                <div className="border-t border-gray-200 bg-gray-50 px-6 py-3 dark:border-gray-700 dark:bg-gray-900/50">
+                  <p className="text-center text-xs text-gray-500 dark:text-gray-400">
                     © {new Date().getFullYear()} ResumeConverter • {t('about.allRightsReserved') || 'All rights reserved'}
                   </p>
                 </div>

@@ -14,7 +14,12 @@ import {
 } from './helpers/ui';
 
 const FALLBACK_DOCX_FIXTURE = path.resolve('node_modules/mammoth/test/test-data/tables.docx');
-const HAS_PANDOC = spawnSync('pandoc', ['--version'], { stdio: 'ignore', shell: true }).status === 0;
+
+function hasCommand(command: string): boolean {
+  return spawnSync(command, ['--version'], { stdio: 'ignore', shell: true }).status === 0;
+}
+
+const HAS_DOCX_CONVERTER = hasCommand('pandoc') || hasCommand('soffice') || hasCommand('libreoffice');
 
 async function uploadResumeAndOpenAnalysis(page: Page) {
   const docxFixture = await ensureLongResumeFixture().catch(() => FALLBACK_DOCX_FIXTURE);
@@ -160,7 +165,7 @@ test.describe('Analysis Improve Export', () => {
 
   test('should export the improved version as DOCX once the resume is marked improved', async ({ page }) => {
     test.setTimeout(180000);
-    test.skip(!HAS_PANDOC, 'pandoc is required locally to validate DOCX export');
+    test.skip(!HAS_DOCX_CONVERTER, 'a local DOCX converter is required (pandoc or LibreOffice/soffice)');
 
     await signInAsE2EUser(page);
     await uploadResumeAndOpenAnalysis(page);
