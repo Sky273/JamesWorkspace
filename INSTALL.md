@@ -2,6 +2,11 @@
 
 Ce guide détaille les procédures d'installation et de lancement de ResumeConverter, que ce soit en mode développement local (hors Docker) ou en mode conteneurisé (Docker).
 
+Référentiel documentaire :
+- `INSTALL.md` est la source canonique pour l'installation locale, les variables d'environnement et les runbooks de démarrage.
+- `docker/README.md` est la source canonique pour le build et l'exécution Docker.
+- `README.md` reste une vue d'ensemble produit et ne doit pas devenir une seconde procédure d'installation complète.
+
 ---
 
 ## Table des matières
@@ -406,18 +411,34 @@ npm run dev
 
 ResumeConverter supporte actuellement **Cloudflare Turnstile** sur le formulaire d'inscription.
 
-- `VITE_TURNSTILE_SITE_KEY` est la cle publique utilisee par le frontend
-- `TURNSTILE_SECRET_KEY` est la cle secrete verifiee par le backend
-- si `TURNSTILE_SECRET_KEY` n'est pas renseignee, le backend n'impose pas de CAPTCHA
-- si `TURNSTILE_SECRET_KEY` est renseignee, `VITE_TURNSTILE_SITE_KEY` doit aussi etre defini sinon l'inscription sera bloquee
-- les valeurs `1x00000000000000000000AA` et `1x0000000000000000000000000000000AA` sont des cles de test Turnstile, adaptees au local et aux environnements de validation
+- `VITE_TURNSTILE_SITE_KEY` est la clé publique utilisée par le frontend
+- `TURNSTILE_SECRET_KEY` est la clé secrète vérifiée par le backend
+- si `TURNSTILE_SECRET_KEY` n'est pas renseignée, le backend n'impose pas de CAPTCHA
+- si `TURNSTILE_SECRET_KEY` est renseignée, `VITE_TURNSTILE_SITE_KEY` doit aussi être définie sinon l'inscription sera bloquée
+- les valeurs `1x00000000000000000000AA` et `1x0000000000000000000000000000000AA` sont des clés de test Turnstile, adaptées au local et aux environnements de validation
 
 Avant mise en production :
-- remplacez les cles de test par vos vraies cles Turnstile
+- remplacez les clés de test par vos vraies clés Turnstile
 - autorisez explicitement votre domaine de production dans Cloudflare
-- verifiez le flux d'inscription complet apres changement de cle
+- vérifiez le flux d'inscription complet après changement de clé
 
 ---
+
+### Étape 7 : Vérifier le bootstrap E2E local
+
+Les tests Playwright E2E démarrent le proxy et le PDF server avec les variables PostgreSQL courantes.
+
+Avant de lancer un test E2E local :
+
+```bash
+npm run migrate
+node -e "console.log(process.env.POSTGRES_HOST, process.env.POSTGRES_DB, process.env.POSTGRES_USER)"
+```
+
+Points d'attention :
+- les variables `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER` et `POSTGRES_PASSWORD` doivent correspondre à une base locale réellement accessible ;
+- le bootstrap Playwright vérifie désormais explicitement la connexion PostgreSQL avant le build frontend ;
+- si le mot de passe du rôle PostgreSQL local diffère de celui attendu, le démarrage E2E échouera immédiatement avec une erreur de préflight au lieu d'un simple timeout sur `/health`.
 
 ## Installation avec Docker (Production)
 
@@ -1056,3 +1077,4 @@ Pour toute question ou problème :
 
 
 
+> Pour le détail Docker, la gestion de `/.env.docker`, les helpers Windows/PowerShell/Linux et la topologie runtime, utilisez `docker/README.md` comme référence principale. La section ci-dessous reste un quickstart opérationnel.

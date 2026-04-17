@@ -13,6 +13,9 @@ This Docker setup starts the application stack with:
 - PDF server on `3002`
 - Pre-built React frontend
 
+This file is the canonical Docker reference for ResumeConverter.
+Use `INSTALL.md` for local non-Docker setup and shared operational notes; use this page for Docker build/runtime behavior.
+
 ## Environment Files
 
 There are three environment files at the project root:

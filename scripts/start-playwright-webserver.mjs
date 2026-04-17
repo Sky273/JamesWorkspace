@@ -1,11 +1,14 @@
+/* global URL, console, fetch, process, setInterval, setTimeout */
 import 'dotenv/config';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
+import pg from 'pg';
 
 const HEALTH_URL = process.env.PLAYWRIGHT_WEB_HEALTH_URL || 'http://localhost:3001/health';
-const HEALTH_TIMEOUT_MS = Number.parseInt(process.env.PLAYWRIGHT_WEB_HEALTH_TIMEOUT_MS || '110000', 10);
+const HEALTH_TIMEOUT_MS = Number.parseInt(process.env.PLAYWRIGHT_WEB_HEALTH_TIMEOUT_MS || '170000', 10);
 const HEALTH_POLL_INTERVAL_MS = 1000;
 const CLIENT_DIR = fileURLToPath(new URL('../client', import.meta.url));
+const { Client } = pg;
 
 let stackProcess = null;
 let shuttingDown = false;
@@ -107,7 +110,54 @@ process.on('SIGTERM', () => shutdown(0));
 process.on('SIGBREAK', () => shutdown(0));
 process.on('disconnect', () => shutdown(0));
 
+async function verifyDatabaseConnection() {
+  const password = process.env.POSTGRES_PASSWORD;
+  if (!password) {
+    throw new Error(
+      '[playwright-webserver] POSTGRES_PASSWORD is required for local E2E bootstrap. ' +
+      'Set the same PostgreSQL credentials you use for `npm run migrate` before running Playwright.'
+    );
+  }
+
+  const client = new Client({
+    host: process.env.POSTGRES_HOST || 'localhost',
+    port: Number.parseInt(process.env.POSTGRES_PORT || '5432', 10),
+    database: process.env.POSTGRES_DB || 'resumeconverter',
+    user: process.env.POSTGRES_USER || 'postgres',
+    password,
+    ssl: process.env.POSTGRES_SSL === 'true'
+      ? { rejectUnauthorized: true }
+      : process.env.POSTGRES_SSL === 'relaxed'
+        ? { rejectUnauthorized: false }
+        : false,
+    connectionTimeoutMillis: 5000,
+  });
+
+  try {
+    await client.connect();
+    const result = await client.query('SELECT current_user, current_database()');
+    const row = result.rows[0] || {};
+    console.log('[playwright-webserver] PostgreSQL preflight OK', {
+      user: row.current_user || client.user,
+      database: row.current_database || client.database,
+      host: client.host,
+      port: client.port,
+    });
+  } catch (error) {
+    const details = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      '[playwright-webserver] PostgreSQL preflight failed. ' +
+      `Check POSTGRES_HOST/PORT/DB/USER/PASSWORD for local E2E bootstrap. Details: ${details}`,
+      { cause: error }
+    );
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
 try {
+  await verifyDatabaseConnection();
+
   await spawnChecked(
     process.execPath,
     ['../node_modules/vite/bin/vite.js', 'build'],
