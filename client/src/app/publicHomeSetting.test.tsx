@@ -14,6 +14,7 @@ describe('publicHomeSetting', () => {
     resetPublicHomeEnabledRuntimeCache();
     fetchMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState({}, '', '/');
   });
 
   afterEach(() => {
@@ -24,6 +25,14 @@ describe('publicHomeSetting', () => {
     const { result } = renderHook(() => usePublicHomeEnabled());
 
     expect(result.current).toBe(getDefaultPublicHomeEnabled());
+  });
+
+  it('optimistically enables the public home on /welcome before runtime settings are loaded', () => {
+    window.history.replaceState({}, '', '/welcome');
+
+    const { result } = renderHook(() => usePublicHomeEnabled());
+
+    expect(result.current).toBe(true);
   });
 
   it('updates from the public settings endpoint when available', async () => {

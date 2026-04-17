@@ -6,6 +6,16 @@ let cachedValue = DEFAULT_PUBLIC_HOME_ENABLED;
 let hasCachedValue = false;
 let pendingRequest: Promise<boolean | null> | null = null;
 
+function shouldOptimisticallyEnablePublicHome(): boolean {
+  if (typeof window === 'undefined') {
+    return DEFAULT_PUBLIC_HOME_ENABLED;
+  }
+
+  // `/welcome` is a public route: render it immediately on first paint and let
+  // the runtime settings fetch correct the state afterwards if needed.
+  return window.location.pathname === '/welcome' || DEFAULT_PUBLIC_HOME_ENABLED;
+}
+
 async function fetchPublicHomeEnabledFromApi(): Promise<boolean | null> {
   if (hasCachedValue) {
     return cachedValue;
@@ -63,7 +73,9 @@ export function resetPublicHomeEnabledRuntimeCache(): void {
 }
 
 export function usePublicHomeEnabled(): boolean {
-  const [enabled, setEnabled] = useState<boolean>(cachedValue);
+  const [enabled, setEnabled] = useState<boolean>(() => (
+    hasCachedValue ? cachedValue : shouldOptimisticallyEnablePublicHome()
+  ));
 
   useEffect(() => {
     let active = true;
