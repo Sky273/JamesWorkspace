@@ -184,17 +184,18 @@ function PublicHomePage(): JSX.Element {
                   variants={stagger}
                 >
                   <span className="block text-gray-900 dark:text-gray-100">{t('home.hero.title1')}</span>
-                  <span
-                    className="block text-transparent"
-                    style={{
-                      backgroundImage: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 45%, #d946ef 100%)',
-                      backgroundClip: 'text',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      textShadow: '0 10px 24px rgba(124, 58, 237, 0.18)',
-                    }}
-                  >
-                    {t('home.hero.title2')}
+                  <span className="block">
+                    <span
+                      className="inline-block text-transparent"
+                      style={{
+                        backgroundImage: 'linear-gradient(90deg, #4f46e5 0%, #7c3aed 52%, #d946ef 100%)',
+                        backgroundClip: 'text',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                      }}
+                    >
+                      {t('home.hero.title2')}
+                    </span>
                   </span>
                 </motion.h1>
                 <motion.p 

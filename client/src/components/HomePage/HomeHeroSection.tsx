@@ -111,17 +111,18 @@ export default function HomeHeroSection({ webglEnabled, onStart }: HomeHeroSecti
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <motion.h1 className="text-5xl font-bold mb-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <span className="block">{t('home.hero.title1')}</span>
-              <span
-                className="block text-transparent"
-                style={{
-                  backgroundImage: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 45%, #d946ef 100%)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  textShadow: '0 10px 24px rgba(124, 58, 237, 0.18)',
-                }}
-              >
-                {t('home.hero.title2')}
+              <span className="block">
+                <span
+                  className="inline-block text-transparent"
+                  style={{
+                    backgroundImage: 'linear-gradient(90deg, #4f46e5 0%, #7c3aed 52%, #d946ef 100%)',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
+                >
+                  {t('home.hero.title2')}
+                </span>
               </span>
             </motion.h1>
             <motion.p className="text-xl text-gray-600 dark:text-gray-300 mb-8" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
