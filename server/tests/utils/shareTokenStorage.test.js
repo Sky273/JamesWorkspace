@@ -12,15 +12,16 @@ import {
 } from '../../utils/shareTokenStorage.js';
 
 describe('shareTokenStorage', () => {
-    it('stores and restores versioned share tokens', () => {
+    it('stores share tokens within the legacy 64-character column budget', () => {
         const token = generateShareToken();
         const storedToken = createStoredShareToken(token);
 
-        expect(storedToken.startsWith('v2:')).toBe(true);
+        expect(storedToken).toBe(token);
+        expect(storedToken).toHaveLength(64);
         expect(readStoredShareToken(storedToken)).toBe(token);
     });
 
-    it('builds lookup params for versioned token queries', () => {
+    it('builds lookup params that support both plain and legacy versioned token queries', () => {
         const lookup = getStoredShareTokenLookup('plain-token');
 
         expect(lookup.exactToken).toBe('plain-token');

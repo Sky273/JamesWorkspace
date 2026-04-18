@@ -1,11 +1,8 @@
 import crypto from 'crypto';
-import { decryptSecret, encryptSecret, isEncryptedSecret } from './secretCrypto.js';
+import { decryptSecret, isEncryptedSecret } from './secretCrypto.js';
 
 const STORAGE_PREFIX = 'v2';
-const TOKEN_OPTIONS = {
-    envVarNames: ['SHARE_TOKEN_ENCRYPTION_KEY', 'MAIL_TOKEN_ENCRYPTION_KEY'],
-    purpose: 'share-token'
-};
+const MAX_SHARE_TOKEN_STORAGE_LENGTH = 64;
 
 function hashShareToken(token) {
     return crypto.createHash('sha256').update(token).digest('hex');
@@ -20,8 +17,9 @@ export function createStoredShareToken(token) {
         return token;
     }
 
-    const encryptedToken = encryptSecret(token, TOKEN_OPTIONS);
-    return `${STORAGE_PREFIX}:${hashShareToken(token)}:${encryptedToken}`;
+    // Resume share-token columns are varchar(64), so the persisted storage
+    // format must stay within the original 64-hex-character contract.
+    return token.slice(0, MAX_SHARE_TOKEN_STORAGE_LENGTH);
 }
 
 export function readStoredShareToken(storedValue) {
@@ -39,7 +37,10 @@ export function readStoredShareToken(storedValue) {
         throw new Error('Invalid stored share token format');
     }
 
-    const decryptedToken = decryptSecret(encryptedToken, TOKEN_OPTIONS);
+    const decryptedToken = decryptSecret(encryptedToken, {
+        envVarNames: ['SHARE_TOKEN_ENCRYPTION_KEY', 'MAIL_TOKEN_ENCRYPTION_KEY'],
+        purpose: 'share-token'
+    });
     if (hashShareToken(decryptedToken) !== tokenHash) {
         throw new Error('Stored share token integrity check failed');
     }
