@@ -32,6 +32,7 @@ const SAFE_INLINE_CSS_PATTERNS = {
     'max-width': [/^(none|\d+(?:\.\d+)?(px|pt|em|rem|%))$/i],
     'min-width': [/^(0|\d+(?:\.\d+)?(px|pt|em|rem|%))$/i],
     display: [/^(block|inline|inline-block|flex|grid|table|table-row|table-cell|none)$/i],
+    'object-fit': [/^(contain|cover|fill|none|scale-down)$/i],
     'vertical-align': [/^(baseline|sub|super|top|text-top|middle|bottom|text-bottom)$/i],
     'white-space': [/^(normal|nowrap|pre|pre-wrap|pre-line|break-spaces)$/i],
     'list-style-type': [/^[a-z-]{1,32}$/i],

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
     injectDocxExtractedImages,
-    injectPdfExtractedLogo
+    injectPdfExtractedLogo,
+    hydrateTemplateImageSlots
 } from '../../routes/templates/extraction/imagePlaceholders.js';
 
 const testImage = {
@@ -48,5 +49,24 @@ describe('template extraction image placeholders', () => {
         expect(injectDocxExtractedImages({}, [])).toBe(false);
         expect(injectPdfExtractedLogo(null, testImage)).toBe(false);
         expect(injectPdfExtractedLogo({}, null)).toBe(false);
+    });
+
+    it('hydrates detected image slots with extracted images in sequence', () => {
+        const template = {
+            headerContent: '<div class="template-image-slot header-slot"></div>',
+            templateContent: '<div class="template-image-slot body-slot"></div>',
+            footerContent: '<div>footer</div>'
+        };
+        const images = [
+            testImage,
+            { base64: 'ZmFrZS1pbWFnZS0y', contentType: 'image/jpeg' }
+        ];
+
+        const updated = hydrateTemplateImageSlots(template, images);
+
+        expect(updated).toBe(true);
+        expect(template.headerContent).toContain('data:image/png;base64,ZmFrZS1sb2dv');
+        expect(template.templateContent).toContain('data:image/jpeg;base64,ZmFrZS1pbWFnZS0y');
+        expect(template.headerContent).toContain('template-extracted-image');
     });
 });

@@ -180,6 +180,59 @@ describe('Template Extraction Service', () => {
             expect(result.template.headerContent).not.toContain('[LOGO]');
         });
 
+        it('merges extracted layout stylesheet and hydrates detected image slots', async () => {
+            callLLM.mockResolvedValueOnce({
+                content: JSON.stringify({
+                    name: 'Layout Template',
+                    headerContent: '<div class="template-image-slot header-slot"></div>',
+                    templateContent: '<h1>-name-</h1><h2>-title-</h2><div>-content-</div>',
+                    stylesheet: '.candidate-name { color: #123456; }'
+                }),
+                model: 'gpt-4',
+                usage: {}
+            });
+
+            const result = await extractTemplateFromHTML('<html>CV</html>', [
+                { name: 'logo.png', base64: 'abc123', contentType: 'image/png' }
+            ], 'cv.pdf', {}, {
+                layoutAnalysis: {
+                    stylesheet: '.template-page{background:#fafafa;}.header-slot{border-radius:12px;}'
+                }
+            });
+
+            expect(result.template.headerContent).toContain('data:image/png;base64,abc123');
+            expect(result.template.stylesheet).toContain('.template-page{background:#fafafa;}');
+            expect(result.template.stylesheet).toContain('.candidate-name { color: #123456; }');
+            expect(result.template.stylesheet).toContain('.template-extracted-image');
+        });
+
+        it('replaces remote image urls with embedded base64 image sources', async () => {
+            callLLM.mockResolvedValueOnce({
+                content: JSON.stringify({
+                    name: 'Embedded Images Template',
+                    headerContent: '<div><img src="https://example.com/logo.png" alt="Logo"></div>',
+                    templateContent: '<h1>-name-</h1><img src="http://cdn.example.com/visual.jpg"><div>-content-</div>',
+                    footerContent: '<footer><img src="/assets/footer.png"></footer>',
+                    stylesheet: 'body{}'
+                }),
+                model: 'gpt-4',
+                usage: {}
+            });
+
+            const images = [
+                { name: 'logo.png', base64: 'abc123', contentType: 'image/png' },
+                { name: 'visual.jpg', base64: 'def456', contentType: 'image/jpeg' }
+            ];
+            const result = await extractTemplateFromHTML('<html>CV</html>', images);
+
+            expect(result.template.headerContent).toContain('src="data:image/png;base64,abc123"');
+            expect(result.template.templateContent).toContain('src="data:image/jpeg;base64,def456"');
+            expect(result.template.footerContent).toContain('src="data:image/png;base64,abc123"');
+            expect(result.template.headerContent).not.toContain('https://example.com/logo.png');
+            expect(result.template.templateContent).not.toContain('http://cdn.example.com/visual.jpg');
+            expect(result.template.footerContent).not.toContain('/assets/footer.png');
+        });
+
         it('should provide default values for missing optional fields', async () => {
             const minimal = JSON.stringify({
                 templateContent: '<h1>-name-</h1><h2>-title-</h2><div>-content-</div>'
