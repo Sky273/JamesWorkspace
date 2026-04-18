@@ -48,6 +48,26 @@ const SCOPES = [
     'https://www.googleapis.com/auth/userinfo.email'
 ];
 
+function isStoredTokenDecryptionError(error) {
+    const message = error?.message || String(error || '');
+    return message.includes('Unsupported state or unable to authenticate data')
+        || message.includes('Invalid encrypted token format')
+        || message.includes('MAIL_TOKEN_ENCRYPTION_KEY');
+}
+
+async function markTokenReconnectionRequired(reason = 'unknown') {
+    await query(`
+        UPDATE global_gdpr_mail_token
+        SET access_token_encrypted = NULL,
+            refresh_token_encrypted = NULL,
+            token_expiry = NOW() - INTERVAL '1 day',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = 'global'
+    `);
+
+    safeLog('warn', '[GDPR Token Refresh] Stored token marked for reconnection', { reason });
+}
+
 /**
  * Create a NEW OAuth2 client instance for GDPR mail
  * NOTE: We create a new instance each time to avoid state pollution
@@ -170,7 +190,15 @@ async function getAccessToken() {
 
     if (!expired) {
         safeLog('debug', 'GDPR token still valid, using cached token');
-        return decryptToken(tokenData.access_token_encrypted);
+        try {
+            return decryptToken(tokenData.access_token_encrypted);
+        } catch (error) {
+            if (isStoredTokenDecryptionError(error)) {
+                await markTokenReconnectionRequired('access_token_decryption_failed');
+                throw new Error('Le token Gmail RGPD stocke ne peut plus etre dechiffre. Un administrateur doit reconnecter Gmail.');
+            }
+            throw error;
+        }
     }
 
     // Token expired - try to refresh using refresh_token
@@ -180,7 +208,16 @@ async function getAccessToken() {
         throw new Error('Token expiré et pas de refresh token. Un administrateur doit reconnecter Gmail.');
     }
 
-    const refreshToken = decryptToken(tokenData.refresh_token_encrypted);
+    let refreshToken;
+    try {
+        refreshToken = decryptToken(tokenData.refresh_token_encrypted);
+    } catch (error) {
+        if (isStoredTokenDecryptionError(error)) {
+            await markTokenReconnectionRequired('refresh_token_decryption_failed');
+            throw new Error('Le refresh token Gmail RGPD stocke ne peut plus etre dechiffre. Un administrateur doit reconnecter Gmail.');
+        }
+        throw error;
+    }
     const oauth2Client = await getOAuth2Client();
     oauth2Client.setCredentials({ refresh_token: refreshToken });
 
@@ -466,7 +503,19 @@ export async function proactiveTokenRefresh() {
         }
 
         // Force refresh by getting a new access token using the refresh token
-        const refreshToken = decryptToken(tokenData.refresh_token_encrypted);
+        let refreshToken;
+        try {
+            refreshToken = decryptToken(tokenData.refresh_token_encrypted);
+        } catch (error) {
+            if (isStoredTokenDecryptionError(error)) {
+                await markTokenReconnectionRequired('proactive_refresh_token_decryption_failed');
+                return {
+                    success: false,
+                    message: 'Le token Gmail RGPD stocke ne peut plus etre dechiffre - reconnexion requise'
+                };
+            }
+            throw error;
+        }
         const oauth2Client = await getOAuth2Client();
         oauth2Client.setCredentials({ refresh_token: refreshToken });
 
@@ -503,6 +552,14 @@ export async function proactiveTokenRefresh() {
         };
     } catch (error) {
         safeLog('error', '[GDPR Token Refresh] Proactive refresh failed', { error: error.message });
+
+        if (isStoredTokenDecryptionError(error)) {
+            await markTokenReconnectionRequired('proactive_refresh_token_decryption_failed');
+            return {
+                success: false,
+                message: 'Le token Gmail RGPD stocke ne peut plus etre dechiffre - reconnexion requise'
+            };
+        }
         
         // Check if token was revoked
         const isRevokedToken = error.message?.includes('invalid_grant') || 

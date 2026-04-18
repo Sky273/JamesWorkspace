@@ -52,7 +52,7 @@ vi.mock('../../utils/logger.backend.js', () => ({
 }));
 
 import { query } from '../../config/database.js';
-import { isTokenExpired } from '../../config/oauth.config.js';
+import { decryptToken, isTokenExpired } from '../../config/oauth.config.js';
 import {
     getAuthUrl,
     getConnectionStatus,
@@ -217,6 +217,23 @@ describe('GDPR Mail Service', () => {
 
             expect(result.success).toBe(false);
             expect(result.message).toBe('network error');
+        });
+
+        it('should mark token for reconnection when refresh token decryption fails', async () => {
+            query.mockResolvedValueOnce({
+                rows: [{ access_token_encrypted: 'enc_at', refresh_token_encrypted: 'enc_rt', email: 'test@gmail.com' }]
+            });
+            query.mockResolvedValueOnce({ rows: [] }); // invalidate stored token
+            decryptToken.mockImplementationOnce(() => {
+                throw new Error('Unsupported state or unable to authenticate data');
+            });
+
+            const result = await proactiveTokenRefresh();
+
+            expect(result.success).toBe(false);
+            expect(result.message).toContain('reconnexion requise');
+            expect(query.mock.calls[1][0]).toContain('SET access_token_encrypted = NULL');
+            expect(mockRefreshAccessToken).not.toHaveBeenCalled();
         });
     });
 });
