@@ -258,6 +258,8 @@ export async function getJobItems(jobId) {
  */
 export async function updateJobItemStatus(itemId, status, updates = {}) {
     try {
+        let currentPendingData;
+
         const setClauses = ['status = $2'];
         const params = [itemId, status];
         let paramIndex = 3;
@@ -303,8 +305,26 @@ export async function updateJobItemStatus(itemId, status, updates = {}) {
         }
 
         if (updates.result_data !== undefined) {
+            const pendingDataResult = await query(
+                `SELECT pending_data
+                 FROM batch_job_items
+                 WHERE id = $1`,
+                [itemId]
+            );
+
+            const currentValue = pendingDataResult.rows[0]?.pending_data;
+            currentPendingData = typeof currentValue === 'string'
+                ? JSON.parse(currentValue)
+                : (currentValue || {});
+
             setClauses.push(`pending_data = $${paramIndex}`);
-            params.push(updates.result_data ? JSON.stringify(stripNullCharactersDeep(updates.result_data)) : null);
+            params.push(updates.result_data
+                ? JSON.stringify({
+                    ...stripNullCharactersDeep(updates.result_data),
+                    ...(currentPendingData.creditUsage ? { creditUsage: currentPendingData.creditUsage } : {})
+                })
+                : null
+            );
             paramIndex++;
         }
 

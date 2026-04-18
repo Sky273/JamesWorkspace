@@ -234,6 +234,30 @@ describe('Batch Jobs - Item CRUD', () => {
             expect(serializedPendingData).toContain('"skills":["java"]');
             expect(serializedPendingData).toContain('"text":"some text"');
         });
+
+        it('should preserve creditUsage when storing result_data', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [{ pending_data: { creditUsage: { profile_analysis: true } } }] })
+                .mockResolvedValueOnce({ rows: [] });
+
+            await updateJobItemStatus('i1', 'success', {
+                result_data: {
+                    profile: {
+                        summary: 'ok'
+                    }
+                }
+            });
+
+            expect(query).toHaveBeenCalledTimes(2);
+            expect(query.mock.calls[0][0]).toContain('SELECT pending_data');
+            expect(query.mock.calls[1][0]).toContain('UPDATE batch_job_items');
+            expect(query.mock.calls[1][1]).toContain('i1');
+            expect(query.mock.calls[1][1]).toContain('success');
+
+            const serializedPendingData = query.mock.calls[1][1].find((value) => typeof value === 'string' && value.includes('"profile"'));
+            expect(serializedPendingData).toContain('"profile"');
+            expect(serializedPendingData).toContain('"creditUsage":{"profile_analysis":true}');
+        });
     });
 
     describe('getJobItem', () => {
