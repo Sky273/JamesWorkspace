@@ -272,7 +272,7 @@ const UserProfilePage = (): JSX.Element => {
                 type="button"
                 onClick={handlePasswordResetRequest}
                 disabled={sendingPasswordReset}
-                className="btn btn-primary px-4 py-2 disabled:opacity-50"
+                className="app-primary-action px-4 py-2 disabled:opacity-50"
               >
                 {sendingPasswordReset ? t('common.loading') : t('userProfile.requestPasswordReset')}
               </button>

@@ -264,7 +264,7 @@ export default function FranceMapTab({ className = '' }: { className?: string })
                 </div>
                 <button
                   onClick={() => setIsMapEnabled(true)}
-                  className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700"
+                  className="app-primary-action inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium"
                   type="button"
                 >
                   <MapPinIcon className="h-4 w-4" />

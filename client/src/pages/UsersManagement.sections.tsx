@@ -112,7 +112,7 @@ export function UsersResultsGrid({
                 icon={PencilSquareIcon}
                 label={t('users.management.actions.edit')}
                 onClick={() => onEdit(user)}
-                className="btn btn-primary flex-1 px-3 py-2"
+                className="app-primary-action flex-1 px-3 py-2"
                 tone="primary"
               />
               <CardActionButton
@@ -203,7 +203,7 @@ export function FirmsResultsGrid({
                   icon={PencilSquareIcon}
                   label={t('users.management.actions.edit')}
                   onClick={() => onEdit(firm)}
-                  className="btn btn-primary flex-1 px-3 py-2"
+                  className="app-primary-action flex-1 px-3 py-2"
                   tone="primary"
                 />
                 <CardActionButton

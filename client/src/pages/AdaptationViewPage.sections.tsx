@@ -149,7 +149,7 @@ export function AdaptationActionBar({
     <div className="flex flex-wrap justify-end gap-3">
       <button
         onClick={onExport}
-        className="btn btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm"
+        className="app-primary-action inline-flex items-center gap-2 px-4 py-2 text-sm"
       >
         <ArrowDownTrayIcon className="h-4 w-4" />
         {t('common.export')}

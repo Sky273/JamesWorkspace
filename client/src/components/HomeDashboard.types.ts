@@ -39,6 +39,7 @@ export interface QuickActionConfig {
   delay: number;
   route: string;
   icon: React.ElementType;
+  tone?: 'primary' | 'secondary';
 }
 
 export interface StatRow {

@@ -6,7 +6,7 @@ const toneClassNames = {
   danger: 'app-button-secondary text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30',
   info: 'app-button-secondary text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30',
   neutral: 'app-button-secondary',
-  primary: 'app-button-primary',
+  primary: 'app-primary-action',
   secondary: 'app-button-secondary',
   success: 'app-button-secondary text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30',
 } as const;

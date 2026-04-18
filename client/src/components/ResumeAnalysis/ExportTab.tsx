@@ -90,7 +90,7 @@ const ExportTab = ({ resume, templates, selectedTemplate, onTemplateChange, load
             <button
               onClick={onExport}
               disabled={!selectedTemplate || exportLoading}
-              className={`btn btn-primary w-full inline-flex justify-center items-center px-4 py-2 text-sm ${!selectedTemplate || exportLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`app-primary-action w-full inline-flex justify-center items-center px-4 py-2 text-sm ${!selectedTemplate || exportLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {exportLoading ? (
                 <>

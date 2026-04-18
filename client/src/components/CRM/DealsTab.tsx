@@ -481,7 +481,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
             </button>
             <button
               onClick={openCreateModal}
-              className="btn btn-primary flex items-center gap-2 px-4 py-2"
+              className="app-primary-action flex items-center gap-2 px-4 py-2"
             >
               <PlusIcon className="w-5 h-5" />
               {t('crm.deals.add')}

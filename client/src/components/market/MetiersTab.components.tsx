@@ -125,7 +125,7 @@ export function MetiersSearchBar({ searchQuery, onSearchQueryChange, onSubmit, o
             </button>
           )}
         </div>
-        <button type="submit" className="btn btn-primary px-4 py-2 text-sm">Rechercher</button>
+        <button type="submit" className="app-primary-action px-4 py-2 text-sm">Rechercher</button>
         {searchQuery && (
           <button type="button" onClick={onClear} className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
             {t('common.resetFilters')}
@@ -301,7 +301,7 @@ export function MetiersResults({
         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">{t('marketRadar.metiers.noData')}</h3>
         <p className="text-gray-500 dark:text-gray-400 mb-4">{searchQuery ? t('marketRadar.metiers.noDataSearch') : t('marketRadar.metiers.noDataEmpty')}</p>
         {isAdmin && !searchQuery && (
-          <button onClick={onCollect} className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">
+          <button onClick={onCollect} className="app-primary-action inline-flex items-center gap-2 rounded-lg px-4 py-2">
             <ArrowPathIcon className="h-4 w-4" />
             {t('marketRadar.metiers.collection.button')}
           </button>

@@ -74,7 +74,7 @@ export const MetiersPageHeader = ({
         <button
           onClick={onCollect}
           disabled={collecting}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-lg transition-colors"
+          className="app-primary-action inline-flex items-center gap-2 rounded-lg px-4 py-2 disabled:opacity-50"
         >
           <ArrowPathIcon className={`h-5 w-5 ${collecting ? 'animate-spin' : ''}`} />
           Collecter les métiers IT
@@ -141,7 +141,7 @@ export const MetiersSearchBar = ({
       </div>
       <button
         type="submit"
-        className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+        className="app-primary-action rounded-lg px-6 py-3"
       >
         Rechercher
       </button>
@@ -392,7 +392,7 @@ export const MetiersEmptyState = ({
     {isAdmin && !searchQuery && (
       <button
         onClick={onCollect}
-        className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+        className="app-primary-action inline-flex items-center gap-2 rounded-lg px-4 py-2"
       >
         <ArrowPathIcon className="h-4 w-4" />
         Collecter les métiers IT

@@ -100,7 +100,7 @@ export default function HomeHeroSection({ webglEnabled, onStart }: HomeHeroSecti
   const { t } = useTranslation();
 
   return (
-    <section className="min-h-[80vh] flex items-center py-8 relative overflow-hidden isolate">
+    <section id="hero" className="min-h-[80vh] flex items-center py-8 relative overflow-hidden isolate scroll-mt-20">
       {webglEnabled && (
         <Suspense fallback={null}>
           <DeferredWebGLBackground />
@@ -109,7 +109,6 @@ export default function HomeHeroSection({ webglEnabled, onStart }: HomeHeroSecti
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <div id="hero" className="scroll-mt-20" />
             <motion.h1 className="text-5xl font-bold mb-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <span className="block">{t('home.hero.title1')}</span>
               <span className="block text-primary-600 dark:text-primary-500">{t('home.hero.title2')}</span>
@@ -119,7 +118,7 @@ export default function HomeHeroSection({ webglEnabled, onStart }: HomeHeroSecti
             </motion.p>
             <motion.button
               onClick={onStart}
-              className="bg-primary-500 hover:bg-primary-600 text-white px-8 py-3 rounded-lg text-lg font-semibold transition-colors"
+              className="app-primary-action rounded-lg px-8 py-3 text-lg font-semibold"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >

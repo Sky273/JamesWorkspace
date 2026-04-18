@@ -315,7 +315,7 @@ const UserFormModal = ({
           </button>
           <button
             type="submit"
-            className="btn btn-primary px-4 py-2.5"
+            className="app-primary-action px-4 py-2.5"
           >
             {isEdit ? t('users.management.modal.saveChanges') : t('users.management.modal.save')}
           </button>

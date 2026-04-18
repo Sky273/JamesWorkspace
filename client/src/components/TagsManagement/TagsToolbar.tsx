@@ -70,7 +70,7 @@ export default function TagsToolbar({
             <button
               onClick={onRecalculateEscoTags}
               disabled={convertingToEsco}
-              className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+              className="app-primary-action inline-flex min-h-11 items-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
             >
               {convertingToEsco ? (
                 <ArrowPathIcon className="h-4 w-4 animate-spin" />

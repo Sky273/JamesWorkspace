@@ -127,7 +127,7 @@ function TemplateCard({
         ) : null}
 
         <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
-          <CardActionButton icon={PencilSquareIcon} label={t('templates.actions.edit')} onClick={handleEditClick} className="btn btn-primary flex-1 px-3 py-2" tone="primary" />
+          <CardActionButton icon={PencilSquareIcon} label={t('templates.actions.edit')} onClick={handleEditClick} className="app-primary-action flex-1 px-3 py-2" tone="primary" />
           {canDuplicate ? (
             <CardActionButton
               icon={DocumentDuplicateIcon}

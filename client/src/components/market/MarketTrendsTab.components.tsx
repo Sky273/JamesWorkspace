@@ -81,7 +81,7 @@ export function MarketTrendsHeader({
 
           {canCollectMarketTrends && (
             <>
-              <button onClick={onCollect} className="btn btn-primary inline-flex items-center px-4 py-2 text-sm">
+              <button onClick={onCollect} className="app-primary-action inline-flex items-center px-4 py-2 text-sm">
                 <ArrowPathIcon className="h-4 w-4 mr-2" />
                 {t('marketRadar.trends.collection.button')}
               </button>

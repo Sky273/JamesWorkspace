@@ -338,7 +338,7 @@ const NewTemplatePage = (): JSX.Element => {
 
             <div className="flex justify-end space-x-4">
               <button type="button" onClick={() => navigate(ADMIN_TEMPLATES_ROUTE)} className="btn btn-secondary px-4 py-2">{t('common.cancel')}</button>
-              <button type="submit" disabled={!editorReady} className={`btn btn-primary px-4 py-2 ${!editorReady ? 'opacity-50 cursor-not-allowed' : ''}`}>{t('common.save')}</button>
+              <button type="submit" disabled={!editorReady} className={`app-primary-action px-4 py-2 ${!editorReady ? 'opacity-50 cursor-not-allowed' : ''}`}>{t('common.save')}</button>
             </div>
           </form>
         )}

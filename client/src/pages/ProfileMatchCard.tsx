@@ -219,7 +219,7 @@ export default function ProfileMatchCard({
                   <button
                     onClick={() => onDetailedAnalysis(profile.resumeId)}
                     disabled={analyzingProfile === profile.resumeId}
-                    className={`btn btn-primary flex items-center gap-2 px-4 py-2 text-sm ${analyzingProfile === profile.resumeId ? 'cursor-not-allowed opacity-50' : ''}`}
+                    className={`app-primary-action flex items-center gap-2 px-4 py-2 text-sm ${analyzingProfile === profile.resumeId ? 'cursor-not-allowed opacity-50' : ''}`}
                   >
                     {analyzingProfile === profile.resumeId ? (
                       <>

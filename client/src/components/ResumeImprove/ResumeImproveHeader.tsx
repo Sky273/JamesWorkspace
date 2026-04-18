@@ -58,7 +58,7 @@ export default function ResumeImproveHeader({
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <button
               onClick={onAdapt}
-              className="btn btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm sm:text-base"
+              className="app-primary-action inline-flex items-center gap-2 px-4 py-2 text-sm sm:text-base"
             >
               <RocketLaunchIcon className="h-4 w-4 sm:h-5 sm:w-5" />
               <span className="hidden sm:inline">{t('resume.actions.adaptToMission')}</span>

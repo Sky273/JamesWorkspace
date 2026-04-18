@@ -23,6 +23,7 @@ interface DashboardQuickActionProps {
   onClick: () => void;
   color: string;
   delay: number;
+  tone?: 'primary' | 'secondary';
 }
 
 function DashboardActionCard({
@@ -67,9 +68,36 @@ function DashboardQuickAction({
   onClick,
   color,
   delay,
+  tone = 'secondary',
 }: DashboardQuickActionProps): JSX.Element {
+  if (tone === 'primary') {
+    return (
+      <motion.button
+        type="button"
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3, delay }}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        onClick={onClick}
+        className="app-primary-action flex w-full items-center justify-between gap-4 rounded-2xl px-5 py-4 text-left"
+      >
+        <div className="flex min-w-0 items-center gap-4">
+          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black/10">
+            <Icon className="h-6 w-6" />
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-base font-semibold">{label}</span>
+            <span className="block text-sm text-slate-800/80">{description}</span>
+          </span>
+        </div>
+      </motion.button>
+    );
+  }
+
   return (
     <motion.button
+      type="button"
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.3, delay }}
@@ -184,6 +212,9 @@ export function HomeDashboardQuickActions({
   actions: QuickActionConfig[];
   onNavigate: (route: string) => void;
 }): JSX.Element {
+  const primaryAction = actions.find((action) => action.tone === 'primary');
+  const secondaryActions = actions.filter((action) => action.tone !== 'primary');
+
   return (
     <motion.div
       id="quick-actions"
@@ -193,8 +224,17 @@ export function HomeDashboardQuickActions({
       className="scroll-mt-32"
     >
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{title}</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {actions.map((action) => (
+      {primaryAction ? (
+        <div className="mb-4">
+          <DashboardQuickAction
+            key={`${primaryAction.route}-${primaryAction.label}`}
+            {...primaryAction}
+            onClick={() => onNavigate(primaryAction.route)}
+          />
+        </div>
+      ) : null}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {secondaryActions.map((action) => (
           <DashboardQuickAction
             key={`${action.route}-${action.label}`}
             {...action}

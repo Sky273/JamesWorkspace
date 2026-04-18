@@ -44,7 +44,7 @@ export default function TagEditModal({
           />
           <div className="flex justify-end gap-3">
             <button onClick={onClose} className="btn btn-secondary px-4 py-2">{t('tags.cancel')}</button>
-            <button onClick={onConfirm} disabled={!newTagName.trim()} className={`btn btn-primary px-4 py-2 ${!newTagName.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}>{t('tags.save')}</button>
+            <button onClick={onConfirm} disabled={!newTagName.trim()} className={`app-primary-action px-4 py-2 ${!newTagName.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}>{t('tags.save')}</button>
           </div>
         </div>
       </motion.div>

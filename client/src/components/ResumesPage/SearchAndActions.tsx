@@ -88,7 +88,7 @@ const SearchAndActions = ({
           <button
             type="button"
             onClick={onUpload}
-            className="cv-gradient-button inline-flex min-h-16 w-full items-center justify-center gap-2 rounded-[1.4rem] px-6 text-sm font-bold transition-all lg:w-auto"
+            className="cv-page-primary-action inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[1.4rem] px-6 py-3 text-sm font-bold transition-all lg:w-auto"
           >
             <PlusIcon className="w-5 h-5" />
             <span>{t('resumes.uploadButton')}</span>

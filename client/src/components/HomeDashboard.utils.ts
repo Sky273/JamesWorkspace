@@ -121,6 +121,7 @@ export function buildQuickActions(t: TFunction<'translation', undefined>): Quick
       route: '/upload?new',
       color: 'bg-blue-500',
       delay: 0.8,
+      tone: 'primary',
     },
     {
       icon: FolderOpenIcon,
@@ -129,6 +130,7 @@ export function buildQuickActions(t: TFunction<'translation', undefined>): Quick
       route: '/resumes',
       color: 'bg-purple-500',
       delay: 0.9,
+      tone: 'secondary',
     },
     {
       icon: ClipboardDocumentListIcon,
@@ -137,6 +139,7 @@ export function buildQuickActions(t: TFunction<'translation', undefined>): Quick
       route: '/missions',
       color: 'bg-orange-500',
       delay: 1.0,
+      tone: 'secondary',
     },
     {
       icon: DocumentDuplicateIcon,
@@ -145,6 +148,7 @@ export function buildQuickActions(t: TFunction<'translation', undefined>): Quick
       route: '/adaptations',
       color: 'bg-green-500',
       delay: 1.1,
+      tone: 'secondary',
     },
   ];
 }

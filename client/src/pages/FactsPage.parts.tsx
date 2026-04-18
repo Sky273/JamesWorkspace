@@ -151,7 +151,7 @@ export const FactsAdminCollectionPanel = ({
         <button
           onClick={() => onCollect('france_travail')}
           disabled={collecting}
-          className={`btn btn-primary inline-flex items-center px-4 py-2 text-sm ${collecting ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`app-primary-action inline-flex items-center px-4 py-2 text-sm ${collecting ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           <ArrowPathIcon className={`h-4 w-4 mr-2 ${collecting ? 'animate-spin' : ''}`} />
           {t('marketRadar.facts.collection.collectFranceTravail')}

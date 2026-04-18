@@ -221,9 +221,10 @@ export default function ProfileMatchSearchPanel({
 
         <div className="flex gap-3 pt-2">
           <button
+            type="button"
             onClick={onSearch}
             disabled={loading || !selectedMissionId || loadingMissions}
-            className={`btn btn-primary flex flex-1 items-center justify-center gap-2 px-6 py-3 ${loading || !selectedMissionId || loadingMissions ? 'cursor-not-allowed opacity-50' : ''}`}
+            className={`cv-page-primary-action inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl px-6 py-3 text-sm font-semibold transition-all ${loading || !selectedMissionId || loadingMissions ? 'cursor-not-allowed opacity-50' : ''}`}
           >
             {loading ? (
               <>

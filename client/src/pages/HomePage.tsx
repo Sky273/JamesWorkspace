@@ -10,7 +10,11 @@ import {
   ChartBarIcon,
   DocumentDuplicateIcon,
   BriefcaseIcon,
-  DocumentMagnifyingGlassIcon
+  DocumentMagnifyingGlassIcon,
+  HomeIcon,
+  RectangleGroupIcon,
+  LightBulbIcon,
+  Squares2X2Icon,
 } from '@heroicons/react/24/outline';
 import { useAuthFetch } from '../hooks/useAuthFetch';
 import HomeStickyNav from '../components/HomePage/HomeStickyNav';
@@ -38,6 +42,7 @@ interface HowItWorksItem {
 
 interface NavSection {
   id: string;
+  icon: HeroIcon;
   label: string;
 }
 
@@ -74,10 +79,10 @@ function HomePage(): JSX.Element {
   useEffect(() => fetchWebglSetting(), [fetchWebglSetting]);
 
   const navSections: NavSection[] = useMemo(() => [
-    { id: 'hero', label: t('home.nav.hero') },
-    { id: 'dashboard', label: t('home.nav.dashboard') },
-    { id: 'how-it-works', label: t('home.nav.howItWorks') },
-    { id: 'features', label: t('home.nav.features') }
+    { id: 'hero', icon: HomeIcon, label: t('home.nav.hero') },
+    { id: 'dashboard', icon: RectangleGroupIcon, label: t('home.nav.dashboard') },
+    { id: 'how-it-works', icon: LightBulbIcon, label: t('home.nav.howItWorks') },
+    { id: 'features', icon: Squares2X2Icon, label: t('home.nav.features') }
   ], [t]);
 
   useEffect(() => {

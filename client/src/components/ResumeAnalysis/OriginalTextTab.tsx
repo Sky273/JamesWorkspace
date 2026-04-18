@@ -278,10 +278,10 @@ const OriginalTextTab = ({ resume, onAIModify }: OriginalTextTabProps): JSX.Elem
               }
             }}
             disabled={isAIModifying || !aiInstructions.trim()}
-            className={`mt-3 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-white transition-colors ${
+            className={`mt-3 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium ${
               isAIModifying || !aiInstructions.trim()
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-indigo-600 hover:bg-indigo-700'
+                ? 'cursor-not-allowed bg-gray-400 text-white'
+                : 'app-primary-action'
             }`}
           >
             {isAIModifying ? (

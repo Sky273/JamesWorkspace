@@ -34,7 +34,7 @@ const PasswordModal = ({ isOpen, onClose, onSubmit, userName, t }: PasswordModal
           <button
             type="button"
             onClick={onSubmit}
-            className="btn btn-primary px-4 py-2"
+            className="app-primary-action px-4 py-2"
           >
             {t('users.management.modal.confirm')}
           </button>

@@ -313,7 +313,7 @@ const FileUpload = (): JSX.Element => {
         {/* Submit button */}
         <button
           type="submit"
-          className="btn btn-primary w-full py-3 px-4 flex items-center justify-center gap-2"
+          className="app-primary-action w-full py-3 px-4 flex items-center justify-center gap-2"
         >
           <DocumentArrowUpIcon className="h-5 w-5" />
           {t('fileUpload.gdpr.continue', 'Continuer vers l\'upload')}

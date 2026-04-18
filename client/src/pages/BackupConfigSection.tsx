@@ -361,7 +361,7 @@ export default function BackupConfigSection({
                     type="button"
                     onClick={onSave}
                     disabled={saving}
-                    className={`btn btn-primary px-6 py-2 flex items-center gap-2 ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`app-primary-action px-6 py-2 flex items-center gap-2 ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                     {saving && <ArrowPathIcon className="w-4 h-4 animate-spin" />}
                     {t('common.save')}

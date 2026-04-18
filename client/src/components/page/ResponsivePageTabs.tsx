@@ -1,13 +1,13 @@
 import type { ComponentType, SVGProps } from 'react';
 
 export interface ResponsivePageTabOption<T extends string> {
-  icon: ComponentType<SVGProps<SVGSVGElement>>;
+  icon?: ComponentType<SVGProps<SVGSVGElement>>;
   label: string;
   value: T;
 }
 
 interface ResponsivePageTabsProps<T extends string> {
-  label: string;
+  label?: string;
   minItemWidthRem?: number;
   onChange: (value: T) => void;
   options: ResponsivePageTabOption<T>[];
@@ -22,8 +22,8 @@ export default function ResponsivePageTabs<T extends string>({
   value,
 }: ResponsivePageTabsProps<T>) {
   return (
-    <div className="mb-6 flex flex-col gap-3">
-      <span className="cv-kicker">{label}</span>
+    <div className={`flex flex-col gap-3 ${label ? 'mb-6' : ''}`.trim()}>
+      {label ? <span className="cv-kicker">{label}</span> : null}
       <div
         className="segmented-control grid gap-2 rounded-[1.6rem] p-2"
         style={{
@@ -41,12 +41,10 @@ export default function ResponsivePageTabs<T extends string>({
               onClick={() => onChange(option.value)}
               title={option.label}
               className={`segmented-control__item inline-flex min-h-12 w-full min-w-0 items-center gap-2 rounded-2xl px-3 py-3 text-left text-sm font-semibold sm:px-4 ${
-                isActive
-                  ? 'segmented-control__item--active'
-                  : 'text-slate-500 hover:text-slate-700 dark:text-[var(--cv-muted)] dark:hover:text-[var(--cv-text)]'
+                isActive ? 'segmented-control__item--active' : ''
               }`}
             >
-              <Icon className="h-4 w-4 shrink-0" />
+              {Icon ? <Icon className="h-4 w-4 shrink-0" /> : null}
               <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap leading-tight [overflow-wrap:normal] [word-break:normal] hyphens-none">
                 {option.label}
               </span>

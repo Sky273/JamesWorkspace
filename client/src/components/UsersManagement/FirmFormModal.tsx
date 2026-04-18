@@ -178,7 +178,7 @@ const FirmFormModal = ({ isOpen, onClose, onSubmit, firm, t }: FirmFormModalProp
           <button
             type="submit"
             disabled={uploading}
-            className={`btn btn-primary px-4 py-2 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`app-primary-action px-4 py-2 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {uploading ? t('users.management.modal.uploading') : t('users.management.modal.save')}
           </button>

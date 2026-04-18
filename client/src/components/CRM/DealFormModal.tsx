@@ -235,7 +235,7 @@ export default function DealFormModal({
                   <button type="button" onClick={onClose} className="btn btn-secondary px-4 py-2">
                     {t('common.cancel')}
                   </button>
-                  <button type="submit" disabled={saving} className={`btn btn-primary px-4 py-2 ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                  <button type="submit" disabled={saving} className={`app-primary-action px-4 py-2 ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}>
                     {saving ? t('common.saving') : t('common.save')}
                   </button>
                 </div>

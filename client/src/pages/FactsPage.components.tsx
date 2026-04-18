@@ -144,7 +144,7 @@ export const FactsMapPlaceholder = ({ onEnable }: FactsMapPlaceholderProps): JSX
         <button
           type="button"
           onClick={onEnable}
-          className="mt-8 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-indigo-500"
+          className="app-primary-action mt-8 inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-medium"
         >
           <MapIcon className="h-5 w-5" />
           {t('marketRadar.map.loadInteractive', 'Charger la carte interactive')}

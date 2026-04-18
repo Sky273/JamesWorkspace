@@ -541,7 +541,7 @@ export function MissionsGroupedToolbar({
           <button
             type="button"
             onClick={onAddMission}
-            className="cv-gradient-button inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-2 text-sm font-bold transition-all"
+            className="cv-page-primary-action inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-2 text-sm font-bold transition-all"
           >
             <PlusIcon className="h-5 w-5" />
             {t('missions.addMission')}
@@ -667,7 +667,7 @@ export function MissionsGroupedEmptyState({
         <button
           type="button"
           onClick={onAddMission}
-          className="cv-gradient-button inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-bold"
+          className="cv-page-primary-action inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-bold"
         >
           <PlusIcon className="h-5 w-5" />
           {t('missions.addMission')}

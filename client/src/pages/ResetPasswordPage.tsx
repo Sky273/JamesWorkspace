@@ -184,7 +184,7 @@ const ResetPasswordPage = (): JSX.Element => {
           <button
             type="submit"
             disabled={loading || !password || !confirmPassword}
-            className="w-full rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="app-primary-action w-full rounded-2xl px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? t('common.loading') : t('auth.resetPassword.submitButton')}
           </button>

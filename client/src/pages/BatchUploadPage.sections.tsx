@@ -176,7 +176,7 @@ export function BatchUploadActions({
             <button
               onClick={onStartProcessing}
               disabled={filesCount === 0 || pendingCount === 0 || (exportOption && exportFormatsCount === 0)}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="app-primary-action inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <DocumentArrowUpIcon className="h-5 w-5" />
               {t('batchUpload.process', 'Traiter')} {pendingCount > 0 ? `${pendingCount} ${t('batchUpload.files', 'fichier(s)')}` : ''}

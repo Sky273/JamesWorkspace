@@ -214,7 +214,7 @@ const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormMod
           </button>
           <button
             type="submit"
-            className="btn btn-primary px-4 py-2"
+            className="app-primary-action px-4 py-2"
           >
             {t('common.save')}
           </button>
