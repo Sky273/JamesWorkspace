@@ -184,7 +184,7 @@ function PublicHomePage(): JSX.Element {
                   variants={stagger}
                 >
                   <span className="block text-gray-900 dark:text-gray-100">{t('home.hero.title1')}</span>
-                  <span className="block text-primary-600 dark:text-primary-500">
+                  <span className="block bg-[linear-gradient(135deg,#6366f1_0%,#8b5cf6_48%,#c084fc_100%)] bg-clip-text text-transparent">
                     {t('home.hero.title2')}
                   </span>
                 </motion.h1>
