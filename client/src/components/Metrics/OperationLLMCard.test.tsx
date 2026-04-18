@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import type { TFunction } from 'i18next';
 import OperationLLMCard from './OperationLLMCard';
 
 describe('OperationLLMCard', () => {
@@ -12,6 +13,9 @@ describe('OperationLLMCard', () => {
       'metrics.postAnalysisFallbackDegradation': 'Fallback post-analyse',
       'metrics.postAnalysisMergeDegradation': 'Fusion post-analyse',
     };
+
+    const t = ((key: string, options?: { defaultValue?: string }) =>
+      translations[key] ?? options?.defaultValue ?? key) as unknown as TFunction;
 
     render(
       <OperationLLMCard
@@ -42,7 +46,7 @@ describe('OperationLLMCard', () => {
           }]
         }}
         successRatio={0.75}
-        t={(key: string, options?: { defaultValue?: string }) => translations[key] ?? options?.defaultValue ?? key}
+        t={t}
         safeNumber={(value: unknown, defaultValue = 0) => typeof value === 'number' ? value : defaultValue}
         formatNumber={(value?: number) => String(value ?? 0)}
       />
@@ -66,6 +70,9 @@ describe('OperationLLMCard', () => {
       'metrics.degradation': 'Dégradation',
       'metrics.adaptationFallbackDegradation': 'Fallback adaptation',
     };
+
+    const t = ((key: string, options?: { defaultValue?: string }) =>
+      translations[key] ?? options?.defaultValue ?? key) as unknown as TFunction;
 
     render(
       <OperationLLMCard
@@ -93,7 +100,7 @@ describe('OperationLLMCard', () => {
           }]
         }}
         successRatio={1}
-        t={(key: string, options?: { defaultValue?: string }) => translations[key] ?? options?.defaultValue ?? key}
+        t={t}
         safeNumber={(value: unknown, defaultValue = 0) => typeof value === 'number' ? value : defaultValue}
         formatNumber={(value?: number) => String(value ?? 0)}
       />
