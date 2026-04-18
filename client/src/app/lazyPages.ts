@@ -1,17 +1,97 @@
 import { lazy, type ComponentType } from 'react';
+import { createLogger } from '../utils/logger.frontend';
 
 const editorialCssLoaders = [() => import('../styles/editorialPages.css')];
 const resumesEditorialCssLoaders = [() => import('../styles/resumesEditorial.css')];
+const CHUNK_RELOAD_STORAGE_KEY = 'lazy-page-reload-once';
+const lazyPagesLog = createLogger('lazyPages');
 
 type LazyPageModule = { default: ComponentType<Record<string, never>> };
+
+type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
+
+function getChunkReloadStorage(): StorageLike | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+export function isRecoverableDynamicImportError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return [
+    'Failed to fetch dynamically imported module',
+    'Importing a module script failed',
+    'error loading dynamically imported module',
+    'ChunkLoadError',
+  ].some((fragment) => message.includes(fragment));
+}
+
+export function canAttemptChunkRecovery(storage: StorageLike | null, currentPath: string): boolean {
+  if (!storage) {
+    return false;
+  }
+
+  return storage.getItem(CHUNK_RELOAD_STORAGE_KEY) !== currentPath;
+}
+
+function markChunkRecoveryAttempt(storage: StorageLike | null, currentPath: string): void {
+  storage?.setItem(CHUNK_RELOAD_STORAGE_KEY, currentPath);
+}
+
+function clearChunkRecoveryAttempt(storage: StorageLike | null): void {
+  storage?.removeItem(CHUNK_RELOAD_STORAGE_KEY);
+}
+
+export function reloadDocument(): void {
+  window.location.reload();
+}
+
+export async function loadLazyPageModule<T extends LazyPageModule>(
+  importer: () => Promise<T>,
+  cssLoaders: Array<() => Promise<unknown>>,
+  options: { reload?: () => void } = {},
+): Promise<T> {
+  const storage = getChunkReloadStorage();
+  const currentPath = typeof window !== 'undefined'
+    ? `${window.location.pathname}${window.location.search}${window.location.hash}`
+    : '';
+  const reload = options.reload || reloadDocument;
+
+  try {
+    const [module] = await Promise.all([importer(), ...cssLoaders.map((loadCss) => loadCss())]);
+    clearChunkRecoveryAttempt(storage);
+    return module;
+  } catch (error) {
+    if (
+      typeof window !== 'undefined'
+      && isRecoverableDynamicImportError(error)
+      && canAttemptChunkRecovery(storage, currentPath)
+    ) {
+      lazyPagesLog.warn('Recoverable lazy chunk error detected, forcing a one-time reload', {
+        path: currentPath,
+        error: error instanceof Error ? error.message : String(error ?? ''),
+      });
+      markChunkRecoveryAttempt(storage, currentPath);
+      reload();
+      return new Promise<T>(() => {});
+    }
+
+    throw error;
+  }
+}
 
 const lazyWithCss = <T extends LazyPageModule>(
   importer: () => Promise<T>,
   cssLoaders: Array<() => Promise<unknown>> = [],
 ) =>
   lazy(async () => {
-    const [module] = await Promise.all([importer(), ...cssLoaders.map((loadCss) => loadCss())]);
-    return module;
+    return loadLazyPageModule(importer, cssLoaders);
   });
 
 export const HomePage = lazy(() => import('../pages/HomePage'));
