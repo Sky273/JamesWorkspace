@@ -251,7 +251,15 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
             .map((profile) => {
                 const llmScore = llmResult.scores[profile.resumeId];
                 if (!llmScore) {
-                    return null;
+                    return {
+                        ...profile,
+                        matchScore: 0,
+                        llmScored: false,
+                        confidence: 'low',
+                        reason: null,
+                        keyStrengths: [],
+                        keyGaps: []
+                    };
                 }
                 return {
                     ...profile,
@@ -272,12 +280,12 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
                         resumeId: profile.resumeId
                     })
                 };
-            })
-            .filter((profile) => profile !== null);
+            });
 
         safeLog('info', 'LLM scoring applied', {
             totalProfiles: profilesToScore.length,
-            llmScored: finalProfiles.length,
+            llmScored: finalProfiles.filter((profile) => profile.llmScored).length,
+            llmOmitted: finalProfiles.filter((profile) => !profile.llmScored).length,
             partial: llmResult.partial
         });
     } else {

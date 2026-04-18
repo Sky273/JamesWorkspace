@@ -575,6 +575,38 @@ describe('Profile Matching Service', () => {
             expect(result.llmScoringApplied).toBe(true);
         });
 
+        it('should keep all scored candidates in results when the LLM omits some ids', async () => {
+            callBusinessChatCompletion.mockResolvedValue({
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            scores: {
+                                'resume-1': {
+                                    score: 88,
+                                    confidence: 'high',
+                                    reason: 'Strong fit'
+                                },
+                                'resume-3': {
+                                    score: 52,
+                                    confidence: 'medium',
+                                    reason: 'Partial fit'
+                                }
+                            }
+                        })
+                    }
+                }]
+            });
+
+            const result = await findMatchingProfiles('mission-1', { limit: 10, minScore: 0 });
+            const omittedProfile = result.profiles.find((profile) => profile.resumeId === 'resume-2');
+
+            expect(result.profiles).toHaveLength(3);
+            expect(omittedProfile).toBeDefined();
+            expect(omittedProfile.matchScore).toBe(0);
+            expect(omittedProfile.llmScored).toBe(false);
+            expect(omittedProfile.confidence).toBe('low');
+        });
+
         it('should handle malformed LLM response', async () => {
             callBusinessChatCompletion.mockResolvedValue({
                 choices: [{
