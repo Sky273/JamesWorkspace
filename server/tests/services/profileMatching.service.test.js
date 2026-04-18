@@ -295,25 +295,26 @@ describe('Profile Matching Service', () => {
             });
         });
 
-        it('should return empty profiles when LLM fails', async () => {
+        it('should fall back to local scoring for all accessible profiles when LLM fails', async () => {
             callBusinessChatCompletion.mockRejectedValue(new Error('LLM API error'));
             
             const result = await findMatchingProfiles('mission-1', { limit: 10 });
             
             expect(result.llmScoringApplied).toBe(false);
             expect(result.llmScoringFailed).toBe(true);
-            // No fallback - LLM is the only scoring source
-            expect(result.profiles).toHaveLength(0);
+            expect(result.profiles).toHaveLength(3);
+            expect(result.profiles.every((profile) => profile.llmScored === false)).toBe(true);
         });
 
-        it('should return empty profiles when LLM model is not configured', async () => {
+        it('should fall back to local scoring when LLM model is not configured', async () => {
             getLLMSettings.mockResolvedValue({ llmModel: null });
             
             const result = await findMatchingProfiles('mission-1', { limit: 10 });
             
             expect(result.llmScoringApplied).toBe(false);
             expect(result.llmScoringFailed).toBe(true);
-            expect(result.profiles).toHaveLength(0);
+            expect(result.profiles).toHaveLength(3);
+            expect(result.profiles.every((profile) => profile.llmScored === false)).toBe(true);
         });
 
         it('should respect minScore filter', async () => {
@@ -380,6 +381,42 @@ describe('Profile Matching Service', () => {
 
             expect(scoringCall).toBeDefined();
             expect(scoringCall[0].responseFormat).toEqual({ type: 'json_object' });
+        });
+
+        it('should use a single wider batch for small GLM profile searches to avoid request bursts', async () => {
+            const fourteenResumes = Array.from({ length: 14 }, (_, i) => ({
+                ...mockResumeRecords[0],
+                id: `resume-${i}`,
+                name: `Candidate ${i}`
+            }));
+
+            getLLMSettings.mockResolvedValue({ llmModel: 'glm-5.1', llmProvider: 'glm' });
+            selectRawWithTimeout.mockResolvedValue(fourteenResumes);
+            callBusinessChatCompletion.mockResolvedValue({
+                choices: [{
+                    message: {
+                        content: JSON.stringify({
+                            scores: Object.fromEntries(
+                                fourteenResumes.map(r => [r.id, { score: 72, confidence: 'medium', reason: 'Test' }])
+                            )
+                        })
+                    }
+                }]
+            });
+
+            const result = await findMatchingProfiles('mission-1', { limit: 0 });
+            const scoringCalls = callBusinessChatCompletion.mock.calls.filter(
+                call => call[0]?.operationType === 'Batch Profile Scoring'
+            );
+            const searchMetric = metrics.trackProfileMatchingActivity.mock.calls.find(
+                call => call[0]?.event === 'search'
+            )?.[0];
+
+            expect(result.profilesSentToLlm).toBe(14);
+            expect(scoringCalls).toHaveLength(1);
+            expect(searchMetric).toBeDefined();
+            expect(searchMetric.metadata.batchSize).toBe(16);
+            expect(searchMetric.metadata.maxConcurrency).toBe(1);
         });
 
         it('should filter resumes by firm_id when a firm is provided', async () => {
@@ -478,7 +515,7 @@ describe('Profile Matching Service', () => {
             }));
         });
 
-        it('should prefilter very large candidate sets before sending them to the LLM', async () => {
+        it('should send all accessible resumes to the LLM batching pipeline for large candidate sets', async () => {
             const manyResumes = Array.from({ length: 180 }, (_, i) => ({
                 ...mockResumeRecords[0],
                 id: `resume-${i}`,
@@ -496,70 +533,24 @@ describe('Profile Matching Service', () => {
                     message: {
                         content: JSON.stringify({
                             scores: Object.fromEntries(
-                                manyResumes.slice(0, 100).map(r => [r.id, { score: 72, confidence: 'medium', reason: 'Test' }])
+                                manyResumes.map(r => [r.id, { score: 72, confidence: 'medium', reason: 'Test' }])
                             )
                         })
                     }
                 }]
             });
 
-            await findMatchingProfiles('mission-1', { limit: 0 });
+            const result = await findMatchingProfiles('mission-1', { limit: 0 });
+            const totalCandidatesSent = callBusinessChatCompletion.mock.calls.reduce((total, call) => {
+                const llmPayload = call[0];
+                const serializedCandidates = llmPayload.messages[1].content;
+                return total + (serializedCandidates.match(/"id":/g) || []).length;
+            }, 0);
 
-            const llmPayload = callBusinessChatCompletion.mock.calls[0][0];
-            const serializedCandidates = llmPayload.messages[1].content;
-            const candidateIdCount = (serializedCandidates.match(/"id":/g) || []).length;
-
-            expect(candidateIdCount).toBeLessThanOrEqual(100);
-        });
-
-        it('should send all in-scope resumes to the batching pipeline when the prefilter cap is disabled', async () => {
-            const originalPrefilterCap = process.env.PROFILE_MATCHING_LLM_PREFILTER_CAP;
-            process.env.PROFILE_MATCHING_LLM_PREFILTER_CAP = '0';
-            vi.resetModules();
-
-            try {
-                const refreshedService = await import('../../services/profileMatching.service.js');
-                const refreshedFindMatchingProfiles = refreshedService.findMatchingProfiles;
-
-                const manyResumes = Array.from({ length: 150 }, (_, i) => ({
-                    ...mockResumeRecords[0],
-                    id: `resume-${i}`,
-                    name: `Candidate ${i}`
-                }));
-
-                findWithTimeout.mockResolvedValue(mockMissionRecord);
-                selectRawWithTimeout.mockResolvedValue(manyResumes);
-                callBusinessChatCompletion.mockResolvedValue({
-                    choices: [{
-                        message: {
-                            content: JSON.stringify({
-                                scores: Object.fromEntries(
-                                    manyResumes.map(r => [r.id, { score: 72, confidence: 'medium', reason: 'Test' }])
-                                )
-                            })
-                        }
-                    }]
-                });
-
-                const result = await refreshedFindMatchingProfiles('mission-1', { limit: 0 });
-                const totalCandidatesSent = callBusinessChatCompletion.mock.calls.reduce((total, call) => {
-                    const llmPayload = call[0];
-                    const serializedCandidates = llmPayload.messages[1].content;
-                    return total + (serializedCandidates.match(/"id":/g) || []).length;
-                }, 0);
-
-                expect(result.totalResumesScanned).toBe(150);
-                expect(result.profilesSentToLlm).toBe(150);
-                expect(totalCandidatesSent).toBe(150);
-                expect(callBusinessChatCompletion.mock.calls.length).toBeGreaterThan(1);
-            } finally {
-                if (originalPrefilterCap === undefined) {
-                    delete process.env.PROFILE_MATCHING_LLM_PREFILTER_CAP;
-                } else {
-                    process.env.PROFILE_MATCHING_LLM_PREFILTER_CAP = originalPrefilterCap;
-                }
-                vi.resetModules();
-            }
+            expect(result.totalResumesScanned).toBe(180);
+            expect(result.profilesSentToLlm).toBe(180);
+            expect(totalCandidatesSent).toBe(180);
+            expect(callBusinessChatCompletion.mock.calls.length).toBeGreaterThan(1);
         });
 
         it('should handle partial LLM failures gracefully', async () => {
@@ -602,7 +593,7 @@ describe('Profile Matching Service', () => {
 
             expect(result.profiles).toHaveLength(3);
             expect(omittedProfile).toBeDefined();
-            expect(omittedProfile.matchScore).toBe(0);
+            expect(omittedProfile.matchScore).toBeGreaterThanOrEqual(0);
             expect(omittedProfile.llmScored).toBe(false);
             expect(omittedProfile.confidence).toBe('low');
         });
@@ -618,9 +609,9 @@ describe('Profile Matching Service', () => {
             
             const result = await findMatchingProfiles('mission-1', { limit: 10 });
             
-            // No fallback - LLM is the only scoring source
             expect(result.llmScoringFailed).toBe(true);
-            expect(result.profiles).toHaveLength(0);
+            expect(result.profiles).toHaveLength(3);
+            expect(result.profiles.every((profile) => profile.llmScored === false)).toBe(true);
         });
 
         it('should retry malformed batch scoring responses with smaller sub-batches', async () => {

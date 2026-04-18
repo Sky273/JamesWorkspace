@@ -7,13 +7,14 @@
 import { findWithTimeout, selectRawWithTimeout } from '../utils/postgresHelpers.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { getLLMSettings } from './settings.service.js';
-import { PROFILE_MATCHING_LLM_PREFILTER_CAP } from '../config/constants.js';
 import { metrics, buildLLMMetricLabel } from './metrics.service.js';
 import { DEFAULT_WEIGHTS } from './profileMatching/constants.js';
 import {
     parseJsonField,
     getProfileMatchingLocalRankingWeights,
-    selectProfilesForLlm
+    scoreProfileHeuristically,
+    buildNormalizedTagSet,
+    normalizeTag
 } from './profileMatching/localRanking.js';
 import {
     getExplanationProfileCount,
@@ -80,6 +81,53 @@ function mapProfileRecord(record) {
         firmName: record.firm_name,
         createdAt: record.created_at,
         resumeTags: parseResumeTags(record)
+    };
+}
+
+function buildLocalProfileScore(profile, missionKeywords, missionTitle, rankingWeights) {
+    const heuristic = scoreProfileHeuristically({ ...profile, missionTitle }, missionKeywords, rankingWeights);
+    const missionSkillSet = buildNormalizedTagSet(missionKeywords.skills);
+    const missionToolSet = buildNormalizedTagSet(missionKeywords.tools);
+    const missionIndustrySet = buildNormalizedTagSet(missionKeywords.industries);
+    const missionSoftSkillSet = buildNormalizedTagSet(missionKeywords.softSkills);
+
+    const selectMatchedTags = (profileValues = [], missionSet = new Set()) =>
+        (profileValues || []).filter((value) => missionSet.has(normalizeTag(value)));
+
+    const selectMissingTags = (missionValues = [], profileValues = []) => {
+        const profileSet = buildNormalizedTagSet(profileValues);
+        return (missionValues || []).filter((value) => !profileSet.has(normalizeTag(value)));
+    };
+
+    const normalizedScore = Math.max(0, Math.min(100, Math.round(heuristic.heuristicScore)));
+
+    return {
+        ...profile,
+        matchScore: normalizedScore,
+        baseScore: normalizedScore,
+        llmScored: false,
+        confidence: 'low',
+        reason: null,
+        keyStrengths: [],
+        keyGaps: [],
+        categoryScores: {
+            skills: Math.round(heuristic.skillCoverage * 100),
+            tools: Math.round(heuristic.toolCoverage * 100),
+            industries: Math.round(heuristic.industryCoverage * 100),
+            softSkills: Math.round(heuristic.softSkillCoverage * 100)
+        },
+        matchedTags: {
+            skills: selectMatchedTags(profile.resumeTags?.skills, missionSkillSet),
+            tools: selectMatchedTags(profile.resumeTags?.tools, missionToolSet),
+            industries: selectMatchedTags(profile.resumeTags?.industries, missionIndustrySet),
+            softSkills: selectMatchedTags(profile.resumeTags?.softSkills, missionSoftSkillSet)
+        },
+        missingTags: {
+            skills: selectMissingTags(missionKeywords.skills, profile.resumeTags?.skills),
+            tools: selectMissingTags(missionKeywords.tools, profile.resumeTags?.tools),
+            industries: selectMissingTags(missionKeywords.industries, profile.resumeTags?.industries),
+            softSkills: selectMissingTags(missionKeywords.softSkills, profile.resumeTags?.softSkills)
+        }
     };
 }
 
@@ -181,19 +229,12 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
 
     const allProfiles = resumeRecords.map(mapProfileRecord);
 
-    const profilesToScore = selectProfilesForLlm(
-        allProfiles,
-        missionKeywords,
-        missionRecord.title,
-        limit,
-        localRankingWeights,
-        PROFILE_MATCHING_LLM_PREFILTER_CAP
-    );
+    const profilesToScore = allProfiles;
 
     safeLog('info', 'Sending profiles to LLM for scoring', {
         totalProfiles: allProfiles.length,
         profilesToScore: profilesToScore.length,
-        prefilterApplied: profilesToScore.length !== allProfiles.length
+        prefilterApplied: false
     });
     await emitProgress(progressCallback, {
         progress: 65,
@@ -201,7 +242,7 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         stageLabel: 'Présélection terminée',
         totalProfiles: allProfiles.length,
         profilesToScore: profilesToScore.length,
-        prefilterApplied: profilesToScore.length !== allProfiles.length
+        prefilterApplied: false
     });
 
     if (profilesToScore.length === 0) {
@@ -251,15 +292,7 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
             .map((profile) => {
                 const llmScore = llmResult.scores[profile.resumeId];
                 if (!llmScore) {
-                    return {
-                        ...profile,
-                        matchScore: 0,
-                        llmScored: false,
-                        confidence: 'low',
-                        reason: null,
-                        keyStrengths: [],
-                        keyGaps: []
-                    };
+                    return buildLocalProfileScore(profile, missionKeywords, missionRecord.title, localRankingWeights);
                 }
                 return {
                     ...profile,
@@ -290,8 +323,10 @@ export async function findMatchingProfiles(missionId, options = {}, userMetadata
         });
     } else {
         llmScoringFailed = true;
-        safeLog('error', 'LLM scoring failed completely - no profiles can be scored');
-        finalProfiles = [];
+        safeLog('error', 'LLM scoring failed completely - falling back to local scoring');
+        finalProfiles = profilesToScore.map((profile) =>
+            buildLocalProfileScore(profile, missionKeywords, missionRecord.title, localRankingWeights)
+        );
     }
 
     const sortedProfiles = finalProfiles

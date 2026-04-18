@@ -49,13 +49,14 @@ export async function scoreBatchWithLLM(profiles, missionKeywords, missionRecord
 
     const isMiniMaxProvider = settings.llmProvider === 'minimax';
     const isDeepSeekProvider = settings.llmProvider === 'deepseek';
+    const isGlmProvider = settings.llmProvider === 'glm';
     const isDeepSeekReasoner = isDeepSeekProvider && model === 'deepseek-reasoner';
     const supportsStructuredJsonResponse = settings.llmProvider === 'deepseek';
-    const providerDefaultBatchSize = isDeepSeekProvider ? 4 : (isMiniMaxProvider ? 6 : 12);
+    const providerDefaultBatchSize = isDeepSeekProvider ? 4 : (isMiniMaxProvider ? 6 : (isGlmProvider ? 16 : 12));
     const batchSize = PROFILE_MATCHING_LLM_BATCH_SIZE > 0
         ? Math.min(PROFILE_MATCHING_LLM_BATCH_SIZE, 100)
         : providerDefaultBatchSize;
-    const providerDefaultConcurrency = isDeepSeekReasoner ? 2 : (isMiniMaxProvider ? 3 : 5);
+    const providerDefaultConcurrency = isDeepSeekReasoner ? 2 : (isMiniMaxProvider ? 3 : (isGlmProvider ? 1 : 5));
     const maxConcurrency = PROFILE_MATCHING_LLM_MAX_CONCURRENCY > 0
         ? Math.min(PROFILE_MATCHING_LLM_MAX_CONCURRENCY, 100)
         : providerDefaultConcurrency;
