@@ -6,6 +6,9 @@ import {
 
 const DEFAULT_HEADER_RATIO = 0.18;
 const DEFAULT_FOOTER_RATIO = 0.14;
+const HEADER_SCAN_RATIO = 0.28;
+const FOOTER_SCAN_RATIO = 0.22;
+const MAX_REPEATED_REGION_PAGES = 3;
 const MIN_LINE_GROUP_THRESHOLD = 6;
 const MIN_VISUAL_BLOCK_AREA = 1200;
 const MIN_IMAGE_BLOCK_AREA = 256;
@@ -157,25 +160,103 @@ function groupItemsIntoLines(items) {
     }).filter((line) => line.text.length > 0);
 }
 
-function splitLinesIntoRegions(lines, pageHeight) {
+function normalizeRegionHintText(text) {
+    return String(text || '')
+        .toLowerCase()
+        .replace(/\d+/g, '#')
+        .replace(/[^a-z0-9#@&.+-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function buildRegionHintSet(lines = []) {
+    return new Set(
+        lines
+            .map((line) => normalizeRegionHintText(line.text))
+            .filter(Boolean)
+    );
+}
+
+function computeContinuationThreshold(referenceLine, candidateLine) {
+    return Math.max(
+        20,
+        Math.round(Math.max(referenceLine?.height || 0, candidateLine?.height || 0) * 2.4)
+    );
+}
+
+function extendHeaderRegion(header, content, lines, pageHeight, repeatedHeaderTexts) {
+    if (lines.length === 0) {
+        return;
+    }
+
+    const maxHeaderTop = Math.round(pageHeight * 0.34);
+
+    while (content.length > 0 && header.length > 0) {
+        const lastHeaderLine = header[header.length - 1];
+        const nextLine = content[0];
+        const gap = Math.max(0, nextLine.top - lastHeaderLine.bottom);
+        const nextLineHint = normalizeRegionHintText(nextLine.text);
+        const shouldPromoteByHint = repeatedHeaderTexts.has(nextLineHint);
+        const shouldPromoteByContinuity = nextLine.top <= maxHeaderTop
+            && gap <= computeContinuationThreshold(lastHeaderLine, nextLine);
+
+        if (!shouldPromoteByHint && !shouldPromoteByContinuity) {
+            break;
+        }
+
+        header.push(content.shift());
+    }
+}
+
+function extendFooterRegion(footer, content, lines, pageHeight, repeatedFooterTexts) {
+    if (lines.length === 0) {
+        return;
+    }
+
+    const minFooterBottom = Math.round(pageHeight * 0.66);
+
+    while (content.length > 0 && footer.length > 0) {
+        const firstFooterLine = footer[0];
+        const previousLine = content[content.length - 1];
+        const gap = Math.max(0, firstFooterLine.top - previousLine.bottom);
+        const previousLineHint = normalizeRegionHintText(previousLine.text);
+        const shouldPromoteByHint = repeatedFooterTexts.has(previousLineHint);
+        const shouldPromoteByContinuity = previousLine.bottom >= minFooterBottom
+            && gap <= computeContinuationThreshold(firstFooterLine, previousLine);
+
+        if (!shouldPromoteByHint && !shouldPromoteByContinuity) {
+            break;
+        }
+
+        footer.unshift(content.pop());
+    }
+}
+
+function splitLinesIntoRegions(lines, pageHeight, repeatedRegionHints = null) {
     if (lines.length === 0) {
         return { header: [], content: [], footer: [] };
     }
 
     const headerBoundary = Math.round(pageHeight * DEFAULT_HEADER_RATIO);
     const footerBoundary = Math.round(pageHeight * (1 - DEFAULT_FOOTER_RATIO));
+    const repeatedHeaderTexts = repeatedRegionHints?.headerTexts || new Set();
+    const repeatedFooterTexts = repeatedRegionHints?.footerTexts || new Set();
 
     const header = [];
     const content = [];
     const footer = [];
 
     for (const line of lines) {
-        if (line.bottom <= headerBoundary) {
+        const normalizedText = normalizeRegionHintText(line.text);
+        const matchesRepeatedHeader = repeatedHeaderTexts.has(normalizedText);
+        const matchesRepeatedFooter = repeatedFooterTexts.has(normalizedText);
+
+        if (line.bottom <= headerBoundary || matchesRepeatedHeader) {
             header.push(line);
             continue;
         }
 
-        if (line.top >= footerBoundary) {
+        if (line.top >= footerBoundary || matchesRepeatedFooter) {
             footer.push(line);
             continue;
         }
@@ -199,6 +280,9 @@ function splitLinesIntoRegions(lines, pageHeight) {
             content.pop();
         }
     }
+
+    extendHeaderRegion(header, content, lines, pageHeight, repeatedHeaderTexts);
+    extendFooterRegion(footer, content, lines, pageHeight, repeatedFooterTexts);
 
     return { header, content, footer };
 }
@@ -560,11 +644,12 @@ export function buildStructuredPdfTemplateInput({
     items = [],
     styles = {},
     operatorList = null,
-    pdfOps = null
+    pdfOps = null,
+    repeatedRegionHints = null
 }) {
     const normalizedItems = normalizeTextItems(items, styles, pageHeight);
     const lines = groupItemsIntoLines(normalizedItems);
-    const regions = splitLinesIntoRegions(lines, pageHeight);
+    const regions = splitLinesIntoRegions(lines, pageHeight, repeatedRegionHints);
     const headerBottom = regions.header.length > 0 ? Math.max(...regions.header.map((line) => line.bottom)) : Math.round(pageHeight * DEFAULT_HEADER_RATIO);
     const contentTop = regions.content.length > 0 ? Math.min(...regions.content.map((line) => line.top)) : headerBottom;
     const contentBottom = regions.content.length > 0 ? Math.max(...regions.content.map((line) => line.bottom)) : Math.round(pageHeight * (1 - DEFAULT_FOOTER_RATIO));
@@ -684,6 +769,8 @@ export function buildStructuredPdfTemplateInput({
             headerLines: regions.header.length,
             contentLines: regions.content.length,
             footerLines: regions.footer.length,
+            repeatedHeaderTextCount: repeatedRegionHints?.headerTexts?.size || 0,
+            repeatedFooterTextCount: repeatedRegionHints?.footerTexts?.size || 0,
             totalTextCharacters: lines.reduce((sum, line) => sum + line.text.length, 0),
             visualBlockCount: visualBlocks.length,
             imageBlockCount: imageBlocks.length,
@@ -696,12 +783,58 @@ export function buildStructuredPdfTemplateInput({
     };
 }
 
+async function extractRepeatedRegionHints(pdf) {
+    const pageCount = Math.min(Number(pdf?.numPages) || 0, MAX_REPEATED_REGION_PAGES);
+    if (pageCount <= 1) {
+        return null;
+    }
+
+    const headerCounts = new Map();
+    const footerCounts = new Map();
+
+    for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+        const page = await pdf.getPage(pageNumber);
+        const viewport = page.getViewport({ scale: 1 });
+        const textContent = await page.getTextContent();
+        const normalizedItems = normalizeTextItems(textContent.items, textContent.styles, viewport.height);
+        const lines = groupItemsIntoLines(normalizedItems);
+        const headerCandidates = lines.filter((line) => line.bottom <= (viewport.height * HEADER_SCAN_RATIO));
+        const footerCandidates = lines.filter((line) => line.top >= (viewport.height * (1 - FOOTER_SCAN_RATIO)));
+
+        for (const text of buildRegionHintSet(headerCandidates)) {
+            headerCounts.set(text, (headerCounts.get(text) || 0) + 1);
+        }
+
+        for (const text of buildRegionHintSet(footerCandidates)) {
+            footerCounts.set(text, (footerCounts.get(text) || 0) + 1);
+        }
+    }
+
+    const headerTexts = new Set(
+        Array.from(headerCounts.entries())
+            .filter(([, count]) => count >= 2)
+            .map(([text]) => text)
+    );
+    const footerTexts = new Set(
+        Array.from(footerCounts.entries())
+            .filter(([, count]) => count >= 2)
+            .map(([text]) => text)
+    );
+
+    if (headerTexts.size === 0 && footerTexts.size === 0) {
+        return null;
+    }
+
+    return { headerTexts, footerTexts };
+}
+
 export async function extractStructuredPdfTemplateInput(buffer) {
     const uint8Array = new Uint8Array(buffer);
     const loadingTask = await loadPdfDocument(uint8Array);
     const pdf = await loadingTask.promise;
     const firstPage = await pdf.getPage(1);
     const viewport = firstPage.getViewport({ scale: 1 });
+    const repeatedRegionHints = await extractRepeatedRegionHints(pdf);
     const [textContent, operatorList, pdfjsLib] = await Promise.all([
         firstPage.getTextContent(),
         typeof firstPage.getOperatorList === 'function'
@@ -716,6 +849,7 @@ export async function extractStructuredPdfTemplateInput(buffer) {
         items: textContent.items,
         styles: textContent.styles,
         operatorList,
-        pdfOps: pdfjsLib?.OPS || null
+        pdfOps: pdfjsLib?.OPS || null,
+        repeatedRegionHints
     });
 }

@@ -88,4 +88,55 @@ describe('template extraction pdf layout builder', () => {
             region: 'content'
         }));
     });
+
+    it('extends the header region when the top block continues below the default ratio', () => {
+        const result = buildStructuredPdfTemplateInput({
+            pageWidth: 600,
+            pageHeight: 800,
+            items: [
+                { str: 'Cabinet Example', transform: [14, 0, 0, 14, 40, 690], width: 120, height: 14, fontName: 'HeaderBold' },
+                { str: 'Conseil en transformation', transform: [11, 0, 0, 11, 40, 648], width: 180, height: 11, fontName: 'HeaderRegular' },
+                { str: 'Senior Engineer', transform: [12, 0, 0, 12, 50, 520], width: 120, height: 12, fontName: 'BodyRegular' },
+                { str: 'www.example.com', transform: [10, 0, 0, 10, 50, 40], width: 120, height: 10, fontName: 'FooterRegular' }
+            ],
+            styles: {
+                HeaderBold: { fontFamily: 'Cabinet Sans' },
+                HeaderRegular: { fontFamily: 'Cabinet Sans' },
+                BodyRegular: { fontFamily: 'Source Sans Pro' },
+                FooterRegular: { fontFamily: 'Source Sans Pro' }
+            }
+        });
+
+        expect(result.headerHtml).toContain('Cabinet Example');
+        expect(result.headerHtml).toContain('Conseil en transformation');
+        expect(result.contentHtml).toContain('Senior Engineer');
+        expect(result.metrics.headerLines).toBe(2);
+    });
+
+    it('promotes repeated top and bottom lines into header and footer regions', () => {
+        const result = buildStructuredPdfTemplateInput({
+            pageWidth: 600,
+            pageHeight: 800,
+            items: [
+                { str: 'CABINET NOVA', transform: [12, 0, 0, 12, 40, 628], width: 120, height: 12, fontName: 'HeaderBold' },
+                { str: 'Profil', transform: [12, 0, 0, 12, 40, 540], width: 60, height: 12, fontName: 'BodyRegular' },
+                { str: 'Page 1 / 2', transform: [10, 0, 0, 10, 440, 120], width: 70, height: 10, fontName: 'FooterRegular' }
+            ],
+            styles: {
+                HeaderBold: { fontFamily: 'Cabinet Sans' },
+                BodyRegular: { fontFamily: 'Source Sans Pro' },
+                FooterRegular: { fontFamily: 'Source Sans Pro' }
+            },
+            repeatedRegionHints: {
+                headerTexts: new Set(['cabinet nova']),
+                footerTexts: new Set(['page # #'])
+            }
+        });
+
+        expect(result.headerHtml).toContain('CABINET NOVA');
+        expect(result.footerHtml).toContain('Page 1 / 2');
+        expect(result.contentHtml).toContain('Profil');
+        expect(result.metrics.repeatedHeaderTextCount).toBe(1);
+        expect(result.metrics.repeatedFooterTextCount).toBe(1);
+    });
 });
