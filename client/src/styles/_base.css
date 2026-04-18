@@ -276,24 +276,24 @@ input[type="button"],
 
 /* Primary CTA buttons - vivid solid color with hover shadow */
 .btn-primary,
-button[type="submit"],
-input[type="submit"] {
+button[type="submit"]:not(.app-primary-action),
+input[type="submit"]:not(.app-primary-action) {
   background: var(--color-primary-600, #4f46e5);
   color: #fff;
   box-shadow: 0 1px 3px rgba(79, 70, 229, 0.3);
 }
 
 .btn-primary:hover,
-button[type="submit"]:hover,
-input[type="submit"]:hover {
+button[type="submit"]:not(.app-primary-action):hover,
+input[type="submit"]:not(.app-primary-action):hover {
   background: var(--color-primary-700, #4338ca);
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
   transform: translateY(-1px);
 }
 
 .btn-primary:active,
-button[type="submit"]:active,
-input[type="submit"]:active {
+button[type="submit"]:not(.app-primary-action):active,
+input[type="submit"]:not(.app-primary-action):active {
   transform: translateY(0);
   box-shadow: 0 1px 3px rgba(79, 70, 229, 0.3);
 }
