@@ -6,6 +6,7 @@
 
 import { callLLM, callLLMWithVision } from './llm.service.js';
 import { safeLog } from '../utils/logger.backend.js';
+import { LLM_OPERATION_TIMEOUT_MS } from '../config/constants.js';
 import {
     buildFallbackTemplateFromLayout,
     processTemplateExtractionResponse
@@ -17,7 +18,7 @@ import {
 
 const TEMPLATE_EXTRACTION_OPERATION_TYPE = 'Template Extraction';
 const TEMPLATE_EXTRACTION_VISION_OPERATION_TYPE = 'Template Extraction Vision Fallback';
-const TEMPLATE_EXTRACTION_HTML_TIMEOUT_MS = Number.parseInt(process.env.TEMPLATE_EXTRACTION_HTML_TIMEOUT_MS || '120000', 10);
+const TEMPLATE_EXTRACTION_TIMEOUT_MS = LLM_OPERATION_TIMEOUT_MS;
 const DEFAULT_TEMPLATE_EXTRACTION_PROMPT_BUDGET_CHARS = Number.parseInt(process.env.TEMPLATE_EXTRACTION_PROMPT_BUDGET_CHARS || '50000', 10);
 const HTML_EXTRACTION_PROMPT = [
     'Tu es un expert en creation de templates de CV reutilisables.',
@@ -99,7 +100,7 @@ export async function extractTemplateFromHTML(htmlContent, images = [], fileName
             operationType: TEMPLATE_EXTRACTION_OPERATION_TYPE,
             temperature: 0.1,
             max_tokens: options.maxTokens ?? 32000,
-            timeout: options.timeout ?? TEMPLATE_EXTRACTION_HTML_TIMEOUT_MS,
+            timeout: options.timeout ?? TEMPLATE_EXTRACTION_TIMEOUT_MS,
             userMetadata: {
                 actionType: 'template.extract',
                 fileName
@@ -113,7 +114,7 @@ export async function extractTemplateFromHTML(htmlContent, images = [], fileName
             safeLog('warn', 'Falling back to deterministic layout template extraction', {
                 fileName,
                 error: error.message,
-                timeoutMs: options.timeout ?? TEMPLATE_EXTRACTION_HTML_TIMEOUT_MS
+                timeoutMs: options.timeout ?? TEMPLATE_EXTRACTION_TIMEOUT_MS
             });
             return buildFallbackTemplateFromLayout(fileName, options.layoutAnalysis, extractedStyles);
         }
@@ -141,6 +142,7 @@ export async function extractTemplateFromImage(imageBase64, textContent = '', fi
             operationType: TEMPLATE_EXTRACTION_VISION_OPERATION_TYPE,
             temperature: 0.2,
             max_tokens: options.maxTokens ?? 20000,
+            timeout: options.timeout ?? TEMPLATE_EXTRACTION_TIMEOUT_MS,
             userMetadata: {
                 actionType: 'template.extract',
                 fileName

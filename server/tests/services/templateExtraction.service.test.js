@@ -21,6 +21,8 @@ import {
     extractTemplateFromCV
 } from '../../services/templateExtraction.service.js';
 
+const STANDARD_TEMPLATE_EXTRACTION_TIMEOUT_MS = 15 * 60 * 1000;
+
 const validTemplateJSON = JSON.stringify({
     name: 'Modern Template',
     description: 'A modern CV template',
@@ -59,7 +61,7 @@ describe('Template Extraction Service', () => {
                 expect.any(Array),
                 expect.objectContaining({
                     operationType: 'Template Extraction',
-                    timeout: 120000,
+                    timeout: STANDARD_TEMPLATE_EXTRACTION_TIMEOUT_MS,
                     userMetadata: expect.objectContaining({
                         actionType: 'template.extract'
                     })
@@ -67,7 +69,7 @@ describe('Template Extraction Service', () => {
             );
         });
 
-        it('requests the extraction-specific timeout and relies on the LLM facade to enforce the standard minimum', async () => {
+        it('requests the platform-standard extraction timeout', async () => {
             callLLM.mockResolvedValueOnce({
                 content: validTemplateJSON,
                 model: 'gpt-4',
@@ -79,7 +81,7 @@ describe('Template Extraction Service', () => {
             expect(callLLM).toHaveBeenCalledWith(
                 expect.any(Array),
                 expect.objectContaining({
-                    timeout: 120000,
+                    timeout: STANDARD_TEMPLATE_EXTRACTION_TIMEOUT_MS,
                     operationType: 'Template Extraction'
                 })
             );
@@ -381,6 +383,7 @@ describe('Template Extraction Service', () => {
                 expect.any(Array),
                 expect.objectContaining({
                     operationType: 'Template Extraction Vision Fallback',
+                    timeout: STANDARD_TEMPLATE_EXTRACTION_TIMEOUT_MS,
                     userMetadata: expect.objectContaining({
                         actionType: 'template.extract'
                     })
