@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 
 import FirmCreditsPage from './FirmCreditsPage';
 
@@ -10,6 +11,7 @@ const getStripeCreditPacksMock = vi.fn();
 const createStripeCheckoutSessionMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
+const navigateMock = vi.fn();
 
 vi.mock('framer-motion', () => ({
   motion: {
@@ -37,6 +39,14 @@ vi.mock('react-hot-toast', () => ({
     error: (...args: unknown[]) => toastErrorMock(...args),
   },
 }));
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
 
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => useAuthMock(),
@@ -107,12 +117,12 @@ describe('FirmCreditsPage', () => {
     });
     addFirmCreditsMock.mockResolvedValue({ id: 'firm-1', name: 'Acme', credits: 1300, status: 'active' });
 
-    render(<FirmCreditsPage />);
+    render(<MemoryRouter><FirmCreditsPage /></MemoryRouter>);
 
     await screen.findByText('Acme');
-    fireEvent.click(screen.getByRole('button', { name: 'firmCredits.addCredits' }));
+    fireEvent.click(screen.getAllByText('firmCredits.addCredits')[0]);
     fireEvent.change(screen.getByLabelText('firmCredits.modal.amountLabel'), { target: { value: '300' } });
-    fireEvent.click(screen.getByRole('button', { name: 'firmCredits.modal.confirm' }));
+    fireEvent.click(screen.getAllByText('firmCredits.modal.confirm')[0]);
 
     await waitFor(() => {
       expect(addFirmCreditsMock).toHaveBeenCalledWith('firm-1', 300);
@@ -125,7 +135,7 @@ describe('FirmCreditsPage', () => {
       user: { role: 'localAdmin', firmId: 'firm-1', firmName: 'Acme' },
     });
 
-    render(<FirmCreditsPage />);
+    render(<MemoryRouter><FirmCreditsPage /></MemoryRouter>);
 
     await screen.findByText('Acme');
     expect(screen.queryByRole('button', { name: 'firmCredits.addCredits' })).not.toBeInTheDocument();
@@ -138,7 +148,7 @@ describe('FirmCreditsPage', () => {
     });
     createStripeCheckoutSessionMock.mockResolvedValue({ id: 'purchase-1', url: 'https://checkout.stripe.test/session' });
 
-    render(<FirmCreditsPage />);
+    render(<MemoryRouter><FirmCreditsPage /></MemoryRouter>);
 
     await screen.findByText('Acme');
     fireEvent.click(screen.getByRole('button', { name: 'firmCredits.purchase.cta' }));
@@ -154,9 +164,22 @@ describe('FirmCreditsPage', () => {
       user: { role: 'admin', firmId: 'firm-1', firmName: 'Acme' },
     });
 
-    render(<FirmCreditsPage />);
+    render(<MemoryRouter><FirmCreditsPage /></MemoryRouter>);
 
     await screen.findByText('Alice');
     expect(screen.getByText('firmCredits.card.topConsumers')).toBeInTheDocument();
+  });
+
+  it('navigates to the firm credit detail page', async () => {
+    useAuthMock.mockReturnValue({
+      user: { role: 'admin', firmId: 'firm-1', firmName: 'Acme' },
+    });
+
+    render(<MemoryRouter><FirmCreditsPage /></MemoryRouter>);
+
+    await screen.findByText('Acme');
+    fireEvent.click(screen.getAllByText('firmCredits.viewDetail')[0]);
+
+    expect(navigateMock).toHaveBeenCalledWith('/admin/firm-credits/firm-1');
   });
 });

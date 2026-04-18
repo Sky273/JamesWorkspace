@@ -7,6 +7,7 @@
     "results": "firms",
     "currentBalance": "Current balance",
     "statusLabel": "Status",
+    "viewDetail": "View detail",
     "addCredits": "Add credits",
     "access": {
       "superAdminTitle": "Global control",
@@ -60,6 +61,46 @@
       "invalidAmount": "Amount must be a positive integer",
       "creditsAdded": "{{amount}} credits added to {{name}}",
       "errorAddingCredits": "Failed to add credits"
+    },
+    "detail": {
+      "title": "Credit detail for {{name}}",
+      "subtitle": "Track consumption and refunds by user and by action for this firm.",
+      "back": "Back to firm credits",
+      "systemUser": "System",
+      "balanceAfter": "Balance after: {{value}}",
+      "sections": {
+        "userBreakdown": "Breakdown by user",
+        "actionBreakdown": "Breakdown by action",
+        "userActionBreakdown": "User / action matrix",
+        "recentTransactions": "Recent transactions"
+      },
+      "columns": {
+        "user": "User",
+        "action": "Action",
+        "users": "Users",
+        "transactions": "Transactions",
+        "consumed": "Consumed",
+        "added": "Added / refunded",
+        "lastActivity": "Last activity"
+      },
+      "stats": {
+        "currentBalance": "Current balance",
+        "totalConsumed": "Total consumed",
+        "totalAdded": "Total added",
+        "transactionCount": "Transactions",
+        "lastActivity": "Last activity: {{value}}"
+      },
+      "messages": {
+        "errorLoading": "Failed to load credit detail"
+      },
+      "empty": {
+        "title": "Firm not found",
+        "description": "The requested credit detail is unavailable or you do not have access to this firm.",
+        "userBreakdown": "No usage recorded by user.",
+        "actionBreakdown": "No usage recorded by action.",
+        "userActionBreakdown": "No user / action combinations recorded.",
+        "recentTransactions": "No recent transactions."
+      }
     },
     "insufficient": {
       "title": "Insufficient credits",

@@ -25,6 +25,7 @@ vi.mock('../../config/constants.js', () => ({
 // Mock firms service
 const mockListFirms = vi.fn();
 const mockListFirmCredits = vi.fn();
+const mockGetFirmCreditsDetail = vi.fn();
 const mockGetFirmById = vi.fn();
 const mockCreateFirm = vi.fn();
 const mockUpdateFirm = vi.fn();
@@ -38,6 +39,7 @@ const mockDeleteFirmLogo = vi.fn();
 vi.mock('../../services/firms.service.js', () => ({
     listFirms: (...args) => mockListFirms(...args),
     listFirmCredits: (...args) => mockListFirmCredits(...args),
+    getFirmCreditsDetail: (...args) => mockGetFirmCreditsDetail(...args),
     getFirmById: (...args) => mockGetFirmById(...args),
     createFirm: (...args) => mockCreateFirm(...args),
     updateFirm: (...args) => mockUpdateFirm(...args),
@@ -145,6 +147,14 @@ describe('Firms Routes', () => {
             firms: [],
             hasMore: false,
             totalCount: 0
+        });
+        mockGetFirmCreditsDetail.mockResolvedValue({
+            firm: { id: 'firm-123', name: 'Firm Local', credits: 1000 },
+            summary: { transaction_count: 0, total_credits_consumed: 0, total_credits_added: 0, total_credits_refunded: 0, last_credit_activity_at: null },
+            userBreakdown: [],
+            actionBreakdown: [],
+            userActionBreakdown: [],
+            recentTransactions: []
         });
     });
 
@@ -298,6 +308,33 @@ describe('Firms Routes', () => {
 
             expect(res.status).toBe(403);
             expect(mockListFirmCredits).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('GET /api/firms/:id/credits/detail', () => {
+        it('should return firm credit detail for a super admin', async () => {
+            const res = await request(app).get('/api/firms/firm-123/credits/detail').set(authHeader);
+
+            expect(res.status).toBe(200);
+            expect(mockGetFirmCreditsDetail).toHaveBeenCalledWith('firm-123');
+        });
+
+        it('should allow a local admin to view their own firm detail', async () => {
+            const res = await request(app)
+                .get('/api/firms/firm-local/credits/detail')
+                .set({ ...authHeader, 'x-test-role': 'localAdmin', 'x-test-firm-id': 'firm-local' });
+
+            expect(res.status).toBe(200);
+            expect(mockGetFirmCreditsDetail).toHaveBeenCalledWith('firm-local');
+        });
+
+        it('should reject a local admin requesting another firm', async () => {
+            const res = await request(app)
+                .get('/api/firms/firm-other/credits/detail')
+                .set({ ...authHeader, 'x-test-role': 'localAdmin', 'x-test-firm-id': 'firm-local' });
+
+            expect(res.status).toBe(403);
+            expect(mockGetFirmCreditsDetail).not.toHaveBeenCalled();
         });
     });
 

@@ -7,6 +7,7 @@
     "results": "cabinets",
     "currentBalance": "Solde actuel",
     "statusLabel": "Statut",
+    "viewDetail": "Voir le détail",
     "addCredits": "Ajouter des crédits",
     "access": {
       "superAdminTitle": "Pilotage global",
@@ -60,6 +61,46 @@
       "invalidAmount": "Le montant doit être un entier positif",
       "creditsAdded": "{{amount}} crédits ajoutés à {{name}}",
       "errorAddingCredits": "Erreur lors de l'ajout des crédits"
+    },
+    "detail": {
+      "title": "Détail des crédits du cabinet {{name}}",
+      "subtitle": "Suivez les consommations et remboursements par utilisateur et par action sur ce cabinet.",
+      "back": "Retour aux crédits cabinet",
+      "systemUser": "Système",
+      "balanceAfter": "Solde après : {{value}}",
+      "sections": {
+        "userBreakdown": "Répartition par utilisateur",
+        "actionBreakdown": "Répartition par action",
+        "userActionBreakdown": "Croisement utilisateur / action",
+        "recentTransactions": "Transactions récentes"
+      },
+      "columns": {
+        "user": "Utilisateur",
+        "action": "Action",
+        "users": "Utilisateurs",
+        "transactions": "Opérations",
+        "consumed": "Consommé",
+        "added": "Ajouté / remboursé",
+        "lastActivity": "Dernière activité"
+      },
+      "stats": {
+        "currentBalance": "Solde courant",
+        "totalConsumed": "Total consommé",
+        "totalAdded": "Total ajouté",
+        "transactionCount": "Opérations",
+        "lastActivity": "Dernière activité : {{value}}"
+      },
+      "messages": {
+        "errorLoading": "Erreur lors du chargement du détail des crédits"
+      },
+      "empty": {
+        "title": "Cabinet introuvable",
+        "description": "Le détail de crédits demandé est indisponible ou vous n'avez pas accès à ce cabinet.",
+        "userBreakdown": "Aucune consommation par utilisateur.",
+        "actionBreakdown": "Aucune consommation par action.",
+        "userActionBreakdown": "Aucune combinaison utilisateur / action.",
+        "recentTransactions": "Aucune transaction récente."
+      }
     },
     "insufficient": {
       "title": "Crédits insuffisants",

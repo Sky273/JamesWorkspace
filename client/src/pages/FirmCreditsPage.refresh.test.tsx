@@ -1,5 +1,6 @@
 import { render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 
 import { markViewScopesDirty } from '../utils/viewRefresh';
 import FirmCreditsPage from './FirmCreditsPage';
@@ -95,7 +96,7 @@ describe('FirmCreditsPage refresh wiring', () => {
   it('forces a firm credits refresh for the embedded admin tab when the firms scope is dirty', async () => {
     markViewScopesDirty(['firms']);
 
-    render(<FirmCreditsPage embedded />);
+    render(<MemoryRouter><FirmCreditsPage embedded /></MemoryRouter>);
 
     await waitFor(() => {
       expect(getFirmCreditsPaginatedMock).toHaveBeenCalledWith(

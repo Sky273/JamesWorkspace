@@ -17,6 +17,7 @@ import {
 import {
     addFirmCreditsTransaction,
     addInitialFirmCreditGrant,
+    getFirmCreditsDetail as getFirmCreditsDetailWithUsage,
     getConfiguredInitialFirmCredits,
     listFirmCredits as listFirmCreditsWithUsage
 } from './aiCredits.service.js';
@@ -264,6 +265,10 @@ export async function addFirmCredits(id, amount, userId = null) {
 
 export async function listFirmCredits(options = {}) {
     return listFirmCreditsWithUsage(options);
+}
+
+export async function getFirmCreditsDetail(firmId) {
+    return getFirmCreditsDetailWithUsage(firmId);
 }
 
 /**

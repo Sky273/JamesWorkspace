@@ -39,6 +39,48 @@ export interface Firm {
   updated_at?: string;
 }
 
+export interface FirmCreditSummary {
+  transaction_count: number;
+  total_credits_consumed: number;
+  total_credits_added: number;
+  total_credits_refunded: number;
+  last_credit_activity_at?: string | null;
+}
+
+export interface FirmCreditBreakdownItem {
+  user_id?: string | null;
+  user_name?: string;
+  action_type?: string;
+  transaction_count: number;
+  consumed_credits: number;
+  added_credits: number;
+  refunded_credits: number;
+  net_credits: number;
+  last_activity_at?: string | null;
+  unique_user_count?: number;
+}
+
+export interface FirmCreditTransactionDetail {
+  id: string;
+  user_id?: string | null;
+  user_name: string;
+  action_type: string;
+  credits_delta: number;
+  balance_after: number;
+  metadata?: Record<string, unknown>;
+  related_transaction_id?: string | null;
+  created_at: string;
+}
+
+export interface FirmCreditsDetailResponse {
+  firm: Firm;
+  summary: FirmCreditSummary;
+  userBreakdown: FirmCreditBreakdownItem[];
+  actionBreakdown: FirmCreditBreakdownItem[];
+  userActionBreakdown: FirmCreditBreakdownItem[];
+  recentTransactions: FirmCreditTransactionDetail[];
+}
+
 export interface StripeCreditPack {
   id: string;
   name: string;
@@ -240,6 +282,20 @@ const userService = {
       };
     } catch (error) {
       logger.error('Error fetching firm credits:', error);
+      throw error;
+    }
+  },
+
+  async getFirmCreditsDetail(firmId: string): Promise<FirmCreditsDetailResponse> {
+    try {
+      const response = await fetchWithAuth(`/api/firms/${firmId}/credits/detail`, createAuthOptions());
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to fetch firm credit detail');
+      }
+      return await response.json();
+    } catch (error) {
+      logger.error('Error fetching firm credit detail:', error);
       throw error;
     }
   },

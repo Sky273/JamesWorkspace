@@ -27,11 +27,13 @@ const { mockFirmsCache, mockInvalidateFirmsCaches, mockInvalidateClientsCaches, 
 const {
     mockAddFirmCreditsTransaction,
     mockAddInitialFirmCreditGrant,
+    mockGetFirmCreditsDetailWithUsage,
     mockGetConfiguredInitialFirmCredits,
     mockListFirmCreditsWithUsage
 } = vi.hoisted(() => ({
     mockAddFirmCreditsTransaction: vi.fn(),
     mockAddInitialFirmCreditGrant: vi.fn(),
+    mockGetFirmCreditsDetailWithUsage: vi.fn(),
     mockGetConfiguredInitialFirmCredits: vi.fn(),
     mockListFirmCreditsWithUsage: vi.fn()
 }));
@@ -52,6 +54,7 @@ vi.mock('../../services/cache.service.js', () => ({
 vi.mock('../../services/aiCredits.service.js', () => ({
     addFirmCreditsTransaction: (...args) => mockAddFirmCreditsTransaction(...args),
     addInitialFirmCreditGrant: (...args) => mockAddInitialFirmCreditGrant(...args),
+    getFirmCreditsDetail: (...args) => mockGetFirmCreditsDetailWithUsage(...args),
     getConfiguredInitialFirmCredits: (...args) => mockGetConfiguredInitialFirmCredits(...args),
     listFirmCredits: (...args) => mockListFirmCreditsWithUsage(...args)
 }));
@@ -66,6 +69,7 @@ import {
     getAssociatedUsersCount,
     deleteFirm,
     addFirmCredits,
+    getFirmCreditsDetail,
     uploadFirmLogo,
     getFirmLogo,
     deleteFirmLogo
@@ -360,5 +364,22 @@ describe('Firms Service', () => {
 
             expect(mockListFirmCreditsWithUsage).toHaveBeenCalledWith({ page: 1, limit: 12 });
             expect(result.firms[0].id).toBe('f1');
+        });
+    });
+    describe('getFirmCreditsDetail', () => {
+        it('should delegate to the AI credits detail service', async () => {
+            mockGetFirmCreditsDetailWithUsage.mockResolvedValue({
+                firm: { id: 'f1', credits: 1000 },
+                summary: { transaction_count: 1 },
+                userBreakdown: [],
+                actionBreakdown: [],
+                userActionBreakdown: [],
+                recentTransactions: []
+            });
+
+            const result = await getFirmCreditsDetail('f1');
+
+            expect(mockGetFirmCreditsDetailWithUsage).toHaveBeenCalledWith('f1');
+            expect(result.firm.id).toBe('f1');
         });
     });

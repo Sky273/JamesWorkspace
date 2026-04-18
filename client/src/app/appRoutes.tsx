@@ -39,6 +39,7 @@ import {
   BatchUploadPage,
   BatchJobsPage,
   AdminWorkspacePage,
+  FirmCreditsDetailPage,
 } from './lazyPages';
 
 export function AppRoutes(): JSX.Element {
@@ -82,6 +83,7 @@ export function AppRoutes(): JSX.Element {
         <Route path="profile" element={<UserProfilePage />} />
         <Route path="credits-required" element={<InsufficientCreditsPage />} />
         <Route path="admin" element={<ManagerRoute><AdminWorkspacePage /></ManagerRoute>} />
+        <Route path="admin/firm-credits/:id" element={<ManagerRoute><FirmCreditsDetailPage /></ManagerRoute>} />
         <Route path="admin/templates/new" element={<ManagerRoute><NewTemplatePage /></ManagerRoute>} />
         <Route path="admin/templates/edit/:id" element={<ManagerRoute><NewTemplatePage /></ManagerRoute>} />
         <Route path="dashboard/security-logs" element={<AdminRoute><SecurityLogs /></AdminRoute>} />

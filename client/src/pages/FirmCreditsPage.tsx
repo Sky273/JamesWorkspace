@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowPathIcon, BanknotesIcon, BuildingOfficeIcon, PlusIcon, ShieldCheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon, BanknotesIcon, BuildingOfficeIcon, EyeIcon, PlusIcon, ShieldCheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
 import AnimatedCard from '../components/page/AnimatedCard';
 import CardActionButton from '../components/page/CardActionButton';
@@ -48,6 +49,7 @@ function formatCurrency(valueCents: number, currency: string): string {
 
 const FirmCreditsPage = ({ embedded = false }: { embedded?: boolean } = {}): JSX.Element => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'admin';
   const [firms, setFirms] = useState<Firm[]>([]);
@@ -452,6 +454,17 @@ const FirmCreditsPage = ({ embedded = false }: { embedded?: boolean } = {}): JSX
                   {isSuperAdmin ? (
                     <div className="mt-4 flex items-center gap-2 border-t border-[var(--cv-outline)] pt-4">
                       <CardActionButton
+                        icon={EyeIcon}
+                        label={t('firmCredits.viewDetail')}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          navigate(`/admin/firm-credits/${firm.id}`);
+                        }}
+                        className="flex-1"
+                        tone="secondary"
+                      />
+                      <CardActionButton
                         icon={PlusIcon}
                         label={t('firmCredits.addCredits')}
                         onClick={(event) => {
@@ -463,7 +476,21 @@ const FirmCreditsPage = ({ embedded = false }: { embedded?: boolean } = {}): JSX
                         tone="primary"
                       />
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className="mt-4 flex items-center gap-2 border-t border-[var(--cv-outline)] pt-4">
+                      <CardActionButton
+                        icon={EyeIcon}
+                        label={t('firmCredits.viewDetail')}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          navigate(`/admin/firm-credits/${firm.id}`);
+                        }}
+                        className="flex-1"
+                        tone="secondary"
+                      />
+                    </div>
+                  )}
                 </div>
               </AnimatedCard>
             ))}

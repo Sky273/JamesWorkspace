@@ -510,3 +510,122 @@ export async function listFirmCredits({
         totalCount
     };
 }
+
+export async function getFirmCreditsDetail(firmId) {
+    if (!firmId) {
+        const error = new Error('Firm ID is required');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    const firmResult = await query(
+        'SELECT id, name, status, credits, created_at, updated_at FROM firms WHERE id = $1',
+        [firmId]
+    );
+
+    if (firmResult.rows.length === 0) {
+        const error = new Error('Firm not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    const summaryResult = await query(
+        `SELECT
+            COUNT(*)::integer AS transaction_count,
+            COALESCE(SUM(CASE WHEN credits_delta < 0 THEN -credits_delta ELSE 0 END), 0)::integer AS total_credits_consumed,
+            COALESCE(SUM(CASE WHEN credits_delta > 0 THEN credits_delta ELSE 0 END), 0)::integer AS total_credits_added,
+            COALESCE(SUM(CASE WHEN credits_delta > 0 AND action_type = 'credit.refund' THEN credits_delta ELSE 0 END), 0)::integer AS total_credits_refunded,
+            MAX(created_at) AS last_credit_activity_at
+         FROM firm_credit_transactions
+         WHERE firm_id = $1`,
+        [firmId]
+    );
+
+    const usersResult = await query(
+        `SELECT
+            t.user_id,
+            COALESCE(u.name, 'System') AS user_name,
+            COUNT(*)::integer AS transaction_count,
+            COALESCE(SUM(CASE WHEN t.credits_delta < 0 THEN -t.credits_delta ELSE 0 END), 0)::integer AS consumed_credits,
+            COALESCE(SUM(CASE WHEN t.credits_delta > 0 THEN t.credits_delta ELSE 0 END), 0)::integer AS added_credits,
+            COALESCE(SUM(CASE WHEN t.credits_delta > 0 AND t.action_type = 'credit.refund' THEN t.credits_delta ELSE 0 END), 0)::integer AS refunded_credits,
+            COALESCE(SUM(t.credits_delta), 0)::integer AS net_credits,
+            MAX(t.created_at) AS last_activity_at
+         FROM firm_credit_transactions t
+         LEFT JOIN users u ON u.id = t.user_id
+         WHERE t.firm_id = $1
+         GROUP BY t.user_id, COALESCE(u.name, 'System')
+         ORDER BY consumed_credits DESC, added_credits DESC, last_activity_at DESC`,
+        [firmId]
+    );
+
+    const actionsResult = await query(
+        `SELECT
+            action_type,
+            COUNT(*)::integer AS transaction_count,
+            COUNT(DISTINCT user_id)::integer AS unique_user_count,
+            COALESCE(SUM(CASE WHEN credits_delta < 0 THEN -credits_delta ELSE 0 END), 0)::integer AS consumed_credits,
+            COALESCE(SUM(CASE WHEN credits_delta > 0 THEN credits_delta ELSE 0 END), 0)::integer AS added_credits,
+            COALESCE(SUM(CASE WHEN credits_delta > 0 AND action_type = 'credit.refund' THEN credits_delta ELSE 0 END), 0)::integer AS refunded_credits,
+            COALESCE(SUM(credits_delta), 0)::integer AS net_credits,
+            MAX(created_at) AS last_activity_at
+         FROM firm_credit_transactions
+         WHERE firm_id = $1
+         GROUP BY action_type
+         ORDER BY consumed_credits DESC, added_credits DESC, last_activity_at DESC`,
+        [firmId]
+    );
+
+    const userActionsResult = await query(
+        `SELECT
+            t.user_id,
+            COALESCE(u.name, 'System') AS user_name,
+            t.action_type,
+            COUNT(*)::integer AS transaction_count,
+            COALESCE(SUM(CASE WHEN t.credits_delta < 0 THEN -t.credits_delta ELSE 0 END), 0)::integer AS consumed_credits,
+            COALESCE(SUM(CASE WHEN t.credits_delta > 0 THEN t.credits_delta ELSE 0 END), 0)::integer AS added_credits,
+            COALESCE(SUM(CASE WHEN t.credits_delta > 0 AND t.action_type = 'credit.refund' THEN t.credits_delta ELSE 0 END), 0)::integer AS refunded_credits,
+            COALESCE(SUM(t.credits_delta), 0)::integer AS net_credits,
+            MAX(t.created_at) AS last_activity_at
+         FROM firm_credit_transactions t
+         LEFT JOIN users u ON u.id = t.user_id
+         WHERE t.firm_id = $1
+         GROUP BY t.user_id, COALESCE(u.name, 'System'), t.action_type
+         ORDER BY consumed_credits DESC, added_credits DESC, last_activity_at DESC`,
+        [firmId]
+    );
+
+    const recentTransactionsResult = await query(
+        `SELECT
+            t.id,
+            t.user_id,
+            COALESCE(u.name, 'System') AS user_name,
+            t.action_type,
+            t.credits_delta,
+            t.balance_after,
+            t.metadata,
+            t.related_transaction_id,
+            t.created_at
+         FROM firm_credit_transactions t
+         LEFT JOIN users u ON u.id = t.user_id
+         WHERE t.firm_id = $1
+         ORDER BY t.created_at DESC
+         LIMIT 25`,
+        [firmId]
+    );
+
+    return {
+        firm: firmResult.rows[0],
+        summary: summaryResult.rows[0] || {
+            transaction_count: 0,
+            total_credits_consumed: 0,
+            total_credits_added: 0,
+            total_credits_refunded: 0,
+            last_credit_activity_at: null
+        },
+        userBreakdown: usersResult.rows,
+        actionBreakdown: actionsResult.rows,
+        userActionBreakdown: userActionsResult.rows,
+        recentTransactions: recentTransactionsResult.rows
+    };
+}

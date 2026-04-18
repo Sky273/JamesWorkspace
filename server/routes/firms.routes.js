@@ -148,6 +148,40 @@ router.get('/credits', authenticateToken, requireUserManager, async (req, res) =
     }
 });
 
+router.get('/:id/credits/detail', authenticateToken, requireUserManager, validateParams('id'), async (req, res) => {
+    try {
+        const managedFirmId = getManagedFirmId(req);
+
+        if (!isUserAdmin(req)) {
+            if (!managedFirmId) {
+                return res.status(403).json({ error: 'No firm association' });
+            }
+
+            if (managedFirmId !== req.params.id) {
+                return res.status(403).json({ error: 'Access denied' });
+            }
+        }
+
+        const detail = await firmsService.getFirmCreditsDetail(req.params.id);
+        return res.json(detail);
+    } catch (error) {
+        if (error.statusCode === 404) {
+            return res.status(404).json({ error: 'Firm not found' });
+        }
+        if (error.statusCode === 400) {
+            return res.status(400).json({ error: error.message });
+        }
+        safeLog('error', 'Error fetching firm credit detail', {
+            error: error.message,
+            firmId: req.params.id,
+            userId: req.user?.id
+        });
+        return res.status(500).json({
+            error: 'Failed to fetch firm credit detail'
+        });
+    }
+});
+
 // GET /api/firms/:id - Get firm by ID
 router.get('/:id', authenticateToken, requireAdmin, validateParams('id'), async (req, res) => {
     try {
