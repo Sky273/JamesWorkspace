@@ -226,10 +226,34 @@ export async function getShareStatus(resumeId) {
         }
 
         const row = result.rows[0];
-        const hasSharedPdf = !!row.shared_pdf_token && !isExpired(row.shared_pdf_expires_at);
-        const hasSharedFile = !!row.shared_file_token && !isExpired(row.shared_file_expires_at);
-        const pdfToken = hasSharedPdf ? readStoredShareToken(row.shared_pdf_token) : null;
-        const fileToken = hasSharedFile ? readStoredShareToken(row.shared_file_token) : null;
+        let hasSharedPdf = !!row.shared_pdf_token && !isExpired(row.shared_pdf_expires_at);
+        let hasSharedFile = !!row.shared_file_token && !isExpired(row.shared_file_expires_at);
+        let pdfToken = null;
+        let fileToken = null;
+
+        if (hasSharedPdf) {
+            try {
+                pdfToken = readStoredShareToken(row.shared_pdf_token);
+            } catch (error) {
+                safeLog('warn', 'Stored shared PDF token could not be read, hiding share status', {
+                    resumeId,
+                    error: error.message
+                });
+                hasSharedPdf = false;
+            }
+        }
+
+        if (hasSharedFile) {
+            try {
+                fileToken = readStoredShareToken(row.shared_file_token);
+            } catch (error) {
+                safeLog('warn', 'Stored shared original-file token could not be read, hiding share status', {
+                    resumeId,
+                    error: error.message
+                });
+                hasSharedFile = false;
+            }
+        }
 
         return {
             hasSharedPdf,

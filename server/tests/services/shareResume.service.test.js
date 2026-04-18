@@ -55,6 +55,7 @@ vi.mock('../../utils/shareTokenStorage.js', () => ({
 
 import { query } from '../../config/database.js';
 import fs from 'fs/promises';
+import { readStoredShareToken } from '../../utils/shareTokenStorage.js';
 import {
     initShareResumeTable,
     storeSharedPdf,
@@ -311,6 +312,27 @@ describe('shareResume.service', () => {
         expect(query.mock.calls[1][0]).toContain('shared_file_token');
     });
 
+    it('regenerates an original-file token when the stored token cannot be read', async () => {
+        readStoredShareToken.mockImplementationOnce(() => {
+            throw new Error('Stored share token integrity check failed');
+        });
+        query
+            .mockResolvedValueOnce({
+                rows: [{
+                    id: 'resume-123',
+                    shared_file_token: 'broken-token',
+                    shared_file_expires_at: new Date(Date.now() + 60_000)
+                }]
+            })
+            .mockResolvedValueOnce({ rows: [] });
+
+        const token = await getOrCreateOriginalFileToken('resume-123');
+
+        expect(token).toHaveLength(64);
+        expect(query).toHaveBeenCalledTimes(2);
+        expect(query.mock.calls[1][0]).toContain('shared_file_token');
+    });
+
     it('looks up hashed v2 share tokens for public PDF access', async () => {
         query.mockResolvedValueOnce({
             rows: [{
@@ -325,6 +347,35 @@ describe('shareResume.service', () => {
 
         expect(query.mock.calls[0][0]).toContain('shared_pdf_token = $1 OR shared_pdf_token LIKE $2');
         expect(query.mock.calls[0][1]).toEqual(['public-token', 'v2:stored:public-token%']);
+    });
+
+    it('hides unreadable stored tokens from share status instead of failing', async () => {
+        readStoredShareToken
+            .mockImplementationOnce(() => {
+                throw new Error('Stored share token integrity check failed');
+            })
+            .mockImplementationOnce(() => {
+                throw new Error('Stored share token integrity check failed');
+            });
+        query.mockResolvedValueOnce({
+            rows: [{
+                shared_pdf_token: 'broken-pdf-token',
+                shared_pdf_expires_at: new Date(Date.now() + 60_000),
+                shared_file_token: 'broken-file-token',
+                shared_file_expires_at: new Date(Date.now() + 60_000)
+            }]
+        });
+
+        await expect(getShareStatus('resume-123')).resolves.toEqual({
+            hasSharedPdf: false,
+            token: null,
+            expiresAt: null,
+            pdfToken: null,
+            pdfExpiresAt: null,
+            hasSharedFile: false,
+            fileToken: null,
+            fileExpiresAt: null
+        });
     });
 
     it('returns original file metadata without loading the blob for a valid file token', async () => {

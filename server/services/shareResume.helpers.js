@@ -92,8 +92,22 @@ export async function getShareRowByResumeId(resumeId) {
 
 export async function getOrCreateShareToken(resumeId, { tokenColumn, expiresColumn }) {
     const share = await getShareRowByResumeId(resumeId);
-    let token = share?.[tokenColumn] ? readStoredShareToken(share[tokenColumn]) : null;
+    let token = null;
     let expiresAt = share?.[expiresColumn];
+
+    if (share?.[tokenColumn]) {
+        try {
+            token = readStoredShareToken(share[tokenColumn]);
+        } catch (error) {
+            safeLog('warn', 'Stored share token could not be read, regenerating token', {
+                resumeId,
+                tokenColumn,
+                error: error.message
+            });
+            token = null;
+            expiresAt = null;
+        }
+    }
 
     if (!token || isExpired(expiresAt)) {
         token = generateShareToken();
