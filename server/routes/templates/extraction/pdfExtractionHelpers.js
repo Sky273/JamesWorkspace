@@ -11,6 +11,18 @@ export function resolvePdfParseFunction(pdfParseModule) {
         return pdfParseModule.pdfParse;
     }
 
+    const PdfParseClass = pdfParseModule?.PDFParse || pdfParseModule?.default?.PDFParse;
+    if (typeof PdfParseClass === 'function') {
+        return async (buffer) => {
+            const parser = new PdfParseClass({ data: buffer });
+            try {
+                return await parser.getText();
+            } finally {
+                await parser.destroy?.().catch(() => {});
+            }
+        };
+    }
+
     return null;
 }
 

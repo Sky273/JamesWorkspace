@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
     resolvePdfParseFunction,
     detectPdfImageFormat,
@@ -12,6 +12,28 @@ describe('template extraction pdf helpers', () => {
         expect(resolvePdfParseFunction(fn)).toBe(fn);
         expect(resolvePdfParseFunction({ pdfParse: fn })).toBe(fn);
         expect(resolvePdfParseFunction({})).toBeNull();
+    });
+
+    it('adapts the pdf-parse v2 PDFParse class export to a callable parser', async () => {
+        const getText = vi.fn().mockResolvedValue({ text: 'parsed text' });
+        const destroy = vi.fn().mockResolvedValue(undefined);
+        class MockPDFParse {
+            constructor(options) {
+                this.options = options;
+            }
+
+            getText = getText;
+            destroy = destroy;
+        }
+        const PDFParse = vi.fn(MockPDFParse);
+
+        const parse = resolvePdfParseFunction({ PDFParse });
+        const buffer = Buffer.from('%PDF-1.7');
+
+        await expect(parse(buffer)).resolves.toEqual({ text: 'parsed text' });
+        expect(PDFParse).toHaveBeenCalledWith({ data: buffer });
+        expect(getText).toHaveBeenCalledTimes(1);
+        expect(destroy).toHaveBeenCalledTimes(1);
     });
 
     it('detects supported PDF image formats from the stream signature', () => {
