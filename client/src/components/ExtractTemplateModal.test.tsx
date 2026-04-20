@@ -6,7 +6,6 @@ const mockNavigate = vi.fn();
 const mockToastError = vi.fn();
 const mockToastSuccess = vi.fn();
 const mockExtractFromCV = vi.fn();
-const mockMarkTemplatesViewDirty = vi.fn();
 
 let capturedOnDrop: ((files: File[]) => void) | null = null;
 
@@ -38,9 +37,6 @@ vi.mock('../utils/templateService', () => ({
   },
 }));
 
-vi.mock('../utils/viewRefreshScopes', () => ({
-  markTemplatesViewDirty: (...args: unknown[]) => mockMarkTemplatesViewDirty(...args),
-}));
 
 vi.mock('./TemplatePreviewFrame', () => ({
   default: ({ title }: { title: string }) => <div>preview-frame:{title}</div>,
@@ -143,7 +139,6 @@ describe('ExtractTemplateModal', () => {
     expect(screen.getByText("Fragments détectés")).toBeInTheDocument();
     expect(screen.getByText('Blocs visuels')).toBeInTheDocument();
     expect(mockToastSuccess).toHaveBeenCalledWith('Extraction reussie');
-    expect(mockMarkTemplatesViewDirty).toHaveBeenCalledTimes(1);
 
     fireEvent.change(screen.getByLabelText('Contenu final'), {
       target: { value: '<div>Body corrected</div>' },
@@ -156,7 +151,6 @@ describe('ExtractTemplateModal', () => {
       headerContent: '<div>Header fragment</div>',
       templateContent: '<div>Body corrected</div>',
     });
-    expect(mockMarkTemplatesViewDirty).toHaveBeenCalledTimes(2);
     expect(mockNavigate).toHaveBeenCalledWith('/admin/templates/new?fromExtraction=true');
   });
 

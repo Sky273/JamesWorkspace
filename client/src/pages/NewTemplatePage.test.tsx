@@ -9,6 +9,7 @@ const {
   getTemplateByIdMock,
   useParamsMock,
   useAuthMock,
+  markTemplatesViewDirtyMock,
 } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
   createTemplateMock: vi.fn(),
@@ -16,6 +17,7 @@ const {
   getTemplateByIdMock: vi.fn(),
   useParamsMock: vi.fn(),
   useAuthMock: vi.fn(),
+  markTemplatesViewDirtyMock: vi.fn(),
 }));
 
 vi.mock('react-router-dom', () => ({
@@ -50,7 +52,7 @@ vi.mock('../utils/logger.frontend', () => ({
 }));
 
 vi.mock('../utils/viewRefreshScopes', () => ({
-  markTemplatesViewDirty: vi.fn(),
+  markTemplatesViewDirty: (...args: unknown[]) => markTemplatesViewDirtyMock(...args),
 }));
 
 vi.mock('../utils/templateService', () => ({
@@ -106,6 +108,8 @@ describe('NewTemplatePage', () => {
     await waitFor(() => {
       expect(createTemplateMock).toHaveBeenCalled();
     });
+
+    expect(markTemplatesViewDirtyMock).toHaveBeenCalledTimes(1);
 
     expect(navigateMock).toHaveBeenCalledWith('/admin?tab=templates', {
       state: {

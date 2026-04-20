@@ -14,7 +14,6 @@ import {
 } from '@heroicons/react/24/outline';
 import type { ExtractedTemplate } from '../utils/templateService';
 import logger from '../utils/logger.frontend';
-import { markTemplatesViewDirty } from '../utils/viewRefreshScopes';
 
 const TemplatePreviewFrame = lazy(() => import('./TemplatePreviewFrame'));
 
@@ -118,7 +117,6 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
       setUsedModel(result.model || '');
       setExtractionMethod(result.extractionMethod || '');
       setStep('preview');
-      markTemplatesViewDirty();
       toast.success(t('templates.extract.success'));
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -158,7 +156,6 @@ const ExtractTemplateModal = ({ isOpen, onClose }: ExtractTemplateModalProps): J
   const handleCreateTemplate = () => {
     if (!extractedTemplate) return;
     sessionStorage.setItem('extractedTemplate', JSON.stringify(extractedTemplate));
-    markTemplatesViewDirty();
     preserveExtractedTemplateRef.current = true;
     setStep('upload');
     setSelectedFile(null);
