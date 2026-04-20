@@ -5,7 +5,8 @@ import {
 } from '../utils/sanitizer.backend.js';
 import {
     hydrateTemplateImageSlots,
-    injectDocxExtractedImages
+    injectDocxExtractedImages,
+    injectPdfExtractedLogo
 } from '../routes/templates/extraction/imagePlaceholders.js';
 
 const SIMPLE_TEXT_ELEMENT_REGEX = /<(h1|h2|h3|h4|p|div|span|strong|em|li)(\b[^>]*)>([^<>]*\S[^<>]*)<\/\1>/gi;
@@ -277,7 +278,7 @@ export function processTemplateExtractionResponse(response, fileName, images = [
     };
 }
 
-export function buildFallbackTemplateFromLayout(fileName, layoutAnalysis = {}, extractedStyles = {}) {
+export function buildFallbackTemplateFromLayout(fileName, layoutAnalysis = {}, extractedStyles = {}, images = []) {
     const headerHasImageRegion = Array.isArray(layoutAnalysis?.imageBlocks)
         && layoutAnalysis.imageBlocks.some((block) => block?.region === 'header');
     const strippedHeader = stripTextNodes(layoutAnalysis?.headerHtml || '');
@@ -311,6 +312,12 @@ export function buildFallbackTemplateFromLayout(fileName, layoutAnalysis = {}, e
     sanitizeTemplateData(template);
     normalizeTemplatePlaceholders(template);
     ensureRequiredPlaceholders(template);
+    hydrateTemplateImageSlots(template, images);
+    if (images.length > 0) {
+        injectPdfExtractedLogo(template, images[0]);
+        injectDocxExtractedImages(template, images);
+        enforceEmbeddedTemplateImages(template, images);
+    }
 
     return {
         success: true,

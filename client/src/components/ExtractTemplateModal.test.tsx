@@ -6,6 +6,7 @@ const mockNavigate = vi.fn();
 const mockToastError = vi.fn();
 const mockToastSuccess = vi.fn();
 const mockExtractFromCV = vi.fn();
+const mockMarkTemplatesViewDirty = vi.fn();
 
 let capturedOnDrop: ((files: File[]) => void) | null = null;
 
@@ -35,6 +36,10 @@ vi.mock('../utils/templateService', () => ({
   templateService: {
     extractFromCV: (...args: unknown[]) => mockExtractFromCV(...args),
   },
+}));
+
+vi.mock('../utils/viewRefreshScopes', () => ({
+  markTemplatesViewDirty: (...args: unknown[]) => mockMarkTemplatesViewDirty(...args),
 }));
 
 vi.mock('./TemplatePreviewFrame', () => ({
@@ -134,15 +139,16 @@ describe('ExtractTemplateModal', () => {
 
     expect(await screen.findByText('Extraction terminee')).toBeInTheDocument();
     expect(await screen.findByText('preview-frame:Template CV')).toBeInTheDocument();
-    expect(screen.getByText(/Confiance elevee 84%/)).toBeInTheDocument();
-    expect(screen.getByText('Fragments detectes')).toBeInTheDocument();
+    expect(screen.getByText(/Confiance élevée 84%/)).toBeInTheDocument();
+    expect(screen.getByText("Fragments détectés")).toBeInTheDocument();
     expect(screen.getByText('Blocs visuels')).toBeInTheDocument();
     expect(mockToastSuccess).toHaveBeenCalledWith('Extraction reussie');
+    expect(mockMarkTemplatesViewDirty).toHaveBeenCalledTimes(1);
 
     fireEvent.change(screen.getByLabelText('Contenu final'), {
       target: { value: '<div>Body corrected</div>' },
     });
-    fireEvent.click(screen.getByText('Utiliser le header detecte'));
+    fireEvent.click(screen.getByText('Utiliser le header détecté'));
     fireEvent.click(screen.getByText('Creer le template'));
 
     expect(JSON.parse(sessionStorage.getItem('extractedTemplate') || '{}')).toMatchObject({
@@ -150,6 +156,7 @@ describe('ExtractTemplateModal', () => {
       headerContent: '<div>Header fragment</div>',
       templateContent: '<div>Body corrected</div>',
     });
+    expect(mockMarkTemplatesViewDirty).toHaveBeenCalledTimes(2);
     expect(mockNavigate).toHaveBeenCalledWith('/admin/templates/new?fromExtraction=true');
   });
 

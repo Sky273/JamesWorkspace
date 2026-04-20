@@ -118,7 +118,7 @@ export async function extractTemplateFromHTML(htmlContent, images = [], fileName
                 error: error.message,
                 timeoutMs: options.timeout ?? TEMPLATE_EXTRACTION_TIMEOUT_MS
             });
-            return buildFallbackTemplateFromLayout(fileName, options.layoutAnalysis, extractedStyles);
+            return buildFallbackTemplateFromLayout(fileName, options.layoutAnalysis, extractedStyles, images);
         }
         throw error;
     }

@@ -1,7 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { useEffect } from 'react';
-
 import NewTemplatePage from './NewTemplatePage';
 
 const {
@@ -71,30 +69,6 @@ vi.mock('../components/AdminFirmSelector', () => ({
   default: () => null,
 }));
 
-vi.mock('../components/TiptapEditor/DeferredTiptapEditor', () => ({
-  default: function MockDeferredTiptapEditor({
-    content,
-    onChange,
-    onReady,
-  }: {
-    content: string;
-    onChange: (value: string) => void;
-    onReady: () => void;
-  }) {
-    useEffect(() => {
-      onReady();
-    }, [onReady]);
-
-    return (
-      <textarea
-        data-testid="tiptap-editor"
-        value={content}
-        onChange={(event) => onChange(event.target.value)}
-      />
-    );
-  },
-}));
-
 describe('NewTemplatePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -123,8 +97,9 @@ describe('NewTemplatePage', () => {
       target: { value: 'Description modele' },
     });
 
-    const editors = screen.getAllByTestId('tiptap-editor');
-    fireEvent.change(editors[1], { target: { value: '<p>Contenu</p>' } });
+    fireEvent.change(screen.getByLabelText('templates.editor.content.label'), {
+      target: { value: '<p>Contenu</p>' },
+    });
 
     fireEvent.click(screen.getByRole('button', { name: 'common.save' }));
 
@@ -166,5 +141,26 @@ describe('NewTemplatePage', () => {
     });
 
     expect(sessionStorage.getItem('extractedTemplate')).toBeNull();
+  });
+
+  it('preserves extracted HTML fragments in plain textareas instead of reparsing them', async () => {
+    sessionStorage.setItem('extractedTemplate', JSON.stringify({
+      name: 'Template extrait',
+      description: 'Description extraite',
+      headerContent: '<div class="template-region-header"><img src="data:image/png;base64,abc"></div>',
+      templateContent: '<section class="template-region-body"><div>-content-</div></section>',
+      footerContent: '<div class="template-region-footer">Footer</div>',
+      stylesheet: '.template-region-header { color: red; }',
+      tags: ['cv'],
+    }));
+
+    render(<NewTemplatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('<div class="template-region-header"><img src="data:image/png;base64,abc"></div>')).toBeInTheDocument();
+    });
+
+    expect(screen.getByDisplayValue('<section class="template-region-body"><div>-content-</div></section>')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('<div class="template-region-footer">Footer</div>')).toBeInTheDocument();
   });
 });

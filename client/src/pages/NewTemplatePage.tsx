@@ -3,7 +3,7 @@
  * TypeScript version
  */
 
-import { useState, useEffect, useRef, useCallback, FormEvent, ChangeEvent } from 'react';
+import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { templateService } from '../utils/templateService';
@@ -19,9 +19,6 @@ import {
   normalizeTemplateStylesheet,
   summarizeTemplatePayload,
 } from '../utils/templateFragments';
-
-import TiptapEditor from '../components/TiptapEditor/DeferredTiptapEditor';
-import type { TiptapEditorRef } from '../components/TiptapEditor/TiptapEditor';
 
 interface FormData {
   name: string;
@@ -43,21 +40,9 @@ const NewTemplatePage = (): JSX.Element => {
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
   const { user, loading: authLoading } = useAuth();
-  const headerEditorRef = useRef<TiptapEditorRef | null>(null);
-  const bodyEditorRef = useRef<TiptapEditorRef | null>(null);
-  const footerEditorRef = useRef<TiptapEditorRef | null>(null);
-  const editorsReadyCount = useRef<number>(0);
-  const [editorReady, setEditorReady] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const { t } = useTranslation();
   const currentUserFirmId = user?.firmId || user?.firm_id || '';
-
-  const handleEditorReady = useCallback(() => {
-    editorsReadyCount.current++;
-    if (editorsReadyCount.current >= 3) {
-      setEditorReady(true);
-    }
-  }, []);
 
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -269,47 +254,47 @@ const NewTemplatePage = (): JSX.Element => {
               <textarea id="stylesheet" name="stylesheet" rows={4} placeholder={t('templates.editor.stylesheet.placeholder')} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" value={formData.stylesheet || ''} onChange={(e) => setFormData({ ...formData, stylesheet: e.target.value })} />
             </div>
 
-            {/* Header Editor */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="headerContent" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('templates.editor.header.label')}
                 <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">({t('templates.editor.header.hint')})</span>
               </label>
-              <TiptapEditor
-                ref={headerEditorRef}
-                content={formData.headerContent}
-                onChange={(html) => setFormData(prev => ({ ...prev, headerContent: html }))}
-                onReady={handleEditorReady}
-                height={250}
+              <textarea
+                id="headerContent"
+                name="headerContent"
+                rows={10}
+                value={formData.headerContent}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
               />
             </div>
 
-            {/* Body Editor */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="templateContent" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('templates.editor.content.label')}
               </label>
-              <TiptapEditor
-                ref={bodyEditorRef}
-                content={formData.templateContent}
-                onChange={(html) => setFormData(prev => ({ ...prev, templateContent: html }))}
-                onReady={handleEditorReady}
-                height={400}
+              <textarea
+                id="templateContent"
+                name="templateContent"
+                rows={16}
+                value={formData.templateContent}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
               />
             </div>
 
-            {/* Footer Editor */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="footerContent" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('templates.editor.footer.label')}
                 <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">({t('templates.editor.footer.hint')})</span>
               </label>
-              <TiptapEditor
-                ref={footerEditorRef}
-                content={formData.footerContent}
-                onChange={(html) => setFormData(prev => ({ ...prev, footerContent: html }))}
-                onReady={handleEditorReady}
-                height={250}
+              <textarea
+                id="footerContent"
+                name="footerContent"
+                rows={10}
+                value={formData.footerContent}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
               />
             </div>
 
@@ -338,7 +323,7 @@ const NewTemplatePage = (): JSX.Element => {
 
             <div className="flex justify-end space-x-4">
               <button type="button" onClick={() => navigate(ADMIN_TEMPLATES_ROUTE)} className="btn btn-secondary px-4 py-2">{t('common.cancel')}</button>
-              <button type="submit" disabled={!editorReady} className={`app-primary-action px-4 py-2 ${!editorReady ? 'opacity-50 cursor-not-allowed' : ''}`}>{t('common.save')}</button>
+              <button type="submit" className="app-primary-action px-4 py-2">{t('common.save')}</button>
             </div>
           </form>
         )}

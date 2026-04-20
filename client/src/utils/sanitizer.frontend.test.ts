@@ -92,6 +92,12 @@ describe('sanitizer.frontend', () => {
             const result = sanitizeHtml(html);
             expect(result).not.toContain('javascript:');
         });
+
+        it('should allow embedded base64 image sources for template previews', () => {
+            const html = '<img src="data:image/png;base64,abc123" alt="Logo" />';
+            const result = sanitizeHtml(html);
+            expect(result).toContain('data:image/png;base64,abc123');
+        });
     });
 
     describe('sanitizeUserHtml', () => {

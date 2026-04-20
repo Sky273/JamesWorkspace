@@ -325,7 +325,9 @@ describe('Template Extraction Service', () => {
         it('should fall back to a deterministic layout template when the LLM call fails and layout data exists', async () => {
             callLLM.mockRejectedValueOnce(new Error('Upstream timeout after 120000ms'));
 
-            const result = await extractTemplateFromHTML('<div>Layout</div>', [], 'cv.pdf', { colors: ['#123456'], fonts: ['Inter'] }, {
+            const result = await extractTemplateFromHTML('<div>Layout</div>', [
+                { name: 'logo.png', base64: 'abc123', contentType: 'image/png' }
+            ], 'cv.pdf', { colors: ['#123456'], fonts: ['Inter'] }, {
                 layoutAnalysis: {
                     headerHtml: '<header><div>Mehdi Hennad</div></header>',
                     contentHtml: '<main><div>Body content</div></main>',
@@ -337,7 +339,8 @@ describe('Template Extraction Service', () => {
 
             expect(result.success).toBe(true);
             expect(result.model).toBe('deterministic-layout-fallback');
-            expect(result.template.headerContent).toContain('-logo-');
+            expect(result.template.headerContent).toContain('data:image/png;base64,abc123');
+            expect(result.template.headerContent).not.toContain('-logo-');
             expect(result.template.headerContent).not.toContain('Mehdi Hennad');
             expect(result.template.footerContent).not.toContain('01 02 03 04 05');
             expect(result.template.templateContent).toContain('-name-');
