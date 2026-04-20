@@ -72,6 +72,9 @@ router.get('/auth-url', authenticateToken, requireAdmin, async (req, res) => {
         const authUrl = await gdprMailService.getAuthUrl(state);
         res.json({ authUrl });
     } catch (error) {
+        if (error?.code === 'MAIL_PROVIDER_OAUTH_UNAVAILABLE') {
+            return res.status(400).json({ error: error.message });
+        }
         safeLog('error', 'Error getting GDPR auth URL', { error: error.message });
         res.status(500).json({ error: 'Failed to get auth URL' });
     }
@@ -141,6 +144,9 @@ router.post('/disconnect', authenticateToken, requireAdmin, async (req, res) => 
         await gdprMailService.disconnect();
         res.json({ success: true });
     } catch (error) {
+        if (error?.code === 'MAIL_PROVIDER_DISCONNECT_UNAVAILABLE') {
+            return res.status(400).json({ error: error.message });
+        }
         safeLog('error', 'Error disconnecting GDPR mail', { error: error.message });
         res.status(500).json({ error: 'Failed to disconnect' });
     }

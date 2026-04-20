@@ -51,6 +51,31 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+const mockGetSmtpStatus = vi.fn(() => ({
+    connected: true,
+    provider: 'smtp',
+    email: 'smtp@example.com',
+    managedByConfiguration: true,
+    allowConnect: false,
+    allowDisconnect: false,
+    supportsOAuth: false,
+    needsReauth: false,
+    missingFields: []
+}));
+const mockIsSmtpConfigured = vi.fn(() => true);
+const mockSendSmtpEmail = vi.fn(async ({ to }) => ({
+    success: true,
+    provider: 'smtp',
+    messageId: 'smtp-msg-1',
+    sentTo: to
+}));
+
+vi.mock('../../services/mail/smtpProvider.js', () => ({
+    getSmtpStatus: () => mockGetSmtpStatus(),
+    isSmtpConfigured: () => mockIsSmtpConfigured(),
+    sendSmtpEmail: (...args) => mockSendSmtpEmail(...args)
+}));
+
 import { query } from '../../config/database.js';
 import { decryptToken, isTokenExpired } from '../../config/oauth.config.js';
 import {
@@ -65,6 +90,8 @@ describe('GDPR Mail Service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         delete process.env.E2E_DISABLE_EXTERNAL_EMAIL;
+        delete process.env.GDPR_MAIL_PROVIDER;
+        delete process.env.MAIL_DELIVERY_PROVIDER;
     });
 
     describe('getAuthUrl', () => {
@@ -109,6 +136,16 @@ describe('GDPR Mail Service', () => {
 
             expect(status.connected).toBe(false);
             expect(status.needsReauth).toBe(true);
+        });
+
+        it('should return SMTP status when SMTP is the active provider', async () => {
+            process.env.GDPR_MAIL_PROVIDER = 'smtp';
+
+            const status = await getConnectionStatus();
+
+            expect(status.provider).toBe('smtp');
+            expect(status.connected).toBe(true);
+            expect(query).not.toHaveBeenCalled();
         });
     });
 
@@ -157,6 +194,24 @@ describe('GDPR Mail Service', () => {
             expect(result.success).toBe(true);
             expect(result.sentTo).toBe('playwright@example.com');
             expect(result.disabled).toBe(true);
+            expect(query).not.toHaveBeenCalled();
+        });
+
+        it('should send through SMTP when configured provider is smtp', async () => {
+            process.env.GDPR_MAIL_PROVIDER = 'smtp';
+
+            const result = await sendEmail({
+                to: 'smtp-target@example.com',
+                subject: 'SMTP subject',
+                html: '<p>smtp</p>',
+                text: 'smtp'
+            });
+
+            expect(result.provider).toBe('smtp');
+            expect(mockSendSmtpEmail).toHaveBeenCalledWith(expect.objectContaining({
+                to: 'smtp-target@example.com',
+                subject: 'SMTP subject'
+            }));
             expect(query).not.toHaveBeenCalled();
         });
     });

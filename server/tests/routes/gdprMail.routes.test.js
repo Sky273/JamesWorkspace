@@ -131,6 +131,19 @@ describe('GDPR Mail Routes', () => {
                 .set(AUTH);
             expect(res.status).toBe(500);
         });
+
+        it('should return 400 when OAuth is unavailable for the active provider', async () => {
+            const error = new Error('OAuth flow is unavailable while SMTP is the active GDPR mail provider.');
+            error.code = 'MAIL_PROVIDER_OAUTH_UNAVAILABLE';
+            mockGetAuthUrl.mockRejectedValueOnce(error);
+
+            const res = await request(app)
+                .get('/api/gdpr/mail/auth-url')
+                .set(AUTH);
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('OAuth flow is unavailable');
+        });
     });
 
     describe('GET /callback', () => {
@@ -192,6 +205,19 @@ describe('GDPR Mail Routes', () => {
                 .post('/api/gdpr/mail/disconnect')
                 .set(AUTH);
             expect(res.status).toBe(500);
+        });
+
+        it('should return 400 when disconnect is unavailable for the active provider', async () => {
+            const error = new Error('Disconnect is unavailable while SMTP is managed by server configuration.');
+            error.code = 'MAIL_PROVIDER_DISCONNECT_UNAVAILABLE';
+            mockDisconnect.mockRejectedValueOnce(error);
+
+            const res = await request(app)
+                .post('/api/gdpr/mail/disconnect')
+                .set(AUTH);
+
+            expect(res.status).toBe(400);
+            expect(res.body.error).toContain('Disconnect is unavailable');
         });
     });
 

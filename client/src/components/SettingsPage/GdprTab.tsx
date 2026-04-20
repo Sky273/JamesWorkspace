@@ -25,6 +25,11 @@ interface GdprMailStatus {
   email?: string;
   provider?: string;
   needsReauth?: boolean;
+  allowConnect?: boolean;
+  allowDisconnect?: boolean;
+  managedByConfiguration?: boolean;
+  supportsOAuth?: boolean;
+  missingFields?: string[];
 }
 
 export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
@@ -165,6 +170,10 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
     }
   };
 
+  const providerLabel = mailStatus?.provider === 'smtp' ? 'SMTP' : 'Gmail';
+  const canConnect = mailStatus?.allowConnect ?? true;
+  const canDisconnect = mailStatus?.allowDisconnect ?? Boolean(mailStatus?.connected);
+
   const handleDisconnect = async () => {
     if (!window.confirm(t('settings.gdpr.confirmDisconnect'))) return;
     
@@ -259,6 +268,16 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
                     {mailStatus.email}
                   </p>
                 )}
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {mailStatus?.managedByConfiguration
+                    ? `${providerLabel} - configuration serveur`
+                    : providerLabel}
+                </p>
+                {mailStatus?.missingFields && mailStatus.missingFields.length > 0 && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    Configuration incomplète: {mailStatus.missingFields.join(', ')}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -276,19 +295,21 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
                       t('settings.gdpr.testSend')
                     )}
                   </button>
-                  <button
-                    onClick={handleDisconnect}
-                    disabled={disconnecting}
-                    className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 border border-red-600 dark:border-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50"
-                  >
-                    {disconnecting ? (
-                      <ArrowPathIcon className="w-4 h-4 animate-spin" />
-                    ) : (
-                      t('settings.gdpr.disconnect')
-                    )}
-                  </button>
+                  {canDisconnect && (
+                    <button
+                      onClick={handleDisconnect}
+                      disabled={disconnecting}
+                      className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 border border-red-600 dark:border-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50"
+                    >
+                      {disconnecting ? (
+                        <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                      ) : (
+                        t('settings.gdpr.disconnect')
+                      )}
+                    </button>
+                  )}
                 </>
-              ) : (
+              ) : canConnect ? (
                 <button
                   onClick={handleConnect}
                   disabled={connecting}
@@ -301,7 +322,7 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
                   )}
                   {t('settings.gdpr.connectGmail')}
                 </button>
-              )}
+              ) : null}
             </div>
           </div>
 

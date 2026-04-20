@@ -22,8 +22,62 @@
  */
 
 import { query } from '../../config/database.js';
+import { SMTP_CONFIG } from '../../config/constants.js';
 import { encryptToken, decryptToken, calculateTokenExpiry, isTokenExpired } from '../../config/oauth.config.js';
 import { safeLog } from '../../utils/logger.backend.js';
+import { getSmtpStatus, isSmtpConfigured, sendSmtpEmail } from './smtpProvider.js';
+
+const DELIVERY_PROVIDER_NAMES = new Set(['gmail', 'smtp', 'auto']);
+
+function getConfiguredDeliveryProviderName() {
+    const rawProvider = String(
+        process.env.GDPR_MAIL_PROVIDER
+        || process.env.MAIL_DELIVERY_PROVIDER
+        || 'gmail'
+    ).trim().toLowerCase();
+
+    if (!DELIVERY_PROVIDER_NAMES.has(rawProvider)) {
+        safeLog('warn', 'Unknown GDPR mail delivery provider configured, falling back to gmail', {
+            configuredProvider: rawProvider
+        });
+        return 'gmail';
+    }
+
+    if (rawProvider === 'auto') {
+        return isSmtpConfigured() ? 'smtp' : 'gmail';
+    }
+
+    return rawProvider;
+}
+
+function buildGmailStatus(overrides = {}) {
+    return {
+        provider: 'gmail',
+        managedByConfiguration: false,
+        allowConnect: !overrides.connected,
+        allowDisconnect: Boolean(overrides.connected),
+        supportsOAuth: true,
+        ...overrides
+    };
+}
+
+function assertGmailOAuthAvailable() {
+    const activeProvider = getConfiguredDeliveryProviderName();
+    if (activeProvider !== 'gmail') {
+        const error = new Error(`OAuth flow is unavailable while ${activeProvider.toUpperCase()} is the active GDPR mail provider.`);
+        error.code = 'MAIL_PROVIDER_OAUTH_UNAVAILABLE';
+        throw error;
+    }
+}
+
+function assertGmailDisconnectAvailable() {
+    const activeProvider = getConfiguredDeliveryProviderName();
+    if (activeProvider !== 'gmail') {
+        const error = new Error(`Disconnect is unavailable while ${activeProvider.toUpperCase()} is managed by server configuration.`);
+        error.code = 'MAIL_PROVIDER_DISCONNECT_UNAVAILABLE';
+        throw error;
+    }
+}
 
 // Lazy load googleapis to avoid startup overhead
 let google = null;
@@ -87,6 +141,7 @@ async function getOAuth2Client() {
  * @returns {Promise<string>}
  */
 export async function getAuthUrl(state) {
+    assertGmailOAuthAvailable();
     const oauth2Client = await getOAuth2Client();
     return oauth2Client.generateAuthUrl({
         access_type: 'offline',
@@ -102,6 +157,7 @@ export async function getAuthUrl(state) {
  * @returns {Promise<Object>}
  */
 export async function handleOAuthCallback(code) {
+    assertGmailOAuthAvailable();
     const oauth2Client = await getOAuth2Client();
     const { tokens } = await oauth2Client.getToken(code);
     
@@ -146,6 +202,10 @@ export async function handleOAuthCallback(code) {
  * @returns {Promise<Object>}
  */
 export async function getConnectionStatus() {
+    if (getConfiguredDeliveryProviderName() === 'smtp') {
+        return getSmtpStatus();
+    }
+
     const result = await query(`
         SELECT provider, email, token_expiry, updated_at
         FROM global_gdpr_mail_token
@@ -153,20 +213,20 @@ export async function getConnectionStatus() {
     `);
 
     if (result.rows.length === 0) {
-        return { connected: false };
+        return buildGmailStatus({ connected: false });
     }
 
     const token = result.rows[0];
     const expired = isTokenExpired(token.token_expiry);
 
-    return {
+    return buildGmailStatus({
         connected: !expired,
         provider: token.provider,
         email: token.email,
         expiresAt: token.token_expiry,
         updatedAt: token.updated_at,
         needsReauth: expired
-    };
+    });
 }
 
 /**
@@ -298,6 +358,11 @@ export async function sendEmail({ to, subject, html, text }, isRetry = false) {
         };
     }
 
+    const activeProvider = getConfiguredDeliveryProviderName();
+    if (activeProvider === 'smtp') {
+        return sendSmtpEmail({ to, subject, html, text });
+    }
+
     // Get GLOBAL access token (will refresh if needed)
     let accessToken;
     try {
@@ -398,17 +463,19 @@ export async function sendEmail({ to, subject, html, text }, isRetry = false) {
  * @param {string} email - Recipient email address
  */
 export async function sendTestEmail(email) {
+    const providerLabel = getConfiguredDeliveryProviderName() === 'smtp' ? 'SMTP' : 'Gmail';
+
     return sendEmail({
         to: email,
-        subject: 'Test RGPD - ResumeConverter',
+        subject: `Test RGPD - ResumeConverter (${providerLabel})`,
         html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2 style="color: #2563eb;">Test de configuration RGPD</h2>
-                <p>Ce message confirme que la configuration Gmail GLOBAL pour l'envoi des emails de consentement RGPD fonctionne correctement.</p>
+                <p>Ce message confirme que la configuration ${providerLabel} pour l'envoi des emails de consentement RGPD fonctionne correctement.</p>
                 <p style="color: #6b7280; font-size: 14px;">Envoyé depuis ResumeConverter</p>
             </div>
         `,
-        text: 'Test de configuration RGPD - Ce message confirme que la configuration Gmail GLOBAL fonctionne correctement.'
+        text: `Test de configuration RGPD - Ce message confirme que la configuration ${providerLabel} fonctionne correctement.`
     });
 }
 
@@ -416,6 +483,8 @@ export async function sendTestEmail(email) {
  * Disconnect GLOBAL Gmail token
  */
 export async function disconnect() {
+    assertGmailDisconnectAvailable();
+
     // Get GLOBAL token to revoke
     const result = await query(`
         SELECT access_token_encrypted
@@ -448,6 +517,16 @@ export async function disconnect() {
  * @returns {Promise<{valid: boolean, error?: string}>}
  */
 export async function validateToken() {
+    if (getConfiguredDeliveryProviderName() === 'smtp') {
+        return {
+            valid: isSmtpConfigured(),
+            provider: 'smtp',
+            error: isSmtpConfigured()
+                ? undefined
+                : `SMTP configuration incomplete: ${getSmtpStatus().missingFields.join(', ')}`
+        };
+    }
+
     try {
         const accessToken = await getAccessToken();
         
@@ -480,6 +559,15 @@ export async function validateToken() {
  * @returns {Promise<{success: boolean, message: string, email?: string}>}
  */
 export async function proactiveTokenRefresh() {
+    if (getConfiguredDeliveryProviderName() === 'smtp') {
+        return {
+            success: true,
+            message: isSmtpConfigured()
+                ? `SMTP provider active (${SMTP_CONFIG.host}:${SMTP_CONFIG.port})`
+                : `SMTP provider selected but configuration is incomplete: ${getSmtpStatus().missingFields.join(', ')}`
+        };
+    }
+
     safeLog('info', '[GDPR Token Refresh] Starting proactive token refresh');
     
     try {
