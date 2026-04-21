@@ -1,5 +1,4 @@
 import nodemailer from 'nodemailer';
-import { SMTP_CONFIG } from '../../config/constants.js';
 import { safeLog } from '../../utils/logger.backend.js';
 
 let transporter = null;
@@ -25,21 +24,34 @@ function stripHtml(value = '') {
         .trim();
 }
 
-function getMissingConfigurationFields() {
+function normalizeSmtpConfig(config = {}) {
+    return {
+        host: normalizeOptionalString(config.smtpHost),
+        port: Number.isInteger(config.smtpPort) ? config.smtpPort : Number.parseInt(String(config.smtpPort || ''), 10),
+        secure: Boolean(config.smtpSecure),
+        user: normalizeOptionalString(config.smtpUser),
+        password: config.smtpPassword || '',
+        fromName: normalizeOptionalString(config.smtpFromName),
+        fromEmail: normalizeOptionalString(config.smtpFromEmail)
+    };
+}
+
+function getMissingConfigurationFields(config = {}) {
+    const smtpConfig = normalizeSmtpConfig(config);
     const missing = [];
 
-    if (!normalizeOptionalString(SMTP_CONFIG.host)) {
+    if (!smtpConfig.host) {
         missing.push('SMTP_HOST');
     }
-    if (!Number.isInteger(SMTP_CONFIG.port) || SMTP_CONFIG.port <= 0) {
+    if (!Number.isInteger(smtpConfig.port) || smtpConfig.port <= 0) {
         missing.push('SMTP_PORT');
     }
-    if (!normalizeOptionalString(SMTP_CONFIG.fromEmail)) {
+    if (!smtpConfig.fromEmail) {
         missing.push('SMTP_FROM_EMAIL');
     }
 
-    const hasUser = Boolean(normalizeOptionalString(SMTP_CONFIG.user));
-    const hasPassword = Boolean(normalizeOptionalString(SMTP_CONFIG.password));
+    const hasUser = Boolean(smtpConfig.user);
+    const hasPassword = Boolean(normalizeOptionalString(smtpConfig.password));
     if (hasUser !== hasPassword) {
         missing.push(hasUser ? 'SMTP_PASSWORD' : 'SMTP_USER');
     }
@@ -47,29 +59,31 @@ function getMissingConfigurationFields() {
     return missing;
 }
 
-function buildTransportCacheKey() {
+function buildTransportCacheKey(config = {}) {
+    const smtpConfig = normalizeSmtpConfig(config);
     return JSON.stringify({
-        host: normalizeOptionalString(SMTP_CONFIG.host),
-        port: SMTP_CONFIG.port,
-        secure: Boolean(SMTP_CONFIG.secure),
-        user: normalizeOptionalString(SMTP_CONFIG.user),
-        fromEmail: normalizeOptionalString(SMTP_CONFIG.fromEmail)
+        host: smtpConfig.host,
+        port: smtpConfig.port,
+        secure: smtpConfig.secure,
+        user: smtpConfig.user,
+        fromEmail: smtpConfig.fromEmail
     });
 }
 
-function getTransporter() {
-    const cacheKey = buildTransportCacheKey();
+function getTransporter(config = {}) {
+    const smtpConfig = normalizeSmtpConfig(config);
+    const cacheKey = buildTransportCacheKey(smtpConfig);
     if (transporter && transporterCacheKey === cacheKey) {
         return transporter;
     }
 
-    const authUser = normalizeOptionalString(SMTP_CONFIG.user);
-    const authPassword = normalizeOptionalString(SMTP_CONFIG.password);
+    const authUser = smtpConfig.user;
+    const authPassword = normalizeOptionalString(smtpConfig.password);
 
     transporter = nodemailer.createTransport({
-        host: SMTP_CONFIG.host,
-        port: SMTP_CONFIG.port,
-        secure: SMTP_CONFIG.secure,
+        host: smtpConfig.host,
+        port: smtpConfig.port,
+        secure: smtpConfig.secure,
         ...(authUser && authPassword
             ? {
                 auth: {
@@ -84,18 +98,19 @@ function getTransporter() {
     return transporter;
 }
 
-export function isSmtpConfigured() {
-    return getMissingConfigurationFields().length === 0;
+export function isSmtpConfigured(config = {}) {
+    return getMissingConfigurationFields(config).length === 0;
 }
 
-export function getSmtpStatus() {
-    const missingFields = getMissingConfigurationFields();
+export function getSmtpStatus(config = {}) {
+    const smtpConfig = normalizeSmtpConfig(config);
+    const missingFields = getMissingConfigurationFields(smtpConfig);
     const configured = missingFields.length === 0;
 
     return {
         connected: configured,
         provider: 'smtp',
-        email: normalizeOptionalString(SMTP_CONFIG.fromEmail) || undefined,
+        email: smtpConfig.fromEmail || undefined,
         managedByConfiguration: true,
         allowConnect: false,
         allowDisconnect: false,
@@ -105,20 +120,21 @@ export function getSmtpStatus() {
     };
 }
 
-export async function sendSmtpEmail({ to, subject, html, text, attachments = [] }) {
-    const missingFields = getMissingConfigurationFields();
+export async function sendSmtpEmail(config = {}, { to, subject, html, text, attachments = [] }) {
+    const smtpConfig = normalizeSmtpConfig(config);
+    const missingFields = getMissingConfigurationFields(smtpConfig);
     if (missingFields.length > 0) {
         const error = new Error(`SMTP mail provider is not fully configured: ${missingFields.join(', ')}`);
         error.code = 'SMTP_NOT_CONFIGURED';
         throw error;
     }
 
-    const fromName = normalizeOptionalString(SMTP_CONFIG.fromName);
-    const fromEmail = normalizeOptionalString(SMTP_CONFIG.fromEmail);
+    const fromName = smtpConfig.fromName;
+    const fromEmail = smtpConfig.fromEmail;
     const from = fromName ? `"${fromName.replace(/"/g, '\\"')}" <${fromEmail}>` : fromEmail;
     const plainText = normalizeOptionalString(text) || stripHtml(html);
 
-    const result = await getTransporter().sendMail({
+    const result = await getTransporter(smtpConfig).sendMail({
         from,
         to,
         subject,

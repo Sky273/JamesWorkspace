@@ -51,6 +51,36 @@ vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
 
+const mockResolveMailSystemConfig = vi.fn(async () => ({
+    provider: 'gmail',
+    effectiveProvider: 'gmail',
+    source: 'environment',
+    smtpConfigured: false,
+    smtpHost: '',
+    smtpPort: 587,
+    smtpSecure: false,
+    smtpUser: '',
+    smtpPassword: '',
+    smtpFromName: 'ResumeConverter',
+    smtpFromEmail: '',
+    googleGdprRedirectUri: 'http://localhost:3001/api/gdpr/mail/callback'
+}));
+const mockGetMailSystemConfigForAdmin = vi.fn(async () => ({
+    provider: 'gmail',
+    effectiveProvider: 'gmail'
+}));
+const mockUpdateMailSystemConfig = vi.fn(async () => ({
+    provider: 'gmail',
+    effectiveProvider: 'gmail'
+}));
+
+vi.mock('../../services/mail/mailSystemConfig.service.js', () => ({
+    resolveMailSystemConfig: (...args) => mockResolveMailSystemConfig(...args),
+    getMailSystemConfigForAdmin: (...args) => mockGetMailSystemConfigForAdmin(...args),
+    updateMailSystemConfig: (...args) => mockUpdateMailSystemConfig(...args),
+    getEffectiveMailDeliveryProvider: vi.fn((config) => config.provider === 'auto' ? (config.smtpConfigured ? 'smtp' : 'gmail') : config.provider)
+}));
+
 const mockGetSmtpStatus = vi.fn(() => ({
     connected: true,
     provider: 'smtp',
@@ -90,8 +120,6 @@ describe('GDPR Mail Service', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         delete process.env.E2E_DISABLE_EXTERNAL_EMAIL;
-        delete process.env.GDPR_MAIL_PROVIDER;
-        delete process.env.MAIL_DELIVERY_PROVIDER;
     });
 
     describe('getAuthUrl', () => {
@@ -139,7 +167,19 @@ describe('GDPR Mail Service', () => {
         });
 
         it('should return SMTP status when SMTP is the active provider', async () => {
-            process.env.GDPR_MAIL_PROVIDER = 'smtp';
+            mockResolveMailSystemConfig.mockResolvedValueOnce({
+                provider: 'smtp',
+                effectiveProvider: 'smtp',
+                source: 'database',
+                smtpConfigured: true,
+                smtpHost: 'smtp.example.com',
+                smtpPort: 587,
+                smtpSecure: false,
+                smtpUser: '',
+                smtpPassword: '',
+                smtpFromName: 'ResumeConverter',
+                smtpFromEmail: 'smtp@example.com'
+            });
 
             const status = await getConnectionStatus();
 
@@ -198,7 +238,19 @@ describe('GDPR Mail Service', () => {
         });
 
         it('should send through SMTP when configured provider is smtp', async () => {
-            process.env.GDPR_MAIL_PROVIDER = 'smtp';
+            mockResolveMailSystemConfig.mockResolvedValueOnce({
+                provider: 'smtp',
+                effectiveProvider: 'smtp',
+                source: 'database',
+                smtpConfigured: true,
+                smtpHost: 'smtp.example.com',
+                smtpPort: 587,
+                smtpSecure: false,
+                smtpUser: '',
+                smtpPassword: '',
+                smtpFromName: 'ResumeConverter',
+                smtpFromEmail: 'smtp@example.com'
+            });
 
             const result = await sendEmail({
                 to: 'smtp-target@example.com',
@@ -208,10 +260,13 @@ describe('GDPR Mail Service', () => {
             });
 
             expect(result.provider).toBe('smtp');
-            expect(mockSendSmtpEmail).toHaveBeenCalledWith(expect.objectContaining({
-                to: 'smtp-target@example.com',
-                subject: 'SMTP subject'
-            }));
+            expect(mockSendSmtpEmail).toHaveBeenCalledWith(
+                expect.objectContaining({ smtpHost: 'smtp.example.com' }),
+                expect.objectContaining({
+                    to: 'smtp-target@example.com',
+                    subject: 'SMTP subject'
+                })
+            );
             expect(query).not.toHaveBeenCalled();
         });
     });

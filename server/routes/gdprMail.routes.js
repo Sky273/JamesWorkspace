@@ -8,7 +8,7 @@
 import express from 'express';
 import crypto from 'crypto';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
-import { validateBody, gdprMailTestSchema } from '../utils/validation.js';
+import { validateBody, gdprMailConfigSchema, gdprMailTestSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { gdprMailService } from '../services/mail/gdprMailService.js';
 import {
@@ -51,6 +51,26 @@ router.get('/status', authenticateToken, requireAdmin, async (req, res) => {
     } catch (error) {
         safeLog('error', 'Error getting GDPR mail status', { error: error.message });
         res.status(500).json({ error: 'Failed to get mail status' });
+    }
+});
+
+router.get('/config', authenticateToken, requireAdmin, async (_req, res) => {
+    try {
+        const config = await gdprMailService.getMailConfiguration();
+        res.json(config);
+    } catch (error) {
+        safeLog('error', 'Error getting GDPR mail config', { error: error.message });
+        res.status(500).json({ error: 'Failed to get mail config' });
+    }
+});
+
+router.put('/config', authenticateToken, requireAdmin, validateBody(gdprMailConfigSchema), async (req, res) => {
+    try {
+        const config = await gdprMailService.updateMailConfiguration(req.body);
+        res.json(config);
+    } catch (error) {
+        safeLog('error', 'Error updating GDPR mail config', { error: error.message });
+        res.status(500).json({ error: 'Failed to update mail config' });
     }
 });
 

@@ -46,12 +46,20 @@
       "emailPlaceholder": "dpo@example.com",
       "phonePlaceholder": "+33 1 23 45 67 89"
     },
-    "gdpr": {
-      "title": "Configuration RGPD",
-      "description": "Configurez l'envoi automatique des emails de demande de consentement pour la conservation des CV.",
-      "emailConfig": "Configuration Email",
-      "connected": "Gmail connecté",
-      "notConnected": "Gmail non connecté",
+      "gdpr": {
+        "title": "Configuration RGPD",
+        "description": "Configurez le système d'envoi email de l'application et l'envoi automatique des emails de demande de consentement pour la conservation des CV.",
+        "mailSystemTitle": "Système email de l'application",
+        "mailSystemDescription": "Choisissez le provider actif et configurez le routage Gmail / SMTP utilisé par les emails applicatifs.",
+        "saveConfig": "Enregistrer la configuration",
+        "configSaved": "Configuration email enregistrée",
+        "providerLabel": "Provider actif",
+        "currentRuntimeLabel": "Runtime effectif",
+        "gmailRedirectUriLabel": "URI de callback Gmail RGPD",
+        "gmailCredentialsWarning": "Les identifiants OAuth Google restent gérés par l'environnement serveur. Seule l'URI de callback Gmail RGPD est configurable ici.",
+        "emailConfig": "Configuration Email",
+        "connected": "Gmail connecté",
+        "notConnected": "Gmail non connecté",
       "connectGmail": "Connecter Gmail",
       "disconnect": "Déconnecter",
       "testSend": "Tester l'envoi",
@@ -65,16 +73,39 @@
       "info3": "Un rappel est envoyé après 7 jours si le candidat n'a pas répondu",
       "consentSettings": "Paramètres de consentement",
       "tokenExpiry": "Expiration du lien",
-      "retention": "Durée de conservation",
-      "reminder": "Rappel après",
-      "days": "jours",
-      "years": "ans",
-      "errors": {
-        "connectFailed": "Erreur de connexion à Gmail",
-        "disconnectFailed": "Erreur lors de la déconnexion",
-        "testFailed": "Erreur lors de l'envoi du test"
-      }
-    },
+        "retention": "Durée de conservation",
+        "reminder": "Rappel après",
+        "days": "jours",
+        "years": "ans",
+        "incompleteConfig": "Configuration incomplète : {{fields}}",
+        "providers": {
+          "gmail": "Gmail OAuth",
+          "smtp": "SMTP",
+          "auto": "Auto (SMTP puis Gmail)"
+        },
+        "configSource": {
+          "environment": "héritée de l'environnement",
+          "database": "persistée en base",
+          "server": "configuration serveur"
+        },
+        "smtp": {
+          "host": "Hôte SMTP",
+          "port": "Port SMTP",
+          "user": "Utilisateur SMTP",
+          "password": "Mot de passe SMTP",
+          "passwordPlaceholder": "Mot de passe déjà enregistré",
+          "fromName": "Nom expéditeur",
+          "fromEmail": "Email expéditeur",
+          "secure": "Connexion sécurisée SMTPS (465)",
+          "clearPassword": "Effacer le mot de passe SMTP enregistré"
+        },
+        "errors": {
+          "connectFailed": "Erreur de connexion à Gmail",
+          "disconnectFailed": "Erreur lors de la déconnexion",
+          "testFailed": "Erreur lors de l'envoi du test",
+          "saveConfigFailed": "Erreur lors de l'enregistrement de la configuration email"
+        }
+      },
     "apiDocs": {
       "title": "Documentation de l'API",
       "description": "Accédez à la documentation interactive de l'API propulsée par Swagger/OpenAPI.",

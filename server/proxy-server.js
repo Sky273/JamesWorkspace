@@ -4,7 +4,7 @@ import compression from 'compression';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
-import 'dotenv/config';
+import './config/loadEnv.js';
 
 // Import safeLog early for global error handlers
 import { safeLog } from './utils/logger.backend.js';

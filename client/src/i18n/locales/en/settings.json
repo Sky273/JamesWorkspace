@@ -46,12 +46,20 @@
       "emailPlaceholder": "dpo@example.com",
       "phonePlaceholder": "+33 1 23 45 67 89"
     },
-    "gdpr": {
-      "title": "GDPR Configuration",
-      "description": "Configure automatic consent request emails for CV storage.",
-      "emailConfig": "Email Configuration",
-      "connected": "Gmail connected",
-      "notConnected": "Gmail not connected",
+      "gdpr": {
+        "title": "GDPR Configuration",
+        "description": "Configure the application's mail system and automatic consent request emails for CV storage.",
+        "mailSystemTitle": "Application mail system",
+        "mailSystemDescription": "Choose the active provider and configure the Gmail / SMTP routing used by application emails.",
+        "saveConfig": "Save configuration",
+        "configSaved": "Mail configuration saved",
+        "providerLabel": "Active provider",
+        "currentRuntimeLabel": "Effective runtime",
+        "gmailRedirectUriLabel": "GDPR Gmail callback URI",
+        "gmailCredentialsWarning": "Google OAuth credentials are still managed through the server environment. Only the GDPR Gmail callback URI is configurable here.",
+        "emailConfig": "Email Configuration",
+        "connected": "Gmail connected",
+        "notConnected": "Gmail not connected",
       "connectGmail": "Connect Gmail",
       "disconnect": "Disconnect",
       "testSend": "Test send",
@@ -65,16 +73,39 @@
       "info3": "A reminder is sent after 7 days if the candidate hasn't responded",
       "consentSettings": "Consent settings",
       "tokenExpiry": "Link expiry",
-      "retention": "Retention period",
-      "reminder": "Reminder after",
-      "days": "days",
-      "years": "years",
-      "errors": {
-        "connectFailed": "Failed to connect Gmail",
-        "disconnectFailed": "Failed to disconnect",
-        "testFailed": "Failed to send test email"
-      }
-    },
+        "retention": "Retention period",
+        "reminder": "Reminder after",
+        "days": "days",
+        "years": "years",
+        "incompleteConfig": "Incomplete configuration: {{fields}}",
+        "providers": {
+          "gmail": "Gmail OAuth",
+          "smtp": "SMTP",
+          "auto": "Auto (SMTP then Gmail)"
+        },
+        "configSource": {
+          "environment": "inherited from environment",
+          "database": "persisted in database",
+          "server": "server configuration"
+        },
+        "smtp": {
+          "host": "SMTP host",
+          "port": "SMTP port",
+          "user": "SMTP user",
+          "password": "SMTP password",
+          "passwordPlaceholder": "Password already stored",
+          "fromName": "Sender name",
+          "fromEmail": "Sender email",
+          "secure": "Secure SMTPS connection (465)",
+          "clearPassword": "Clear stored SMTP password"
+        },
+        "errors": {
+          "connectFailed": "Failed to connect Gmail",
+          "disconnectFailed": "Failed to disconnect",
+          "testFailed": "Failed to send test email",
+          "saveConfigFailed": "Failed to save mail configuration"
+        }
+      },
     "apiDocs": {
       "title": "API Documentation",
       "description": "Access the interactive API documentation powered by Swagger/OpenAPI.",

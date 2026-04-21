@@ -13,9 +13,13 @@ const mockGetAuthUrl = vi.fn();
 const mockHandleOAuthCallback = vi.fn();
 const mockDisconnect = vi.fn();
 const mockSendTestEmail = vi.fn();
+const mockGetMailConfiguration = vi.fn();
+const mockUpdateMailConfiguration = vi.fn();
 vi.mock('../../services/mail/gdprMailService.js', () => ({
     gdprMailService: {
         getConnectionStatus: (...args) => mockGetConnectionStatus(...args),
+        getMailConfiguration: (...args) => mockGetMailConfiguration(...args),
+        updateMailConfiguration: (...args) => mockUpdateMailConfiguration(...args),
         getAuthUrl: (...args) => mockGetAuthUrl(...args),
         handleOAuthCallback: (...args) => mockHandleOAuthCallback(...args),
         disconnect: (...args) => mockDisconnect(...args),
@@ -108,6 +112,48 @@ describe('GDPR Mail Routes', () => {
                 .get('/api/gdpr/mail/status')
                 .set(AUTH);
             expect(res.status).toBe(500);
+        });
+    });
+
+    describe('GET /config', () => {
+        it('should return mail configuration', async () => {
+            mockGetMailConfiguration.mockResolvedValueOnce({
+                provider: 'smtp',
+                smtpHost: 'smtp.example.com'
+            });
+
+            const res = await request(app)
+                .get('/api/gdpr/mail/config')
+                .set(AUTH);
+
+            expect(res.status).toBe(200);
+            expect(res.body.provider).toBe('smtp');
+        });
+    });
+
+    describe('PUT /config', () => {
+        it('should update mail configuration', async () => {
+            mockUpdateMailConfiguration.mockResolvedValueOnce({
+                provider: 'auto',
+                smtpHost: 'smtp.example.com'
+            });
+
+            const res = await request(app)
+                .put('/api/gdpr/mail/config')
+                .set(AUTH)
+                .send({
+                    provider: 'auto',
+                    smtpHost: 'smtp.example.com',
+                    smtpPort: 587,
+                    smtpSecure: false,
+                    smtpUser: 'mailer',
+                    smtpFromName: 'ResumeConverter',
+                    smtpFromEmail: 'mailer@example.com',
+                    googleGdprRedirectUri: 'https://resumeconverter.net/api/gdpr/mail/callback'
+                });
+
+            expect(res.status).toBe(200);
+            expect(res.body.provider).toBe('auto');
         });
     });
 
