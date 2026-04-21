@@ -1,3 +1,36 @@
+## v1.9.2 - 2026-04-21
+### Fiabilisation du pipeline mission et gestion des suppressions depuis les ecrans de detail CV
+
+#### Pipeline mission
+- Correction des problemes de rafraichissement sur la vue pipeline des missions :
+  - relectures fraiches apres ajout, modification, suppression et deplacement d'un candidat
+  - propagation explicite du marquage dirty pour eviter les retours a un etat stale
+- Ajout d'un bouton `Actualiser` sur la vue pipeline mission, aligne sur les autres vues.
+- Correction du drag and drop des candidats dans le pipeline mission pour le rendre deterministe :
+  - resolution fiable de la carte deplacee au drop
+  - mise a jour locale optimiste avant rechargement
+  - suppression des cas ou un toast de succes apparaissait sans mouvement visuel de la carte
+
+#### Onglets pipeline CV
+- Correction du meme probleme de stale refresh dans l'onglet de selection des CVs ameliores.
+- Ajout de la suppression d'un candidat directement depuis le pipeline de selection des missions.
+- Reprise visuelle du bouton `Retirer du pipeline` pour une integration plus qualitative dans les cartes.
+
+#### Detail CV
+- Ajout d'une action de suppression directement depuis la page de detail d'un CV ameliore.
+- Ajout de la meme action de suppression depuis la page de detail d'un CV analyse.
+- Harmonisation du flux de confirmation, du feedback utilisateur et de la redirection vers la liste des CVs.
+- Correction du contrat frontend de suppression pour que les erreurs remontent correctement aux ecrans appelants.
+
+#### OpenAI et prompts
+- Ajout de `gpt-5.4-mini` dans la liste des modeles OpenAI disponibles.
+- Remplacement du prompt d'amelioration CV par une nouvelle version stable, plus stricte sur la fidelite au contenu, le JSON de sortie, le sommaire obligatoire et la structuration ATS.
+
+#### Backend et qualite
+- Correction du demarrage backend suite a un import invalide de `normalizeWeights` dans les helpers de settings.
+- Alignement de la version applicative sur `v1.9.2`.
+
+---
 ## v1.9.1 - 2026-04-16
 ### Ajustements UI CVtheque et coherence des vues liste
 
