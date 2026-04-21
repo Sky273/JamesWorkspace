@@ -41,7 +41,7 @@ describe('mailSystemConfig.service', () => {
         };
     });
 
-    it('treats blank persisted fields as the active GDPR mail configuration', async () => {
+    it('falls back to environment defaults when persisted GDPR mail fields are blank', async () => {
         mockGetCanonicalSettingsRecord.mockResolvedValueOnce({
             id: 'settings-1',
             mail_delivery_provider: 'smtp',
@@ -59,14 +59,14 @@ describe('mailSystemConfig.service', () => {
 
         expect(config.provider).toBe('smtp');
         expect(config.source).toBe('database');
-        expect(config.smtpHost).toBe('');
+        expect(config.smtpHost).toBe('smtp.gmail.com');
         expect(config.smtpPort).toBe(587);
-        expect(config.smtpUser).toBe('');
-        expect(config.smtpPassword).toBe('');
-        expect(config.smtpFromName).toBe('ResumeConverter');
-        expect(config.smtpFromEmail).toBe('');
-        expect(config.googleGdprRedirectUri).toBe('http://localhost:3001/api/gdpr/mail/callback');
-        expect(config.smtpConfigured).toBe(false);
+        expect(config.smtpUser).toBe('luc.moreau.1@gmail.com');
+        expect(config.smtpPassword).toBe('wscp wzfu nbvs tksx');
+        expect(config.smtpFromName).toBe('ResumeConverter@gmail.com');
+        expect(config.smtpFromEmail).toBe('luc.moreau.1@gmail.com');
+        expect(config.googleGdprRedirectUri).toBe('https://resumeconverter.net/api/gdpr/mail/callback');
+        expect(config.smtpConfigured).toBe(true);
     });
 
     it('uses only persisted values once a GDPR mail config exists in database', async () => {

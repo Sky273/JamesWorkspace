@@ -39,20 +39,53 @@ function normalizeOverrideString(value) {
     return String(value).trim();
 }
 
-function buildMailConfigOverride(override = {}) {
+function hasOwn(override, key) {
+    return Object.prototype.hasOwnProperty.call(override, key);
+}
+
+async function buildMailConfigOverride(override = {}) {
+    const baseConfig = await resolveMailSystemConfig();
+
     const provider = ['gmail', 'smtp', 'auto'].includes(String(override.provider || '').toLowerCase())
         ? String(override.provider).toLowerCase()
-        : 'gmail';
-    const smtpHost = normalizeOverrideString(override.smtpHost);
+        : baseConfig.provider;
+
+    const smtpHostOverride = normalizeOverrideString(override.smtpHost);
+    const smtpHost = smtpHostOverride || baseConfig.smtpHost;
+
     const smtpPortRaw = Number.parseInt(String(override.smtpPort ?? ''), 10);
-    const smtpPort = Number.isInteger(smtpPortRaw) && smtpPortRaw > 0 ? smtpPortRaw : 587;
-    const smtpSecure = Boolean(override.smtpSecure);
-    const smtpUser = normalizeOverrideString(override.smtpUser);
-    const smtpPassword = override.clearSmtpPassword ? '' : String(override.smtpPassword || '');
-    const smtpFromName = normalizeOverrideString(override.smtpFromName) || 'ResumeConverter';
-    const smtpFromEmail = normalizeOverrideString(override.smtpFromEmail);
-    const googleGdprRedirectUri = normalizeOverrideString(override.googleGdprRedirectUri)
+    const smtpPort = Number.isInteger(smtpPortRaw) && smtpPortRaw > 0
+        ? smtpPortRaw
+        : baseConfig.smtpPort;
+
+    const smtpSecure = hasOwn(override, 'smtpSecure')
+        ? Boolean(override.smtpSecure)
+        : Boolean(baseConfig.smtpSecure);
+
+    const smtpUserOverride = normalizeOverrideString(override.smtpUser);
+    const smtpUser = smtpUserOverride || baseConfig.smtpUser;
+
+    let smtpPassword = baseConfig.smtpPassword;
+    if (override.clearSmtpPassword) {
+        smtpPassword = '';
+    } else {
+        const smtpPasswordOverride = String(override.smtpPassword || '');
+        if (smtpPasswordOverride) {
+            smtpPassword = smtpPasswordOverride;
+        }
+    }
+
+    const smtpFromNameOverride = normalizeOverrideString(override.smtpFromName);
+    const smtpFromName = smtpFromNameOverride || baseConfig.smtpFromName || 'ResumeConverter';
+
+    const smtpFromEmailOverride = normalizeOverrideString(override.smtpFromEmail);
+    const smtpFromEmail = smtpFromEmailOverride || baseConfig.smtpFromEmail;
+
+    const googleRedirectOverride = normalizeOverrideString(override.googleGdprRedirectUri);
+    const googleGdprRedirectUri = googleRedirectOverride
+        || baseConfig.googleGdprRedirectUri
         || `${process.env.BACKEND_URL || 'http://localhost:3001'}/api/gdpr/mail/callback`;
+
     const smtpConfigured = Boolean(
         smtpHost
         && smtpPort
@@ -61,6 +94,7 @@ function buildMailConfigOverride(override = {}) {
     );
 
     return {
+        ...baseConfig,
         provider,
         smtpHost,
         smtpPort,
@@ -502,7 +536,7 @@ export async function sendEmail({ to, subject, html, text }, isRetry = false) {
  */
 export async function sendTestEmail(email, mailConfigOverride = null) {
     const mailConfig = mailConfigOverride
-        ? buildMailConfigOverride(mailConfigOverride)
+        ? await buildMailConfigOverride(mailConfigOverride)
         : await resolveMailSystemConfig();
     const providerLabel = mailConfig.effectiveProvider === 'smtp' ? 'SMTP' : 'Gmail';
 

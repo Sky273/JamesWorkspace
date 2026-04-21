@@ -91,6 +91,18 @@ function resolvePortValue(persistedValue, envValue) {
     return normalizePort(envValue);
 }
 
+function resolveStringValue(persistedValue, envValue, fallback = '') {
+    if (persistedValue !== undefined && persistedValue !== null && normalizeString(persistedValue) !== '') {
+        return normalizeString(persistedValue);
+    }
+
+    if (envValue !== undefined && envValue !== null && normalizeString(envValue) !== '') {
+        return normalizeString(envValue);
+    }
+
+    return fallback;
+}
+
 function resolvePasswordValue(persistedValue, envValue) {
     if (persistedValue !== undefined && persistedValue !== null && normalizeString(persistedValue) !== '') {
         return persistedValue ? decryptToken(persistedValue) : '';
@@ -113,15 +125,19 @@ export async function resolveMailSystemConfig() {
 
     const config = hasPersistedConfig
         ? {
-            provider: normalizeProvider(settingsRecord?.mail_delivery_provider),
-            smtpHost: normalizeString(settingsRecord?.smtp_host),
-            smtpPort: resolvePortValue(settingsRecord?.smtp_port, DEFAULT_SMTP_PORT),
-            smtpSecure: resolveBooleanValue(settingsRecord?.smtp_secure, false, false),
-            smtpUser: normalizeString(settingsRecord?.smtp_user),
-            smtpPassword: resolvePasswordValue(settingsRecord?.smtp_password_encrypted, ''),
-            smtpFromName: normalizeString(settingsRecord?.smtp_from_name) || DEFAULT_SMTP_FROM_NAME,
-            smtpFromEmail: normalizeString(settingsRecord?.smtp_from_email),
-            googleGdprRedirectUri: normalizeString(settingsRecord?.google_gdpr_redirect_uri) || buildDefaultGdprRedirectUri(),
+            provider: normalizeProvider(settingsRecord?.mail_delivery_provider || environmentConfig.provider),
+            smtpHost: resolveStringValue(settingsRecord?.smtp_host, environmentConfig.smtpHost),
+            smtpPort: resolvePortValue(settingsRecord?.smtp_port, environmentConfig.smtpPort),
+            smtpSecure: resolveBooleanValue(settingsRecord?.smtp_secure, environmentConfig.smtpSecure, false),
+            smtpUser: resolveStringValue(settingsRecord?.smtp_user, environmentConfig.smtpUser),
+            smtpPassword: resolvePasswordValue(settingsRecord?.smtp_password_encrypted, environmentConfig.smtpPassword),
+            smtpFromName: resolveStringValue(settingsRecord?.smtp_from_name, environmentConfig.smtpFromName, DEFAULT_SMTP_FROM_NAME),
+            smtpFromEmail: resolveStringValue(settingsRecord?.smtp_from_email, environmentConfig.smtpFromEmail),
+            googleGdprRedirectUri: resolveStringValue(
+                settingsRecord?.google_gdpr_redirect_uri,
+                environmentConfig.googleGdprRedirectUri,
+                buildDefaultGdprRedirectUri()
+            ),
             source
         }
         : {

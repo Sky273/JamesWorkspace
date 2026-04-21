@@ -25,14 +25,23 @@ function stripHtml(value = '') {
 }
 
 function normalizeSmtpConfig(config = {}) {
+    const envUser = normalizeOptionalString(process.env.SMTP_USER);
+    const envFromEmail = normalizeOptionalString(process.env.SMTP_FROM_EMAIL) || envUser;
+    const envPortRaw = Number.parseInt(String(process.env.SMTP_PORT || ''), 10);
+
     return {
-        host: normalizeOptionalString(config.smtpHost),
-        port: Number.isInteger(config.smtpPort) ? config.smtpPort : Number.parseInt(String(config.smtpPort || ''), 10),
-        secure: Boolean(config.smtpSecure),
-        user: normalizeOptionalString(config.smtpUser),
-        password: config.smtpPassword || '',
-        fromName: normalizeOptionalString(config.smtpFromName),
-        fromEmail: normalizeOptionalString(config.smtpFromEmail)
+        host: normalizeOptionalString(config.smtpHost) || normalizeOptionalString(process.env.SMTP_HOST),
+        port: Number.isInteger(config.smtpPort)
+            ? config.smtpPort
+            : (Number.parseInt(String(config.smtpPort || ''), 10) || envPortRaw),
+        secure: config.smtpSecure !== undefined
+            ? Boolean(config.smtpSecure)
+            : String(process.env.SMTP_SECURE || '').toLowerCase() === 'true',
+        user: normalizeOptionalString(config.smtpUser) || envUser,
+        password: config.smtpPassword || process.env.SMTP_PASSWORD || '',
+        fromName: normalizeOptionalString(config.smtpFromName)
+            || normalizeOptionalString(process.env.SMTP_FROM_NAME),
+        fromEmail: normalizeOptionalString(config.smtpFromEmail) || envFromEmail
     };
 }
 

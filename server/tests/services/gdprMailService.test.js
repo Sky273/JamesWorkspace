@@ -274,6 +274,21 @@ describe('GDPR Mail Service', () => {
 
     describe('sendTestEmail', () => {
         it('should send the SMTP test using the provided form override', async () => {
+            mockResolveMailSystemConfig.mockResolvedValueOnce({
+                provider: 'smtp',
+                effectiveProvider: 'smtp',
+                source: 'database',
+                smtpConfigured: true,
+                smtpHost: 'smtp.base.example.com',
+                smtpPort: 587,
+                smtpSecure: false,
+                smtpUser: 'base-user@example.com',
+                smtpPassword: 'base-password',
+                smtpFromName: 'Base Sender',
+                smtpFromEmail: 'base-sender@example.com',
+                googleGdprRedirectUri: 'https://resumeconverter.net/api/gdpr/mail/callback'
+            });
+
             const result = await sendTestEmail('test@example.com', {
                 provider: 'smtp',
                 smtpHost: 'smtp.form.example.com',
@@ -294,6 +309,50 @@ describe('GDPR Mail Service', () => {
                     smtpUser: 'form-user@example.com',
                     smtpPassword: 'form-password',
                     smtpFromEmail: 'form-sender@example.com'
+                }),
+                expect.objectContaining({
+                    to: 'test@example.com'
+                })
+            );
+        });
+
+        it('should preserve resolved SMTP fields when the request override omits them', async () => {
+            mockResolveMailSystemConfig.mockResolvedValueOnce({
+                provider: 'smtp',
+                effectiveProvider: 'smtp',
+                source: 'environment',
+                smtpConfigured: true,
+                smtpHost: 'smtp.base.example.com',
+                smtpPort: 587,
+                smtpSecure: false,
+                smtpUser: 'base-user@example.com',
+                smtpPassword: 'base-password',
+                smtpFromName: 'Base Sender',
+                smtpFromEmail: 'base-sender@example.com',
+                googleGdprRedirectUri: 'https://resumeconverter.net/api/gdpr/mail/callback'
+            });
+
+            const result = await sendTestEmail('test@example.com', {
+                provider: 'smtp',
+                smtpHost: '',
+                smtpPort: 587,
+                smtpSecure: false,
+                smtpUser: '',
+                smtpPassword: '',
+                smtpFromName: '',
+                smtpFromEmail: '',
+                googleGdprRedirectUri: ''
+            });
+
+            expect(result.provider).toBe('smtp');
+            expect(mockSendSmtpEmail).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    smtpHost: 'smtp.base.example.com',
+                    smtpPort: 587,
+                    smtpUser: 'base-user@example.com',
+                    smtpPassword: 'base-password',
+                    smtpFromName: 'Base Sender',
+                    smtpFromEmail: 'base-sender@example.com'
                 }),
                 expect.objectContaining({
                     to: 'test@example.com'
