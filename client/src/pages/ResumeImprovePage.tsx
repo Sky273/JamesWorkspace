@@ -35,6 +35,7 @@ import PipelineTab from '../components/ResumeAnalysis/PipelineTab';
 import OriginalSourcePreview from '../components/ResumeAnalysis/OriginalSourcePreview';
 import ResumeComments from '../components/ResumeComments';
 import PageHeader from '../components/page/PageHeader';
+import ConfirmDialog from '../components/page/ConfirmDialog';
 import ResponsivePageTabs, { type ResponsivePageTabOption } from '../components/page/ResponsivePageTabs';
 import { fetchWithAuth, fetchWithCsrfRetry, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
 import { FRONTEND_LLM_AI_MODIFICATION_TIMEOUT_MS } from '../constants/llmTimeouts';
@@ -53,7 +54,16 @@ const ResumeImprovePage = (): JSX.Element => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { currentResume, setCurrentResume, improveCurrentResume, updateImprovedContent, loading: contextLoading, processingStep } = useResume();
+  const {
+    currentResume,
+    setCurrentResume,
+    improveCurrentResume,
+    updateImprovedContent,
+    deleteResume,
+    deleting,
+    loading: contextLoading,
+    processingStep
+  } = useResume();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isImproving, setIsImproving] = useState(false);
@@ -65,6 +75,7 @@ const ResumeImprovePage = (): JSX.Element => {
   const [shareUrl, setShareUrl] = useState<string>('');
   const [shareLoading, setShareLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const improveTabOptions: ResponsivePageTabOption<'improved' | 'original' | 'compare' | 'analysis' | 'pipeline'>[] = [
     { value: 'improved', label: t('resume.analysis.tabs.improved'), icon: PencilSquareIcon },
@@ -269,6 +280,22 @@ const ResumeImprovePage = (): JSX.Element => {
     }
   }, [id, localResume, t]);
 
+  const handleDelete = useCallback(async () => {
+    if (!localResume?.id) {
+      return;
+    }
+
+    try {
+      await deleteResume(localResume.id);
+      toast.success(t('resumes.deleteSuccess', 'CV supprimé avec succès'));
+      setShowDeleteConfirm(false);
+      navigate('/resumes');
+    } catch (error) {
+      logger.error('Failed to delete resume from detail page:', error);
+      toast.error(t('resumes.deleteError', 'Erreur lors de la suppression du CV'));
+    }
+  }, [deleteResume, localResume?.id, navigate, t]);
+
   const resumeName = localResume?.['Name'] || localResume?.['File Name'] || 'CV';
   const hasImprovedText = !!localResume?.['Improved Text'];
 
@@ -363,6 +390,8 @@ const ResumeImprovePage = (): JSX.Element => {
           onSave={handleSaveImprovedContent}
           onShare={handleShare}
           onAdapt={() => navigate(`/resumes/${id}/adapt`)}
+          onDelete={() => setShowDeleteConfirm(true)}
+          deleting={deleting}
           t={t}
         />
 
@@ -454,6 +483,24 @@ const ResumeImprovePage = (): JSX.Element => {
         title={t('share.improvedCV')}
         candidateName={localResume?.['Name'] || 'CV'}
         isLoading={shareLoading}
+      />
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={() => {
+          void handleDelete();
+        }}
+        disabled={deleting}
+        title={t('resumes.confirmDeleteTitle')}
+        cancelLabel={t('common.cancel')}
+        confirmLabel={deleting ? t('common.deleting') : t('common.delete')}
+        content={
+          <p>
+            {t('resumes.confirmDeleteMessage', {
+              filename: localResume?.['Resume File']?.[0]?.filename || localResume?.Name || resumeName
+            })}
+          </p>
+        }
       />
     </>
   );

@@ -465,12 +465,13 @@ export const ResumeProvider = ({ children }: ResumeProviderProps): JSX.Element =
     } catch (error) {
       if (!controller.signal.aborted) {
         if (isInsufficientCreditsRedirectError(error)) {
-          return;
+          throw error;
         }
         logger.error('Error deleting resume:', error);
         const { message: userFriendlyMessage } = getUserFriendlyMessage(error);
         setProcessingError(userFriendlyMessage);
       }
+      throw error;
     } finally {
       if (!controller.signal.aborted) {
         setDeleting(false);

@@ -8,6 +8,7 @@ const mockToastError = vi.fn();
 const mockToastSuccess = vi.fn();
 const mockGetResume = vi.fn();
 const mockImproveCurrentResume = vi.fn();
+const mockDeleteResume = vi.fn();
 
 const resumeContextState: {
   currentResume: Record<string, unknown> | null;
@@ -15,6 +16,8 @@ const resumeContextState: {
   resumes: Array<Record<string, unknown>>;
   improveCurrentResume: typeof mockImproveCurrentResume;
   updateImprovedContent: ReturnType<typeof vi.fn>;
+  deleteResume: typeof mockDeleteResume;
+  deleting: boolean;
   loading: boolean;
   processingStep: string | null;
 } = {
@@ -23,6 +26,8 @@ const resumeContextState: {
   resumes: [] as Array<Record<string, unknown>>,
   improveCurrentResume: mockImproveCurrentResume,
   updateImprovedContent: vi.fn(),
+  deleteResume: mockDeleteResume,
+  deleting: false,
   loading: false,
   processingStep: null,
 };
@@ -84,18 +89,41 @@ vi.mock('../components/ResumeImprove/ResumeImproveHeader', () => ({
   default: ({
     hasImprovedText,
     onAdapt,
+    onDelete,
     onSave,
   }: {
     hasImprovedText: boolean;
     onAdapt: () => void;
+    onDelete: () => void;
     onSave: () => void;
   }) => (
     <div>
       <span>{hasImprovedText ? 'header-improved' : 'header-empty'}</span>
       <button onClick={onSave}>save-improved</button>
       <button onClick={onAdapt}>adapt-resume</button>
+      <button onClick={onDelete}>delete-resume</button>
     </div>
   ),
+}));
+
+vi.mock('../components/page/ConfirmDialog', () => ({
+  default: ({
+    isOpen,
+    onClose,
+    onConfirm,
+    title,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    title: string;
+  }) => (isOpen ? (
+    <div>
+      <div>{title}</div>
+      <button onClick={onConfirm}>confirm-delete</button>
+      <button onClick={onClose}>cancel-delete</button>
+    </div>
+  ) : null),
 }));
 
 vi.mock('../components/ResumeImprove/ResumeImproveStepIndicator', () => ({
@@ -183,17 +211,18 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => {
       const map: Record<string, string> = {
-        'resume.improve.title': 'Amélioration du CV',
-        'resume.improve.description': 'Description amélioration',
-        'resume.analysis.improvedResume': 'CV amélioré',
-        'resume.improve.notYetImproved': 'Pas encore amélioré',
-        'resume.analysis.tabs.improved': 'Version améliorée',
+        'resume.improve.title': 'Amelioration du CV',
+        'resume.improve.description': 'Description amelioration',
+        'resume.analysis.improvedResume': 'CV ameliore',
+        'resume.improve.notYetImproved': 'Pas encore ameliore',
+        'resume.analysis.tabs.improved': 'Version amelioree',
         'resume.analysis.tabs.compare': 'Comparer',
         'resume.analysis.tabs.overview': 'Analyse',
         'resume.analysis.tabs.pipeline': 'Pipeline',
-        'resume.improveSuccess': 'Amélioration réussie',
-        'resume.improveError': 'Erreur amélioration',
+        'resume.improveSuccess': 'Amelioration reussie',
+        'resume.improveError': 'Erreur amelioration',
         'errors.loadResume': 'Erreur chargement CV',
+        'resumes.confirmDeleteTitle': 'Confirmer la suppression',
       };
       map['resume.analysis.tabs.original'] = 'Original';
       return map[key] ?? key;
@@ -209,6 +238,7 @@ describe('ResumeImprovePage', () => {
     resumeContextState.resumes = [];
     resumeContextState.loading = false;
     resumeContextState.processingStep = null;
+    resumeContextState.deleting = false;
     resumeContextState.setCurrentResume.mockImplementation((resume: Record<string, unknown> | null) => {
       resumeContextState.currentResume = resume;
     });
@@ -219,10 +249,11 @@ describe('ResumeImprovePage', () => {
       'Original Text': 'Texte original',
     });
     mockImproveCurrentResume.mockResolvedValue(undefined);
+    mockDeleteResume.mockResolvedValue(undefined);
     resumeContextState.updateImprovedContent.mockResolvedValue({ success: true, currentVersion: 5 });
   });
 
-  it('charge le CV et lance l’amélioration depuis l’état vide', async () => {
+  it('charge le CV et lance l amelioration depuis l etat vide', async () => {
     const resume = {
       id: 'resume-1',
       Name: 'Ada Lovelace',
@@ -233,7 +264,7 @@ describe('ResumeImprovePage', () => {
 
     render(<ResumeImprovePage />);
 
-    expect(await screen.findByText('Amélioration du CV')).toBeInTheDocument();
+    expect(await screen.findByText('Amelioration du CV')).toBeInTheDocument();
     expect(screen.getByText('header-empty')).toBeInTheDocument();
     expect(screen.getByText('step-indicator:resume-1')).toBeInTheDocument();
 
@@ -242,15 +273,15 @@ describe('ResumeImprovePage', () => {
     await waitFor(() => {
       expect(mockImproveCurrentResume).toHaveBeenCalledTimes(1);
     });
-    expect(mockToastSuccess).toHaveBeenCalledWith('Amélioration réussie');
+    expect(mockToastSuccess).toHaveBeenCalledWith('Amelioration reussie');
   });
 
-  it('affiche les onglets quand un texte amélioré existe et permet la navigation', async () => {
+  it('affiche les onglets quand un texte ameliore existe et permet la navigation', async () => {
     const improvedResume = {
       id: 'resume-1',
       Name: 'Ada Lovelace',
-      'Improved Text': 'Contenu amélioré',
-      improvedText: 'Contenu amélioré',
+      'Improved Text': 'Contenu ameliore',
+      improvedText: 'Contenu ameliore',
       'Improved Key Improvements': 'Point 1',
       improvedSkillsEvidence: [{ name: 'Java', evidenceScore: 0.91 }],
       improvedToolsEvidence: [{ tool: 'Docker', evidence_score: 0.83 }],
@@ -263,7 +294,7 @@ describe('ResumeImprovePage', () => {
 
     expect(await screen.findByText('header-improved')).toBeInTheDocument();
     expect(screen.getByText('improved-tab')).toBeInTheDocument();
-    expect(screen.getByText('editor:Contenu amélioré:Docker,Java')).toBeInTheDocument();
+    expect(screen.getByText('editor:Contenu ameliore:Docker,Java')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Original'));
     expect(screen.getByText('original-source-preview')).toBeInTheDocument();
@@ -280,12 +311,13 @@ describe('ResumeImprovePage', () => {
     fireEvent.click(screen.getByText('adapt-resume'));
     expect(mockNavigate).toHaveBeenCalledWith('/resumes/resume-1/adapt');
   });
+
   it('does not navigate back to analysis when save is clicked on an improved resume', async () => {
     const improvedResume = {
       id: 'resume-1',
       Name: 'Ada Lovelace',
-      'Improved Text': 'Contenu amélioré',
-      improvedText: 'Contenu amélioré',
+      'Improved Text': 'Contenu ameliore',
+      improvedText: 'Contenu ameliore',
     };
     resumeContextState.currentResume = improvedResume;
     resumeContextState.resumes = [improvedResume];
@@ -354,7 +386,33 @@ describe('ResumeImprovePage', () => {
     fireEvent.click(screen.getByText('start-improve'));
 
     await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith('Erreur amélioration');
+      expect(mockToastError).toHaveBeenCalledWith('Erreur amelioration');
     });
+  });
+
+  it('allows deleting an improved resume from the detail page', async () => {
+    const improvedResume = {
+      id: 'resume-1',
+      Name: 'Ada Lovelace',
+      'Improved Text': 'Contenu ameliore',
+      improvedText: 'Contenu ameliore',
+    };
+    resumeContextState.currentResume = improvedResume;
+    resumeContextState.resumes = [improvedResume];
+    mockGetResume.mockResolvedValue(improvedResume);
+
+    render(<ResumeImprovePage />);
+
+    expect(await screen.findByText('header-improved')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('delete-resume'));
+    expect(screen.getByText('Confirmer la suppression')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('confirm-delete'));
+
+    await waitFor(() => {
+      expect(mockDeleteResume).toHaveBeenCalledWith('resume-1');
+    });
+    expect(mockNavigate).toHaveBeenCalledWith('/resumes');
   });
 });

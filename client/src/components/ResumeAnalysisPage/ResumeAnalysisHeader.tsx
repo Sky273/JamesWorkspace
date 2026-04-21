@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowRightIcon, CheckCircleIcon, ShareIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, CheckCircleIcon, ShareIcon, SparklesIcon, TrashIcon } from '@heroicons/react/24/outline';
 import type { TFunction } from 'i18next';
 import ConsentBadge, { ConsentStatus } from '../ConsentBadge';
 import type { Resume } from '../../types/entities';
@@ -12,6 +12,8 @@ interface ResumeAnalysisHeaderProps {
   hasImprovedText: boolean;
   onShare: () => void;
   onImprove: () => void;
+  onDelete: () => void;
+  deleting: boolean;
   t: TFunction;
 }
 
@@ -22,6 +24,8 @@ export default function ResumeAnalysisHeader({
   hasImprovedText,
   onShare,
   onImprove,
+  onDelete,
+  deleting,
   t
 }: ResumeAnalysisHeaderProps): JSX.Element {
   return (
@@ -55,9 +59,21 @@ export default function ResumeAnalysisHeader({
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <button
+              onClick={onDelete}
+              disabled={deleting}
+              className={`inline-flex min-h-12 items-center gap-2 rounded-2xl border border-red-200/70 bg-red-50/90 px-4 py-2.5 text-sm font-semibold text-red-700 shadow-sm transition hover:border-red-300 hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200 dark:hover:border-red-400/30 dark:hover:bg-red-500/15 sm:text-base ${deleting ? 'cursor-not-allowed opacity-60' : ''}`}
+              title={t('resumes.deleteResume')}
+              type="button"
+            >
+              <TrashIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span>{t('resumes.deleteResume')}</span>
+            </button>
+
+            <button
               onClick={onShare}
               className="cv-ghost-button inline-flex min-h-12 items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold sm:text-base"
               title={t('share.button')}
+              type="button"
             >
               <ShareIcon className="h-4 w-4 sm:h-5 sm:w-5" />
               <span className="hidden sm:inline">{t('share.button')}</span>
@@ -77,6 +93,7 @@ export default function ResumeAnalysisHeader({
               <button
                 onClick={onImprove}
                 className="cv-gradient-button inline-flex min-h-12 items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-semibold sm:text-base"
+                type="button"
               >
                 <SparklesIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                 {t('resume.actions.improve')}

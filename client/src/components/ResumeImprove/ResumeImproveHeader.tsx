@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ShareIcon, RocketLaunchIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { ShareIcon, RocketLaunchIcon, CheckIcon, TrashIcon } from '@heroicons/react/24/outline';
 import type { TFunction } from 'i18next';
 import ConsentBadge, { ConsentStatus } from '../ConsentBadge';
 import type { Resume } from '../../types/entities';
@@ -13,6 +13,8 @@ interface ResumeImproveHeaderProps {
   onSave: () => void;
   onShare: () => void;
   onAdapt: () => void;
+  onDelete: () => void;
+  deleting: boolean;
   t: TFunction;
 }
 
@@ -25,6 +27,8 @@ export default function ResumeImproveHeader({
   onSave,
   onShare,
   onAdapt,
+  onDelete,
+  deleting,
   t
 }: ResumeImproveHeaderProps): JSX.Element {
   return (
@@ -54,11 +58,24 @@ export default function ResumeImproveHeader({
             {t('resume.improve.title')}
           </p>
         </div>
-        {hasImprovedText && (
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <button
+            onClick={onDelete}
+            disabled={deleting}
+            className={`inline-flex items-center gap-2 rounded-full border border-red-200/70 bg-red-50/90 px-4 py-2 text-sm font-semibold text-red-700 shadow-sm transition hover:border-red-300 hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200 dark:hover:border-red-400/30 dark:hover:bg-red-500/15 sm:text-base ${deleting ? 'cursor-not-allowed opacity-60' : ''}`}
+            title={t('resumes.deleteResume')}
+            type="button"
+          >
+            <TrashIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span>{t('resumes.deleteResume')}</span>
+          </button>
+
+          {hasImprovedText && (
+            <>
             <button
               onClick={onAdapt}
               className="app-primary-action inline-flex items-center gap-2 px-4 py-2 text-sm sm:text-base"
+              type="button"
             >
               <RocketLaunchIcon className="h-4 w-4 sm:h-5 sm:w-5" />
               <span className="hidden sm:inline">{t('resume.actions.adaptToMission')}</span>
@@ -69,6 +86,7 @@ export default function ResumeImproveHeader({
               onClick={onSave}
               disabled={isSaving || !editorReady}
               className={`btn btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm sm:text-base ${isSaving || !editorReady ? 'opacity-50 cursor-not-allowed' : ''}`}
+              type="button"
             >
               {isSaving ? (
                 <>
@@ -91,12 +109,14 @@ export default function ResumeImproveHeader({
               onClick={onShare}
               className="btn btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm sm:text-base"
               title={t('share.button')}
+              type="button"
             >
               <ShareIcon className="h-4 w-4 sm:h-5 sm:w-5" />
               <span className="hidden sm:inline">{t('share.button')}</span>
             </button>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
     </motion.div>
   );

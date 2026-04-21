@@ -31,7 +31,9 @@ export function useResumeAnalysisPage() {
     setCurrentResume,
     resumes,
     improveCurrentResume,
-    processingStep
+    processingStep,
+    deleteResume,
+    deleting,
   } = useResume();
 
   const [loading, setLoading] = useState(true);
@@ -41,6 +43,7 @@ export function useResumeAnalysisPage() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
   const [shareLoading, setShareLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const locationState = location.state as ResumeAnalysisLocationState;
   const fromDealsView = locationState?.from === 'dealsGroupedView'
@@ -210,6 +213,22 @@ export function useResumeAnalysisPage() {
     navigate('/resumes', { state: { viewMode: 'byDeal', refreshResumesView: true } });
   }, [dealReturnContext, navigate]);
 
+  const handleDelete = useCallback(async () => {
+    if (!currentResume?.id) {
+      return;
+    }
+
+    try {
+      await deleteResume(currentResume.id);
+      toast.success(t('resumes.deleteSuccess', 'CV supprimé avec succès'));
+      setShowDeleteConfirm(false);
+      navigate('/resumes');
+    } catch (error) {
+      logger.error('[ResumeAnalysisPage] Error deleting resume:', error);
+      toast.error(t('resumes.deleteError', 'Erreur lors de la suppression du CV'));
+    }
+  }, [currentResume?.id, deleteResume, navigate, t]);
+
   return {
     id,
     currentResume,
@@ -227,8 +246,12 @@ export function useResumeAnalysisPage() {
     setShowShareModal,
     shareUrl,
     shareLoading,
+    showDeleteConfirm,
+    setShowDeleteConfirm,
+    deleting,
     handleImprove,
     handleShare,
+    handleDelete,
     handleBackToDealsView,
     t,
   };

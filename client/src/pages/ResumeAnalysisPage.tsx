@@ -12,6 +12,7 @@ import ShareQRCodeModal from '../components/ShareQRCodeModal';
 import { SkeletonCard } from '../components/ui/Skeleton';
 import ImprovementAnimation from '../components/ImprovementAnimation';
 import ResponsivePageTabs, { type ResponsivePageTabOption } from '../components/page/ResponsivePageTabs';
+import ConfirmDialog from '../components/page/ConfirmDialog';
 import OverviewTab from '../components/ResumeAnalysis/OverviewTab';
 import SkillsTagsTab from '../components/ResumeAnalysis/SkillsTagsTab';
 import OriginalTextTab from '../components/ResumeAnalysis/OriginalTextTab';
@@ -61,8 +62,12 @@ const ResumeAnalysisPage = (): JSX.Element => {
     setShowShareModal,
     shareUrl,
     shareLoading,
+    showDeleteConfirm,
+    setShowDeleteConfirm,
+    deleting,
     handleImprove,
     handleShare,
+    handleDelete,
     handleBackToDealsView,
     t,
   } = useResumeAnalysisPage();
@@ -123,6 +128,8 @@ const ResumeAnalysisPage = (): JSX.Element => {
             hasImprovedText={hasImprovedText}
             onShare={handleShare}
             onImprove={handleImprove}
+            onDelete={() => setShowDeleteConfirm(true)}
+            deleting={deleting}
             t={t}
           />
         )}
@@ -187,6 +194,24 @@ const ResumeAnalysisPage = (): JSX.Element => {
         candidateName={(currentResume['Name'] as string) || 'CV'}
         isLoading={shareLoading}
         warning={hasImprovedText ? undefined : t('share.originalWarning')}
+      />
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={() => {
+          void handleDelete();
+        }}
+        disabled={deleting}
+        title={t('resumes.confirmDeleteTitle')}
+        cancelLabel={t('common.cancel')}
+        confirmLabel={deleting ? t('common.deleting') : t('common.delete')}
+        content={
+          <p>
+            {t('resumes.confirmDeleteMessage', {
+              filename: currentResume['Resume File']?.[0]?.filename || currentResume.Name || resumeName
+            })}
+          </p>
+        }
       />
     </div>
   );

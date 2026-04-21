@@ -7,6 +7,7 @@ const {
   navigateMock,
   setCurrentResumeMock,
   improveCurrentResumeMock,
+  deleteResumeMock,
   fetchWithAuthMock,
   fetchWithCsrfRetryMock,
   createAuthOptionsWithCsrfMock,
@@ -21,6 +22,7 @@ const {
   navigateMock: vi.fn(),
   setCurrentResumeMock: vi.fn(),
   improveCurrentResumeMock: vi.fn(),
+  deleteResumeMock: vi.fn(),
   fetchWithAuthMock: vi.fn(),
   fetchWithCsrfRetryMock: vi.fn(),
   createAuthOptionsWithCsrfMock: vi.fn(),
@@ -40,6 +42,8 @@ let resumeContextValue: {
   setCurrentResume: typeof setCurrentResumeMock;
   resumes: ResumeLike[];
   improveCurrentResume: typeof improveCurrentResumeMock;
+  deleteResume: typeof deleteResumeMock;
+  deleting: boolean;
   loading: boolean;
   processingStep: string | null;
 };
@@ -143,19 +147,42 @@ vi.mock('../components/ResumeAnalysisPage/ResumeAnalysisHeader', () => ({
     hasImprovedText,
     onShare,
     onImprove,
+    onDelete,
   }: {
     resumeName: string;
     hasImprovedText: boolean;
     onShare: () => void;
     onImprove: () => void;
+    onDelete: () => void;
   }) => (
     <div data-testid="analysis-header">
       <span>{resumeName}</span>
       <span>{hasImprovedText ? 'improved' : 'original'}</span>
       <button onClick={onShare}>share</button>
       <button onClick={onImprove}>improve</button>
+      <button onClick={onDelete}>delete</button>
     </div>
   ),
+}));
+
+vi.mock('../components/page/ConfirmDialog', () => ({
+  default: ({
+    isOpen,
+    onClose,
+    onConfirm,
+    title,
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    title: string;
+  }) => (isOpen ? (
+    <div data-testid="confirm-dialog">
+      <span>{title}</span>
+      <button onClick={onConfirm}>confirm-delete</button>
+      <button onClick={onClose}>cancel-delete</button>
+    </div>
+  ) : null),
 }));
 
 vi.mock('../components/ResumeAnalysisPage/ResumeAnalysisStepIndicator', () => ({
@@ -215,9 +242,12 @@ describe('ResumeAnalysisPage', () => {
       setCurrentResume: setCurrentResumeMock,
       resumes: [],
       improveCurrentResume: improveCurrentResumeMock,
+      deleteResume: deleteResumeMock,
+      deleting: false,
       loading: false,
       processingStep: null,
     };
+    deleteResumeMock.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -489,6 +519,35 @@ describe('ResumeAnalysisPage', () => {
     expect(navigateMock).toHaveBeenCalledWith('/resumes', {
       state: { viewMode: 'byDeal', refreshResumesView: true },
     });
+  });
+
+  it('allows deleting an analyzed resume from the detail page', async () => {
+    resumeContextValue = {
+      ...resumeContextValue,
+      currentResume: {
+        id: 'resume-1',
+        Name: 'Jane Doe',
+        'Original Text': 'Original content',
+      },
+    };
+
+    render(
+      <MemoryRouter>
+        <ResumeAnalysisPage />
+      </MemoryRouter>
+    );
+
+    await screen.findByTestId('analysis-header');
+
+    fireEvent.click(screen.getByRole('button', { name: 'delete' }));
+    expect(screen.getByTestId('confirm-dialog')).toHaveTextContent('resumes.confirmDeleteTitle');
+
+    fireEvent.click(screen.getByRole('button', { name: 'confirm-delete' }));
+
+    await waitFor(() => {
+      expect(deleteResumeMock).toHaveBeenCalledWith('resume-1');
+    });
+    expect(navigateMock).toHaveBeenCalledWith('/resumes');
   });
 
 });
