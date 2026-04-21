@@ -111,7 +111,7 @@ describe('LLMTab', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Afficher le JSON' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Reinitialiser' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Réinitialiser' }));
 
     expect(onInputChange).toHaveBeenCalledWith('llmModelParametersJson', '{}');
   });
@@ -230,7 +230,7 @@ describe('LLMTab', () => {
     });
 
     expect(onInputChange).toHaveBeenCalledWith('llmModel', 'meta-llama/Llama-3.3-70B-Instruct');
-    expect(screen.getByText(/La valeur par defaut est/)).toBeInTheDocument();
+    expect(screen.getByText(/La valeur par défaut est/)).toBeInTheDocument();
   });
 
   it('renders the test model action', () => {
@@ -251,7 +251,7 @@ describe('LLMTab', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: 'Tester le modele' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tester le modèle' })).toBeInTheDocument();
   });
 
   it('exposes the self-service registration approval checkbox', () => {
