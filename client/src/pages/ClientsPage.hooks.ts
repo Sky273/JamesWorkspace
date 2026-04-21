@@ -45,14 +45,39 @@ export function mergePreservedClientIntoResults({
   typeFilter: string;
   normalizedSearch: string;
 }) {
-  const shouldPreserveClient = preservedClient != null
-    && (typeFilter === '' || preservedClient.type === typeFilter)
-    && (normalizedSearch.length === 0 || preservedClient.name.toLowerCase().includes(normalizedSearch))
-    && !clients.some((client) => client.id === preservedClient.id);
+  if (preservedClient == null) {
+    return clients;
+  }
 
-  return shouldPreserveClient
-    ? [preservedClient, ...clients].slice(0, CLIENTS_PAGE_SIZE)
-    : clients;
+  const matchesFilter = typeFilter === '' || preservedClient.type === typeFilter;
+  const matchesSearch = normalizedSearch.length === 0
+    || preservedClient.name.toLowerCase().includes(normalizedSearch);
+
+  if (!matchesFilter || !matchesSearch) {
+    return clients.filter((client) => client.id !== preservedClient.id);
+  }
+
+  const existingIndex = clients.findIndex((client) => client.id === preservedClient.id);
+
+  if (existingIndex === -1) {
+    return [preservedClient, ...clients].slice(0, CLIENTS_PAGE_SIZE);
+  }
+
+  const existingClient = clients[existingIndex];
+  const existingMatchesSearch = normalizedSearch.length === 0
+    || existingClient.name.toLowerCase().includes(normalizedSearch);
+
+  if (
+    existingClient.name !== preservedClient.name
+    || existingClient.type !== preservedClient.type
+    || !existingMatchesSearch
+  ) {
+    const nextClients = [...clients];
+    nextClients[existingIndex] = preservedClient;
+    return nextClients;
+  }
+
+  return clients;
 }
 
 export function useClientsDashboard() {

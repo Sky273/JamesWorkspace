@@ -823,12 +823,36 @@ describe('Batch Jobs Routes - DELETE /api/batch-jobs/:id', () => {
             status: 'pending',
             firm_id: 'firm-123'
         });
+        mockGetJobItems.mockResolvedValueOnce([
+            { id: 'item-1', status: 'pending' }
+        ]);
 
         const res = await request(app)
             .delete('/api/batch-jobs/job-123')
             .set('Authorization', 'Bearer valid-token');
 
         expect(res.status).toBe(400);
+    });
+
+    it('should delete a stale pending job when no items are still active', async () => {
+        mockGetJob.mockResolvedValueOnce({ 
+            id: 'job-123',
+            status: 'pending',
+            firm_id: 'firm-123'
+        });
+        mockGetJobItems.mockResolvedValueOnce([
+            { id: 'item-1', status: 'success' },
+            { id: 'item-2', status: 'error' }
+        ]);
+        mockDeleteJob.mockResolvedValueOnce(true);
+
+        const res = await request(app)
+            .delete('/api/batch-jobs/job-123')
+            .set('Authorization', 'Bearer valid-token');
+
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(mockDeleteJob).toHaveBeenCalledWith('job-123');
     });
 
     it('should return 403 for job from different firm', async () => {

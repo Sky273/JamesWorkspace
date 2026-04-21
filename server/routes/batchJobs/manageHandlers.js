@@ -264,6 +264,10 @@ async function getAuthorizedJobOrRespond(req, res, jobId) {
     return { job, userContext };
 }
 
+function hasActiveJobItems(items = []) {
+    return items.some((item) => item.status === ITEM_STATUS.PENDING || item.status === ITEM_STATUS.PROCESSING);
+}
+
 export async function listJobs(req, res) {
     try {
         const userContext = getUserContext(req);
@@ -345,7 +349,10 @@ export async function deleteJobHandler(req, res) {
 
         const { job } = jobContext;
         if (job.status === JOB_STATUS.PENDING || job.status === JOB_STATUS.PROCESSING) {
-            return res.status(400).json({ error: "Annulez d'abord le job avant de le supprimer" });
+            const items = await getJobItems(id);
+            if (hasActiveJobItems(items)) {
+                return res.status(400).json({ error: "Annulez d'abord le job avant de le supprimer" });
+            }
         }
 
         await deleteJob(id);
