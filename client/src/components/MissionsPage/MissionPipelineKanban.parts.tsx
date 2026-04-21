@@ -445,15 +445,15 @@ export function KanbanBoard({
           {stages.map((stage) => (
             <StageColumn
               key={stage.id}
-        draggedEntry={draggedEntry}
-        dragOverStage={dragOverStage}
-        entries={entries}
-        formatDate={formatDate}
-        isEnglish={isEnglish}
-        onDragEnd={onDragEnd}
-        onDragLeave={onDragLeave}
-        onDragOver={onDragOver}
-        onDragStart={onDragStart}
+              draggedEntry={draggedEntry}
+              dragOverStage={dragOverStage}
+              entries={entries}
+              formatDate={formatDate}
+              isEnglish={isEnglish}
+              onDragEnd={onDragEnd}
+              onDragLeave={onDragLeave}
+              onDragOver={onDragOver}
+              onDragStart={onDragStart}
               onDrop={onDrop}
               onEditNotes={onEditNotes}
               onManageInterviews={onManageInterviews}

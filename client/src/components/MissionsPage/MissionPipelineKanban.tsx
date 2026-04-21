@@ -83,12 +83,12 @@ export default function MissionPipelineKanban({
     meetingLink: ''
   });
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (options: { forceRefresh?: boolean } = {}) => {
     try {
       setLoading(true);
       const [stagesData, entriesData, adaptations] = await Promise.all([
         getStages(),
-        getPipelineByMissionId(missionId),
+        getPipelineByMissionId(missionId, { forceRefresh: options.forceRefresh }),
         resumeAdaptationService.getAdaptationsByMission(missionId),
       ]);
       const missionAdaptedResumeIds = buildMissionAdaptedResumeIds(adaptations);
@@ -183,7 +183,7 @@ export default function MissionPipelineKanban({
       setShowAddModal(false);
       setSelectedCandidateId('');
       setAddNotes('');
-      await loadData();
+      await loadData({ forceRefresh: true });
     } catch (error) {
       logger.error('[MissionPipelineKanban] Error adding to pipeline:', error);
       toast.error(t('pipeline.errors.addFailed'));
@@ -235,7 +235,7 @@ export default function MissionPipelineKanban({
       )));
       markMissionsViewDirty();
       toast.success(t('pipeline.stageUpdated'));
-      await loadData();
+      await loadData({ forceRefresh: true });
     } catch (error) {
       logger.error('[MissionPipelineKanban] Error moving stage:', error);
       toast.error(t('pipeline.errors.updateFailed'));
@@ -252,7 +252,7 @@ export default function MissionPipelineKanban({
     try {
       await removeFromPipeline(entry.id);
       toast.success(t('pipeline.removedSuccess'));
-      await loadData();
+      await loadData({ forceRefresh: true });
     } catch (error) {
       logger.error('[MissionPipelineKanban] Error removing:', error);
       toast.error(t('pipeline.errors.removeFailed'));
@@ -275,7 +275,7 @@ export default function MissionPipelineKanban({
       toast.success(t('pipeline.notesUpdated'));
       setShowNotesModal(false);
       setEditingEntry(null);
-      await loadData();
+      await loadData({ forceRefresh: true });
     } catch (error) {
       logger.error('[MissionPipelineKanban] Error updating notes:', error);
       toast.error(t('pipeline.errors.updateFailed'));
@@ -331,7 +331,7 @@ export default function MissionPipelineKanban({
       setShowInterviewModal(false);
       const interviews = await getInterviews(selectedEntryForInterview.id);
       setEntryInterviews(interviews);
-      await loadData();
+      await loadData({ forceRefresh: true });
     } catch (error) {
       logger.error('[MissionPipelineKanban] Error scheduling interview:', error);
       toast.error(t('pipeline.errors.scheduleFailed'));
@@ -348,7 +348,7 @@ export default function MissionPipelineKanban({
         setEntryInterviews(interviews);
       }
 
-      await loadData();
+      await loadData({ forceRefresh: true });
     } catch (error) {
       logger.error('[MissionPipelineKanban] Error completing interview:', error);
       toast.error(t('pipeline.errors.completeFailed'));
@@ -396,7 +396,7 @@ export default function MissionPipelineKanban({
         candidatesLabel={t('pipeline.candidates')}
         missionTitle={missionTitle}
         onAddCandidate={handleOpenAddModal}
-        onRefresh={() => { void loadData(); }}
+        onRefresh={() => { void loadData({ forceRefresh: true }); }}
         onClose={onClose}
         refreshLabel={t('common.refresh', 'Rafraichir')}
         title={t('pipeline.title')}

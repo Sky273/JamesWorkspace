@@ -86,9 +86,9 @@ async function addToPipeline({ resumeId, adaptationId = null, missionId, clientI
     }
 }
 
-async function getPipelineById(pipelineId) {
+async function getPipelineById(pipelineId, { bypassCache = false } = {}) {
     try {
-        return candidatePipelineCache.getOrLoad(`detail:${pipelineId}`, async () => {
+        const loadPipelineEntry = async () => {
             const result = await query(
                 `
                 SELECT 
@@ -109,7 +109,13 @@ async function getPipelineById(pipelineId) {
             );
 
             return result.rows[0] || null;
-        }, {
+        };
+
+        if (bypassCache) {
+            return loadPipelineEntry();
+        }
+
+        return candidatePipelineCache.getOrLoad(`detail:${pipelineId}`, loadPipelineEntry, {
             scope: `detail:${pipelineId}`
         });
     } catch (error) {
@@ -118,9 +124,9 @@ async function getPipelineById(pipelineId) {
     }
 }
 
-async function getPipelineByResumeId(resumeId) {
+async function getPipelineByResumeId(resumeId, { bypassCache = false } = {}) {
     try {
-        return candidatePipelineCache.getOrLoad(`resume:${resumeId}`, async () => {
+        const loadResumePipeline = async () => {
             const result = await query(
             `
             SELECT 
@@ -141,7 +147,13 @@ async function getPipelineByResumeId(resumeId) {
             );
 
             return result.rows;
-        }, {
+        };
+
+        if (bypassCache) {
+            return loadResumePipeline();
+        }
+
+        return candidatePipelineCache.getOrLoad(`resume:${resumeId}`, loadResumePipeline, {
             scope: `resume:${resumeId}`
         });
     } catch (error) {
@@ -150,9 +162,9 @@ async function getPipelineByResumeId(resumeId) {
     }
 }
 
-async function getPipelineByMissionId(missionId) {
+async function getPipelineByMissionId(missionId, { bypassCache = false } = {}) {
     try {
-        return candidatePipelineCache.getOrLoad(`mission:${missionId}`, async () => {
+        const loadMissionPipeline = async () => {
             const result = await query(
             `
             SELECT 
@@ -171,7 +183,13 @@ async function getPipelineByMissionId(missionId) {
             );
 
             return result.rows;
-        }, {
+        };
+
+        if (bypassCache) {
+            return loadMissionPipeline();
+        }
+
+        return candidatePipelineCache.getOrLoad(`mission:${missionId}`, loadMissionPipeline, {
             scope: `mission:${missionId}`
         });
     } catch (error) {
@@ -180,10 +198,10 @@ async function getPipelineByMissionId(missionId) {
     }
 }
 
-async function getPipelineOverview(filters = {}, pipelineStages) {
+async function getPipelineOverview(filters = {}, pipelineStages, { bypassCache = false } = {}) {
     try {
         const cacheKey = buildOverviewCacheKey(filters);
-        return candidatePipelineCache.getOrLoad(`overview:${cacheKey}`, async () => {
+        const loadOverview = async () => {
         let whereClause = 'WHERE 1=1';
         const params = [];
         let paramIndex = 1;
@@ -238,7 +256,13 @@ async function getPipelineOverview(filters = {}, pipelineStages) {
         }
 
             return overview;
-        }, {
+        };
+
+        if (bypassCache) {
+            return loadOverview();
+        }
+
+        return candidatePipelineCache.getOrLoad(`overview:${cacheKey}`, loadOverview, {
             scope: PIPELINE_AGGREGATE_SCOPE
         });
     } catch (error) {

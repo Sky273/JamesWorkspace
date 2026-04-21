@@ -9,9 +9,9 @@ import { assertSchemaRequirements } from './schemaVerification.service.js';
 import { getPipelineHistory } from './candidatePipeline/history.js';
 import {
     addToPipeline as addToPipelineInternal,
-    getPipelineById,
-    getPipelineByMissionId,
-    getPipelineByResumeId,
+    getPipelineById as getPipelineByIdInternal,
+    getPipelineByMissionId as getPipelineByMissionIdInternal,
+    getPipelineByResumeId as getPipelineByResumeIdInternal,
     getPipelineOverview,
     moveToStage as moveToStageInternal,
     removeFromPipeline as removeFromPipelineInternal,
@@ -85,9 +85,6 @@ export async function initCandidatePipelineTable() {
 }
 
 export {
-    getPipelineById,
-    getPipelineByResumeId,
-    getPipelineByMissionId,
     getPipelineHistory,
     getInterviews,
     getUpcomingInterviews,
@@ -96,8 +93,20 @@ export {
     getPipelineStats
 };
 
-export async function getPipelineOverviewFacade(filters = {}) {
-    return getPipelineOverview(filters, PIPELINE_STAGES);
+export async function getPipelineById(pipelineId, options = {}) {
+    return getPipelineByIdInternal(pipelineId, options);
+}
+
+export async function getPipelineByResumeId(resumeId, options = {}) {
+    return getPipelineByResumeIdInternal(resumeId, options);
+}
+
+export async function getPipelineByMissionId(missionId, options = {}) {
+    return getPipelineByMissionIdInternal(missionId, options);
+}
+
+export async function getPipelineOverviewFacade(filters = {}, options = {}) {
+    return getPipelineOverview(filters, PIPELINE_STAGES, options);
 }
 
 async function resolvePipelineFirmId({ missionId = null, resumeId = null, clientId = null } = {}) {

@@ -168,9 +168,13 @@ export async function getPipelineById(pipelineId: string): Promise<PipelineEntry
 /**
  * Get all pipeline entries for a resume
  */
-export async function getPipelineByResumeId(resumeId: string): Promise<PipelineEntry[]> {
+export async function getPipelineByResumeId(
+  resumeId: string,
+  options: { forceRefresh?: boolean } = {}
+): Promise<PipelineEntry[]> {
   try {
-    return await fetchPipelineApiJson<PipelineEntry[]>(`/resume/${resumeId}`, { fallbackMessage: 'Failed to fetch pipeline entries' });
+    const suffix = options.forceRefresh ? '?refresh=1' : '';
+    return await fetchPipelineApiJson<PipelineEntry[]>(`/resume/${resumeId}${suffix}`, { fallbackMessage: 'Failed to fetch pipeline entries' });
   } catch (error) {
     logger.error('[pipelineService] Error fetching pipeline for resume:', error);
     throw error;
@@ -180,9 +184,13 @@ export async function getPipelineByResumeId(resumeId: string): Promise<PipelineE
 /**
  * Get all pipeline entries for a mission
  */
-export async function getPipelineByMissionId(missionId: string): Promise<PipelineEntry[]> {
+export async function getPipelineByMissionId(
+  missionId: string,
+  options: { forceRefresh?: boolean } = {}
+): Promise<PipelineEntry[]> {
   try {
-    return await fetchPipelineApiJson<PipelineEntry[]>(`/mission/${missionId}`, { fallbackMessage: 'Failed to fetch pipeline entries' });
+    const suffix = options.forceRefresh ? '?refresh=1' : '';
+    return await fetchPipelineApiJson<PipelineEntry[]>(`/mission/${missionId}${suffix}`, { fallbackMessage: 'Failed to fetch pipeline entries' });
   } catch (error) {
     logger.error('[pipelineService] Error fetching pipeline for mission:', error);
     throw error;

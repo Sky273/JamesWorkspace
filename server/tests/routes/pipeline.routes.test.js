@@ -344,7 +344,22 @@ describe('Pipeline Routes', () => {
             const res = await request(app).get('/api/pipeline/overview').set(authHeader);
 
             expect(res.status).toBe(200);
-            expect(mockGetPipelineOverview).toHaveBeenCalledWith(expect.objectContaining({ firmId: 'firm-123' }));
+            expect(mockGetPipelineOverview).toHaveBeenCalledWith(
+                expect.objectContaining({ firmId: 'firm-123' }),
+                { bypassCache: false }
+            );
+        });
+
+        it('should bypass cache when refresh=1 is provided', async () => {
+            mockGetPipelineOverview.mockResolvedValue({ new: { count: 1, items: [] } });
+
+            const res = await request(app).get('/api/pipeline/overview?refresh=1').set(authHeader);
+
+            expect(res.status).toBe(200);
+            expect(mockGetPipelineOverview).toHaveBeenCalledWith(
+                expect.objectContaining({ firmId: 'firm-123' }),
+                { bypassCache: true }
+            );
         });
     });
 

@@ -18,6 +18,7 @@ import {
     withPipelineRequestAccess,
     withResumeAccess
 } from './pipeline.routes.helpers.js';
+import { shouldBypassCache } from '../utils/requestCacheControl.js';
 
 function createPipelineRouteHandler(logMessage, errorMessage, handler) {
     return async (req, res) => {
@@ -153,11 +154,12 @@ export function registerPipelineCrudRoutes(router, services) {
     router.get('/overview', authenticateToken, createPipelineRouteHandler('Failed to get pipeline overview', 'Failed to get pipeline overview', async (req, res) => {
         await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
             const { clientId, missionId } = req.query;
+            const bypassCache = shouldBypassCache(req);
             const overview = await services.getPipelineOverview({
                 clientId,
                 missionId,
                 firmId: access.isAdmin ? null : access.userFirmId
-            });
+            }, { bypassCache });
             res.json(overview);
         });
     }));
@@ -176,8 +178,9 @@ export function registerPipelineCrudRoutes(router, services) {
 
     router.get('/:id', authenticateToken, validateParams('id'), createPipelineRouteHandler('Failed to get pipeline entry', 'Failed to get pipeline entry', async (req, res) => {
         await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
+            const bypassCache = shouldBypassCache(req);
             await withPipelineEntryAccess(res, access, req.params.id, services.getPipelineAccessContext, async () => {
-                const pipeline = await services.getPipelineById(req.params.id);
+                const pipeline = await services.getPipelineById(req.params.id, { bypassCache });
                 if (!pipeline) {
                     return res.status(404).json({ error: 'Pipeline entry not found' });
                 }
@@ -188,8 +191,9 @@ export function registerPipelineCrudRoutes(router, services) {
 
     router.get('/resume/:resumeId', authenticateToken, validateParams('resumeId'), createPipelineRouteHandler('Failed to get pipeline for resume', 'Failed to get pipeline entries', async (req, res) => {
         await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
+            const bypassCache = shouldBypassCache(req);
             await withResumeAccess(res, access, req.params.resumeId, services.getResumeFirmId, async () => {
-                const pipelines = await services.getPipelineByResumeId(req.params.resumeId);
+                const pipelines = await services.getPipelineByResumeId(req.params.resumeId, { bypassCache });
                 res.json(pipelines);
             });
         });
@@ -197,8 +201,9 @@ export function registerPipelineCrudRoutes(router, services) {
 
     router.get('/mission/:missionId', authenticateToken, validateParams('missionId'), createPipelineRouteHandler('Failed to get pipeline for mission', 'Failed to get pipeline entries', async (req, res) => {
         await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
+            const bypassCache = shouldBypassCache(req);
             await withMissionAccess(res, access, req.params.missionId, services.getMissionContext, async () => {
-                const pipelines = await services.getPipelineByMissionId(req.params.missionId);
+                const pipelines = await services.getPipelineByMissionId(req.params.missionId, { bypassCache });
                 res.json(pipelines);
             });
         });
