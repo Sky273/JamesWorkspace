@@ -374,7 +374,9 @@ export default function MissionPipelineKanban({
         candidatesLabel={t('pipeline.candidates')}
         missionTitle={missionTitle}
         onAddCandidate={handleOpenAddModal}
+        onRefresh={() => { void loadData(); }}
         onClose={onClose}
+        refreshLabel={t('common.refresh', 'Rafraichir')}
         title={t('pipeline.title')}
       />
 

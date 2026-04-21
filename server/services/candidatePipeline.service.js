@@ -15,7 +15,7 @@ import {
     getPipelineOverview,
     moveToStage as moveToStageInternal,
     removeFromPipeline as removeFromPipelineInternal,
-    updatePipelineNotes
+    updatePipelineNotes as updatePipelineNotesInternal
 } from './candidatePipeline/pipeline.js';
 import {
     cancelInterview as cancelInterviewInternal,
@@ -28,6 +28,8 @@ import {
     updateInterview
 } from './candidatePipeline/interviews.js';
 import { query } from '../config/database.js';
+import { invalidateDealsCaches, invalidateMissionsCaches } from './cache.service.js';
+import { invalidateGroupedDealViews } from './viewCacheInvalidation.service.js';
 
 export const PIPELINE_STAGES = [
     { id: 'new', label: 'Nouveau', labelEn: 'New', order: 1, color: '#6B7280' },
@@ -86,7 +88,6 @@ export {
     getPipelineById,
     getPipelineByResumeId,
     getPipelineByMissionId,
-    updatePipelineNotes,
     getPipelineHistory,
     getInterviews,
     getUpcomingInterviews,
@@ -97,6 +98,41 @@ export {
 
 export async function getPipelineOverviewFacade(filters = {}) {
     return getPipelineOverview(filters, PIPELINE_STAGES);
+}
+
+async function resolvePipelineFirmId({ missionId = null, resumeId = null, clientId = null } = {}) {
+    if (missionId) {
+        const missionContext = await getMissionContext(missionId);
+        if (missionContext?.firm_id) {
+            return missionContext.firm_id;
+        }
+    }
+
+    if (resumeId) {
+        const resumeFirmId = await getResumeFirmId(resumeId);
+        if (resumeFirmId) {
+            return resumeFirmId;
+        }
+    }
+
+    if (clientId) {
+        const clientFirmId = await getClientFirmId(clientId);
+        if (clientFirmId) {
+            return clientFirmId;
+        }
+    }
+
+    return null;
+}
+
+async function invalidatePipelineRelatedViews({ missionId = null, resumeId = null, clientId = null } = {}) {
+    const firmId = await resolvePipelineFirmId({ missionId, resumeId, clientId });
+
+    await Promise.all([
+        invalidateMissionsCaches(),
+        invalidateDealsCaches(),
+        invalidateGroupedDealViews(firmId)
+    ]);
 }
 
 export async function scheduleInterview(args) {
@@ -125,6 +161,11 @@ export async function scheduleInterview(args) {
 export async function addToPipeline(args) {
     try {
         const pipelineEntry = await addToPipelineInternal(args);
+        await invalidatePipelineRelatedViews({
+            missionId: pipelineEntry?.mission_id || args.missionId || null,
+            resumeId: pipelineEntry?.resume_id || args.resumeId || null,
+            clientId: pipelineEntry?.client_id || args.clientId || null
+        });
         updateLastPipelineActivitySummary({
             operation: 'addToPipeline',
             status: 'completed',
@@ -152,6 +193,11 @@ export async function addToPipeline(args) {
 export async function moveToStage(args) {
     try {
         const updatedEntry = await moveToStageInternal(args);
+        await invalidatePipelineRelatedViews({
+            missionId: updatedEntry?.mission_id || null,
+            resumeId: updatedEntry?.resume_id || null,
+            clientId: updatedEntry?.client_id || null
+        });
         updateLastPipelineActivitySummary({
             operation: 'moveToStage',
             status: 'completed',
@@ -173,9 +219,29 @@ export async function moveToStage(args) {
     }
 }
 
+export async function updatePipelineNotes(args) {
+    try {
+        const updatedEntry = await updatePipelineNotesInternal(args);
+        await invalidatePipelineRelatedViews({
+            missionId: updatedEntry?.mission_id || null,
+            resumeId: updatedEntry?.resume_id || null,
+            clientId: updatedEntry?.client_id || null
+        });
+        return updatedEntry;
+    } catch (error) {
+        throw error;
+    }
+}
+
 export async function removeFromPipeline(pipelineId) {
     try {
+        const existingEntry = await getPipelineAccessContext(pipelineId);
         const removed = await removeFromPipelineInternal(pipelineId);
+        await invalidatePipelineRelatedViews({
+            missionId: existingEntry?.mission_id || null,
+            resumeId: existingEntry?.resume_id || null,
+            clientId: existingEntry?.client_id || null
+        });
         updateLastPipelineActivitySummary({
             operation: 'removeFromPipeline',
             status: 'completed',

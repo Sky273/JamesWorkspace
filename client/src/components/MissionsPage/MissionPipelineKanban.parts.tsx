@@ -35,10 +35,12 @@ interface KanbanHeaderProps {
   candidateCount: number;
   missionTitle: string;
   onAddCandidate: () => void;
+  onRefresh: () => void;
   onClose?: () => void;
   title: string;
   candidatesLabel: string;
   addCandidateLabel: string;
+  refreshLabel: string;
 }
 
 interface KanbanBoardTexts {
@@ -350,7 +352,9 @@ export function KanbanHeader({
   candidatesLabel,
   missionTitle,
   onAddCandidate,
+  onRefresh,
   onClose,
+  refreshLabel,
   title,
 }: KanbanHeaderProps) {
   return (
@@ -372,6 +376,13 @@ export function KanbanHeader({
       </div>
 
       <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+        <button
+          onClick={onRefresh}
+          className="cv-ghost-button inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold"
+        >
+          <ArrowPathIcon className="h-4 w-4" />
+          {refreshLabel}
+        </button>
         <button
           onClick={onAddCandidate}
           className="cv-gradient-button inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold"

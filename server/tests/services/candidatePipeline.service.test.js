@@ -20,7 +20,14 @@ vi.mock('../../services/cache.service.js', () => ({
     candidatePipelineCache: {
         getOrLoad: vi.fn(async (_key, loader) => loader())
     },
-    invalidateCandidatePipelineCaches: vi.fn(async () => undefined)
+    invalidateCandidatePipelineCaches: vi.fn(async () => undefined),
+    invalidateDealsCaches: vi.fn(async () => undefined),
+    invalidateMissionsCaches: vi.fn(async () => undefined)
+}));
+
+const mockInvalidateGroupedDealViews = vi.fn(async () => undefined);
+vi.mock('../../services/viewCacheInvalidation.service.js', () => ({
+    invalidateGroupedDealViews: (...args) => mockInvalidateGroupedDealViews(...args)
 }));
 
 import { query } from '../../config/database.js';
@@ -57,6 +64,7 @@ import {
 describe('Candidate Pipeline Service', () => {
     beforeEach(() => {
         vi.resetAllMocks();
+        mockInvalidateGroupedDealViews.mockResolvedValue(undefined);
     });
 
     // ============================================
@@ -136,8 +144,9 @@ describe('Candidate Pipeline Service', () => {
     describe('addToPipeline', () => {
         it('should insert pipeline entry and add history', async () => {
             query
-                .mockResolvedValueOnce({ rows: [{ id: 'p1', stage: 'new' }] }) // insert
+                .mockResolvedValueOnce({ rows: [{ id: 'p1', stage: 'new', mission_id: 'm1', resume_id: 'r1', client_id: 'c1' }] }) // insert
                 .mockResolvedValueOnce({ rows: [] }); // history
+            query.mockResolvedValueOnce({ rows: [{ firm_id: 'f1', client_id: 'c1' }] }); // mission context
 
             const result = await addToPipeline({
                 resumeId: 'r1', adaptationId: 'a1', missionId: 'm1', clientId: 'c1',
@@ -158,12 +167,14 @@ describe('Candidate Pipeline Service', () => {
             expect(query.mock.calls[0][0]).toContain('ON CONFLICT');
             // Second call is history insert
             expect(query.mock.calls[1][0]).toContain('INSERT INTO pipeline_history');
+            expect(mockInvalidateGroupedDealViews).toHaveBeenCalledWith('f1');
         });
 
         it('should use default stage "new"', async () => {
             query
-                .mockResolvedValueOnce({ rows: [{ id: 'p1', stage: 'new' }] })
-                .mockResolvedValueOnce({ rows: [] });
+                .mockResolvedValueOnce({ rows: [{ id: 'p1', stage: 'new', resume_id: 'r1' }] })
+                .mockResolvedValueOnce({ rows: [] })
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] });
 
             await addToPipeline({ resumeId: 'r1', createdBy: 'u1' });
 
@@ -272,8 +283,9 @@ describe('Candidate Pipeline Service', () => {
         it('should update stage and record history', async () => {
             query
                 .mockResolvedValueOnce({ rows: [{ stage: 'new' }] })       // get current
-                .mockResolvedValueOnce({ rows: [{ id: 'p1', stage: 'screening' }] }) // update
-                .mockResolvedValueOnce({ rows: [] }); // history
+                .mockResolvedValueOnce({ rows: [{ id: 'p1', stage: 'screening', mission_id: 'm1', resume_id: 'r1', client_id: 'c1' }] }) // update
+                .mockResolvedValueOnce({ rows: [] }) // history
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1', client_id: 'c1' }] }); // mission context
 
             const result = await moveToStage({
                 pipelineId: 'p1', newStage: 'screening', changedBy: 'u1', notes: 'Moved'
@@ -290,6 +302,7 @@ describe('Candidate Pipeline Service', () => {
             expect(query.mock.calls[2][0]).toContain('INSERT INTO pipeline_history');
             expect(query.mock.calls[2][1]).toContain('new'); // from_stage
             expect(query.mock.calls[2][1]).toContain('screening'); // to_stage
+            expect(mockInvalidateGroupedDealViews).toHaveBeenCalledWith('f1');
         });
 
         it('should throw if pipeline entry not found', async () => {
@@ -303,17 +316,23 @@ describe('Candidate Pipeline Service', () => {
 
     describe('updatePipelineNotes', () => {
         it('should update notes', async () => {
-            query.mockResolvedValueOnce({ rows: [{ id: 'p1', notes: 'Updated' }] });
+            query
+                .mockResolvedValueOnce({ rows: [{ id: 'p1', notes: 'Updated', mission_id: 'm1', resume_id: 'r1', client_id: 'c1' }] })
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1', client_id: 'c1' }] });
 
             const result = await updatePipelineNotes({ pipelineId: 'p1', notes: 'Updated' });
 
             expect(result.notes).toBe('Updated');
+            expect(mockInvalidateGroupedDealViews).toHaveBeenCalledWith('f1');
         });
     });
 
     describe('removeFromPipeline', () => {
         it('should delete entry and return true', async () => {
-            query.mockResolvedValueOnce({ rows: [] });
+            query
+                .mockResolvedValueOnce({ rows: [{ id: 'p1', resume_id: 'r1', mission_id: 'm1', client_id: 'c1', resume_firm_id: 'f1', mission_firm_id: 'f1', client_firm_id: 'f1' }] })
+                .mockResolvedValueOnce({ rows: [{ id: 'p1', resume_id: 'r1', mission_id: 'm1' }] })
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1', client_id: 'c1' }] });
 
             expect(await removeFromPipeline('p1')).toBe(true);
             expect(getLastPipelineActivitySummary()).toMatchObject({
@@ -321,7 +340,8 @@ describe('Candidate Pipeline Service', () => {
                 status: 'completed',
                 pipelineId: 'p1'
             });
-            expect(query.mock.calls[0][0]).toContain('DELETE FROM candidate_pipeline');
+            expect(query.mock.calls[1][0]).toContain('DELETE FROM candidate_pipeline');
+            expect(mockInvalidateGroupedDealViews).toHaveBeenCalledWith('f1');
         });
     });
 
