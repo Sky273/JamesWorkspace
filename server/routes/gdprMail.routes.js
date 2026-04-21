@@ -8,7 +8,7 @@
 import express from 'express';
 import crypto from 'crypto';
 import { authenticateToken, requireAdmin } from '../middleware/auth.middleware.js';
-import { validateBody, gdprMailConfigSchema, gdprMailTestSchema } from '../utils/validation.js';
+import { validateBody, gdprMailConfigSchema, gdprMailTestWithConfigSchema } from '../utils/validation.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { gdprMailService } from '../services/mail/gdprMailService.js';
 import {
@@ -177,9 +177,9 @@ router.post('/disconnect', authenticateToken, requireAdmin, async (req, res) => 
  * @desc Send a test email via GLOBAL GDPR Gmail
  * @access Private (Admin)
  */
-router.post('/test', authenticateToken, requireAdmin, validateBody(gdprMailTestSchema), async (req, res) => {
+router.post('/test', authenticateToken, requireAdmin, validateBody(gdprMailTestWithConfigSchema), async (req, res) => {
     try {
-        const { email } = req.body;
+        const { email, ...mailConfigOverride } = req.body;
 
         if (!email || typeof email !== 'string') {
             return res.status(400).json({ error: 'Email address required' });
@@ -191,7 +191,7 @@ router.post('/test', authenticateToken, requireAdmin, validateBody(gdprMailTestS
             return res.status(400).json({ error: 'Invalid email address format' });
         }
 
-        await gdprMailService.sendTestEmail(email);
+        await gdprMailService.sendTestEmail(email, mailConfigOverride);
         res.json({ success: true, sentTo: email });
     } catch (error) {
         safeLog('error', 'Error sending test email', { error: error.message });

@@ -113,7 +113,8 @@ import {
     getConnectionStatus,
     disconnect,
     proactiveTokenRefresh,
-    sendEmail
+    sendEmail,
+    sendTestEmail
 } from '../../services/mail/gdprMailService.js';
 
 describe('GDPR Mail Service', () => {
@@ -268,6 +269,36 @@ describe('GDPR Mail Service', () => {
                 })
             );
             expect(query).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('sendTestEmail', () => {
+        it('should send the SMTP test using the provided form override', async () => {
+            const result = await sendTestEmail('test@example.com', {
+                provider: 'smtp',
+                smtpHost: 'smtp.form.example.com',
+                smtpPort: 2525,
+                smtpSecure: false,
+                smtpUser: 'form-user@example.com',
+                smtpPassword: 'form-password',
+                smtpFromName: 'Form Sender',
+                smtpFromEmail: 'form-sender@example.com',
+                googleGdprRedirectUri: 'https://resumeconverter.net/api/gdpr/mail/callback'
+            });
+
+            expect(result.provider).toBe('smtp');
+            expect(mockSendSmtpEmail).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    smtpHost: 'smtp.form.example.com',
+                    smtpPort: 2525,
+                    smtpUser: 'form-user@example.com',
+                    smtpPassword: 'form-password',
+                    smtpFromEmail: 'form-sender@example.com'
+                }),
+                expect.objectContaining({
+                    to: 'test@example.com'
+                })
+            );
         });
     });
 

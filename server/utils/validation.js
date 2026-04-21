@@ -147,6 +147,7 @@ export {
   generatePdfProxySchema,
   generateDocxProxySchema,
   gdprMailTestSchema,
+  gdprMailTestWithConfigSchema,
   gdprMailConfigSchema,
   findProfilesSchema,
   escoRecalculateSchema,

@@ -146,6 +146,10 @@ export const gdprMailConfigSchema = z.object({
   googleGdprRedirectUri: z.union([z.string().url().max(500), z.literal('')]).optional()
 }).strict();
 
+export const gdprMailTestWithConfigSchema = gdprMailConfigSchema.extend({
+  email: z.string().email()
+}).strict();
+
 export const findProfilesSchema = z.object({
   limit: z.number().min(0).max(100).optional(),
   minScore: z.number().min(0).max(100).optional(),

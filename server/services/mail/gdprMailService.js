@@ -32,6 +32,51 @@ import {
     updateMailSystemConfig as persistMailSystemConfig
 } from './mailSystemConfig.service.js';
 
+function normalizeOverrideString(value) {
+    if (value === undefined || value === null) {
+        return '';
+    }
+    return String(value).trim();
+}
+
+function buildMailConfigOverride(override = {}) {
+    const provider = ['gmail', 'smtp', 'auto'].includes(String(override.provider || '').toLowerCase())
+        ? String(override.provider).toLowerCase()
+        : 'gmail';
+    const smtpHost = normalizeOverrideString(override.smtpHost);
+    const smtpPortRaw = Number.parseInt(String(override.smtpPort ?? ''), 10);
+    const smtpPort = Number.isInteger(smtpPortRaw) && smtpPortRaw > 0 ? smtpPortRaw : 587;
+    const smtpSecure = Boolean(override.smtpSecure);
+    const smtpUser = normalizeOverrideString(override.smtpUser);
+    const smtpPassword = override.clearSmtpPassword ? '' : String(override.smtpPassword || '');
+    const smtpFromName = normalizeOverrideString(override.smtpFromName) || 'ResumeConverter';
+    const smtpFromEmail = normalizeOverrideString(override.smtpFromEmail);
+    const googleGdprRedirectUri = normalizeOverrideString(override.googleGdprRedirectUri)
+        || `${process.env.BACKEND_URL || 'http://localhost:3001'}/api/gdpr/mail/callback`;
+    const smtpConfigured = Boolean(
+        smtpHost
+        && smtpPort
+        && smtpFromEmail
+        && ((!smtpUser && !smtpPassword) || (smtpUser && smtpPassword))
+    );
+
+    return {
+        provider,
+        smtpHost,
+        smtpPort,
+        smtpSecure,
+        smtpUser,
+        smtpPassword,
+        smtpFromName,
+        smtpFromEmail,
+        googleGdprRedirectUri,
+        smtpConfigured,
+        effectiveProvider: getEffectiveMailDeliveryProvider({ provider, smtpConfigured }),
+        source: 'request',
+        hasSmtpPassword: Boolean(smtpPassword)
+    };
+}
+
 function buildGmailStatus(overrides = {}, mailConfig = {}) {
     return {
         provider: 'gmail',
@@ -455,9 +500,26 @@ export async function sendEmail({ to, subject, html, text }, isRetry = false) {
  * Send a test email using GLOBAL token
  * @param {string} email - Recipient email address
  */
-export async function sendTestEmail(email) {
-    const mailConfig = await resolveMailSystemConfig();
+export async function sendTestEmail(email, mailConfigOverride = null) {
+    const mailConfig = mailConfigOverride
+        ? buildMailConfigOverride(mailConfigOverride)
+        : await resolveMailSystemConfig();
     const providerLabel = mailConfig.effectiveProvider === 'smtp' ? 'SMTP' : 'Gmail';
+
+    if (mailConfigOverride && mailConfig.effectiveProvider === 'smtp') {
+        return sendSmtpEmail(mailConfig, {
+            to: email,
+            subject: `Test RGPD - ResumeConverter (${providerLabel})`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #2563eb;">Test de configuration RGPD</h2>
+                    <p>Ce message confirme que la configuration ${providerLabel} pour l'envoi des emails de consentement RGPD fonctionne correctement.</p>
+                    <p style="color: #6b7280; font-size: 14px;">Envoye depuis ResumeConverter</p>
+                </div>
+            `,
+            text: `Test de configuration RGPD - Ce message confirme que la configuration ${providerLabel} fonctionne correctement.`
+        });
+    }
 
     return sendEmail({
         to: email,

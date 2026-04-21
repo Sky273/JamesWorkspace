@@ -87,7 +87,7 @@ describe('GdprTab', () => {
   });
 
   it('ignores oauth popup messages from unexpected origins', async () => {
-    mockFetchWithAuth.mockImplementation(async (url: string) => {
+    mockFetchWithAuth.mockImplementation(async (url: string, _options?: RequestInit) => {
       if (url === '/api/gdpr/mail/status') {
         return {
           ok: true,
@@ -138,7 +138,7 @@ describe('GdprTab', () => {
 
   it('accepts oauth popup messages from the current origin', async () => {
     let statusCallCount = 0;
-    mockFetchWithAuth.mockImplementation(async (url: string) => {
+    mockFetchWithAuth.mockImplementation(async (url: string, _options?: RequestInit) => {
       if (url === '/api/gdpr/mail/status') {
         statusCallCount += 1;
         return {
@@ -235,5 +235,72 @@ describe('GdprTab', () => {
         expect.objectContaining({ method: 'PUT' })
       );
     });
+  });
+
+  it('sends the test email with the current form configuration', async () => {
+    vi.stubGlobal('prompt', vi.fn(() => 'test@example.com'));
+
+    mockFetchWithAuth.mockImplementation(async (url: string, _options?: RequestInit) => {
+      if (url === '/api/gdpr/mail/status') {
+        return {
+          ok: true,
+          json: async () => defaultStatusResponse,
+        };
+      }
+
+      if (url === '/api/gdpr/mail/config') {
+        return {
+          ok: true,
+          json: async () => defaultConfigResponse,
+        };
+      }
+
+      if (url === '/api/gdpr/mail/test') {
+        return {
+          ok: true,
+          json: async () => ({ success: true, sentTo: 'test@example.com' }),
+        };
+      }
+
+      return {
+        ok: true,
+        json: async () => ({ authUrl: 'https://accounts.google.com/oauth' }),
+      };
+    });
+
+    render(<GdprTab t={(key) => key} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'settings.gdpr.testSend' })).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('settings.gdpr.providerLabel'), { target: { value: 'smtp' } });
+    fireEvent.change(screen.getByLabelText('settings.gdpr.smtp.host'), { target: { value: 'smtp.form.example.com' } });
+    fireEvent.change(screen.getByLabelText('settings.gdpr.smtp.port'), { target: { value: '2525' } });
+    fireEvent.change(screen.getByLabelText('settings.gdpr.smtp.user'), { target: { value: 'form-user@example.com' } });
+    fireEvent.change(screen.getByLabelText('settings.gdpr.smtp.password'), { target: { value: 'form-password' } });
+    fireEvent.change(screen.getByLabelText('settings.gdpr.smtp.fromEmail'), { target: { value: 'form-sender@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'settings.gdpr.testSend' }));
+
+    await waitFor(() => {
+      expect(mockFetchWithAuth).toHaveBeenCalledWith(
+        '/api/gdpr/mail/test',
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
+
+    const testCall = mockFetchWithAuth.mock.calls.find(([url]) => url === '/api/gdpr/mail/test');
+    expect(testCall).toBeTruthy();
+    expect(JSON.parse((testCall?.[1] as RequestInit).body as string)).toEqual(expect.objectContaining({
+      email: 'test@example.com',
+      provider: 'smtp',
+      smtpHost: 'smtp.form.example.com',
+      smtpPort: 2525,
+      smtpUser: 'form-user@example.com',
+      smtpPassword: 'form-password',
+      smtpFromEmail: 'form-sender@example.com'
+    }));
+
+    vi.unstubAllGlobals();
   });
 });

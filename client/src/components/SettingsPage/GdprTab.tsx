@@ -277,7 +277,19 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
       const options = await createAuthOptionsWithCsrf({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: testEmail })
+        body: JSON.stringify({
+          email: testEmail,
+          provider: formState.provider,
+          smtpHost: formState.smtpHost,
+          smtpPort: Number(formState.smtpPort),
+          smtpSecure: formState.smtpSecure,
+          smtpUser: formState.smtpUser,
+          smtpPassword: formState.smtpPassword || undefined,
+          clearSmtpPassword: formState.clearSmtpPassword,
+          smtpFromName: formState.smtpFromName,
+          smtpFromEmail: formState.smtpFromEmail,
+          googleGdprRedirectUri: formState.googleGdprRedirectUri,
+        })
       });
       const response = await fetchWithAuth('/api/gdpr/mail/test', options);
       if (response.ok) {

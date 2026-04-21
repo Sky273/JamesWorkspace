@@ -290,11 +290,30 @@ describe('GDPR Mail Routes', () => {
             const res = await request(app)
                 .post('/api/gdpr/mail/test')
                 .set(AUTH)
-                .send({ email: 'test@example.com' });
+                .send({
+                    email: 'test@example.com',
+                    provider: 'smtp',
+                    smtpHost: 'smtp.example.com',
+                    smtpPort: 587,
+                    smtpSecure: false,
+                    smtpUser: 'mailer@example.com',
+                    smtpPassword: 'app-password',
+                    smtpFromName: 'ResumeConverter',
+                    smtpFromEmail: 'mailer@example.com',
+                    googleGdprRedirectUri: 'https://resumeconverter.net/api/gdpr/mail/callback'
+                });
 
             expect(res.status).toBe(200);
             expect(res.body.success).toBe(true);
             expect(res.body.sentTo).toBe('test@example.com');
+            expect(mockSendTestEmail).toHaveBeenCalledWith(
+                'test@example.com',
+                expect.objectContaining({
+                    provider: 'smtp',
+                    smtpHost: 'smtp.example.com',
+                    smtpFromEmail: 'mailer@example.com'
+                })
+            );
         });
 
         it('should return 500 on error', async () => {
@@ -303,7 +322,18 @@ describe('GDPR Mail Routes', () => {
             const res = await request(app)
                 .post('/api/gdpr/mail/test')
                 .set(AUTH)
-                .send({ email: 'test@example.com' });
+                .send({
+                    email: 'test@example.com',
+                    provider: 'smtp',
+                    smtpHost: 'smtp.example.com',
+                    smtpPort: 587,
+                    smtpSecure: false,
+                    smtpUser: 'mailer@example.com',
+                    smtpPassword: 'app-password',
+                    smtpFromName: 'ResumeConverter',
+                    smtpFromEmail: 'mailer@example.com',
+                    googleGdprRedirectUri: 'https://resumeconverter.net/api/gdpr/mail/callback'
+                });
             expect(res.status).toBe(500);
             expect(res.body.error).toBe('Failed to send test email');
         });
