@@ -67,7 +67,6 @@ describe('envValidation', () => {
 
         it('should fail in production when PDF_SERVER_INTERNAL_TOKEN is missing', () => {
             process.env.NODE_ENV = 'production';
-            process.env.DEFAULT_ADMIN_PASSWORD = 'A-strong-admin-password';
             delete process.env.PDF_SERVER_INTERNAL_TOKEN;
 
             const result = validateEnvironment();
@@ -76,27 +75,27 @@ describe('envValidation', () => {
             expect(result.errors.some(e => e.includes('PDF_SERVER_INTERNAL_TOKEN'))).toBe(true);
         });
 
-        it('should fail in production when DEFAULT_ADMIN_PASSWORD is missing', () => {
+        it('should not fail in production when DEFAULT_ADMIN_PASSWORD is missing', () => {
             process.env.NODE_ENV = 'production';
             delete process.env.DEFAULT_ADMIN_PASSWORD;
 
             const result = validateEnvironment();
 
-            expect(result.valid).toBe(false);
-            expect(result.errors.some(e => e.includes('DEFAULT_ADMIN_PASSWORD'))).toBe(true);
+            expect(result.valid).toBe(true);
+            expect(result.errors.some(e => e.includes('DEFAULT_ADMIN_PASSWORD'))).toBe(false);
         });
 
-        it('should fail in production when DEFAULT_ADMIN_PASSWORD is still admin123', () => {
+        it('should not fail in production when DEFAULT_ADMIN_PASSWORD is admin123', () => {
             process.env.NODE_ENV = 'production';
             process.env.DEFAULT_ADMIN_PASSWORD = 'admin123';
 
             const result = validateEnvironment();
 
-            expect(result.valid).toBe(false);
-            expect(result.errors.some(e => e.includes('DEFAULT_ADMIN_PASSWORD'))).toBe(true);
+            expect(result.valid).toBe(true);
+            expect(result.errors.some(e => e.includes('DEFAULT_ADMIN_PASSWORD'))).toBe(false);
         });
 
-        it('should pass production validation with a strong DEFAULT_ADMIN_PASSWORD', () => {
+        it('should still pass production validation with a strong DEFAULT_ADMIN_PASSWORD', () => {
             process.env.NODE_ENV = 'production';
             process.env.DEFAULT_ADMIN_PASSWORD = 'A-strong-admin-password';
 

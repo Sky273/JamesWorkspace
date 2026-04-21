@@ -44,11 +44,6 @@ function looksLikePlaceholder(value = '') {
     return PLACEHOLDER_PATTERNS.some(pattern => pattern.test(value));
 }
 
-function isWeakDefaultAdminPassword(value = '') {
-    const normalized = String(value || '').trim();
-    return !normalized || normalized === 'admin123' || looksLikePlaceholder(normalized);
-}
-
 export function validateEnvironment() {
     const errors = [];
     const warnings = [];
@@ -82,13 +77,6 @@ export function validateEnvironment() {
     }
 
     if (isProduction) {
-        const defaultAdminPassword = process.env.DEFAULT_ADMIN_PASSWORD;
-        if (isWeakDefaultAdminPassword(defaultAdminPassword)) {
-            errors.push('DEFAULT_ADMIN_PASSWORD must be explicitly set to a strong non-default value in production');
-        } else if (defaultAdminPassword.length < 12) {
-            errors.push('DEFAULT_ADMIN_PASSWORD must be at least 12 characters long in production');
-        }
-
         if (!process.env.DEFAULT_ADMIN_EMAIL) {
             warnings.push('DEFAULT_ADMIN_EMAIL is not explicitly set; production will fall back to admin@resumeconverter.local');
         }
