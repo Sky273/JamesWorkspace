@@ -3,10 +3,10 @@ import {
   ANONYMIZATION_RULES_NOMINATIVE,
   DEFAULT_ADAPTATION_PROMPT,
   DEFAULT_ANALYSIS_PROMPT,
-  DEFAULT_IMPROVEMENT_PROMPT,
   DEFAULT_PRE_ANALYSIS_PROMPT as DEFAULT_PRE_ANALYSIS_PROMPT_TEXT,
   DEFAULT_MATCH_ANALYSIS_PROMPT
 } from './prompts/resume.prompts.js';
+import { DEFAULT_IMPROVEMENT_PROMPT } from './prompts/resumeImprovement.prompt.js';
 import {
   BATCH_PROFILE_SCORING_PROMPT,
   DETAILED_PROFILE_ANALYSIS_PROMPT,
@@ -123,12 +123,12 @@ export const PROMPT_REGISTRY = Object.freeze({
   DEFAULT_IMPROVEMENT_PROMPT: Object.freeze({
     key: 'DEFAULT_IMPROVEMENT_PROMPT',
     id: 'resume.improvement.default',
-    version: '1.8.8',
+    version: '1.9.0',
     domain: 'resume',
     operation: 'resume-improvement',
     contractId: 'resume_improvement_v1',
     owner: 'resume',
-    sourceModule: './prompts/resume.prompts.js',
+    sourceModule: './prompts/resumeImprovement.prompt.js',
     text: DEFAULT_IMPROVEMENT_PROMPT
   }),
   DEFAULT_MATCH_ANALYSIS_PROMPT: Object.freeze({
