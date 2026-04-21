@@ -22,6 +22,7 @@ import {
 } from '../../services/pipelineService';
 import { fetchWithAuth } from '../../utils/apiInterceptor';
 import logger from '../../utils/logger.frontend';
+import { markMissionsViewDirty } from '../../utils/viewRefreshScopes';
 import PipelineAddModal from './PipelineAddModal';
 import PipelineScheduleModal from './PipelineScheduleModal';
 import PipelineCompleteModal from './PipelineCompleteModal';
@@ -81,12 +82,12 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
   });
   const [interviewOutcome, setInterviewOutcome] = useState<InterviewOutcomeState>({ outcome: '', outcomeNotes: '' });
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (options: { forceRefresh?: boolean } = {}) => {
     try {
       setLoading(true);
       const [stagesData, pipelinesData, missionsRes, clientsRes] = await Promise.all([
         getStages(),
-        getPipelineByResumeId(resumeId),
+        getPipelineByResumeId(resumeId, { forceRefresh: options.forceRefresh }),
         fetchWithAuth('/api/missions?limit=100'),
         fetchWithAuth('/api/clients?limit=100')
       ]);
@@ -140,9 +141,10 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
         notes: newPipeline.notes || undefined
       });
       toast.success(t('pipeline.addedSuccess'));
+      markMissionsViewDirty();
       setShowAddModal(false);
       setNewPipeline({ missionId: '', clientId: '', notes: '' });
-      void loadData();
+      void loadData({ forceRefresh: true });
     } catch (error) {
       logger.error('[PipelineTab] Error adding to pipeline:', error);
       toast.error(t('pipeline.errors.addFailed'));
@@ -151,9 +153,15 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
 
   const handleStageChange = useCallback(async (pipelineId: string, newStage: string) => {
     try {
-      await moveToStage(pipelineId, newStage);
+      const updatedPipeline = await moveToStage(pipelineId, newStage);
+      setPipelines((currentPipelines) => currentPipelines.map((pipeline) => (
+        pipeline.id === pipelineId
+          ? { ...pipeline, ...updatedPipeline, stage: updatedPipeline?.stage || newStage }
+          : pipeline
+      )));
+      markMissionsViewDirty();
       toast.success(t('pipeline.stageUpdated'));
-      void loadData();
+      void loadData({ forceRefresh: true });
     } catch (error) {
       logger.error('[PipelineTab] Error changing stage:', error);
       toast.error(t('pipeline.errors.updateFailed'));
@@ -164,9 +172,11 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
     if (!window.confirm(t('pipeline.confirmRemove'))) return;
     try {
       await removeFromPipeline(pipelineId);
+      setPipelines((currentPipelines) => currentPipelines.filter((pipeline) => pipeline.id !== pipelineId));
+      markMissionsViewDirty();
       toast.success(t('pipeline.removedSuccess'));
       setSelectedPipeline(null);
-      void loadData();
+      void loadData({ forceRefresh: true });
     } catch (error) {
       logger.error('[PipelineTab] Error removing from pipeline:', error);
       toast.error(t('pipeline.errors.removeFailed'));
@@ -191,6 +201,7 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
         attendees: newInterview.attendees.filter(a => a.name && a.email)
       });
       toast.success(t('pipeline.interviewScheduled'));
+      markMissionsViewDirty();
       setShowInterviewModal(false);
       setNewInterview({
         title: '',
@@ -204,7 +215,7 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
       });
       const updatedInterviews = await getInterviews(selectedPipeline.id);
       setInterviews(updatedInterviews);
-      void loadData();
+      void loadData({ forceRefresh: true });
     } catch (error) {
       logger.error('[PipelineTab] Error scheduling interview:', error);
       toast.error(t('pipeline.errors.scheduleFailed'));
@@ -227,7 +238,8 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
         const updatedInterviews = await getInterviews(selectedPipeline.id);
         setInterviews(updatedInterviews);
       }
-      void loadData();
+      markMissionsViewDirty();
+      void loadData({ forceRefresh: true });
     } catch (error) {
       logger.error('[PipelineTab] Error completing interview:', error);
       toast.error(t('pipeline.errors.completeFailed'));
@@ -243,6 +255,8 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
         const updatedInterviews = await getInterviews(selectedPipeline.id);
         setInterviews(updatedInterviews);
       }
+      markMissionsViewDirty();
+      void loadData({ forceRefresh: true });
     } catch (error) {
       logger.error('[PipelineTab] Error cancelling interview:', error);
       toast.error(t('pipeline.errors.cancelFailed'));
@@ -265,8 +279,21 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
   }, []);
 
   const handlePipelineNotesBlur = useCallback((pipelineId: string, notes: string) => {
-    void updatePipelineNotes(pipelineId, notes);
-  }, []);
+    void updatePipelineNotes(pipelineId, notes)
+      .then((updatedPipeline) => {
+        setPipelines((currentPipelines) => currentPipelines.map((pipeline) => (
+          pipeline.id === pipelineId
+            ? { ...pipeline, ...updatedPipeline, notes: updatedPipeline?.notes ?? notes }
+            : pipeline
+        )));
+        markMissionsViewDirty();
+      })
+      .catch((error) => {
+        logger.error('[PipelineTab] Error updating notes:', error);
+        toast.error(t('pipeline.errors.updateFailed'));
+        void loadData({ forceRefresh: true });
+      });
+  }, [loadData, t]);
 
   const formatDate = useCallback((value: string) => formatPipelineDate(value, locale), [locale]);
   const formatRelativeTime = useCallback((value: string) => formatRelativePipelineTime(value, locale, isEnglish), [isEnglish, locale]);

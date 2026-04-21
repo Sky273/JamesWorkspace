@@ -8,6 +8,7 @@ const getInterviewsMock = vi.fn();
 const fetchWithAuthMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
+const markMissionsViewDirtyMock = vi.fn();
 
 const stableT = (key: string) => key;
 
@@ -49,6 +50,10 @@ vi.mock('../../utils/logger.frontend', () => ({
   default: {
     error: vi.fn(),
   },
+}));
+
+vi.mock('../../utils/viewRefreshScopes', () => ({
+  markMissionsViewDirty: (...args: unknown[]) => markMissionsViewDirtyMock(...args),
 }));
 
 vi.mock('./pipelineTab/PipelineTabHeader', () => ({
@@ -138,6 +143,10 @@ describe('PipelineTab', () => {
       });
     });
     expect(toastSuccessMock).toHaveBeenCalledWith('pipeline.addedSuccess');
+    await waitFor(() => {
+      expect(markMissionsViewDirtyMock).toHaveBeenCalledTimes(1);
+      expect(getPipelineByResumeIdMock).toHaveBeenLastCalledWith('resume-1', { forceRefresh: true });
+    });
   });
 
   it('shows an error toast when initial loading fails', async () => {
