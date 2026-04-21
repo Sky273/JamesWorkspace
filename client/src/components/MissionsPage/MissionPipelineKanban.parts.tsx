@@ -158,11 +158,12 @@ function CandidateCard({
           {renderScore(entry.global_score)}
           <button
             onClick={() => onRemove(entry)}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:text-[var(--cv-muted)] dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
+            className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-100 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/15"
             title={texts.remove}
             aria-label={texts.remove}
           >
             <TrashIcon className="h-4 w-4" />
+            <span>{texts.remove}</span>
           </button>
         </div>
       </div>

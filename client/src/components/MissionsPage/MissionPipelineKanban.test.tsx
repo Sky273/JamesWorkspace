@@ -9,6 +9,7 @@ const getPipelineByMissionIdMock = vi.fn();
 const fetchWithAuthMock = vi.fn();
 const getAdaptationsByMissionMock = vi.fn();
 const addToPipelineMock = vi.fn();
+const removeFromPipelineMock = vi.fn();
 const toastErrorMock = vi.fn();
 
 vi.mock('react-hot-toast', () => ({
@@ -27,7 +28,7 @@ vi.mock('../../services/pipelineService', () => ({
   getPipelineByMissionId: (...args: unknown[]) => getPipelineByMissionIdMock(...args),
   addToPipeline: (...args: unknown[]) => addToPipelineMock(...args),
   moveToStage: vi.fn(),
-  removeFromPipeline: vi.fn(),
+  removeFromPipeline: (...args: unknown[]) => removeFromPipelineMock(...args),
   updatePipelineNotes: vi.fn(),
   getInterviews: vi.fn(),
   scheduleInterview: vi.fn(),
@@ -103,6 +104,7 @@ describe('MissionPipelineKanban', () => {
       }),
     });
     addToPipelineMock.mockResolvedValue(undefined);
+    removeFromPipelineMock.mockResolvedValue(undefined);
   });
 
   it('loads available candidates with mission adaptations first when opening the add modal', async () => {
@@ -215,6 +217,16 @@ describe('MissionPipelineKanban', () => {
 
     const adaptedLink = await screen.findByRole('link', { name: 'ADA' });
     expect(adaptedLink).toHaveAttribute('href', '/adaptations/adapt-1');
+  });
+
+  it('shows a visible remove action on pipeline cards', async () => {
+    render(
+      <MemoryRouter>
+        <MissionPipelineKanban missionId="mission-1" missionTitle="Product Manager" />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('button', { name: 'pipeline.remove' })).toBeInTheDocument();
   });
 
 });
