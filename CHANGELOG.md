@@ -1,52 +1,52 @@
 ## v1.9.2 - 2026-04-21
-### Fiabilisation du pipeline mission et gestion des suppressions depuis les ecrans de detail CV
+### Fiabilisation du pipeline mission et gestion des suppressions depuis les écrans de détail CV
 
 #### Pipeline mission
-- Correction des problemes de rafraichissement sur la vue pipeline des missions :
-  - relectures fraiches apres ajout, modification, suppression et deplacement d'un candidat
-  - propagation explicite du marquage dirty pour eviter les retours a un etat stale
-- Ajout d'un bouton `Actualiser` sur la vue pipeline mission, aligne sur les autres vues.
-- Correction du drag and drop des candidats dans le pipeline mission pour le rendre deterministe :
-  - resolution fiable de la carte deplacee au drop
-  - mise a jour locale optimiste avant rechargement
-  - suppression des cas ou un toast de succes apparaissait sans mouvement visuel de la carte
+- Correction des problèmes de rafraîchissement sur la vue pipeline des missions :
+  - relectures fraîches après ajout, modification, suppression et déplacement d'un candidat
+  - propagation explicite du marquage dirty pour éviter les retours à un état stale
+- Ajout d'un bouton `Actualiser` sur la vue pipeline mission, aligné sur les autres vues.
+- Correction du drag and drop des candidats dans le pipeline mission pour le rendre déterministe :
+  - résolution fiable de la carte déplacée au drop
+  - mise à jour locale optimiste avant rechargement
+  - suppression des cas où un toast de succès apparaissait sans mouvement visuel de la carte
 
 #### Onglets pipeline CV
-- Correction du meme probleme de stale refresh dans l'onglet de selection des CVs ameliores.
-- Ajout de la suppression d'un candidat directement depuis le pipeline de selection des missions.
-- Reprise visuelle du bouton `Retirer du pipeline` pour une integration plus qualitative dans les cartes.
+- Correction du même problème de stale refresh dans l'onglet de sélection des CVs améliorés.
+- Ajout de la suppression d'un candidat directement depuis le pipeline de sélection des missions.
+- Reprise visuelle du bouton `Retirer du pipeline` pour une intégration plus qualitative dans les cartes.
 
-#### Detail CV
-- Ajout d'une action de suppression directement depuis la page de detail d'un CV ameliore.
-- Ajout de la meme action de suppression depuis la page de detail d'un CV analyse.
+#### Détail CV
+- Ajout d'une action de suppression directement depuis la page de détail d'un CV amélioré.
+- Ajout de la même action de suppression depuis la page de détail d'un CV analysé.
 - Harmonisation du flux de confirmation, du feedback utilisateur et de la redirection vers la liste des CVs.
-- Correction du contrat frontend de suppression pour que les erreurs remontent correctement aux ecrans appelants.
+- Correction du contrat frontend de suppression pour que les erreurs remontent correctement aux écrans appelants.
 
 #### OpenAI et prompts
-- Ajout de `gpt-5.4-mini` dans la liste des modeles OpenAI disponibles.
-- Remplacement du prompt d'amelioration CV par une nouvelle version stable, plus stricte sur la fidelite au contenu, le JSON de sortie, le sommaire obligatoire et la structuration ATS.
+- Ajout de `gpt-5.4-mini` dans la liste des modèles OpenAI disponibles.
+- Remplacement du prompt d'amélioration CV par une nouvelle version stable, plus stricte sur la fidélité au contenu, le JSON de sortie, le sommaire obligatoire et la structuration ATS.
 
-#### Backend et qualite
-- Correction du demarrage backend suite a un import invalide de `normalizeWeights` dans les helpers de settings.
+#### Backend et qualité
+- Correction du démarrage backend suite à un import invalide de `normalizeWeights` dans les helpers de settings.
 - Alignement de la version applicative sur `v1.9.2`.
 
 ---
 ## v1.9.1 - 2026-04-16
-### Ajustements UI CVtheque et coherence des vues liste
+### Ajustements UI CVthèque et cohérence des vues liste
 
-#### CVtheque
-- Refonte de la vue `CVtheque / Liste` pour reprendre la structure visuelle de la vue `Par affaire` sans la hierarchie par affaire.
-- Reutilisation des cartes CV enrichies dans les deux vues pour aligner les actions rapides, le score, l'apercu et les badges.
-- Correction du tooltip des tags dans les deux vues CVtheque :
+#### CVthèque
+- Refonte de la vue `CVthèque / Liste` pour reprendre la structure visuelle de la vue `Par affaire` sans la hiérarchie par affaire.
+- Réutilisation des cartes CV enrichies dans les deux vues pour aligner les actions rapides, le score, l'aperçu et les badges.
+- Correction du tooltip des tags dans les deux vues CVthèque :
   - positionnement viewport-aware
   - z-index d'overlay explicite
-  - fond desormais totalement opaque pour eviter les superpositions visuelles avec les cartes sous-jacentes
+  - fond désormais totalement opaque pour éviter les superpositions visuelles avec les cartes sous-jacentes
 
 #### Missions
 - Refonte de la vue `Missions / Liste` sur la base de `Missions / Par affaire`, sans regroupement par affaire.
-- Reutilisation de la toolbar, du bloc de synthese et des cartes mission de la vue groupee pour eviter deux rendus concurrents.
+- Réutilisation de la toolbar, du bloc de synthèse et des cartes mission de la vue groupée pour éviter deux rendus concurrents.
 
-#### Qualite
+#### Qualité
 - Alignement de la version applicative sur `v1.9.1`.
 
 ---
