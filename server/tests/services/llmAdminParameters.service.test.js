@@ -5,6 +5,7 @@ vi.mock('../../services/llmAvailability.service.js', () => ({
 }));
 
 import {
+    buildLlmAdminMetadata,
     resolveEffectiveModelParameters,
     sanitizeLlmModelParameters
 } from '../../services/llmAdminParameters.service.js';
@@ -129,5 +130,15 @@ describe('llmAdminParameters.service', () => {
             max_tokens: 4096
         });
         expect(resolved.parameters.max_tokens).toBe(4096);
+    });
+
+    it('exposes gpt-5.4-mini in the OpenAI model catalog', () => {
+        const metadata = buildLlmAdminMetadata();
+
+        expect(metadata.llmModelCatalog.openai).toEqual(
+            expect.arrayContaining([
+                { value: 'gpt-5.4-mini', label: 'gpt-5.4-mini' }
+            ])
+        );
     });
 });

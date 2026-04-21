@@ -10,6 +10,7 @@ const PROVIDER_MODEL_CATALOG = Object.freeze({
     openai: [
         { value: 'gpt-5.4', label: 'gpt-5.4' },
         { value: 'gpt-5.4-pro', label: 'gpt-5.4-pro' },
+        { value: 'gpt-5.4-mini', label: 'gpt-5.4-mini' },
         { value: 'gpt-5.2', label: 'gpt-5.2' },
         { value: 'gpt-5.2-pro', label: 'gpt-5.2-pro' },
         { value: 'gpt-5.1', label: 'gpt-5.1' },
