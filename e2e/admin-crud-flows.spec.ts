@@ -7,7 +7,6 @@ import {
   deleteViaApi,
   EDIT_LABEL_REGEX,
   fieldFollowingLabel,
-  fillProseMirror,
   getJsonViaApi,
   postJsonViaApi,
   putJsonViaApi,
@@ -161,9 +160,9 @@ test.describe('Admin CRUD flows', () => {
     const createTemplateResponsePromise = page.waitForResponse((response) => response.request().method() === 'POST' && /\/api\/templates$/.test(response.url()));
     await page.locator('#name').fill(templateName);
     await page.locator('#description').fill('Playwright template coverage');
-    await fillProseMirror(page, 0, 'Header E2E');
-    await fillProseMirror(page, 1, 'Body E2E');
-    await fillProseMirror(page, 2, 'Footer E2E');
+    await page.locator('#headerContent').fill('Header E2E');
+    await page.locator('#templateContent').fill('Body E2E');
+    await page.locator('#footerContent').fill('Footer E2E');
     await page.getByRole('button', { name: SAVE_LABEL_REGEX }).click({ force: true });
     const createdTemplateResponse = await createTemplateResponsePromise;
     await expect(createdTemplateResponse.ok()).toBeTruthy();
