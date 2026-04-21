@@ -3,6 +3,7 @@ import {
   PlusIcon,
   UserIcon,
   CalendarDaysIcon,
+  ArrowRightIcon,
   StarIcon,
   XMarkIcon,
   DocumentTextIcon,
@@ -10,7 +11,6 @@ import {
   EyeIcon,
   TrashIcon,
   ChatBubbleLeftRightIcon,
-  VideoCameraIcon,
   ArrowsRightLeftIcon,
   SparklesIcon,
 } from '@heroicons/react/24/outline';
@@ -160,17 +160,6 @@ function CandidateCard({
         </div>
         <div className="mt-3 flex items-start justify-between gap-2">
           {renderScore(entry.global_score)}
-          <button
-            onClick={() => onRemove(entry)}
-            className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-rose-200/80 bg-gradient-to-r from-rose-50 via-white to-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 shadow-[0_14px_30px_-24px_rgba(225,29,72,0.85)] ring-1 ring-white/70 transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-300 hover:from-rose-100 hover:to-rose-50 hover:text-rose-800 hover:shadow-[0_18px_34px_-22px_rgba(225,29,72,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300 dark:border-rose-500/20 dark:from-rose-500/12 dark:via-rose-500/6 dark:to-transparent dark:text-rose-200 dark:ring-white/5 dark:hover:border-rose-400/35 dark:hover:from-rose-500/18 dark:hover:to-rose-500/8 dark:hover:text-white dark:focus-visible:ring-rose-400/40"
-            title={texts.remove}
-            aria-label={texts.remove}
-          >
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-rose-100 text-rose-600 ring-1 ring-rose-200/80 dark:bg-rose-500/15 dark:text-rose-200 dark:ring-rose-400/20">
-              <TrashIcon className="h-3.5 w-3.5" />
-            </span>
-            <span className="pr-0.5">{texts.remove}</span>
-          </button>
         </div>
       </div>
 
@@ -210,13 +199,15 @@ function CandidateCard({
             onClick={() => onManageInterviews(entry)}
             className="inline-flex h-9 w-9 items-center justify-center rounded-2xl text-slate-500 transition-colors hover:bg-purple-50 hover:text-purple-600 dark:text-[var(--cv-muted)] dark:hover:bg-purple-500/10 dark:hover:text-purple-300"
             title={texts.manageInterviews}
+            aria-label={texts.manageInterviews}
           >
-            <VideoCameraIcon className="h-4 w-4" />
+            <CalendarDaysIcon className="h-4 w-4" />
           </button>
           <button
             onClick={() => onEditNotes(entry)}
             className="inline-flex h-9 w-9 items-center justify-center rounded-2xl text-slate-500 transition-colors hover:bg-blue-50 hover:text-blue-600 dark:text-[var(--cv-muted)] dark:hover:bg-blue-500/10 dark:hover:text-blue-300"
             title={texts.editNotes}
+            aria-label={texts.editNotes}
           >
             <ChatBubbleLeftRightIcon className="h-4 w-4" />
           </button>
@@ -224,22 +215,34 @@ function CandidateCard({
             to={analysisPath}
             className="inline-flex h-9 w-9 items-center justify-center rounded-2xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:text-[var(--cv-muted)] dark:hover:bg-white/10 dark:hover:text-white"
             title={texts.viewResume}
+            aria-label={texts.viewResume}
           >
             <EyeIcon className="h-4 w-4" />
           </Link>
+          <button
+            onClick={() => onRemove(entry)}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-2xl text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:text-[var(--cv-muted)] dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
+            title={texts.remove}
+            aria-label={texts.remove}
+          >
+            <TrashIcon className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
       <button
         onClick={() => onManageInterviews(entry)}
         className="mt-3 inline-flex w-full items-center justify-between gap-3 rounded-[1.1rem] bg-purple-50 px-3.5 py-3 text-left text-sm font-medium text-purple-700 transition-colors hover:bg-purple-100 dark:bg-purple-500/10 dark:text-purple-300 dark:hover:bg-purple-500/15"
+        title={interviewCta.label}
+        aria-label={interviewCta.label}
       >
         <span className="inline-flex items-center gap-2">
-          <VideoCameraIcon className="h-4 w-4" />
+          <CalendarDaysIcon className="h-4 w-4" />
           {interviewCta.label}
         </span>
-        <span className="text-xs text-purple-500 dark:text-purple-200/80">
-          {interviewCta.meta}
+        <span className="inline-flex items-center gap-2 text-xs text-purple-500 dark:text-purple-200/80">
+          {interviewCta.meta ? <span>{interviewCta.meta}</span> : null}
+          <ArrowRightIcon className="h-4 w-4" />
         </span>
       </button>
     </article>
