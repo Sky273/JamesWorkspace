@@ -8,6 +8,9 @@ import {
   XMarkIcon,
   DocumentTextIcon,
   ArrowPathIcon,
+  ChatBubbleLeftRightIcon,
+  EyeIcon,
+  TrashIcon,
   ArrowsRightLeftIcon,
   SparklesIcon,
 } from '@heroicons/react/24/outline';
@@ -69,86 +72,6 @@ interface KanbanBoardProps {
   onRemove: (entry: PipelineEntry) => void;
   stages: PipelineStage[];
   texts: KanbanBoardTexts;
-}
-
-function CalendarActionIcon({ className = 'h-4 w-4' }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      className={className}
-      stroke="currentColor"
-      strokeWidth="1.9"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3.5" y="5.5" width="17" height="15" rx="2.5" />
-      <path d="M7.5 3.5v4" />
-      <path d="M16.5 3.5v4" />
-      <path d="M3.5 9.5h17" />
-      <path d="M8 13h3" />
-      <path d="M8 16h2.5" />
-    </svg>
-  );
-}
-
-function NotesActionIcon({ className = 'h-4 w-4' }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      className={className}
-      stroke="currentColor"
-      strokeWidth="1.9"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M7 16.5L4 19l.7-3.6A7.5 7.5 0 1 1 19.5 12" />
-      <path d="M8 10h8" />
-      <path d="M8 13h5.5" />
-    </svg>
-  );
-}
-
-function ViewActionIcon({ className = 'h-4 w-4' }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      className={className}
-      stroke="currentColor"
-      strokeWidth="1.9"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
-      <circle cx="12" cy="12" r="2.75" />
-    </svg>
-  );
-}
-
-function TrashActionIcon({ className = 'h-4 w-4' }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      className={className}
-      stroke="currentColor"
-      strokeWidth="1.9"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M4.5 7.5h15" />
-      <path d="M9.5 3.5h5l1 2.5h-7Z" />
-      <path d="M6.5 7.5l1 11a2 2 0 0 0 2 1.8h5a2 2 0 0 0 2-1.8l1-11" />
-      <path d="M10 11v5.5" />
-      <path d="M14 11v5.5" />
-    </svg>
-  );
 }
 
 function renderScore(score?: number) {
@@ -273,20 +196,22 @@ function CandidateCard({
         </div>
         <div className="flex items-center gap-1">
           <button
+            type="button"
             onClick={() => onManageInterviews(entry)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-purple-50 text-purple-600 ring-1 ring-purple-200/80 transition-colors hover:bg-purple-100 hover:text-purple-700 dark:bg-purple-500/15 dark:text-purple-200 dark:ring-purple-400/25 dark:hover:bg-purple-500/20 dark:hover:text-white"
+            className="mission-pipeline-icon-button mission-pipeline-icon-button--interviews"
             title={texts.manageInterviews}
             aria-label={texts.manageInterviews}
           >
-            <CalendarActionIcon />
+            <CalendarDaysIcon className="h-4 w-4" />
           </button>
           <button
+            type="button"
             onClick={() => onEditNotes(entry)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-200/80 transition-colors hover:bg-blue-100 hover:text-blue-700 dark:bg-blue-500/15 dark:text-blue-200 dark:ring-blue-400/25 dark:hover:bg-blue-500/20 dark:hover:text-white"
+            className="mission-pipeline-icon-button mission-pipeline-icon-button--notes"
             title={texts.editNotes}
             aria-label={texts.editNotes}
           >
-            <NotesActionIcon />
+            <ChatBubbleLeftRightIcon className="h-4 w-4" />
           </button>
           <Link
             to={analysisPath}
@@ -294,27 +219,29 @@ function CandidateCard({
             title={texts.viewResume}
             aria-label={texts.viewResume}
           >
-            <ViewActionIcon />
+            <EyeIcon className="h-4 w-4" />
           </Link>
           <button
+            type="button"
             onClick={() => onRemove(entry)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 ring-1 ring-rose-200/80 transition-colors hover:bg-rose-100 hover:text-rose-700 dark:bg-rose-500/15 dark:text-rose-200 dark:ring-rose-400/25 dark:hover:bg-rose-500/20 dark:hover:text-white"
+            className="mission-pipeline-icon-button mission-pipeline-icon-button--remove"
             title={texts.remove}
             aria-label={texts.remove}
           >
-            <TrashActionIcon />
+            <TrashIcon className="h-4 w-4" />
           </button>
         </div>
       </div>
 
       <button
+        type="button"
         onClick={() => onManageInterviews(entry)}
-        className="mt-3 inline-flex w-full items-center justify-between gap-3 rounded-[1.1rem] bg-purple-50 px-3.5 py-3 text-left text-sm font-medium text-purple-700 transition-colors hover:bg-purple-100 dark:bg-purple-500/10 dark:text-purple-300 dark:hover:bg-purple-500/15"
+        className="mission-pipeline-cta-button mt-3"
         title={interviewCta.label}
         aria-label={interviewCta.label}
       >
         <span className="inline-flex items-center gap-2">
-          <CalendarActionIcon className="h-4 w-4 shrink-0" />
+          <CalendarDaysIcon className="h-4 w-4 shrink-0" />
           {interviewCta.label}
         </span>
         <span className="inline-flex items-center gap-2 text-xs text-purple-500 dark:text-purple-200/80">
