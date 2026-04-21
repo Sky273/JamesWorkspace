@@ -5,8 +5,6 @@
  */
 
 import { query } from '../config/database.js';
-import { findWithTimeout, createWithTimeout } from '../utils/postgresHelpers.js';
-import { resumesCache } from './cache.service.js';
 import {
     resolveResumeExecutor,
     sanitizeResumePersistenceValue,
@@ -16,6 +14,18 @@ import {
     invalidateResumeCollectionViews,
     invalidateResumeMutationViews
 } from './resumesInvalidation.service.js';
+export {
+    RESUME_SELECT_COLUMNS,
+    countResumes,
+    createAdaptation,
+    findMissionRecord,
+    findResumeRecord,
+    getResumeAuditInfo,
+    getResumeById,
+    getResumeFileForDownload,
+    getResumeForAccessCheck,
+    listResumes
+} from './resumesReads.service.js';
 export {
     expirePendingConsents,
     expireRetentionConsents,
@@ -27,6 +37,7 @@ export {
     resetResumeConsentForResend,
     updateConsentStatus
 } from './resumesConsent.service.js';
+import { getResumeById } from './resumesReads.service.js';
 
 /**
  * Allowed column names for dynamic UPDATE on the resumes table.
@@ -52,154 +63,6 @@ const ALLOWED_COLUMNS = new Set([
     'consent_status', 'consent_requested_at', 'consent_responded_at',
     'consent_token_expires_at', 'retention_until'
 ]);
-
-/**
- * SQL columns to select for resume queries (excludes binary resume_file_data)
- */
-export const RESUME_SELECT_COLUMNS = `
-    id, name, title, file_name, resume_file_url, resume_file_size, resume_file_type,
-    status, firm_id, firm_name, skills, industries, tools, soft_skills,
-    skills_cleaned, industries_cleaned, tools_cleaned, soft_skills_cleaned,
-    skills_esco, industries_esco, tools_esco, soft_skills_esco,
-    key_improvements, summary, experience_years, education_level, certifications, languages,
-    created_at, updated_at, analyzed_at, original_text, improved_text, original_name,
-    global_rating, skills_score, experience_score, education_score, ats_score,
-    executive_summary_score, hobbies_languages_score,
-    improved_global_rating, improved_skills_score, improved_experience_score, improved_education_score,
-    improved_ats_score, improved_executive_summary_score, improved_hobbies_languages_score,
-    template_id, template_name, improvement_suggestions, analysis_details, improvement_date,
-    trigram, improved_key_improvements, improved_skills, improved_industries, improved_tools, improved_soft_skills,
-    profile_type, candidate_name, candidate_email, consent_status, consent_requested_at, consent_responded_at, consent_token_expires_at, retention_until
-`.trim();
-
-/**
- * Get resume by ID for access checking (lightweight - only id, firm_id, name)
- * @param {string} resumeId
- * @returns {Promise<Object|null>}
- */
-export async function getResumeForAccessCheck(resumeId, { bypassCache = false } = {}) {
-    const loadResume = async () => {
-        const result = await query(
-            'SELECT id, firm_id, name FROM resumes WHERE id = $1',
-            [resumeId]
-        );
-        return result.rows.length > 0 ? result.rows[0] : null;
-    };
-
-    if (bypassCache) {
-        return loadResume();
-    }
-
-    return resumesCache.getOrLoad(`access:${resumeId}`, loadResume, {
-        scope: `detail:${resumeId}`
-    });
-}
-
-/**
- * Get resume by ID (all columns except binary file data)
- * @param {string} id
- * @returns {Promise<Object|null>}
- */
-export async function getResumeById(id, { bypassCache = false } = {}) {
-    const loadResume = async () => {
-        const result = await query(
-            `SELECT ${RESUME_SELECT_COLUMNS} FROM resumes WHERE id = $1`,
-            [id]
-        );
-        return result.rows.length > 0 ? result.rows[0] : null;
-    };
-
-    if (bypassCache) {
-        return loadResume();
-    }
-
-    return resumesCache.getOrLoad(`detail:${id}`, loadResume, {
-        scope: `detail:${id}`
-    });
-}
-
-/**
- * Get resume file data for download
- * @param {string} id
- * @returns {Promise<Object|null>}
- */
-export async function getResumeFileForDownload(id) {
-    const result = await query(
-        `SELECT id, file_name, resume_file_data, resume_file_type, resume_file_size, firm_id, firm_name
-         FROM resumes WHERE id = $1`,
-        [id]
-    );
-    return result.rows.length > 0 ? result.rows[0] : null;
-}
-
-/**
- * Count resumes matching given filters
- * @param {Object} options
- * @returns {Promise<number>}
- */
-export async function countResumes({ conditions = [], params = [], dealId, dealParamIndex }) {
-    let sql;
-    const countParams = [...params];
-
-    if (dealId) {
-        sql = `SELECT COUNT(DISTINCT r.id) as total FROM resumes r 
-               INNER JOIN deal_resumes dr ON r.id = dr.resume_id 
-               WHERE dr.deal_id = $${dealParamIndex}`;
-        countParams.push(dealId);
-        const whereClause = conditions.length > 0 ? conditions.join(' AND ') : '';
-        if (whereClause) {
-            sql = sql.replace('WHERE dr.deal_id', `WHERE ${whereClause.replace(/\b(firm_id|status|name|title|file_name)\b/g, 'r.$1')} AND dr.deal_id`);
-        }
-    } else {
-        sql = 'SELECT COUNT(*) as total FROM resumes';
-        if (conditions.length > 0) {
-            sql += ` WHERE ${conditions.join(' AND ')}`;
-        }
-    }
-
-    const result = await query(sql, countParams);
-    return parseInt(result.rows[0]?.total || '0', 10);
-}
-
-/**
- * List resumes with pagination and filters
- * @param {Object} options
- * @returns {Promise<Array>}
- */
-export async function listResumes({ conditions = [], params = [], dealId, dealParamIndex, limit, offset }) {
-    const normalizedLimit = Math.max(1, Math.min(Number.isFinite(limit) ? limit : 50, 100));
-    const normalizedOffset = Math.max(0, Number.isFinite(offset) ? offset : 0);
-    let sql;
-    const queryParams = [...params];
-
-    if (dealId) {
-        sql = `SELECT DISTINCT r.${RESUME_SELECT_COLUMNS.split(',').map(c => c.trim()).join(', r.')}
-            FROM resumes r
-            INNER JOIN deal_resumes dr ON r.id = dr.resume_id
-            WHERE dr.deal_id = $${dealParamIndex}`;
-        queryParams.push(dealId);
-        const whereClause = conditions.length > 0 ? conditions.join(' AND ') : '';
-        if (whereClause) {
-            sql = sql.replace('WHERE dr.deal_id', `WHERE ${whereClause.replace(/\b(firm_id|status|name|title|file_name)\b/g, 'r.$1')} AND dr.deal_id`);
-        }
-        const limitIdx = queryParams.length + 1;
-        const offsetIdx = queryParams.length + 2;
-        sql += ` ORDER BY LOWER(r.name) ASC, r.created_at DESC LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
-        queryParams.push(normalizedLimit + 1, normalizedOffset);
-    } else {
-        sql = `SELECT ${RESUME_SELECT_COLUMNS} FROM resumes`;
-        if (conditions.length > 0) {
-            sql += ` WHERE ${conditions.join(' AND ')}`;
-        }
-        const limitIdx = queryParams.length + 1;
-        const offsetIdx = queryParams.length + 2;
-        sql += ` ORDER BY LOWER(name) ASC, created_at DESC LIMIT $${limitIdx} OFFSET $${offsetIdx}`;
-        queryParams.push(normalizedLimit + 1, normalizedOffset);
-    }
-
-    const result = await query(sql, queryParams);
-    return result.rows;
-}
 
 /**
  * Update a resume
@@ -310,45 +173,4 @@ export async function deleteResume(id) {
         await invalidateResumeMutationViews(id, result.rows[0].firm_id || null);
     }
     return true;
-}
-
-export async function getResumeAuditInfo(resumeId) {
-    return resumesCache.getOrLoad(`audit:${resumeId}`, async () => {
-        const result = await query(`
-            SELECT id, firm_id, firm_name, candidate_name, candidate_email, consent_status
-            FROM resumes WHERE id = $1
-        `, [resumeId]);
-        return result.rows[0] || null;
-    }, {
-        scope: `detail:${resumeId}`
-    });
-}
-
-/**
- * Find a resume record by ID (full record via findWithTimeout)
- * @param {string} id
- * @returns {Promise<Object>} Resume record (throws if not found)
- */
-export async function findResumeRecord(id) {
-    return findWithTimeout('resumes', id);
-}
-
-/**
- * Find a mission record by ID
- * @param {string} id
- * @returns {Promise<Object>} Mission record (throws if not found)
- */
-export async function findMissionRecord(id) {
-    return findWithTimeout('missions', id);
-}
-
-/**
- * Create a resume adaptation record
- * @param {Object} data - Adaptation fields
- * @returns {Promise<Object>} Created adaptation record
- */
-export async function createAdaptation(data) {
-    const record = await createWithTimeout('resume_adaptations', data);
-    await invalidateResumeCollectionViews(record.firm_id || data.firm_id || null);
-    return record;
 }

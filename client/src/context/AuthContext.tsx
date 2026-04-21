@@ -4,12 +4,12 @@
  * TypeScript version with full type safety
  */
 
-import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { authService, User, RegisterData, RegisterResponse, SignInResponse } from '../services/authService';
-import { resetSessionState } from '../utils/apiInterceptor';
 import { redirectToExpiredSession, setSessionExpiredHandler } from '../utils/sessionRedirect';
 import toast from 'react-hot-toast';
 import logger from '../utils/logger.frontend';
+import { useAuthInitialization } from './useAuthInitialization';
 
 
 // ============================================
@@ -53,45 +53,12 @@ export const AuthProvider = ({ children }: AuthProviderProps): JSX.Element => {
   const [loading, setLoading] = useState<boolean>(true); // Start with loading true
   const [error, setError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState<boolean>(false);
-  const authCheckStartedRef = useRef<boolean>(false);
 
-  // Fetch current user from server on mount (session restored via httpOnly cookies)
-  useEffect(() => {
-    const fetchCurrentUser = async () => {
-      if (authCheckStartedRef.current) {
-        return;
-      }
-      authCheckStartedRef.current = true;
-
-      // Skip fetching user if we're on the signin page with expired flag
-      // This prevents infinite loops when session has expired
-      if (window.location.pathname === '/signin' && window.location.search.includes('expired=true')) {
-        // Reset session state to clear isSessionExpiring flag and stale CSRF token
-        // This ensures the first login attempt after expiration will work
-        resetSessionState();
-        setUser(null);
-        authService.clearCurrentUser();
-        setLoading(false);
-        setInitialized(true);
-        return;
-      }
-
-      try {
-        const restoredUser = await authService.restoreSession();
-        setUser(restoredUser);
-      } catch (err) {
-        logger.error('Failed to fetch current user:', err);
-        resetSessionState();
-        setUser(null);
-        authService.clearCurrentUser();
-      } finally {
-        setLoading(false);
-        setInitialized(true);
-      }
-    };
-
-    fetchCurrentUser();
-  }, []);
+  useAuthInitialization({
+    setInitialized,
+    setLoading,
+    setUser,
+  });
 
   const signIn = useCallback(async (email: string, password: string): Promise<User | SignInResponse> => {
     try {

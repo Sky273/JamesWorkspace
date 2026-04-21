@@ -3,10 +3,7 @@
  * Generates ZIP exports with PDF/DOCX files from processed batch jobs
  */
 
-import path from 'path';
 import fs from 'fs';
-import os from 'os';
-import { pipeline } from 'stream/promises';
 import { safeLog } from '../../utils/logger.backend.js';
 import { query } from '../../config/database.js';
 import { metrics } from '../metrics.service.js';
@@ -23,12 +20,8 @@ import {
     getBatchExportMaxArchiveBytes,
     getGeneratedArtifactByteLength
 } from '../../utils/batchExportArchiveBudget.js';
-import {
-    buildProcessedTemplateSections,
-    generateDocumentWithRetry,
-    loadExportSourceData,
-    resolveFirmLogoMarkup
-} from './exportGenerator.documents.js';
+import { writeExportArchiveToDisk } from './exportGenerator.archive.js';
+import { processExportItemForFormat } from './exportGenerator.items.js';
 import {
     buildExportItemSelection,
     buildSafeArchiveFilePath,
@@ -238,86 +231,6 @@ export async function generateJobExport(jobId, options) {
 
     const itemResults = createItemResultsMap(successfulItems);
     
-    // Process single item for a specific format
-    const processExportItemForFormat = async (item, format) => {
-        const fileExtension = format === 'pdf' ? 'pdf' : format;
-        const fallbackSourceType = item.source_type || 'resume';
-        
-        try {
-            const exportSource = await loadExportSourceData(item);
-            if (!exportSource.success) {
-                return {
-                    success: false,
-                    itemId: item.id,
-                    error: exportSource.error,
-                    resumeId: item.resume_id,
-                    format,
-                    sourceType: exportSource.sourceType
-                };
-            }
-
-            const {
-                sourceType,
-                content,
-                candidateName,
-                candidateTitle,
-                trigram,
-                firmId
-            } = exportSource;
-
-            const logoMarkup = await resolveFirmLogoMarkup({
-                firmId,
-                template,
-                firmLogoMarkupCache
-            });
-
-            const {
-                processedBody,
-                processedHeader,
-                processedFooter
-            } = buildProcessedTemplateSections(template, {
-                candidateName,
-                candidateTitle,
-                content,
-                logoMarkup
-            });
-            
-            // Generate document
-            const result = await generateDocumentWithRetry({
-                pdfServerUrl: PDF_SERVER_URL,
-                template,
-                jobId,
-                processedBody,
-                processedHeader,
-                processedFooter,
-                candidateName,
-                format,
-                diagnostics: {
-                    itemId: item.id,
-                    resumeId: item.resume_id || null,
-                    adaptationId: item.adaptation_id || null,
-                    sourceType
-                }
-            });
-            
-            if (!result.success) {
-                return { success: false, itemId: item.id, error: result.error, resumeId: item.resume_id, format, sourceType };
-            }
-            
-            const sanitizedItemName = (item.file_name || '')
-                .replace(/[^a-zA-Z0-9\-_\s]/g, '')
-                .replace(/\s+/g, '_');
-            const fileName = sourceType === 'adaptation' && sanitizedItemName
-                ? `${trigram}_${sanitizedItemName}_${templateName}.${fileExtension}`
-                : `${trigram}_${templateName}.${fileExtension}`;
-            
-            return { success: true, itemId: item.id, fileName, content: result.content, resumeId: item.resume_id, format, relativePath: item.relative_path, sourceType };
-        } catch (err) {
-            safeLog('error', `Error processing ${fallbackSourceType} for ${format.toUpperCase()} export`, { resumeId: item.resume_id, adaptationId: item.adaptation_id, error: err.message });
-            return { success: false, itemId: item.id, error: err.message, resumeId: item.resume_id, format, sourceType: fallbackSourceType };
-        }
-    };
-    
     // Process items in bounded batches to keep upstream load controlled.
     const exportBatchSize = getBatchExportBatchSize();
     const totalBatches = Math.ceil(successfulItems.length / exportBatchSize);
@@ -390,7 +303,15 @@ export async function generateJobExport(jobId, options) {
                 totalItems: successfulItems.length
             });
             
-            const batchResults = await Promise.all(batch.map(item => processExportItemForFormat(item, format)));
+            const batchResults = await Promise.all(batch.map((item) => processExportItemForFormat({
+                item,
+                format,
+                jobId,
+                template,
+                templateName,
+                pdfServerUrl: PDF_SERVER_URL,
+                firmLogoMarkupCache
+            })));
             
             // Add results to the appropriate folder
             for (const result of batchResults) {
@@ -572,27 +493,8 @@ export async function generateJobExport(jobId, options) {
     let finalArchivePath = null;
 
     try {
-        // Generate ZIP directly to disk to avoid buffering the full archive in memory
-        const exportsDir = path.join(os.tmpdir(), 'batch-exports');
-        await fs.promises.mkdir(exportsDir, { recursive: true });
-
-        // Save ZIP file
-        const fileName = `export_${jobId}_${Date.now()}.zip`;
-        const filePath = path.join(exportsDir, fileName);
+        const { fileName, filePath, archiveBytes } = await writeExportArchiveToDisk({ zip, jobId });
         finalArchivePath = filePath;
-        const zipStream = typeof zip.generateNodeStream === 'function'
-            ? zip.generateNodeStream({ streamFiles: true, compression: 'DEFLATE' })
-            : null;
-        let exportedSize = 0;
-
-        if (zipStream) {
-            await pipeline(zipStream, fs.createWriteStream(filePath));
-            exportedSize = (await fs.promises.stat(filePath)).size;
-        } else {
-            const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
-            await fs.promises.writeFile(filePath, zipBuffer);
-            exportedSize = (await fs.promises.stat(filePath)).size;
-        }
         
         // Update job with export file info
         await updateJobExportFile(jobId, filePath, fileName);
@@ -604,7 +506,7 @@ export async function generateJobExport(jobId, options) {
             generatedFiles: actualFilesInZip,
             failedFiles: exportErrorCount,
             generatedArtifactBytes: totalGeneratedArtifactBytes,
-            archiveBytes: exportedSize,
+            archiveBytes,
             successfulRuns: 1,
             metadata: { jobId }
         });
@@ -613,7 +515,7 @@ export async function generateJobExport(jobId, options) {
             jobId, 
             fileName, 
             filesCount: Object.keys(zip.files).length,
-            size: exportedSize,
+            size: archiveBytes,
             durationMs: Date.now() - startedAt
         });
         updateLastBatchExportSummary({
@@ -627,11 +529,11 @@ export async function generateJobExport(jobId, options) {
             generatedFiles: actualFilesInZip,
             failedFiles: exportErrorCount,
             generatedArtifactBytes: totalGeneratedArtifactBytes,
-            archiveBytes: exportedSize,
+            archiveBytes,
             durationMs: Date.now() - startedAt
         });
     } catch (error) {
-        await cleanupPartialExportArchive(finalArchivePath, jobId);
+        await cleanupPartialExportArchive(finalArchivePath || error?.partialArchivePath, jobId);
         await persistItemResults('Export archive generation failed');
         updateLastBatchExportSummary({
             operation: 'generateJobExport',
