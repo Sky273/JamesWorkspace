@@ -4,7 +4,7 @@
  * Allows drag-and-drop to change candidate stages and adding new CVs to the pipeline
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import {
@@ -55,6 +55,7 @@ export default function MissionPipelineKanban({
   const [loading, setLoading] = useState(true);
   const [draggedEntry, setDraggedEntry] = useState<PipelineEntry | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+  const draggedEntryRef = useRef<PipelineEntry | null>(null);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [availableCandidates, setAvailableCandidates] = useState<CandidateOption[]>([]);
@@ -189,8 +190,17 @@ export default function MissionPipelineKanban({
     }
   };
 
-  const handleDragStart = (entry: PipelineEntry) => {
+  const handleDragStart = (event: React.DragEvent, entry: PipelineEntry) => {
+    draggedEntryRef.current = entry;
     setDraggedEntry(entry);
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', entry.id);
+  };
+
+  const handleDragEnd = () => {
+    draggedEntryRef.current = null;
+    setDraggedEntry(null);
+    setDragOverStage(null);
   };
 
   const handleDragOver = (event: React.DragEvent, stageId: string) => {
@@ -206,13 +216,23 @@ export default function MissionPipelineKanban({
     event.preventDefault();
     setDragOverStage(null);
 
-    if (!draggedEntry || draggedEntry.stage === targetStageId) {
-      setDraggedEntry(null);
+    const draggedPipelineId = event.dataTransfer.getData('text/plain');
+    const currentDraggedEntry = draggedEntryRef.current
+      || entries.find((entry) => entry.id === draggedPipelineId)
+      || null;
+
+    if (!currentDraggedEntry || currentDraggedEntry.stage === targetStageId) {
+      handleDragEnd();
       return;
     }
 
     try {
-      await moveToStage(draggedEntry.id, targetStageId);
+      const updatedEntry = await moveToStage(currentDraggedEntry.id, targetStageId);
+      setEntries((currentEntries) => currentEntries.map((entry) => (
+        entry.id === currentDraggedEntry.id
+          ? { ...entry, ...updatedEntry, stage: updatedEntry?.stage || targetStageId }
+          : entry
+      )));
       markMissionsViewDirty();
       toast.success(t('pipeline.stageUpdated'));
       await loadData();
@@ -220,7 +240,7 @@ export default function MissionPipelineKanban({
       logger.error('[MissionPipelineKanban] Error moving stage:', error);
       toast.error(t('pipeline.errors.updateFailed'));
     } finally {
-      setDraggedEntry(null);
+      handleDragEnd();
     }
   };
 
@@ -388,6 +408,7 @@ export default function MissionPipelineKanban({
         entries={entries}
         formatDate={formatDate}
         isEnglish={isEnglish}
+        onDragEnd={handleDragEnd}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
         onDragStart={handleDragStart}

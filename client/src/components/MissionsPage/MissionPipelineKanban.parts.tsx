@@ -62,9 +62,10 @@ interface KanbanBoardProps {
   entries: PipelineEntry[];
   formatDate: (dateStr: string) => string;
   isEnglish: boolean;
+  onDragEnd: () => void;
   onDragLeave: () => void;
   onDragOver: (event: React.DragEvent, stageId: string) => void;
-  onDragStart: (entry: PipelineEntry) => void;
+  onDragStart: (event: React.DragEvent, entry: PipelineEntry) => void;
   onDrop: (event: React.DragEvent, stageId: string) => void;
   onEditNotes: (entry: PipelineEntry) => void;
   onManageInterviews: (entry: PipelineEntry) => void;
@@ -99,6 +100,7 @@ function CandidateCard({
   draggedEntry,
   entry,
   formatDate,
+  onDragEnd,
   onDragStart,
   onEditNotes,
   onManageInterviews,
@@ -108,7 +110,8 @@ function CandidateCard({
   draggedEntry: PipelineEntry | null;
   entry: PipelineEntry;
   formatDate: (dateStr: string) => string;
-  onDragStart: (entry: PipelineEntry) => void;
+  onDragEnd: () => void;
+  onDragStart: (event: React.DragEvent, entry: PipelineEntry) => void;
   onEditNotes: (entry: PipelineEntry) => void;
   onManageInterviews: (entry: PipelineEntry) => void;
   onRemove: (entry: PipelineEntry) => void;
@@ -124,7 +127,8 @@ function CandidateCard({
   return (
     <article
       draggable
-      onDragStart={() => onDragStart(entry)}
+      onDragStart={(event) => onDragStart(event, entry)}
+      onDragEnd={onDragEnd}
       className={`group rounded-[1.5rem] border border-slate-200/80 bg-white/95 p-4 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.45)] transition-all duration-200 dark:border-white/10 dark:bg-[color:color-mix(in_srgb,var(--cv-panel-start)_88%,black)] ${
         draggedEntry?.id === entry.id
           ? 'scale-[0.985] opacity-50'
@@ -248,6 +252,7 @@ function StageColumn({
   entries,
   formatDate,
   isEnglish,
+  onDragEnd,
   onDragLeave,
   onDragOver,
   onDragStart,
@@ -263,9 +268,10 @@ function StageColumn({
   entries: PipelineEntry[];
   formatDate: (dateStr: string) => string;
   isEnglish: boolean;
+  onDragEnd: () => void;
   onDragLeave: () => void;
   onDragOver: (event: React.DragEvent, stageId: string) => void;
-  onDragStart: (entry: PipelineEntry) => void;
+  onDragStart: (event: React.DragEvent, entry: PipelineEntry) => void;
   onDrop: (event: React.DragEvent, stageId: string) => void;
   onEditNotes: (entry: PipelineEntry) => void;
   onManageInterviews: (entry: PipelineEntry) => void;
@@ -324,6 +330,7 @@ function StageColumn({
               draggedEntry={draggedEntry}
               entry={entry}
               formatDate={formatDate}
+              onDragEnd={onDragEnd}
               onDragStart={onDragStart}
               onEditNotes={onEditNotes}
               onManageInterviews={onManageInterviews}
@@ -413,6 +420,7 @@ export function KanbanBoard({
   entries,
   formatDate,
   isEnglish,
+  onDragEnd,
   onDragLeave,
   onDragOver,
   onDragStart,
@@ -437,14 +445,15 @@ export function KanbanBoard({
           {stages.map((stage) => (
             <StageColumn
               key={stage.id}
-              draggedEntry={draggedEntry}
-              dragOverStage={dragOverStage}
-              entries={entries}
-              formatDate={formatDate}
-              isEnglish={isEnglish}
-              onDragLeave={onDragLeave}
-              onDragOver={onDragOver}
-              onDragStart={onDragStart}
+        draggedEntry={draggedEntry}
+        dragOverStage={dragOverStage}
+        entries={entries}
+        formatDate={formatDate}
+        isEnglish={isEnglish}
+        onDragEnd={onDragEnd}
+        onDragLeave={onDragLeave}
+        onDragOver={onDragOver}
+        onDragStart={onDragStart}
               onDrop={onDrop}
               onEditNotes={onEditNotes}
               onManageInterviews={onManageInterviews}
