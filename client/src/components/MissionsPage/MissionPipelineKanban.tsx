@@ -25,6 +25,7 @@ import {
 import { fetchWithAuth } from '../../utils/apiInterceptor';
 import resumeAdaptationService from '../../utils/resumeAdaptationService';
 import logger from '../../utils/logger.frontend';
+import { markMissionsViewDirty } from '../../utils/viewRefreshScopes';
 import PipelineAddCandidateModal from './PipelineAddCandidateModal';
 import {
   buildAdaptationCandidates,
@@ -212,6 +213,7 @@ export default function MissionPipelineKanban({
 
     try {
       await moveToStage(draggedEntry.id, targetStageId);
+      markMissionsViewDirty();
       toast.success(t('pipeline.stageUpdated'));
       await loadData();
     } catch (error) {

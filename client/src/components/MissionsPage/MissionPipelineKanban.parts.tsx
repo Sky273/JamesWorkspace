@@ -158,12 +158,14 @@ function CandidateCard({
           {renderScore(entry.global_score)}
           <button
             onClick={() => onRemove(entry)}
-            className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-100 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/15"
+            className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-rose-200/80 bg-gradient-to-r from-rose-50 via-white to-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 shadow-[0_14px_30px_-24px_rgba(225,29,72,0.85)] ring-1 ring-white/70 transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-300 hover:from-rose-100 hover:to-rose-50 hover:text-rose-800 hover:shadow-[0_18px_34px_-22px_rgba(225,29,72,0.9)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300 dark:border-rose-500/20 dark:from-rose-500/12 dark:via-rose-500/6 dark:to-transparent dark:text-rose-200 dark:ring-white/5 dark:hover:border-rose-400/35 dark:hover:from-rose-500/18 dark:hover:to-rose-500/8 dark:hover:text-white dark:focus-visible:ring-rose-400/40"
             title={texts.remove}
             aria-label={texts.remove}
           >
-            <TrashIcon className="h-4 w-4" />
-            <span>{texts.remove}</span>
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-rose-100 text-rose-600 ring-1 ring-rose-200/80 dark:bg-rose-500/15 dark:text-rose-200 dark:ring-rose-400/20">
+              <TrashIcon className="h-3.5 w-3.5" />
+            </span>
+            <span className="pr-0.5">{texts.remove}</span>
           </button>
         </div>
       </div>

@@ -228,5 +228,4 @@ describe('MissionPipelineKanban', () => {
 
     expect(await screen.findByRole('button', { name: 'pipeline.remove' })).toBeInTheDocument();
   });
-
 });
