@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import GdprTab from './GdprTab';
 
 const {
@@ -126,10 +126,12 @@ describe('GdprTab', () => {
       expect(window.open).toHaveBeenCalled();
     });
 
-    window.dispatchEvent(new MessageEvent('message', {
-      origin: 'https://evil.example',
-      data: { type: 'gdpr-oauth-success' }
-    }));
+    await act(async () => {
+      window.dispatchEvent(new MessageEvent('message', {
+        origin: 'https://evil.example',
+        data: { type: 'gdpr-oauth-success' }
+      }));
+    });
 
     await waitFor(() => {
       expect(mockToastSuccess).not.toHaveBeenCalled();
@@ -180,10 +182,12 @@ describe('GdprTab', () => {
       expect(window.open).toHaveBeenCalled();
     });
 
-    window.dispatchEvent(new MessageEvent('message', {
-      origin: window.location.origin,
-      data: { type: 'gdpr-oauth-success' }
-    }));
+    await act(async () => {
+      window.dispatchEvent(new MessageEvent('message', {
+        origin: window.location.origin,
+        data: { type: 'gdpr-oauth-success' }
+      }));
+    });
 
     await waitFor(() => {
       expect(mockToastSuccess).toHaveBeenCalledWith('settings.gdpr.connected');

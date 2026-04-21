@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ResumeImprovePage from './ResumeImprovePage';
 
@@ -186,7 +186,9 @@ vi.mock('../components/TiptapEditor/DeferredTiptapEditor', async () => {
       setContent: (nextContent: string) => setCurrentContent(nextContent),
       getEditor: () => null,
     }), [currentContent]);
-    onReady();
+    React.useEffect(() => {
+      onReady();
+    }, [onReady]);
     const labels = (skillProofs || []).map((proof) => proof.name || proof.tool).filter(Boolean).join(',');
     return <div>editor:{currentContent}:{labels || 'none'}</div>;
   });
@@ -327,7 +329,9 @@ describe('ResumeImprovePage', () => {
 
     expect(await screen.findByText('header-improved')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('save-improved'));
+    await act(async () => {
+      fireEvent.click(screen.getByText('save-improved'));
+    });
 
     expect(mockNavigate).not.toHaveBeenCalledWith('/resumes/resume-1/analysis');
   });
@@ -349,7 +353,9 @@ describe('ResumeImprovePage', () => {
     expect(await screen.findByText('header-improved')).toBeInTheDocument();
     expect(screen.getByText('editor:<p>Contenu sauvegarde</p>:none')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('save-improved'));
+    await act(async () => {
+      fireEvent.click(screen.getByText('save-improved'));
+    });
 
     await waitFor(() => {
       expect(resumeContextState.updateImprovedContent).toHaveBeenCalledWith('resume-1', '<p>Contenu sauvegarde</p>');

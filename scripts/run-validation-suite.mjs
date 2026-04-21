@@ -34,6 +34,22 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function withValidationNodeOptions(env) {
+  const disableDep0040 = '--disable-warning=DEP0040';
+  const currentNodeOptions = env.NODE_OPTIONS || '';
+
+  if (currentNodeOptions.includes(disableDep0040)) {
+    return env;
+  }
+
+  return {
+    ...env,
+    NODE_OPTIONS: currentNodeOptions
+      ? `${currentNodeOptions} ${disableDep0040}`.trim()
+      : disableDep0040,
+  };
+}
+
 async function runCommand(command, args, cwd) {
   const startedAt = Date.now();
   console.log(`\n> ${command} ${args.join(' ')}`);
@@ -43,12 +59,12 @@ async function runCommand(command, args, cwd) {
       ? spawn(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', `${command} ${args.join(' ')}`], {
         cwd,
         stdio: 'inherit',
-        env: process.env,
+        env: withValidationNodeOptions(process.env),
       })
       : spawn(command, args, {
         cwd,
         stdio: 'inherit',
-        env: process.env,
+        env: withValidationNodeOptions(process.env),
       });
 
     child.on('exit', (code) => resolve(code ?? 1));
