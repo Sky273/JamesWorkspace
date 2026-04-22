@@ -19,7 +19,6 @@ import {
   normalizeTemplateStylesheet,
   summarizeTemplatePayload,
 } from '../utils/templateFragments';
-import TiptapEditor from '../components/TiptapEditor/DeferredTiptapEditor';
 
 interface FormData {
   name: string;
@@ -237,70 +236,52 @@ const NewTemplatePage = (): JSX.Element => {
             </div>
 
             <div>
-              <label htmlFor="headerContent-editor" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="headerContent" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('templates.editor.header.label')}
                 <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">({t('templates.editor.header.hint')})</span>
               </label>
-              <div id="headerContent-editor">
-                <TiptapEditor
-                  content={formData.headerContent}
-                  onChange={(html) => updateFormField('headerContent', html)}
-                  placeholder={t('templates.editor.header.hint')}
-                  height={280}
-                  className="mt-1"
-                />
-              </div>
               <textarea
+                id="headerContent"
+                name="headerContent"
+                rows={10}
                 value={formData.headerContent}
-                readOnly
-                tabIndex={-1}
-                aria-hidden="true"
-                className="sr-only"
+                onChange={(e) => updateFormField('headerContent', e.target.value)}
+                placeholder={t('templates.editor.header.hint')}
+                spellCheck={false}
+                className="mt-1 block w-full rounded-md border-gray-300 font-mono text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
               />
             </div>
 
             <div>
-              <label htmlFor="templateContent-editor" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="templateContent" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('templates.editor.content.label')}
               </label>
-              <div id="templateContent-editor">
-                <TiptapEditor
-                  content={formData.templateContent}
-                  onChange={(html) => updateFormField('templateContent', html)}
-                  placeholder={t('templates.editor.content.label')}
-                  height={360}
-                  className="mt-1"
-                />
-              </div>
               <textarea
+                id="templateContent"
+                name="templateContent"
+                rows={14}
                 value={formData.templateContent}
-                readOnly
-                tabIndex={-1}
-                aria-hidden="true"
-                className="sr-only"
+                onChange={(e) => updateFormField('templateContent', e.target.value)}
+                placeholder={t('templates.editor.content.label')}
+                spellCheck={false}
+                className="mt-1 block w-full rounded-md border-gray-300 font-mono text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
               />
             </div>
 
             <div>
-              <label htmlFor="footerContent-editor" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="footerContent" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('templates.editor.footer.label')}
                 <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">({t('templates.editor.footer.hint')})</span>
               </label>
-              <div id="footerContent-editor">
-                <TiptapEditor
-                  content={formData.footerContent}
-                  onChange={(html) => updateFormField('footerContent', html)}
-                  placeholder={t('templates.editor.footer.hint')}
-                  height={280}
-                  className="mt-1"
-                />
-              </div>
               <textarea
+                id="footerContent"
+                name="footerContent"
+                rows={10}
                 value={formData.footerContent}
-                readOnly
-                tabIndex={-1}
-                aria-hidden="true"
-                className="sr-only"
+                onChange={(e) => updateFormField('footerContent', e.target.value)}
+                placeholder={t('templates.editor.footer.hint')}
+                spellCheck={false}
+                className="mt-1 block w-full rounded-md border-gray-300 font-mono text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
               />
             </div>
 

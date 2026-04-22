@@ -167,8 +167,8 @@ describe('NewTemplatePage', () => {
     expect(screen.getByDisplayValue('Modele charge')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Description chargee')).toBeInTheDocument();
     expect(screen.getByLabelText('templates.editor.content.label')).toHaveValue('<main><p>Corps</p></main>');
-    expect(screen.getByLabelText('templates.editor.header.hint')).toHaveValue('<header><div>Entete</div></header>');
-    expect(screen.getByLabelText('templates.editor.footer.hint')).toHaveValue('<footer><div>Pied</div></footer>');
+    expect(screen.getByDisplayValue('<header><div>Entete</div></header>')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('<footer><div>Pied</div></footer>')).toBeInTheDocument();
     expect(screen.getByDisplayValue('body { color: red; }')).toBeInTheDocument();
     expect(screen.getByDisplayValue('42')).toBeInTheDocument();
   });
