@@ -18,7 +18,7 @@ describe('lazyPages chunk recovery', () => {
   });
 
   it('allows only one chunk recovery attempt per current path', () => {
-    const path = '/admin/templates/new?fromExtraction=true';
+    const path = '/admin/templates/new';
 
     expect(canAttemptChunkRecovery(window.sessionStorage, path)).toBe(true);
     window.sessionStorage.setItem('lazy-page-reload-once', path);

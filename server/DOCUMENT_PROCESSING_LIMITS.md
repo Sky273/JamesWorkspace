@@ -5,7 +5,6 @@ This note summarizes the effective limits currently enforced by the application 
 ## Scope
 
 - Resume text extraction: `POST /api/resumes/extract-doc`, `POST /api/resumes/extract-pdf`
-- Template extraction from CV: `POST /api/templates/extract-from-cv`
 - Batch import: `POST /api/batch-jobs`
 - Batch export: `POST /api/batch-export`
 - Document generation proxy: `POST /generate-pdf`, `POST /generate-docx`
@@ -68,22 +67,6 @@ This note summarizes the effective limits currently enforced by the application 
 - Native extraction is attempted first for `docx` and `doc`.
 - OCR fallback converts Word to PDF through `soffice` and then applies the PDF extraction limits above.
   - Source: `server/services/wordTextExtraction.service.js`
-
-### Template Extraction Limits
-
-- Upload size limit is `10 MB`.
-  - Source: `server/routes/templates/extraction/extractors.js`
-- Dedicated per-user rate limit is `10` requests per `15 minutes`.
-  - Source: `server/routes/templates/extraction.routes.js`
-- Maximum concurrent template extractions per user: `2`.
-  - Source: `server/routes/templates/extraction.routes.js`
-- Accepted upload types are PDF, DOCX, and legacy DOC.
-  - Source: `server/routes/templates/extraction/extractors.js`
-- Legacy `doc` is explicitly rejected by the route handler after upload.
-  - Source: `server/routes/templates/extraction/handlers.js`
-- File signature validation is now enforced before processing.
-  - Source: `server/routes/templates/extraction/handlers.js`
-  - Source: `server/utils/fileSignature.js`
 
 ### Batch Import Limits
 

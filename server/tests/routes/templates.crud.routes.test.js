@@ -612,7 +612,9 @@ describe('Templates CRUD Routes', () => {
             const updateArgs = mockUpdateTemplate.mock.calls[0];
             expect(updateArgs[1].name).toBe('Camel Updated');
             expect(updateArgs[1].status).toBe('inactive');
+            expect(updateArgs[1].template_content).toBe('<main>Updated</main>');
             expect(updateArgs[1].preview_image_url).toBe('https://example.com/updated.png');
+            expect(updateArgs[1].firm_id).toBe('firm-123');
         });
 
         it('should update template with valid data', async () => {
@@ -668,6 +670,21 @@ describe('Templates CRUD Routes', () => {
                 .put('/api/templates/tpl-123')
                 .set('Authorization', 'Bearer valid-token')
                 .send({ ...updateBody, FirmId: 'firm-other' });
+
+            expect(res.status).toBe(200);
+            const updateArgs = mockUpdateTemplate.mock.calls[0];
+            expect(updateArgs[1].firm_id).toBe('firm-other');
+        });
+
+        it('should update firm_id from normalized alias payloads', async () => {
+            mockGetTemplateById.mockResolvedValueOnce(sampleTemplateRow);
+            mockGetFirmIfExists.mockResolvedValueOnce({ id: 'firm-other', name: 'Other Firm' });
+            mockUpdateTemplate.mockResolvedValueOnce({ ...sampleTemplateRow, firm_id: 'firm-other' });
+
+            const res = await request(app)
+                .put('/api/templates/tpl-123')
+                .set('Authorization', 'Bearer valid-token')
+                .send({ ...updateBody, 'Firm ID': 'firm-other' });
 
             expect(res.status).toBe(200);
             const updateArgs = mockUpdateTemplate.mock.calls[0];

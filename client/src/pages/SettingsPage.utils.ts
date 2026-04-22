@@ -104,7 +104,6 @@ export interface Settings {
   firmInitialCredits?: number;
   aiCreditChatbotMessage?: number;
   aiCreditResumeAiModify?: number;
-  aiCreditTemplateExtract?: number;
   aiCreditResumeAnalysis?: number;
   aiCreditResumeImprovement?: number;
   aiCreditResumeAdaptation?: number;
@@ -113,7 +112,6 @@ export interface Settings {
   aiCreditProfileAnalysis?: number;
   aiMaxTokensChatbotMessage?: number;
   aiMaxTokensResumeAiModify?: number;
-  aiMaxTokensTemplateExtract?: number;
   aiMaxTokensResumeAnalysis?: number;
   aiMaxTokensResumeImprovement?: number;
   aiMaxTokensResumeAdaptation?: number;
@@ -162,7 +160,6 @@ export interface SettingsFormData {
   firmInitialCredits: number;
   aiCreditChatbotMessage: number;
   aiCreditResumeAiModify: number;
-  aiCreditTemplateExtract: number;
   aiCreditResumeAnalysis: number;
   aiCreditResumeImprovement: number;
   aiCreditResumeAdaptation: number;
@@ -171,7 +168,6 @@ export interface SettingsFormData {
   aiCreditProfileAnalysis: number;
   aiMaxTokensChatbotMessage: number;
   aiMaxTokensResumeAiModify: number;
-  aiMaxTokensTemplateExtract: number;
   aiMaxTokensResumeAnalysis: number;
   aiMaxTokensResumeImprovement: number;
   aiMaxTokensResumeAdaptation: number;
@@ -254,7 +250,6 @@ export const defaultFormData: SettingsFormData = {
   firmInitialCredits: 1000,
   aiCreditChatbotMessage: 1,
   aiCreditResumeAiModify: 5,
-  aiCreditTemplateExtract: 15,
   aiCreditResumeAnalysis: 25,
   aiCreditResumeImprovement: 75,
   aiCreditResumeAdaptation: 50,
@@ -263,7 +258,6 @@ export const defaultFormData: SettingsFormData = {
   aiCreditProfileAnalysis: 25,
   aiMaxTokensChatbotMessage: 4000,
   aiMaxTokensResumeAiModify: 8192,
-  aiMaxTokensTemplateExtract: 32000,
   aiMaxTokensResumeAnalysis: 16000,
   aiMaxTokensResumeImprovement: 16384,
   aiMaxTokensResumeAdaptation: 8192,
@@ -321,7 +315,6 @@ export const toFormData = (settings?: Settings | null): SettingsFormData => ({
   firmInitialCredits: settings?.firmInitialCredits ?? 1000,
   aiCreditChatbotMessage: settings?.aiCreditChatbotMessage ?? 1,
   aiCreditResumeAiModify: settings?.aiCreditResumeAiModify ?? 5,
-  aiCreditTemplateExtract: settings?.aiCreditTemplateExtract ?? 15,
   aiCreditResumeAnalysis: settings?.aiCreditResumeAnalysis ?? 25,
   aiCreditResumeImprovement: settings?.aiCreditResumeImprovement ?? 75,
   aiCreditResumeAdaptation: settings?.aiCreditResumeAdaptation ?? 50,
@@ -330,7 +323,6 @@ export const toFormData = (settings?: Settings | null): SettingsFormData => ({
   aiCreditProfileAnalysis: settings?.aiCreditProfileAnalysis ?? 25,
   aiMaxTokensChatbotMessage: settings?.aiMaxTokensChatbotMessage ?? 4000,
   aiMaxTokensResumeAiModify: settings?.aiMaxTokensResumeAiModify ?? 8192,
-  aiMaxTokensTemplateExtract: settings?.aiMaxTokensTemplateExtract ?? 32000,
   aiMaxTokensResumeAnalysis: settings?.aiMaxTokensResumeAnalysis ?? 16000,
   aiMaxTokensResumeImprovement: settings?.aiMaxTokensResumeImprovement ?? 16384,
   aiMaxTokensResumeAdaptation: settings?.aiMaxTokensResumeAdaptation ?? 8192,
@@ -369,7 +361,6 @@ export const createSavePayload = (
     firmInitialCredits: Number(formData.firmInitialCredits),
     aiCreditChatbotMessage: Number(formData.aiCreditChatbotMessage),
     aiCreditResumeAiModify: Number(formData.aiCreditResumeAiModify),
-    aiCreditTemplateExtract: Number(formData.aiCreditTemplateExtract),
     aiCreditResumeAnalysis: Number(formData.aiCreditResumeAnalysis),
     aiCreditResumeImprovement: Number(formData.aiCreditResumeImprovement),
     aiCreditResumeAdaptation: Number(formData.aiCreditResumeAdaptation),
@@ -378,7 +369,6 @@ export const createSavePayload = (
     aiCreditProfileAnalysis: Number(formData.aiCreditProfileAnalysis),
     aiMaxTokensChatbotMessage: Number(formData.aiMaxTokensChatbotMessage),
     aiMaxTokensResumeAiModify: Number(formData.aiMaxTokensResumeAiModify),
-    aiMaxTokensTemplateExtract: Number(formData.aiMaxTokensTemplateExtract),
     aiMaxTokensResumeAnalysis: Number(formData.aiMaxTokensResumeAnalysis),
     aiMaxTokensResumeImprovement: Number(formData.aiMaxTokensResumeImprovement),
     aiMaxTokensResumeAdaptation: Number(formData.aiMaxTokensResumeAdaptation),

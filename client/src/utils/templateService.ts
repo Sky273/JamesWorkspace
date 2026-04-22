@@ -2,9 +2,8 @@
  * Template Service for CV templates
  */
 
-import { fetchWithAuth, createAuthOptions, createAuthOptionsWithCsrf, authPost, authPut, authDelete, fetchWithCsrfRetry, getResponseErrorMessage } from './apiInterceptor';
+import { fetchWithAuth, createAuthOptions, authPost, authPut, authDelete } from './apiInterceptor';
 import logger from './logger.frontend';
-import { FRONTEND_LLM_OPERATION_TIMEOUT_MS } from '../constants/llmTimeouts';
 
 export interface Template {
     id: string;
@@ -150,119 +149,6 @@ const sanitizeTemplateData = (data: TemplateData): SanitizedTemplateData => {
     ) as SanitizedTemplateData;
 };
 
-export interface ExtractedTemplate {
-    name: string;
-    description: string;
-    headerContent: string;
-    templateContent: string;
-    footerContent: string;
-    stylesheet: string;
-    footerHeight: number;
-    tags: string[];
-    extractedColors?: string[];
-    extractedFonts?: string[];
-    layoutDescription?: string;
-    extractionConfidence?: {
-        score: number;
-        level: 'low' | 'medium' | 'high';
-        reasons?: string[];
-    };
-    extractionReview?: {
-        extractionMethod: string;
-        textLength: number;
-        imageCount: number;
-        layoutMetrics?: Record<string, unknown> | null;
-        headerHtml?: string;
-        contentHtml?: string;
-        footerHtml?: string;
-        stylesheet?: string;
-        visualBlocks?: Array<{
-            type: string;
-            left: number;
-            top: number;
-            width: number;
-            height: number;
-            fill?: string;
-            region?: string;
-        }>;
-        imageRegions?: Array<{
-            left: number;
-            top: number;
-            width: number;
-            height: number;
-            region?: string;
-        }>;
-    };
-}
-
-export interface ExtractTemplateResponse {
-    success: boolean;
-    template: ExtractedTemplate;
-    model: string;
-    extractionMethod?: string;
-    usage?: {
-        prompt_tokens: number;
-        completion_tokens: number;
-        total_tokens: number;
-    };
-}
-
-function buildExtractionFailureMessage(errorData: Record<string, unknown> | null, fallbackMessage: string): string {
-    const baseMessage = typeof errorData?.error === 'string' && errorData.error.trim()
-        ? errorData.error.trim()
-        : fallbackMessage;
-    const details = errorData?.details && typeof errorData.details === 'object'
-        ? errorData.details as Record<string, unknown>
-        : null;
-
-    if (!details) {
-        return baseMessage;
-    }
-
-    const detectedTextCharacters = typeof details.detectedTextCharacters === 'number'
-        ? details.detectedTextCharacters
-        : null;
-    const extractedPdfTextLength = typeof details.extractedPdfTextLength === 'number'
-        ? details.extractedPdfTextLength
-        : null;
-    const minimumTextCharacters = typeof details.minimumTextCharacters === 'number'
-        ? details.minimumTextCharacters
-        : null;
-    const sourcePageNumber = typeof details.sourcePageNumber === 'number'
-        ? details.sourcePageNumber
-        : null;
-
-    if (detectedTextCharacters !== null && minimumTextCharacters !== null) {
-        const locationLabel = sourcePageNumber !== null ? `sur la page source ${sourcePageNumber}` : 'sur la page analysee';
-        const globalTextFragment = extractedPdfTextLength !== null
-            ? ` Extraction textuelle globale: ${extractedPdfTextLength} caractere(s).`
-            : '';
-        return `${baseMessage}\n\nDiagnostic: ${detectedTextCharacters} caractere(s) detecte(s) ${locationLabel}, minimum requis ${minimumTextCharacters}.${globalTextFragment}`;
-    }
-
-    if (typeof details.cause === 'string' && details.cause.trim()) {
-        return `${baseMessage}\n\nCause: ${details.cause.trim()}`;
-    }
-
-    return baseMessage;
-}
-
-const parseJsonResponseOrThrow = async <T>(response: Response, fallbackMessage: string): Promise<T> => {
-    const contentType = (response.headers.get('content-type') || '').toLowerCase();
-
-    if (!contentType.includes('application/json')) {
-        const message = await getResponseErrorMessage(response, fallbackMessage);
-        throw new Error(message || fallbackMessage);
-    }
-
-    try {
-        return await response.json() as T;
-    } catch {
-        const message = await getResponseErrorMessage(response, fallbackMessage);
-        throw new Error(message || fallbackMessage);
-    }
-};
-
 export const templateService = {
     // Get only active templates (for export/selection purposes)
     async getAllTemplates(): Promise<Template[]> {
@@ -388,47 +274,6 @@ export const templateService = {
             return normalizeTemplate(await response.json());
         } catch (error) {
             logger.error('Error duplicating template:', error);
-            throw error;
-        }
-    },
-
-    async extractFromCV(file: File): Promise<ExtractTemplateResponse> {
-        try {
-            const formData = new FormData();
-            formData.append('file', file);
-
-            const authOptions = await createAuthOptionsWithCsrf({
-                method: 'POST',
-                headers: {
-                    Accept: 'application/json'
-                },
-                body: formData
-            });
-            
-            // Remove Content-Type header to let browser set it with boundary for multipart
-            if (authOptions.headers && 'Content-Type' in authOptions.headers) {
-                delete (authOptions.headers as Record<string, string>)['Content-Type'];
-            }
-
-            const EXTRACTION_TIMEOUT = FRONTEND_LLM_OPERATION_TIMEOUT_MS;
-            
-            const response = await fetchWithCsrfRetry('/api/templates/extract-from-cv', authOptions, EXTRACTION_TIMEOUT);
-            
-            if (!response.ok) {
-                const errorData = await response.clone().json().catch(() => null) as Record<string, unknown> | null;
-                if (response.status === 422) {
-                    throw new Error(buildExtractionFailureMessage(errorData, 'Failed to extract template from CV'));
-                }
-                const errorMessage = await getResponseErrorMessage(response, 'Failed to extract template from CV');
-                throw new Error(errorMessage);
-            }
-            
-            return await parseJsonResponseOrThrow<ExtractTemplateResponse>(
-                response,
-                'Template extraction returned an invalid response.'
-            );
-        } catch (error) {
-            logger.error('Error extracting template from CV:', error);
             throw error;
         }
     }

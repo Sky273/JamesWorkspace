@@ -73,7 +73,6 @@ export function useTemplatesDashboard(options: { embedded?: boolean } = {}) {
   const [templateToDelete, setTemplateToDelete] = useState<Template | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
-  const [isExtractModalOpen, setIsExtractModalOpen] = useState(false);
   const templatesRequestIdRef = useRef(0);
   const pendingTemplateRef = useRef<{ template: Template; mode: 'created' | 'updated' } | null>(null);
 
@@ -281,16 +280,13 @@ export function useTemplatesDashboard(options: { embedded?: boolean } = {}) {
     handleConfirmDelete,
     isDeleteModalOpen,
     isDeleting,
-    isExtractModalOpen,
     loading,
     mounted,
     openDeleteConfirmModal,
-    openExtractModal: () => setIsExtractModalOpen(true),
     openPreviewModal: setPreviewTemplate,
     previewTemplate,
     resetSearch,
     searchTerm,
-    setIsExtractModalOpen,
     setPreviewTemplate,
     setSearchTerm,
     setSortBy,

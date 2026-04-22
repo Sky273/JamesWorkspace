@@ -19,6 +19,7 @@ import {
   normalizeTemplateStylesheet,
   summarizeTemplatePayload,
 } from '../utils/templateFragments';
+import TiptapEditor from '../components/TiptapEditor/DeferredTiptapEditor';
 
 interface FormData {
   name: string;
@@ -42,7 +43,6 @@ const NewTemplatePage = (): JSX.Element => {
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState<boolean>(false);
   const { t } = useTranslation();
-  const currentUserFirmId = user?.firmId || user?.firm_id || '';
 
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -59,46 +59,24 @@ const NewTemplatePage = (): JSX.Element => {
   });
 
   useEffect(() => {
+    if (authLoading || id) {
+      return;
+    }
+
+    const currentUserFirmId = user?.firmId || user?.firm_id || '';
+    if (!currentUserFirmId) {
+      return;
+    }
+
+    setFormData((prev) => (
+      prev.firmId
+        ? prev
+        : { ...prev, firmId: currentUserFirmId }
+    ));
+  }, [authLoading, id, user?.firmId, user?.firm_id]);
+
+  useEffect(() => {
     const fetchTemplate = async (): Promise<void> => {
-      // Check if we have an extracted template from sessionStorage
-      const extractedTemplateJson = sessionStorage.getItem('extractedTemplate');
-      if (extractedTemplateJson && !id) {
-        if (authLoading) {
-          return;
-        }
-
-        try {
-          const extractedTemplate = JSON.parse(extractedTemplateJson);
-          const normalizedExtractedTemplate = {
-            ...extractedTemplate,
-            headerContent: normalizeTemplateFragment(extractedTemplate.headerContent, 'header'),
-            footerContent: normalizeTemplateFragment(extractedTemplate.footerContent, 'footer'),
-            stylesheet: normalizeTemplateStylesheet(extractedTemplate.stylesheet),
-          };
-          const newFormData = {
-            name: normalizedExtractedTemplate.name || '',
-            description: normalizedExtractedTemplate.description || '',
-            headerContent: normalizedExtractedTemplate.headerContent || '',
-            templateContent: normalizedExtractedTemplate.templateContent || '',
-            footerContent: normalizedExtractedTemplate.footerContent || '',
-            footerHeight: normalizedExtractedTemplate.footerHeight || 25,
-            stylesheet: normalizedExtractedTemplate.stylesheet || '',
-            status: 'Active',
-            popular: false,
-            tags: normalizedExtractedTemplate.tags || [],
-            firmId: currentUserFirmId
-          };
-          setFormData(newFormData);
-          // Clear sessionStorage after loading
-          sessionStorage.removeItem('extractedTemplate');
-          toast.success(t('templates.extract.templateLoaded'));
-          return;
-        } catch (parseError) {
-          logger.error('Error parsing extracted template:', parseError);
-          sessionStorage.removeItem('extractedTemplate');
-        }
-      }
-
       if (!id) {
         return;
       }
@@ -131,7 +109,7 @@ const NewTemplatePage = (): JSX.Element => {
       }
     };
     fetchTemplate();
-  }, [authLoading, currentUserFirmId, id, navigate, t]);
+  }, [id, navigate, t]);
 
 
 
@@ -200,6 +178,10 @@ const NewTemplatePage = (): JSX.Element => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const updateFormField = <K extends keyof FormData>(field: K, value: FormData[K]): void => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto">
@@ -251,50 +233,74 @@ const NewTemplatePage = (): JSX.Element => {
 
             <div className="mt-4">
               <label htmlFor="stylesheet" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('templates.editor.stylesheet.label')}</label>
-              <textarea id="stylesheet" name="stylesheet" rows={4} placeholder={t('templates.editor.stylesheet.placeholder')} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" value={formData.stylesheet || ''} onChange={(e) => setFormData({ ...formData, stylesheet: e.target.value })} />
+              <textarea id="stylesheet" name="stylesheet" rows={4} placeholder={t('templates.editor.stylesheet.placeholder')} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" value={formData.stylesheet || ''} onChange={(e) => updateFormField('stylesheet', e.target.value)} />
             </div>
 
             <div>
-              <label htmlFor="headerContent" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="headerContent-editor" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('templates.editor.header.label')}
                 <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">({t('templates.editor.header.hint')})</span>
               </label>
+              <div id="headerContent-editor">
+                <TiptapEditor
+                  content={formData.headerContent}
+                  onChange={(html) => updateFormField('headerContent', html)}
+                  placeholder={t('templates.editor.header.hint')}
+                  height={280}
+                  className="mt-1"
+                />
+              </div>
               <textarea
-                id="headerContent"
-                name="headerContent"
-                rows={10}
                 value={formData.headerContent}
-                onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                readOnly
+                tabIndex={-1}
+                aria-hidden="true"
+                className="sr-only"
               />
             </div>
 
             <div>
-              <label htmlFor="templateContent" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="templateContent-editor" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('templates.editor.content.label')}
               </label>
+              <div id="templateContent-editor">
+                <TiptapEditor
+                  content={formData.templateContent}
+                  onChange={(html) => updateFormField('templateContent', html)}
+                  placeholder={t('templates.editor.content.label')}
+                  height={360}
+                  className="mt-1"
+                />
+              </div>
               <textarea
-                id="templateContent"
-                name="templateContent"
-                rows={16}
                 value={formData.templateContent}
-                onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                readOnly
+                tabIndex={-1}
+                aria-hidden="true"
+                className="sr-only"
               />
             </div>
 
             <div>
-              <label htmlFor="footerContent" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="footerContent-editor" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t('templates.editor.footer.label')}
                 <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">({t('templates.editor.footer.hint')})</span>
               </label>
+              <div id="footerContent-editor">
+                <TiptapEditor
+                  content={formData.footerContent}
+                  onChange={(html) => updateFormField('footerContent', html)}
+                  placeholder={t('templates.editor.footer.hint')}
+                  height={280}
+                  className="mt-1"
+                />
+              </div>
               <textarea
-                id="footerContent"
-                name="footerContent"
-                rows={10}
                 value={formData.footerContent}
-                onChange={handleChange}
-                className="mt-1 block w-full rounded-md border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                readOnly
+                tabIndex={-1}
+                aria-hidden="true"
+                className="sr-only"
               />
             </div>
 
@@ -310,7 +316,7 @@ const NewTemplatePage = (): JSX.Element => {
                 min="10" 
                 max="250" 
                 value={formData.footerHeight} 
-                onChange={(e) => setFormData({ ...formData, footerHeight: parseInt(e.target.value) || 25 })} 
+                onChange={(e) => updateFormField('footerHeight', parseInt(e.target.value) || 25)} 
                 className="mt-1 block w-32 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" 
               />
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('templates.editor.footerHeight.hint', 'Hauteur réservée pour le footer dans le PDF (10-250mm)')}</p>

@@ -12,7 +12,6 @@ const ACTION_LABELS: Record<string, string> = {
   'chatbot.message': 'Chatbot',
   'resume.upload': 'Upload et analyse de CV',
   'resume.ai_modify': 'Édition IA de CV',
-  'template.extract': 'Extraction de modèle',
   'resume.analysis': 'Analyse de CV',
   'resume.improvement': 'Amélioration de CV',
   'resume.adaptation': 'Adaptation de CV',

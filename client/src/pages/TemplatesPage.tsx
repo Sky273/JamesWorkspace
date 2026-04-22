@@ -10,7 +10,6 @@ import { markTemplatesViewDirty } from '../utils/viewRefreshScopes';
 import {
   TemplatesDeleteModal,
   TemplatesDuplicateModal,
-  TemplatesExtractDialog,
   TemplatesHeader,
   TemplatesLoadingState,
   TemplatesPreviewModal,
@@ -41,16 +40,13 @@ const TemplatesPage = ({ embedded = false }: { embedded?: boolean } = {}): JSX.E
     handleConfirmDelete,
     isDeleteModalOpen,
     isDeleting,
-    isExtractModalOpen,
     loading,
     mounted,
     openDeleteConfirmModal,
-    openExtractModal,
     openPreviewModal,
     previewTemplate,
     resetSearch,
     searchTerm,
-    setIsExtractModalOpen,
     setPreviewTemplate,
     setSearchTerm,
     setSortBy,
@@ -115,7 +111,6 @@ const TemplatesPage = ({ embedded = false }: { embedded?: boolean } = {}): JSX.E
       <TemplatesStats stats={stats} />
       <TemplatesToolbar
         onCreate={goToNewTemplate}
-        onExtract={openExtractModal}
         onRefresh={refreshTemplates}
         onResetSearch={resetSearch}
         onSearchChange={setSearchTerm}
@@ -161,10 +156,6 @@ const TemplatesPage = ({ embedded = false }: { embedded?: boolean } = {}): JSX.E
         onFirmChange={setDuplicateFirmId}
         selectedFirmId={duplicateFirmId}
         template={duplicateTarget}
-      />
-      <TemplatesExtractDialog
-        isOpen={isExtractModalOpen}
-        onClose={() => setIsExtractModalOpen(false)}
       />
     </motion.div>
   );

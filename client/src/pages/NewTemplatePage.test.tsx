@@ -71,6 +71,24 @@ vi.mock('../components/AdminFirmSelector', () => ({
   default: () => null,
 }));
 
+vi.mock('../components/TiptapEditor/DeferredTiptapEditor', () => ({
+  default: ({
+    content = '',
+    onChange,
+    placeholder,
+  }: {
+    content?: string;
+    onChange?: (html: string) => void;
+    placeholder?: string;
+  }) => (
+    <textarea
+      aria-label={placeholder || 'tiptap-editor'}
+      value={content}
+      onChange={(event) => onChange?.(event.target.value)}
+    />
+  ),
+}));
+
 describe('NewTemplatePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -109,6 +127,11 @@ describe('NewTemplatePage', () => {
       expect(createTemplateMock).toHaveBeenCalled();
     });
 
+    expect(createTemplateMock).toHaveBeenCalledWith(expect.objectContaining({
+      firm_id: 'firm-current',
+      templateContent: '<p>Contenu</p>',
+    }));
+
     expect(markTemplatesViewDirtyMock).toHaveBeenCalledTimes(1);
 
     expect(navigateMock).toHaveBeenCalledWith('/admin?tab=templates', {
@@ -118,53 +141,36 @@ describe('NewTemplatePage', () => {
     });
   });
 
-  it('assigns the current user firm to templates loaded from extraction', async () => {
-    sessionStorage.setItem('extractedTemplate', JSON.stringify({
-      name: 'Template extrait',
-      description: 'Description extraite',
-      headerContent: '<div>Header</div>',
-      templateContent: '<p>Body</p>',
-      footerContent: '<div>Footer</div>',
-      stylesheet: 'body { color: #111; }',
-      tags: ['cv'],
-    }));
+  it('loads an existing template into the editor when editing', async () => {
+    useParamsMock.mockReturnValue({ id: 'tpl-edit' });
+    getTemplateByIdMock.mockResolvedValue({
+      id: 'tpl-edit',
+      Name: 'Modele charge',
+      Description: 'Description chargee',
+      HeaderContent: '<html><body><header><div>Entete</div></header></body></html>',
+      TemplateContent: '<main><p>Corps</p></main>',
+      FooterContent: '<html><body><footer><div>Pied</div></footer></body></html>',
+      FooterHeight: 42,
+      Stylesheet: '<style>body { color: red; }</style>',
+      Status: 'active',
+      Popular: true,
+      Tags: ['demo'],
+      FirmId: 'firm-edit',
+    });
 
     render(<NewTemplatePage />);
 
     await waitFor(() => {
-      expect(screen.getByLabelText('templates.editor.name.label')).toHaveValue('Template extrait');
+      expect(getTemplateByIdMock).toHaveBeenCalledWith('tpl-edit');
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'common.save' }));
-
-    await waitFor(() => {
-      expect(createTemplateMock).toHaveBeenCalledWith(expect.objectContaining({
-        firm_id: 'firm-current',
-        name: 'Template extrait',
-      }));
-    });
-
-    expect(sessionStorage.getItem('extractedTemplate')).toBeNull();
+    expect(screen.getByDisplayValue('Modele charge')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Description chargee')).toBeInTheDocument();
+    expect(screen.getByLabelText('templates.editor.content.label')).toHaveValue('<main><p>Corps</p></main>');
+    expect(screen.getByLabelText('templates.editor.header.hint')).toHaveValue('<header><div>Entete</div></header>');
+    expect(screen.getByLabelText('templates.editor.footer.hint')).toHaveValue('<footer><div>Pied</div></footer>');
+    expect(screen.getByDisplayValue('body { color: red; }')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('42')).toBeInTheDocument();
   });
 
-  it('preserves extracted HTML fragments in plain textareas instead of reparsing them', async () => {
-    sessionStorage.setItem('extractedTemplate', JSON.stringify({
-      name: 'Template extrait',
-      description: 'Description extraite',
-      headerContent: '<div class="template-region-header"><img src="data:image/png;base64,abc"></div>',
-      templateContent: '<section class="template-region-body"><div>-content-</div></section>',
-      footerContent: '<div class="template-region-footer">Footer</div>',
-      stylesheet: '.template-region-header { color: red; }',
-      tags: ['cv'],
-    }));
-
-    render(<NewTemplatePage />);
-
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('<div class="template-region-header"><img src="data:image/png;base64,abc"></div>')).toBeInTheDocument();
-    });
-
-    expect(screen.getByDisplayValue('<section class="template-region-body"><div>-content-</div></section>')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('<div class="template-region-footer">Footer</div>')).toBeInTheDocument();
-  });
 });

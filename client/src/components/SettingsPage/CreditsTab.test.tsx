@@ -12,7 +12,6 @@ describe('CreditsTab', () => {
           firmInitialCredits: 1000,
           aiCreditChatbotMessage: 1,
           aiCreditResumeAiModify: 5,
-          aiCreditTemplateExtract: 15,
           aiCreditResumeAnalysis: 25,
           aiCreditResumeImprovement: 75,
           aiCreditResumeAdaptation: 50,
@@ -21,7 +20,6 @@ describe('CreditsTab', () => {
           aiCreditProfileAnalysis: 25,
           aiMaxTokensChatbotMessage: 4000,
           aiMaxTokensResumeAiModify: 8192,
-          aiMaxTokensTemplateExtract: 32000,
           aiMaxTokensResumeAnalysis: 16000,
           aiMaxTokensResumeImprovement: 16384,
           aiMaxTokensResumeAdaptation: 8192,
@@ -42,7 +40,6 @@ describe('CreditsTab', () => {
     expect(screen.getByTestId('aiCreditProfileSearch')).toHaveValue(12);
     expect(screen.getByTestId('aiCreditResumeMatch')).toHaveValue(8);
     expect(screen.getByTestId('aiCreditResumeAiModify')).toHaveValue(5);
-    expect(screen.getByTestId('aiCreditTemplateExtract')).toHaveValue(15);
     expect(screen.getByTestId('aiCreditChatbotMessage')).toHaveValue(1);
     expect(screen.getByTestId('aiMaxTokensResumeAnalysis')).toHaveValue(16000);
     expect(screen.getByTestId('aiMaxTokensResumeImprovement')).toHaveValue(16384);
@@ -59,7 +56,6 @@ describe('CreditsTab', () => {
           firmInitialCredits: 1000,
           aiCreditChatbotMessage: 1,
           aiCreditResumeAiModify: 5,
-          aiCreditTemplateExtract: 15,
           aiCreditResumeAnalysis: 25,
           aiCreditResumeImprovement: 75,
           aiCreditResumeAdaptation: 50,
@@ -68,7 +64,6 @@ describe('CreditsTab', () => {
           aiCreditProfileAnalysis: 25,
           aiMaxTokensChatbotMessage: 4000,
           aiMaxTokensResumeAiModify: 8192,
-          aiMaxTokensTemplateExtract: 32000,
           aiMaxTokensResumeAnalysis: 16000,
           aiMaxTokensResumeImprovement: 16384,
           aiMaxTokensResumeAdaptation: 8192,

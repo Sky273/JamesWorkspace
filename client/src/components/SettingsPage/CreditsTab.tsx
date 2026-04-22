@@ -14,7 +14,6 @@ const CREDIT_ACTION_FIELDS = [
   { creditKey: 'aiCreditProfileSearch', maxTokensKey: 'aiMaxTokensProfileSearch', labelKey: 'settings.credits.actions.profileSearch', fallback: 'Market radar : recherche de profils' },
   { creditKey: 'aiCreditResumeMatch', maxTokensKey: 'aiMaxTokensResumeMatch', labelKey: 'settings.credits.actions.resumeMatch', fallback: 'Matching CV / mission' },
   { creditKey: 'aiCreditResumeAiModify', maxTokensKey: 'aiMaxTokensResumeAiModify', labelKey: 'settings.credits.actions.resumeAiModify', fallback: 'Édition IA de CV' },
-  { creditKey: 'aiCreditTemplateExtract', maxTokensKey: 'aiMaxTokensTemplateExtract', labelKey: 'settings.credits.actions.templateExtract', fallback: 'Extraction de modèle depuis CV' },
   { creditKey: 'aiCreditChatbotMessage', maxTokensKey: 'aiMaxTokensChatbotMessage', labelKey: 'settings.credits.actions.chatbotMessage', fallback: 'Message du chatbot' }
 ];
 

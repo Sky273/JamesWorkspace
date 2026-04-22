@@ -17,13 +17,6 @@ export const AI_CREDIT_ACTION_SETTINGS = Object.freeze([
         defaultMaxTokens: 8192
     },
     {
-        actionType: 'template.extract',
-        settingKey: 'aiCreditTemplateExtract',
-        maxTokensSettingKey: 'aiMaxTokensTemplateExtract',
-        defaultCost: 15,
-        defaultMaxTokens: 32000
-    },
-    {
         actionType: 'resume.analysis',
         settingKey: 'aiCreditResumeAnalysis',
         maxTokensSettingKey: 'aiMaxTokensResumeAnalysis',

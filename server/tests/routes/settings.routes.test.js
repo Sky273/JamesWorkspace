@@ -239,7 +239,6 @@ vi.mock('../../utils/mappers.js', () => ({
         firmInitialCredits: settings.firm_initial_credits ?? settings.firmInitialCredits ?? 1000,
         aiCreditChatbotMessage: settings.ai_credit_chatbot_message ?? settings.aiCreditChatbotMessage ?? 1,
         aiCreditResumeAiModify: settings.ai_credit_resume_ai_modify ?? settings.aiCreditResumeAiModify ?? 5,
-        aiCreditTemplateExtract: settings.ai_credit_template_extract ?? settings.aiCreditTemplateExtract ?? 15,
         aiCreditResumeAnalysis: settings.ai_credit_resume_analysis ?? settings.aiCreditResumeAnalysis ?? 25,
         aiCreditResumeImprovement: settings.ai_credit_resume_improvement ?? settings.aiCreditResumeImprovement ?? 75,
         aiCreditResumeAdaptation: settings.ai_credit_resume_adaptation ?? settings.aiCreditResumeAdaptation ?? 50,
@@ -372,28 +371,6 @@ describe('Settings Routes', () => {
             expect(res.body.llmAvailability).toEqual({
                 minimax: { highspeedEnabled: false }
             });
-        });
-
-        it('should expose canonical template extraction cost and max tokens in settings payload', async () => {
-            mockGetSettings.mockResolvedValue({
-                id: 'set-1',
-                llm_model: 'gpt-4o',
-                llm_provider: 'openai',
-                cv_mode: 'nominative',
-                chatbot_enabled: 'on',
-                ai_credit_template_extract: 15,
-                ai_max_tokens_template_extract: 32000
-            });
-            mockGetLLMSettings.mockResolvedValue({
-                aiCreditTemplateExtract: 42,
-                aiMaxTokensTemplateExtract: 24576
-            });
-
-            const res = await request(app).get('/api/settings').set(authHeader);
-
-            expect(res.status).toBe(200);
-            expect(res.body.aiCreditTemplateExtract).toBe(42);
-            expect(res.body.aiMaxTokensTemplateExtract).toBe(24576);
         });
 
         it('should return defaults when no settings exist', async () => {
@@ -572,8 +549,6 @@ describe('Settings Routes', () => {
                 public_home_enabled: true,
                 firm_initial_credits: 1500,
                 ai_credit_resume_analysis: 30,
-                ai_credit_template_extract: 22,
-                ai_max_tokens_template_extract: 24000,
                 dpo_name: '',
                 dpo_email: '',
                 dpo_phone: ''
@@ -589,9 +564,7 @@ describe('Settings Routes', () => {
                     publicHomeEnabled: true,
                     allowUserRegistrationWithoutApproval: true,
                     firmInitialCredits: 1500,
-                    aiCreditResumeAnalysis: 30,
-                    aiCreditTemplateExtract: 22,
-                    aiMaxTokensTemplateExtract: 24000
+                    aiCreditResumeAnalysis: 30
                 });
 
             expect(res.status).toBe(200);
@@ -603,8 +576,6 @@ describe('Settings Routes', () => {
                 allowUserRegistrationWithoutApproval: true,
                 firmInitialCredits: 1500,
                 aiCreditResumeAnalysis: 30,
-                aiCreditTemplateExtract: 22,
-                aiMaxTokensTemplateExtract: 24000,
                 promptVersionState: expect.objectContaining({
                     'Analysis Prompt': expect.objectContaining({
                         currentRevision: 1

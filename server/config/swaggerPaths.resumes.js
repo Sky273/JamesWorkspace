@@ -174,16 +174,6 @@ export function createResumeSwaggerPaths({
                 parameters: [paramId],
                 responses: { 200: { description: 'Template deleted' }, 401: auth401, 403: forbidden403 }
             }
-        },
-        '/templates/extract-from-cv': {
-            post: {
-                tags: ['Templates'],
-                summary: 'Extract template from CV (admin)',
-                description: 'AI-powered extraction of template from uploaded DOCX/PDF',
-                security: securityCsrf,
-                requestBody: { required: true, content: { 'multipart/form-data': { schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } } } } },
-                responses: { 200: { description: 'Extracted template components' }, 401: auth401, 403: forbidden403 }
-            }
         }
     };
 }

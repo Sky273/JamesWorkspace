@@ -217,7 +217,7 @@ router.put('/:id', authenticateToken, requireUserManager, validateParams('id'), 
         }
         
         const templateData = {
-            ...mapTemplateFromFrontend(req.body),
+            ...mapTemplateFromFrontend(normalizedTemplate),
             firm_id: targetFirmId
         };
 

@@ -8,7 +8,6 @@ import {
   EyeIcon,
   PencilSquareIcon,
   PlusIcon,
-  SparklesIcon,
   StarIcon,
   TrashIcon,
   XMarkIcon,
@@ -29,7 +28,6 @@ import StatCardsGrid from '../components/page/StatCardsGrid';
 import { SkeletonTemplateList } from '../components/ui/Skeleton';
 import { TEMPLATES_PAGE_SIZE, type Template, type TemplateSort, type TemplateStats } from './TemplatesPage.hooks';
 
-const ExtractTemplateModal = lazy(() => import('../components/ExtractTemplateModal'));
 const TemplatePreviewFrame = lazy(() => import('../components/TemplatePreviewFrame'));
 
 function TemplateCard({
@@ -58,7 +56,18 @@ function TemplateCard({
 
   return (
     <AnimatedCard index={index} className="shadow-md overflow-hidden">
-      <div className="relative group cursor-pointer" onClick={() => onPreviewClick(template)}>
+      <div
+        className="relative group cursor-pointer"
+        onClick={() => onPreviewClick(template)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onPreviewClick(template);
+          }
+        }}
+        role="button"
+        tabIndex={0}
+      >
         <div className="h-48 bg-gray-50 dark:bg-gray-900 overflow-hidden">
           <Suspense fallback={<div className="flex h-full min-h-48 items-center justify-center text-xs text-gray-400 dark:text-gray-500">Chargement de l'aperçu...</div>}>
           <TemplatePreviewFrame
@@ -205,7 +214,6 @@ export function TemplatesStats({ stats }: { stats: TemplateStats }) {
 
 export function TemplatesToolbar({
   onCreate,
-  onExtract,
   onRefresh,
   onResetSearch,
   onSearchChange,
@@ -214,7 +222,6 @@ export function TemplatesToolbar({
   sortBy,
 }: {
   onCreate: () => void;
-  onExtract: () => void;
   onRefresh: () => Promise<void>;
   onResetSearch: () => void;
   onSearchChange: (value: string) => void;
@@ -251,7 +258,6 @@ export function TemplatesToolbar({
           {searchTerm ? (
             <button onClick={onResetSearch} className="app-button-secondary inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm font-medium" title={t('common.resetFilters')}><XMarkIcon className="w-4 h-4" /><span className="hidden sm:inline">{t('common.resetFilters')}</span></button>
           ) : null}
-          <button onClick={onExtract} className="app-button-secondary flex items-center gap-2 rounded-2xl px-4 py-2.5" title={t('templates.extract.title')}><SparklesIcon className="w-5 h-5" /><span className="hidden sm:inline">{t('templates.extract.buttonShort')}</span></button>
           <button onClick={onCreate} className="app-button-primary flex items-center gap-2 rounded-2xl px-4 py-2.5"><PlusIcon className="w-5 h-5" />{t('templates.newTemplate')}</button>
         </div>
       </div>
@@ -460,19 +466,5 @@ export function TemplatesPreviewModal({
         </div>
       </motion.div>
     </div>
-  );
-}
-
-export function TemplatesExtractDialog({
-  isOpen,
-  onClose,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-}) {
-  return (
-    <Suspense fallback={null}>
-      <ExtractTemplateModal isOpen={isOpen} onClose={onClose} />
-    </Suspense>
   );
 }
