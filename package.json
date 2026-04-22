@@ -92,7 +92,7 @@
     "otpauth": "^9.5.0",
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^2.4.5",
-    "pdfjs-dist": "^5.5.207",
+    "pdfjs-dist": "5.5.207",
     "pg": "^8.20.0",
     "postcss": "^8.5.8",
     "puppeteer": "^24.38.0",
