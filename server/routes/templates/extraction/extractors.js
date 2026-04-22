@@ -1,9 +1,7 @@
 import multer from 'multer';
 import { safeLog } from '../../../utils/logger.backend.js';
 import {
-    extractTemplateFromHTML,
-    extractTemplateFromImage,
-    extractTemplateFromCV
+    extractTemplateFromHTML
 } from '../../../services/templateExtraction.service.js';
 import { extractTextFromPDFBuffer } from '../../../services/batchJobsWorker/textExtraction.js';
 import { convertWordBufferToPdfBuffer } from '../../../services/wordTextExtraction.service.js';
@@ -19,10 +17,21 @@ import {
 import { extractStructuredPdfTemplateInput } from './pdfLayoutTemplateBuilder.js';
 
 const MIN_LAYOUT_TEXT_CHARACTERS = 80;
-let cachedPdfJsModules = null;
 
 function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
+}
+
+function createTemplateExtractionError(message, {
+    code = 'TEMPLATE_EXTRACTION_FAILED',
+    statusCode = 422,
+    details = null
+} = {}) {
+    return Object.assign(new Error(message), {
+        code,
+        statusCode,
+        details
+    });
 }
 
 function buildExtractionConfidence({
@@ -133,40 +142,6 @@ const upload = multer({
     }
 });
 
-async function getPdfJsModules() {
-    if (cachedPdfJsModules) {
-        return cachedPdfJsModules;
-    }
-
-    const candidates = [
-        'pdfjs-dist/legacy/build/pdf.mjs',
-        'pdfjs-dist/build/pdf.mjs',
-        'pdfjs-dist/legacy/build/pdf.min.mjs',
-        'pdfjs-dist/build/pdf.min.mjs'
-    ];
-
-    let pdfJsModule = null;
-    let lastError = null;
-    for (const candidate of candidates) {
-        try {
-            pdfJsModule = await import(candidate);
-            break;
-        } catch (error) {
-            lastError = error;
-        }
-    }
-
-    if (!pdfJsModule) {
-        throw lastError || new Error('Unable to load pdfjs-dist module for PDF rendering');
-    }
-
-    cachedPdfJsModules = {
-        pdfJsModule
-    };
-
-    return cachedPdfJsModules;
-}
-
 async function extractDocxAssets(buffer) {
     const JSZip = (await import('jszip')).default;
     const extractedImages = [];
@@ -175,10 +150,15 @@ async function extractDocxAssets(buffer) {
     try {
         const zip = await JSZip.loadAsync(buffer);
         const stylesFile = zip.file('word/styles.xml');
-        if (stylesFile) {
-            const stylesXml = await stylesFile.async('string');
-            extractedStyles = parseDocxStyles(stylesXml);
-        }
+        const themeFile = zip.file('word/theme/theme1.xml');
+        const fontTableFile = zip.file('word/fontTable.xml');
+        const documentFile = zip.file('word/document.xml');
+        extractedStyles = parseDocxStyles({
+            stylesXml: stylesFile ? await stylesFile.async('string') : '',
+            themeXml: themeFile ? await themeFile.async('string') : '',
+            fontTableXml: fontTableFile ? await fontTableFile.async('string') : '',
+            documentXml: documentFile ? await documentFile.async('string') : ''
+        });
 
         const mediaFiles = Object.keys(zip.files).filter((name) => name.startsWith('word/media/'));
         for (const mediaPath of mediaFiles) {
@@ -262,36 +242,6 @@ async function extractPdfText(buffer, fileName) {
     }
 }
 
-async function renderPdfToFirstPageImage(buffer) {
-    const [{ createCanvas }, { pdfJsModule }] = await Promise.all([
-        import('canvas'),
-        getPdfJsModules()
-    ]);
-
-    const loadingTask = pdfJsModule.getDocument({
-        data: new Uint8Array(buffer),
-        disableWorker: true,
-        useWorkerFetch: false,
-        isEvalSupported: false,
-        standardFontDataUrl: undefined
-    });
-    const pdfDocument = await loadingTask.promise;
-    const pdfPage = await pdfDocument.getPage(1);
-    const viewport = pdfPage.getViewport({ scale: 2 });
-    const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
-    const context = canvas.getContext('2d');
-
-    await pdfPage.render({
-        canvasContext: context,
-        viewport
-    }).promise;
-
-    const imageBuffer = canvas.toBuffer('image/png');
-
-    await pdfDocument.destroy().catch(() => {});
-    return imageBuffer.toString('base64');
-}
-
 async function extractFromPdfWithLayout(buffer, fileName, extractedImages = [], extractedStyles = {}, options = {}) {
     const textContent = await extractPdfText(buffer, fileName);
     const layoutAnalysis = await extractStructuredPdfTemplateInput(buffer);
@@ -318,7 +268,8 @@ async function extractFromPdfWithLayout(buffer, fileName, extractedImages = [], 
         },
         {
             maxTokens: options.maxTokens,
-            layoutAnalysis
+            layoutAnalysis,
+            strictExtraction: true
         }
     );
 
@@ -333,16 +284,6 @@ async function extractFromPdfWithLayout(buffer, fileName, extractedImages = [], 
         ...result,
         textContent,
         layoutAnalysis
-    };
-}
-
-async function extractFromPdfWithVision(buffer, fileName, extractedImages = [], options = {}) {
-    const textContent = await extractPdfText(buffer, fileName);
-    const imageBase64 = await renderPdfToFirstPageImage(buffer);
-    const result = await extractTemplateFromImage(imageBase64, textContent, fileName, extractedImages, options);
-    return {
-        ...result,
-        textContent
     };
 }
 
@@ -381,8 +322,36 @@ async function extractFromPDF(buffer, fileName, options = {}) {
 
     try {
         const layoutResult = await extractFromPdfWithLayout(buffer, fileName, extractedImages, {}, options);
-        if ((layoutResult.layoutAnalysis?.metrics?.totalTextCharacters || 0) < MIN_LAYOUT_TEXT_CHARACTERS) {
-            throw new Error('PDF layout extraction produced too little text for reliable template generation');
+        const detectedTextCharacters = Number(layoutResult.layoutAnalysis?.metrics?.totalTextCharacters) || 0;
+        const extractedPdfTextLength = Number(layoutResult.textContent?.length) || 0;
+        const sourcePageNumber = Number(layoutResult.layoutAnalysis?.metrics?.sourcePageNumber) || 1;
+        if (detectedTextCharacters < MIN_LAYOUT_TEXT_CHARACTERS) {
+            const candidatePages = Array.isArray(layoutResult.layoutAnalysis?.metrics?.candidatePages)
+                ? layoutResult.layoutAnalysis.metrics.candidatePages
+                : [];
+            const bestCandidate = [...candidatePages].sort((left, right) => (
+                (Number(right.layoutTextCharacters) || 0) - (Number(left.layoutTextCharacters) || 0)
+            ))[0] || null;
+            const discrepancyHint = extractedPdfTextLength >= MIN_LAYOUT_TEXT_CHARACTERS
+                ? `Le PDF contient pourtant ${extractedPdfTextLength} caracteres via l'extraction textuelle globale, mais seulement ${detectedTextCharacters} caracteres sont exploitables pour le layout structure.`
+                : `Le PDF fournit seulement ${extractedPdfTextLength} caracteres via l'extraction textuelle globale et ${detectedTextCharacters} caracteres pour le layout structure.`;
+            throw createTemplateExtractionError(
+                `Extraction du modele impossible : le layout PDF detecte seulement ${detectedTextCharacters} caracteres exploitables sur la page source ${sourcePageNumber}, minimum requis ${MIN_LAYOUT_TEXT_CHARACTERS}. ${discrepancyHint}`,
+                {
+                    code: 'TEMPLATE_LAYOUT_TOO_SPARSE',
+                    statusCode: 422,
+                    details: {
+                        fileName,
+                        detectedTextCharacters,
+                        extractedPdfTextLength,
+                        minimumTextCharacters: MIN_LAYOUT_TEXT_CHARACTERS,
+                        sourcePageNumber,
+                        bestCandidatePage: bestCandidate,
+                        layoutMetrics: layoutResult.layoutAnalysis?.metrics || null,
+                        extractedImageCount: extractedImages.length
+                    }
+                }
+            );
         }
 
         layoutResult.extractionMethod = 'pdf-layout-html';
@@ -396,38 +365,28 @@ async function extractFromPDF(buffer, fileName, options = {}) {
             textContent: layoutResult.textContent || ''
         });
     } catch (error) {
-        safeLog('warn', 'Structured PDF layout extraction failed, falling back to vision', {
+        safeLog('error', 'Structured PDF layout extraction failed without fallback', {
             fileName,
-            error: error.message
+            error: error.message,
+            code: error.code,
+            details: error.details
         });
-
-        try {
-            const visionResult = await extractFromPdfWithVision(buffer, fileName, extractedImages, options);
-            visionResult.extractionMethod = 'pdf-vision-fallback';
-            if (extractedImages.length > 0) {
-                injectPdfExtractedLogo(visionResult.template, extractedImages[0]);
-            }
-            return attachExtractionReview(visionResult, {
-                extractionMethod: visionResult.extractionMethod,
-                layoutAnalysis: null,
-                extractedImages,
-                textContent: visionResult.textContent || ''
-            });
-        } catch (visionError) {
-            safeLog('error', 'PDF vision extraction failed', { fileName, error: visionError.message });
-            const fallbackText = await extractPdfText(buffer, fileName);
-            if (fallbackText && fallbackText.trim().length > 50) {
-                const legacyResult = await extractTemplateFromCV(fallbackText, fileName, options);
-                legacyResult.extractionMethod = 'pdf-text-fallback';
-                return attachExtractionReview(legacyResult, {
-                    extractionMethod: legacyResult.extractionMethod,
-                    layoutAnalysis: null,
-                    extractedImages,
-                    textContent: fallbackText
-                });
-            }
-            throw visionError;
+        if (error.statusCode && error.code) {
+            throw error;
         }
+
+        throw createTemplateExtractionError(
+            `Extraction du modele impossible : la reconstruction du layout PDF a echoue. ${error.message}`,
+            {
+                code: 'TEMPLATE_LAYOUT_EXTRACTION_FAILED',
+                statusCode: 422,
+                details: {
+                    fileName,
+                    extractedImageCount: extractedImages.length,
+                    cause: error.message
+                }
+            }
+        );
     }
 }
 

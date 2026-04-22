@@ -11,6 +11,12 @@ import {
 
 const SIMPLE_TEXT_ELEMENT_REGEX = /<(h1|h2|h3|h4|p|div|span|strong|em|li)(\b[^>]*)>([^<>]*\S[^<>]*)<\/\1>/gi;
 const PLACEHOLDER_TOKEN_REGEX = /-(name|title|content|logo)-/gi;
+const TEMPLATE_LINE_REGEX = /<div([^>]*class=['"][^'"]*(template-region-(header|content|footer)-line-\d+)[^'"]*['"][^>]*)>([\s\S]*?)<\/div>/gi;
+
+function parseNumber(value, fallback = 0) {
+    const parsed = Number.parseFloat(String(value ?? ''));
+    return Number.isFinite(parsed) ? parsed : fallback;
+}
 
 function sanitizeTemplateData(templateData) {
     templateData.headerContent = sanitizeDocumentHtmlContent(templateData.headerContent || '');
@@ -58,6 +64,212 @@ function mergeRecoveredStylesheet(templateStylesheet = '', sourceStylesheet = ''
 
 function normalizeSpacing(value = '') {
     return value.replace(/\s+/g, ' ').trim();
+}
+
+function stripHtmlTags(value = '') {
+    return String(value || '').replace(/<[^>]+>/g, ' ');
+}
+
+function decodeHtmlEntities(value = '') {
+    return String(value || '')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;/gi, '\'');
+}
+
+function extractLineMetricsFromStylesheet(stylesheet = '') {
+    const metrics = new Map();
+    const classRuleRegex = /\.([a-z0-9_-]+)\{([^}]*)\}/gi;
+    let match;
+
+    while ((match = classRuleRegex.exec(stylesheet)) !== null) {
+        const [, className = '', declarations = ''] = match;
+        if (!/^template-region-(header|content|footer)-line-\d+$/i.test(className)) {
+            continue;
+        }
+
+        const fontSizeMatch = declarations.match(/font-size:\s*([0-9.]+)px/i);
+        const topMatch = declarations.match(/top:\s*([0-9.]+)px/i);
+        const leftMatch = declarations.match(/left:\s*([0-9.]+)px/i);
+
+        metrics.set(className, {
+            fontSize: parseNumber(fontSizeMatch?.[1], 0),
+            top: parseNumber(topMatch?.[1], Number.MAX_SAFE_INTEGER),
+            left: parseNumber(leftMatch?.[1], 0)
+        });
+    }
+
+    return metrics;
+}
+
+function extractTemplateLines(html = '', stylesheet = '') {
+    const metrics = extractLineMetricsFromStylesheet(stylesheet);
+    const lines = [];
+    let match;
+
+    while ((match = TEMPLATE_LINE_REGEX.exec(String(html || ''))) !== null) {
+        const [, attrs = '', className = '', region = 'content', innerHtml = ''] = match;
+        const text = normalizeSpacing(decodeHtmlEntities(stripHtmlTags(innerHtml)));
+        const lineMetrics = metrics.get(className) || {};
+        lines.push({
+            attrs,
+            className,
+            region,
+            text,
+            fontSize: lineMetrics.fontSize ?? 0,
+            top: lineMetrics.top ?? Number.MAX_SAFE_INTEGER,
+            left: lineMetrics.left ?? 0
+        });
+    }
+
+    return lines;
+}
+
+function scoreLineForIdentity(line) {
+    const text = line?.text || '';
+    if (!text) {
+        return -Infinity;
+    }
+
+    let score = (line.fontSize || 0) * 10;
+    if (line.region === 'header') {
+        score += 25;
+    }
+
+    if (text.length >= 6 && text.length <= 60) {
+        score += 12;
+    }
+
+    if (/[@+]|www\.|http|linkedin|github|\.com|\.fr|\d{2,}/i.test(text)) {
+        score -= 20;
+    }
+
+    return score;
+}
+
+function chooseLayoutPlaceholderTargets(layoutAnalysis = {}) {
+    const stylesheet = layoutAnalysis?.stylesheet || '';
+    const headerLines = extractTemplateLines(layoutAnalysis?.headerHtml || '', stylesheet);
+    const contentLines = extractTemplateLines(layoutAnalysis?.contentHtml || '', stylesheet);
+    const candidateLines = [...headerLines, ...contentLines];
+
+    const sortedByIdentity = [...candidateLines]
+        .filter((line) => line.text)
+        .sort((left, right) => {
+            const scoreDiff = scoreLineForIdentity(right) - scoreLineForIdentity(left);
+            if (scoreDiff !== 0) {
+                return scoreDiff;
+            }
+            if (left.top !== right.top) {
+                return left.top - right.top;
+            }
+            return left.left - right.left;
+        });
+
+    const nameLine = sortedByIdentity[0] || null;
+    const titleLine = sortedByIdentity.find((line) => line.className !== nameLine?.className) || null;
+    const contentLine = contentLines.find((line) => line.className !== nameLine?.className && line.className !== titleLine?.className) || null;
+
+    return {
+        nameLine,
+        titleLine,
+        contentLine
+    };
+}
+
+function replaceTemplateLineText(html = '', className = '', replacement = '') {
+    if (!html || !className) {
+        return html;
+    }
+
+    const escapedClassName = className.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const lineRegex = new RegExp(`(<div[^>]*class=['"][^'"]*${escapedClassName}[^'"]*['"][^>]*>)([\\s\\S]*?)(<\\/div>)`, 'i');
+    return String(html).replace(lineRegex, `$1${replacement}$3`);
+}
+
+function blankUnassignedTemplateLines(html = '', assignedClassNames = new Set()) {
+    if (!html) {
+        return html;
+    }
+
+    return String(html).replace(TEMPLATE_LINE_REGEX, (match, attrs = '', className = '', _region = '', innerHtml = '') => {
+        if (assignedClassNames.has(className)) {
+            return match;
+        }
+
+        const currentText = normalizeSpacing(decodeHtmlEntities(stripHtmlTags(innerHtml)));
+        if (!currentText) {
+            return match;
+        }
+
+        return `<div${attrs}></div>`;
+    });
+}
+
+function buildLayoutDrivenSections(templateData, layoutAnalysis = {}) {
+    const sourceHeader = layoutAnalysis?.headerHtml || '';
+    const sourceContent = layoutAnalysis?.contentHtml || '';
+    const sourceFooter = layoutAnalysis?.footerHtml || '';
+
+    if (!sourceHeader && !sourceContent && !sourceFooter) {
+        return null;
+    }
+
+    const { nameLine, titleLine, contentLine } = chooseLayoutPlaceholderTargets(layoutAnalysis);
+    const assignedClassNames = new Set(
+        [nameLine?.className, titleLine?.className, contentLine?.className].filter(Boolean)
+    );
+
+    let headerContent = sourceHeader;
+    let templateContent = sourceContent;
+    let footerContent = sourceFooter;
+
+    const applyReplacement = (line, replacement) => {
+        if (!line) {
+            return;
+        }
+
+        if (line.region === 'header') {
+            headerContent = replaceTemplateLineText(headerContent, line.className, replacement);
+            return;
+        }
+
+        if (line.region === 'footer') {
+            footerContent = replaceTemplateLineText(footerContent, line.className, replacement);
+            return;
+        }
+
+        templateContent = replaceTemplateLineText(templateContent, line.className, replacement);
+    };
+
+    applyReplacement(nameLine, '-name-');
+    applyReplacement(titleLine, '-title-');
+    applyReplacement(contentLine, '-content-');
+
+    headerContent = blankUnassignedTemplateLines(headerContent, assignedClassNames);
+    templateContent = blankUnassignedTemplateLines(templateContent, assignedClassNames);
+    footerContent = blankUnassignedTemplateLines(footerContent, assignedClassNames);
+
+    if (!templateContent.includes('-name-')) {
+        templateContent = `<div class="candidate-name">-name-</div>${templateContent}`;
+    }
+
+    if (!templateContent.includes('-title-')) {
+        templateContent = `<div class="candidate-title">-title-</div>${templateContent}`;
+    }
+
+    if (!templateContent.includes('-content-')) {
+        templateContent += '<div class="cv-content">-content-</div>';
+    }
+
+    templateData.headerContent = headerContent;
+    templateData.templateContent = templateContent;
+    templateData.footerContent = footerContent;
+
+    return templateData;
 }
 
 function replaceFirstSimpleTextElement(html, replacement) {
@@ -245,7 +457,11 @@ export function processTemplateExtractionResponse(response, fileName, images = [
         ].join('\n');
     }
 
-    normalizeTemplatePlaceholders(templateData);
+    if (context?.layoutAnalysis) {
+        buildLayoutDrivenSections(templateData, context.layoutAnalysis);
+    } else {
+        normalizeTemplatePlaceholders(templateData);
+    }
     ensureRequiredPlaceholders(templateData);
     hydrateTemplateImageSlots(templateData, images);
     injectImages(templateData, images);
@@ -281,24 +497,12 @@ export function processTemplateExtractionResponse(response, fileName, images = [
 export function buildFallbackTemplateFromLayout(fileName, layoutAnalysis = {}, extractedStyles = {}, images = []) {
     const headerHasImageRegion = Array.isArray(layoutAnalysis?.imageBlocks)
         && layoutAnalysis.imageBlocks.some((block) => block?.region === 'header');
-    const strippedHeader = stripTextNodes(layoutAnalysis?.headerHtml || '');
-    const strippedFooter = stripTextNodes(layoutAnalysis?.footerHtml || '');
-    const headerContent = [headerHasImageRegion ? '<div class="template-header-logo">-logo-</div>' : '', strippedHeader]
-        .filter(Boolean)
-        .join('\n');
-
     const template = {
         name: `Template extrait - ${fileName}`,
         description: `Template genere automatiquement depuis la structure PDF de ${fileName}`,
-        headerContent,
-        templateContent: [
-            '<section class="template-layout-fallback">',
-            '  <div class="candidate-name">-name-</div>',
-            '  <div class="candidate-title">-title-</div>',
-            '  <div class="cv-content">-content-</div>',
-            '</section>'
-        ].join('\n'),
-        footerContent: strippedFooter,
+        headerContent: layoutAnalysis?.headerHtml || '',
+        templateContent: layoutAnalysis?.contentHtml || '',
+        footerContent: layoutAnalysis?.footerHtml || '',
         stylesheet: mergeRecoveredStylesheet(
             mergeFallbackStylesheet(layoutAnalysis?.stylesheet || ''),
             layoutAnalysis?.stylesheet || ''
@@ -310,7 +514,18 @@ export function buildFallbackTemplateFromLayout(fileName, layoutAnalysis = {}, e
     };
 
     sanitizeTemplateData(template);
-    normalizeTemplatePlaceholders(template);
+    buildLayoutDrivenSections(template, layoutAnalysis);
+    if (!template.templateContent.includes('-name-') || !template.templateContent.includes('-title-') || !template.templateContent.includes('-content-')) {
+        normalizeTemplatePlaceholders(template);
+    }
+    if (!template.headerContent.includes('template-image-slot') && !template.headerContent.includes('-logo-') && headerHasImageRegion) {
+        template.headerContent = ['<div class="template-header-logo">-logo-</div>', stripTextNodes(template.headerContent)]
+            .filter(Boolean)
+            .join('\n');
+    } else if (!template.headerContent.includes('-name-') && !template.headerContent.includes('-title-')) {
+        template.headerContent = stripTextNodes(template.headerContent);
+    }
+    template.footerContent = stripTextNodes(template.footerContent);
     ensureRequiredPlaceholders(template);
     hydrateTemplateImageSlots(template, images);
     if (images.length > 0) {

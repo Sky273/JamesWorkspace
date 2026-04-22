@@ -283,6 +283,47 @@ describe('Template Extraction Service', () => {
             expect(userMsg).toContain('totalLines');
         });
 
+        it('rebuilds the final template from structured layout fragments when available', async () => {
+            callLLM.mockResolvedValueOnce({
+                content: JSON.stringify({
+                    name: 'Noisy Template',
+                    headerContent: '<div>Nom pollue</div>',
+                    templateContent: '<div>Contenu pollue</div>',
+                    footerContent: '<div>Pied pollue</div>',
+                    stylesheet: '.legacy { color: red; }'
+                }),
+                model: 'gpt-4',
+                usage: {}
+            });
+
+            const result = await extractTemplateFromHTML('<div>Layout</div>', [
+                { name: 'logo.png', base64: 'abc123', contentType: 'image/png' }
+            ], 'cv.pdf', {}, {
+                layoutAnalysis: {
+                    headerHtml: '<div class="template-region template-region-header"><div class="template-image-slot template-region-header-image-0"></div><div class="template-region-header-line-0">Cabinet Nova</div></div>',
+                    contentHtml: '<div class="template-region template-region-content"><div class="template-region-content-line-0">Senior Product Designer</div><div class="template-region-content-line-1">Experience detaillee</div></div>',
+                    footerHtml: '<div class="template-region template-region-footer"><div class="template-region-footer-line-0">www.example.com</div></div>',
+                    stylesheet: [
+                        '.template-region-header-line-0{position:absolute;left:24px;top:8px;font-size:28px;}',
+                        '.template-region-content-line-0{position:absolute;left:24px;top:24px;font-size:18px;}',
+                        '.template-region-content-line-1{position:absolute;left:24px;top:84px;font-size:12px;}',
+                        '.template-region-footer-line-0{position:absolute;left:24px;top:12px;font-size:10px;}'
+                    ].join('')
+                }
+            });
+
+            expect(result.template.headerContent).toContain('template-region-header-line-0');
+            expect(result.template.headerContent).toContain('-name-');
+            expect(result.template.headerContent).toContain('data:image/png;base64,abc123');
+            expect(result.template.templateContent).toContain('-title-');
+            expect(result.template.templateContent).toContain('-content-');
+            expect(result.template.footerContent).not.toContain('www.example.com');
+            expect(result.template.headerContent).not.toContain('Nom pollue');
+            expect(result.template.templateContent).not.toContain('Contenu pollue');
+            expect(result.template.stylesheet).toContain('.template-region-header-line-0');
+            expect(result.template.stylesheet).toContain('.legacy { color: red; }');
+        });
+
         it('should omit full raw html from the prompt when it is huge and layout fragments are available', async () => {
             callLLM.mockResolvedValueOnce({ content: validTemplateJSON, model: 'gpt-4', usage: {} });
             const hugeHtml = `<div>${'X'.repeat(30000)}</div>`;
@@ -349,6 +390,20 @@ describe('Template Extraction Service', () => {
             expect(result.template.stylesheet).toContain('.template-layout-fallback');
             expect(result.template.extractedColors).toEqual(['#123456']);
             expect(result.template.extractedFonts).toEqual(['Inter']);
+        });
+
+        it('does not fall back to deterministic layout when strict extraction is requested', async () => {
+            callLLM.mockRejectedValueOnce(new Error('Upstream timeout after 120000ms'));
+
+            await expect(extractTemplateFromHTML('<div>Layout</div>', [], 'cv.pdf', { colors: ['#123456'] }, {
+                strictExtraction: true,
+                layoutAnalysis: {
+                    headerHtml: '<header><div>Brand</div></header>',
+                    contentHtml: '<main><div>Body content</div></main>',
+                    footerHtml: '<footer><div>Footer</div></footer>',
+                    stylesheet: '.page { color: #123456; }'
+                }
+            })).rejects.toThrow('Upstream timeout after 120000ms');
         });
 
         it('should fall back to deterministic layout extraction when the prompt budget is exceeded before the LLM call', async () => {

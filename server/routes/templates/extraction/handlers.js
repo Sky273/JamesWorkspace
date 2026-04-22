@@ -72,6 +72,13 @@ function createExtractFromCvHandler() {
                 if (error.statusCode === 400) {
                     return res.status(400).json({ error: error.message });
                 }
+                if (error.statusCode === 422) {
+                    return res.status(422).json({
+                        code: error.code || 'TEMPLATE_EXTRACTION_FAILED',
+                        error: error.message,
+                        details: error.details || null
+                    });
+                }
                 throw error;
             }
 

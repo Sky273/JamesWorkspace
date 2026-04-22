@@ -207,6 +207,46 @@ export interface ExtractTemplateResponse {
     };
 }
 
+function buildExtractionFailureMessage(errorData: Record<string, unknown> | null, fallbackMessage: string): string {
+    const baseMessage = typeof errorData?.error === 'string' && errorData.error.trim()
+        ? errorData.error.trim()
+        : fallbackMessage;
+    const details = errorData?.details && typeof errorData.details === 'object'
+        ? errorData.details as Record<string, unknown>
+        : null;
+
+    if (!details) {
+        return baseMessage;
+    }
+
+    const detectedTextCharacters = typeof details.detectedTextCharacters === 'number'
+        ? details.detectedTextCharacters
+        : null;
+    const extractedPdfTextLength = typeof details.extractedPdfTextLength === 'number'
+        ? details.extractedPdfTextLength
+        : null;
+    const minimumTextCharacters = typeof details.minimumTextCharacters === 'number'
+        ? details.minimumTextCharacters
+        : null;
+    const sourcePageNumber = typeof details.sourcePageNumber === 'number'
+        ? details.sourcePageNumber
+        : null;
+
+    if (detectedTextCharacters !== null && minimumTextCharacters !== null) {
+        const locationLabel = sourcePageNumber !== null ? `sur la page source ${sourcePageNumber}` : 'sur la page analysee';
+        const globalTextFragment = extractedPdfTextLength !== null
+            ? ` Extraction textuelle globale: ${extractedPdfTextLength} caractere(s).`
+            : '';
+        return `${baseMessage}\n\nDiagnostic: ${detectedTextCharacters} caractere(s) detecte(s) ${locationLabel}, minimum requis ${minimumTextCharacters}.${globalTextFragment}`;
+    }
+
+    if (typeof details.cause === 'string' && details.cause.trim()) {
+        return `${baseMessage}\n\nCause: ${details.cause.trim()}`;
+    }
+
+    return baseMessage;
+}
+
 const parseJsonResponseOrThrow = async <T>(response: Response, fallbackMessage: string): Promise<T> => {
     const contentType = (response.headers.get('content-type') || '').toLowerCase();
 
@@ -375,6 +415,10 @@ export const templateService = {
             const response = await fetchWithCsrfRetry('/api/templates/extract-from-cv', authOptions, EXTRACTION_TIMEOUT);
             
             if (!response.ok) {
+                const errorData = await response.clone().json().catch(() => null) as Record<string, unknown> | null;
+                if (response.status === 422) {
+                    throw new Error(buildExtractionFailureMessage(errorData, 'Failed to extract template from CV'));
+                }
                 const errorMessage = await getResponseErrorMessage(response, 'Failed to extract template from CV');
                 throw new Error(errorMessage);
             }

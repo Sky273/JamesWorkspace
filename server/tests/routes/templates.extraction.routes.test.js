@@ -12,20 +12,6 @@ const { mockUserRateLimit } = vi.hoisted(() => ({
     mockUserRateLimit: vi.fn(() => (req, _res, next) => next())
 }));
 
-const mockExtractTemplateFromHTML = vi.fn();
-const mockExtractTemplateFromImage = vi.fn();
-const mockExtractTemplateFromCV = vi.fn();
-vi.mock('../../services/templateExtraction.service.js', () => ({
-    extractTemplateFromHTML: (...args) => mockExtractTemplateFromHTML(...args),
-    extractTemplateFromImage: (...args) => mockExtractTemplateFromImage(...args),
-    extractTemplateFromCV: (...args) => mockExtractTemplateFromCV(...args)
-}));
-
-const mockExtractTextFromPDFBuffer = vi.fn();
-vi.mock('../../services/batchJobsWorker/textExtraction.js', () => ({
-    extractTextFromPDFBuffer: (...args) => mockExtractTextFromPDFBuffer(...args)
-}));
-
 const mockExtractFromDOCX = vi.fn();
 const mockExtractFromPDF = vi.fn();
 let validDocxBuffer = Buffer.from([0x50, 0x4B, 0x03, 0x04, 0x14, 0x00]);
@@ -101,11 +87,6 @@ vi.mock('../../routes/templates/extraction/extractors.js', () => ({
     extractFromPDF: (...args) => mockExtractFromPDF(...args)
 }));
 
-const mockPdfParse = vi.fn();
-vi.mock('pdf-parse', () => ({
-    default: (...args) => mockPdfParse(...args)
-}));
-
 vi.mock('../../utils/logger.backend.js', () => ({
     safeLog: vi.fn()
 }));
@@ -171,7 +152,7 @@ describe('Templates Extraction Routes', () => {
             template: { name: 'PDF Template' },
             model: 'test-model',
             usage: { total_tokens: 1 },
-            extractionMethod: 'pdf-text'
+            extractionMethod: 'pdf-layout-html'
         });
         app = createTestApp();
     });
@@ -253,27 +234,37 @@ describe('Templates Extraction Routes', () => {
             expect(res.body.error).toContain('Invalid file contents');
         });
 
-        it('falls back to pdfjs text extraction when pdf-parse is not callable', async () => {
-            mockPdfParse.mockRejectedValue(new TypeError('pdfParse is not a function'));
-            mockExtractTextFromPDFBuffer.mockResolvedValue('A'.repeat(80));
-            mockExtractFromPDF.mockResolvedValueOnce({
-                template: { name: 'Fallback Template' },
-                model: 'test-model',
-                usage: { total_tokens: 10 },
-                extractionMethod: 'pdf-text-fallback'
-            });
+        it('returns a clear extraction error payload when backend extraction fails without fallback', async () => {
+            mockExtractFromPDF.mockRejectedValueOnce(Object.assign(
+                new Error('Extraction du modele impossible : le layout PDF detecte seulement 12 caracteres exploitables sur la premiere page, minimum requis 80.'),
+                {
+                    code: 'TEMPLATE_LAYOUT_TOO_SPARSE',
+                    statusCode: 422,
+                    details: {
+                        detectedTextCharacters: 12,
+                        extractedPdfTextLength: 240,
+                        minimumTextCharacters: 80
+                    }
+                }
+            ));
 
             const res = await request(app)
                 .post('/api/templates/extract-from-cv')
                 .set({ ...AUTH, 'x-test-mimetype': 'application/pdf' });
 
-            expect(res.status).toBe(200);
+            expect(res.status).toBe(422);
             expect(mockExtractFromPDF).toHaveBeenCalledWith(
                 expect.any(Buffer),
                 'template.pdf',
                 { maxTokens: undefined }
             );
-            expect(res.body.extractionMethod).toBe('pdf-text-fallback');
+            expect(res.body.code).toBe('TEMPLATE_LAYOUT_TOO_SPARSE');
+            expect(res.body.error).toContain('minimum requis 80');
+            expect(res.body.details).toEqual(expect.objectContaining({
+                detectedTextCharacters: 12,
+                extractedPdfTextLength: expect.any(Number),
+                minimumTextCharacters: 80
+            }));
         });
 
         it('should reject concurrent template extractions above the per-user limit', async () => {

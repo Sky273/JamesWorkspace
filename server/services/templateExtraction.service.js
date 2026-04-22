@@ -108,11 +108,12 @@ export async function extractTemplateFromHTML(htmlContent, images = [], fileName
         });
 
         return processTemplateExtractionResponse(response, fileName, images, {
-            sourceStylesheet: options.layoutAnalysis?.stylesheet || ''
+            sourceStylesheet: options.layoutAnalysis?.stylesheet || '',
+            layoutAnalysis: options.layoutAnalysis || null
         });
     } catch (error) {
         safeLog('error', 'HTML template extraction failed', { error: error.message });
-        if (options.layoutAnalysis) {
+        if (options.layoutAnalysis && !options.strictExtraction) {
             safeLog('warn', 'Falling back to deterministic layout template extraction', {
                 fileName,
                 error: error.message,
@@ -152,7 +153,8 @@ export async function extractTemplateFromImage(imageBase64, textContent = '', fi
         });
 
         return processTemplateExtractionResponse(response, fileName, extractedImages, {
-            sourceStylesheet: options.layoutAnalysis?.stylesheet || ''
+            sourceStylesheet: options.layoutAnalysis?.stylesheet || '',
+            layoutAnalysis: options.layoutAnalysis || null
         });
     } catch (error) {
         safeLog('error', 'Vision template extraction failed', { error: error.message });

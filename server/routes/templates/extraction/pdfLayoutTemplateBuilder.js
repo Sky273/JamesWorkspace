@@ -9,10 +9,12 @@ const DEFAULT_FOOTER_RATIO = 0.14;
 const HEADER_SCAN_RATIO = 0.28;
 const FOOTER_SCAN_RATIO = 0.22;
 const MAX_REPEATED_REGION_PAGES = 3;
+const MAX_LAYOUT_CANDIDATE_PAGES = 3;
 const MIN_LINE_GROUP_THRESHOLD = 6;
 const MIN_VISUAL_BLOCK_AREA = 1200;
 const MIN_IMAGE_BLOCK_AREA = 256;
 const DEFAULT_PAGE_BACKGROUND = '#ffffff';
+const MIN_PAGE_BACKGROUND_AREA_RATIO = 0.35;
 
 function escapeHtml(value) {
     return String(value || '')
@@ -50,6 +52,78 @@ function inferFontStyle(fontName, fontFamily) {
     return /italic|oblique/i.test(`${fontName} ${fontFamily}`) ? 'italic' : 'normal';
 }
 
+function normalizeColorString(value) {
+    const normalized = String(value || '').trim();
+    if (!normalized) {
+        return null;
+    }
+
+    if (/^#[0-9a-f]{3,8}$/i.test(normalized)) {
+        return normalized.toLowerCase();
+    }
+
+    const rgbMatch = normalized.match(/^rgba?\(([^)]+)\)$/i);
+    if (rgbMatch) {
+        const channels = rgbMatch[1]
+            .split(',')
+            .map((part) => Number.parseFloat(part.trim()))
+            .filter((part) => Number.isFinite(part));
+        if (channels.length >= 3) {
+            return rgbToHex(
+                clamp(Math.round(channels[0]), 0, 255),
+                clamp(Math.round(channels[1]), 0, 255),
+                clamp(Math.round(channels[2]), 0, 255)
+            );
+        }
+    }
+
+    return null;
+}
+
+function inferItemColor(item, style = {}) {
+    const candidates = [
+        item?.color,
+        item?.fill,
+        item?.fillColor,
+        style?.color,
+        style?.fill,
+        style?.fillColor
+    ];
+
+    for (const candidate of candidates) {
+        const normalized = normalizeColorString(candidate);
+        if (normalized) {
+            return normalized;
+        }
+    }
+
+    return null;
+}
+
+function quoteCssFontFamily(value) {
+    const normalized = String(value || '').trim();
+    if (!normalized) {
+        return 'sans-serif';
+    }
+
+    return normalized
+        .split(',')
+        .map((part) => {
+            const token = part.trim();
+            if (!token) {
+                return null;
+            }
+
+            if (/^['"]/.test(token) || /^[a-z-]+$/i.test(token)) {
+                return token;
+            }
+
+            return `"${token.replace(/"/g, '\\"')}"`;
+        })
+        .filter(Boolean)
+        .join(', ');
+}
+
 function normalizeTextItems(items, styles, pageHeight) {
     return (items || [])
         .filter((item) => typeof item?.str === 'string' && item.str.trim())
@@ -82,7 +156,8 @@ function normalizeTextItems(items, styles, pageHeight) {
                 fontFamily,
                 fontName: item.fontName || '',
                 fontWeight: inferFontWeight(item.fontName, fontFamily),
-                fontStyle: inferFontStyle(item.fontName, fontFamily)
+                fontStyle: inferFontStyle(item.fontName, fontFamily),
+                color: inferItemColor(item, style)
             };
         })
         .sort((a, b) => {
@@ -143,6 +218,15 @@ function groupItemsIntoLines(items) {
         const dominantItem = sortedItems.reduce((selected, current) => (
             current.text.length > selected.text.length ? current : selected
         ), sortedItems[0]);
+        const colorWeights = new Map();
+        sortedItems.forEach((item) => {
+            if (!item.color) {
+                return;
+            }
+            colorWeights.set(item.color, (colorWeights.get(item.color) || 0) + Math.max(item.text.length, 1));
+        });
+        const dominantColor = Array.from(colorWeights.entries())
+            .sort((left, right) => right[1] - left[1])[0]?.[0] || dominantItem.color || null;
 
         return {
             index,
@@ -155,7 +239,8 @@ function groupItemsIntoLines(items) {
             fontSize: dominantItem.fontSize,
             fontFamily: dominantItem.fontFamily,
             fontWeight: dominantItem.fontWeight,
-            fontStyle: dominantItem.fontStyle
+            fontStyle: dominantItem.fontStyle,
+            color: dominantColor
         };
     }).filter((line) => line.text.length > 0);
 }
@@ -619,7 +704,7 @@ function buildRegionFragment(regionName, lines, regionBounds, pageWidth, regionH
         const className = `template-region-${safeRegionName}-line-${index}`;
         extractedFonts.add(line.fontFamily);
         cssRules.push(
-            `.${className}{position:absolute;left:${line.left}px;top:${Math.max(0, line.top - regionBounds.top)}px;font-size:${line.fontSize}px;line-height:${Math.max(line.height, Math.round(line.fontSize * 1.2))}px;font-family:${line.fontFamily};font-weight:${line.fontWeight};font-style:${line.fontStyle};white-space:pre-wrap;z-index:2;}`
+            `.${className}{position:absolute;left:${line.left}px;top:${Math.max(0, line.top - regionBounds.top)}px;font-size:${line.fontSize}px;line-height:${Math.max(line.height, Math.round(line.fontSize * 1.2))}px;font-family:${quoteCssFontFamily(line.fontFamily)};font-weight:${line.fontWeight};font-style:${line.fontStyle};${line.color ? `color:${line.color};` : ''}white-space:pre-wrap;z-index:2;}`
         );
         htmlLines.push(`<div class="${className}">${escapeHtml(line.text)}</div>`);
     });
@@ -630,6 +715,83 @@ function buildRegionFragment(regionName, lines, regionBounds, pageWidth, regionH
         stylesheet: cssRules.join('\n'),
         fonts: Array.from(extractedFonts)
     };
+}
+
+function derivePrimaryFontFamily(lines = []) {
+    const weights = new Map();
+
+    lines.forEach((line) => {
+        if (!line?.fontFamily) {
+            return;
+        }
+        const weight = Math.max((line.text || '').length, 1) * Math.max(line.fontSize || 1, 1);
+        weights.set(line.fontFamily, (weights.get(line.fontFamily) || 0) + weight);
+    });
+
+    return Array.from(weights.entries())
+        .sort((left, right) => right[1] - left[1])[0]?.[0] || 'Arial, sans-serif';
+}
+
+function derivePrimaryTextColor(lines = []) {
+    const weights = new Map();
+
+    lines.forEach((line) => {
+        if (!line?.color) {
+            return;
+        }
+        const weight = Math.max((line.text || '').length, 1) * Math.max(line.fontSize || 1, 1);
+        weights.set(line.color, (weights.get(line.color) || 0) + weight);
+    });
+
+    return Array.from(weights.entries())
+        .sort((left, right) => right[1] - left[1])[0]?.[0] || null;
+}
+
+function derivePageBackgroundColor(visualBlocks = [], pageWidth = 0, pageHeight = 0) {
+    const pageArea = Math.max(Number(pageWidth) || 0, 1) * Math.max(Number(pageHeight) || 0, 1);
+    const largestBlock = [...visualBlocks]
+        .sort((left, right) => ((right.width * right.height) - (left.width * left.height)))[0];
+
+    if (!largestBlock) {
+        return null;
+    }
+
+    const blockArea = (largestBlock.width || 0) * (largestBlock.height || 0);
+    if ((blockArea / pageArea) < MIN_PAGE_BACKGROUND_AREA_RATIO) {
+        return null;
+    }
+
+    return largestBlock.fill || null;
+}
+
+function buildExtractedColorPalette(lines = [], visualArtifacts = {}, pageBackgroundColor = null) {
+    const weightedColors = new Map();
+
+    lines.forEach((line) => {
+        if (!line?.color) {
+            return;
+        }
+        const weight = Math.max((line.text || '').length, 1) * Math.max(line.fontSize || 1, 1);
+        weightedColors.set(line.color, (weightedColors.get(line.color) || 0) + weight);
+    });
+
+    (visualArtifacts?.visualBlocks || []).forEach((block) => {
+        if (!block?.fill) {
+            return;
+        }
+        const weight = Math.max((block.width || 0) * (block.height || 0), 1);
+        weightedColors.set(block.fill, (weightedColors.get(block.fill) || 0) + weight);
+    });
+
+    if (pageBackgroundColor) {
+        weightedColors.set(pageBackgroundColor, (weightedColors.get(pageBackgroundColor) || 0) + 1_000_000);
+    }
+
+    return Array.from(weightedColors.entries())
+        .sort((left, right) => right[1] - left[1])
+        .map(([color]) => color)
+        .filter((color, index, array) => color && array.indexOf(color) === index)
+        .slice(0, 12);
 }
 
 function buildCombinedPageHtml(headerHtml, contentHtml, footerHtml) {
@@ -725,7 +887,16 @@ export function buildStructuredPdfTemplateInput({
     );
 
     const stylesheet = sanitizeDocumentStylesheet([
-        `.template-page{position:relative;width:${Math.round(pageWidth)}px;min-height:${Math.round(pageHeight)}px;background:${DEFAULT_PAGE_BACKGROUND};color:#111;font-family:Arial,sans-serif;}`,
+        `.template-page{position:relative;width:${Math.round(pageWidth)}px;min-height:${Math.round(pageHeight)}px;${(() => {
+            const pageBackgroundColor = derivePageBackgroundColor(visualArtifacts.visualBlocks, pageWidth, pageHeight);
+            const primaryTextColor = derivePrimaryTextColor(lines);
+            const primaryFontFamily = derivePrimaryFontFamily(lines);
+            return [
+                `background:${pageBackgroundColor || DEFAULT_PAGE_BACKGROUND};`,
+                primaryTextColor ? `color:${primaryTextColor};` : '',
+                `font-family:${quoteCssFontFamily(primaryFontFamily)};`
+            ].filter(Boolean).join('');
+        })()}}`,
         `header,main,footer{display:block;width:100%;}`,
         `.template-visual-block,.template-image-slot{box-sizing:border-box;}`,
         headerFragment.stylesheet,
@@ -747,6 +918,7 @@ export function buildStructuredPdfTemplateInput({
         ...block,
         fill: block.fill || '#e5e7eb'
     }));
+    const pageBackgroundColor = derivePageBackgroundColor(visualBlocks, pageWidth, pageHeight);
 
     const imageBlocks = [
         ...imageBlocksByRegion.header,
@@ -761,7 +933,7 @@ export function buildStructuredPdfTemplateInput({
         footerHtml: footerFragment.html,
         stylesheet,
         extractedFonts,
-        extractedColors: visualArtifacts.extractedColors,
+        extractedColors: buildExtractedColorPalette(lines, { visualBlocks }, pageBackgroundColor),
         visualBlocks,
         imageBlocks,
         metrics: {
@@ -774,6 +946,8 @@ export function buildStructuredPdfTemplateInput({
             totalTextCharacters: lines.reduce((sum, line) => sum + line.text.length, 0),
             visualBlockCount: visualBlocks.length,
             imageBlockCount: imageBlocks.length,
+            rawItemCount: items.length,
+            rawTextCharacters: (items || []).reduce((sum, item) => sum + (item?.str || '').length, 0),
             pageWidth: Math.round(pageWidth),
             pageHeight: Math.round(pageHeight),
             headerTop: roundNumber(headerBounds.top),
@@ -832,24 +1006,62 @@ export async function extractStructuredPdfTemplateInput(buffer) {
     const uint8Array = new Uint8Array(buffer);
     const loadingTask = await loadPdfDocument(uint8Array);
     const pdf = await loadingTask.promise;
-    const firstPage = await pdf.getPage(1);
-    const viewport = firstPage.getViewport({ scale: 1 });
     const repeatedRegionHints = await extractRepeatedRegionHints(pdf);
-    const [textContent, operatorList, pdfjsLib] = await Promise.all([
-        firstPage.getTextContent(),
-        typeof firstPage.getOperatorList === 'function'
-            ? firstPage.getOperatorList().catch(() => null)
-            : Promise.resolve(null),
-        import('pdfjs-dist/legacy/build/pdf.mjs').catch(() => null)
-    ]);
+    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs').catch(() => null);
+    const pageCount = Math.min(Number(pdf?.numPages) || 0, MAX_LAYOUT_CANDIDATE_PAGES);
+    const candidateAnalyses = [];
 
-    return buildStructuredPdfTemplateInput({
-        pageWidth: viewport.width,
-        pageHeight: viewport.height,
-        items: textContent.items,
-        styles: textContent.styles,
-        operatorList,
-        pdfOps: pdfjsLib?.OPS || null,
-        repeatedRegionHints
+    for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
+        const page = await pdf.getPage(pageNumber);
+        const viewport = page.getViewport({ scale: 1 });
+        const [textContent, operatorList] = await Promise.all([
+            page.getTextContent(),
+            typeof page.getOperatorList === 'function'
+                ? page.getOperatorList().catch(() => null)
+                : Promise.resolve(null)
+        ]);
+
+        const candidate = buildStructuredPdfTemplateInput({
+            pageWidth: viewport.width,
+            pageHeight: viewport.height,
+            items: textContent.items,
+            styles: textContent.styles,
+            operatorList,
+            pdfOps: pdfjsLib?.OPS || null,
+            repeatedRegionHints
+        });
+
+        candidateAnalyses.push({
+            pageNumber,
+            analysis: candidate,
+            rawItemCount: textContent.items.length,
+            rawTextCharacters: textContent.items.reduce((sum, item) => sum + (item?.str || '').length, 0)
+        });
+    }
+
+    const selectedCandidate = [...candidateAnalyses].sort((left, right) => {
+        const rightScore = (right.analysis.metrics.totalTextCharacters * 10) + (right.analysis.metrics.totalLines * 5) + right.rawTextCharacters;
+        const leftScore = (left.analysis.metrics.totalTextCharacters * 10) + (left.analysis.metrics.totalLines * 5) + left.rawTextCharacters;
+        return rightScore - leftScore;
+    })[0];
+
+    const selectedAnalysis = selectedCandidate?.analysis || buildStructuredPdfTemplateInput({
+        pageWidth: 0,
+        pageHeight: 0
     });
+
+    selectedAnalysis.metrics = {
+        ...selectedAnalysis.metrics,
+        sourcePageNumber: selectedCandidate?.pageNumber || 1,
+        candidatePageCount: candidateAnalyses.length,
+        candidatePages: candidateAnalyses.map((candidate) => ({
+            pageNumber: candidate.pageNumber,
+            rawItemCount: candidate.rawItemCount,
+            rawTextCharacters: candidate.rawTextCharacters,
+            totalLines: candidate.analysis.metrics.totalLines,
+            layoutTextCharacters: candidate.analysis.metrics.totalTextCharacters
+        }))
+    };
+
+    return selectedAnalysis;
 }

@@ -5,8 +5,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockExtractTemplateFromHTML = vi.fn();
-const mockExtractTemplateFromImage = vi.fn();
-const mockExtractTemplateFromCV = vi.fn();
 const mockExtractTextFromPDFBuffer = vi.fn();
 const mockConvertWordBufferToPdfBuffer = vi.fn();
 const mockExtractStructuredPdfTemplateInput = vi.fn();
@@ -25,8 +23,6 @@ vi.mock('canvas', () => ({
 
 vi.mock('../../services/templateExtraction.service.js', () => ({
     extractTemplateFromHTML: (...args) => mockExtractTemplateFromHTML(...args),
-    extractTemplateFromImage: (...args) => mockExtractTemplateFromImage(...args),
-    extractTemplateFromCV: (...args) => mockExtractTemplateFromCV(...args)
 }));
 
 vi.mock('../../services/batchJobsWorker/textExtraction.js', () => ({
@@ -67,7 +63,7 @@ describe('template extraction extractors', () => {
         vi.clearAllMocks();
 
         mockPdfParse.mockResolvedValue({
-            text: 'PDF text content for extraction'
+            text: 'PDF text content for extraction with enough global characters to exceed the threshold easily'
         });
 
         mockPdfDocumentLoad.mockResolvedValue({
@@ -91,25 +87,17 @@ describe('template extraction extractors', () => {
                 totalTextCharacters: 180,
                 totalLines: 10,
                 visualBlockCount: 1,
-                imageBlockCount: 1
+                imageBlockCount: 1,
+                sourcePageNumber: 1,
+                candidatePages: [
+                    { pageNumber: 1, rawItemCount: 10, rawTextCharacters: 180, totalLines: 10, layoutTextCharacters: 180 }
+                ]
             }
         });
 
         mockExtractTemplateFromHTML.mockResolvedValue({
             template: { name: 'Extracted template' },
             model: 'mock-model',
-            usage: { total_tokens: 1 }
-        });
-
-        mockExtractTemplateFromImage.mockResolvedValue({
-            template: { name: 'Vision template' },
-            model: 'vision-model',
-            usage: { total_tokens: 1 }
-        });
-
-        mockExtractTemplateFromCV.mockResolvedValue({
-            template: { name: 'Fallback template' },
-            model: 'legacy-model',
             usage: { total_tokens: 1 }
         });
 
@@ -169,7 +157,6 @@ describe('template extraction extractors', () => {
                 })
             })
         );
-        expect(mockExtractTemplateFromImage).not.toHaveBeenCalled();
     });
 
     it('converts office documents to PDF before layout extraction', async () => {
@@ -189,7 +176,7 @@ describe('template extraction extractors', () => {
         expect(mockExtractStructuredPdfTemplateInput).toHaveBeenCalledWith(Buffer.from('%PDF-1.7 converted'));
     });
 
-    it('falls back to vision when structured PDF layout is too sparse', async () => {
+    it('fails with a clear extraction error when structured PDF layout is too sparse', async () => {
         mockExtractStructuredPdfTemplateInput.mockResolvedValueOnce({
             pageHtml: '<div class="template-page"></div>',
             headerHtml: '',
@@ -203,12 +190,19 @@ describe('template extraction extractors', () => {
             }
         });
 
-        const result = await extractFromPDF(Buffer.from('%PDF-1.7 sample'), 'sample.pdf');
-
-        expect(result.extractionMethod).toBe('pdf-vision-fallback');
-        expect(result.template.extractionConfidence).toEqual(expect.objectContaining({
-            level: 'medium'
-        }));
-        expect(mockExtractTemplateFromImage).toHaveBeenCalledTimes(1);
+        await expect(extractFromPDF(Buffer.from('%PDF-1.7 sample'), 'sample.pdf'))
+            .rejects.toMatchObject({
+                code: 'TEMPLATE_LAYOUT_TOO_SPARSE',
+                statusCode: 422,
+                details: expect.objectContaining({
+                    detectedTextCharacters: 12,
+                    extractedPdfTextLength: expect.any(Number),
+                    minimumTextCharacters: 80,
+                    sourcePageNumber: 1,
+                    layoutMetrics: expect.objectContaining({
+                        totalTextCharacters: 12
+                    })
+                })
+            });
     });
 });
