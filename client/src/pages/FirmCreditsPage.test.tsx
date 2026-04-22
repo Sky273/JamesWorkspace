@@ -120,9 +120,9 @@ describe('FirmCreditsPage', () => {
     render(<MemoryRouter><FirmCreditsPage /></MemoryRouter>);
 
     await screen.findByText('Acme');
-    fireEvent.click(screen.getAllByText('firmCredits.addCredits')[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'firmCredits.addCredits' })[0]);
     fireEvent.change(screen.getByLabelText('firmCredits.modal.amountLabel'), { target: { value: '300' } });
-    fireEvent.click(screen.getAllByText('firmCredits.modal.confirm')[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'firmCredits.modal.confirm' }));
 
     await waitFor(() => {
       expect(addFirmCreditsMock).toHaveBeenCalledWith('firm-1', 300);

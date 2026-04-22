@@ -12,7 +12,8 @@ vi.mock('../../utils/logger.backend.js', () => ({
 
 // Mock pdfjs-dist
 vi.mock('pdfjs-dist/legacy/build/pdf.mjs', () => ({
-    getDocument: vi.fn()
+    getDocument: vi.fn(),
+    GlobalWorkerOptions: {}
 }));
 
 vi.mock('canvas', () => ({
