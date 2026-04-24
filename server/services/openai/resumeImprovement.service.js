@@ -21,6 +21,63 @@ function isRecoverableStructuredJsonError(error) {
         || message.includes('Unexpected token');
 }
 
+const IMPROVEMENT_TEXT_FIELD_KEYS = ['structuredText', 'html', 'improvedText', 'content', 'text'];
+
+function decodeJsonStringFragment(value = '') {
+    try {
+        return JSON.parse(`"${value}"`);
+    } catch {
+        return value
+            .replace(/\\"/g, '"')
+            .replace(/\\n/g, '\n')
+            .replace(/\\r/g, '\r')
+            .replace(/\\t/g, '\t')
+            .replace(/\\\\/g, '\\');
+    }
+}
+
+function extractJsonStringFieldValue(content = '', fieldKey) {
+    const fieldPattern = new RegExp(`"${fieldKey}"\\s*:\\s*"`, 'i');
+    const match = fieldPattern.exec(content);
+    if (!match) {
+        return '';
+    }
+
+    const valueStart = match.index + match[0].length;
+    let escaped = false;
+
+    for (let index = valueStart; index < content.length; index++) {
+        const char = content[index];
+
+        if (escaped) {
+            escaped = false;
+            continue;
+        }
+
+        if (char === '\\') {
+            escaped = true;
+            continue;
+        }
+
+        if (char === '"') {
+            return decodeJsonStringFragment(content.slice(valueStart, index));
+        }
+    }
+
+    return '';
+}
+
+function extractImprovedTextFromMalformedJson(content = '') {
+    for (const fieldKey of IMPROVEMENT_TEXT_FIELD_KEYS) {
+        const value = extractJsonStringFieldValue(content, fieldKey);
+        if (value && value.trim()) {
+            return value;
+        }
+    }
+
+    return '';
+}
+
 export async function executeResumeImprovement({
     text,
     analysis,
@@ -68,6 +125,39 @@ export async function executeResumeImprovement({
     }
 
     const rawContent = stripLlmThinkingContent(response.choices[0].message.content);
+
+    function buildMalformedJsonFieldSalvageResult(content, source) {
+        const selectedText = extractImprovedTextFromMalformedJson(content);
+        const cleanedText = finalizeImprovedOutput({
+            sourceText: text,
+            selectedText,
+            context: { fallback: true, source }
+        });
+
+        if (!cleanedText || cleanedText.trim().length === 0) {
+            return null;
+        }
+
+        safeLog('warn', 'Recovered improved resume text from malformed JSON field', {
+            source,
+            model,
+            recoveredTextLength: cleanedText.length
+        });
+        metrics.trackImprovementActivity({
+            provider: metricsProvider,
+            event: 'run',
+            successfulRuns: 1,
+            fallbackRuns: 1,
+            inputChars: text.length,
+            outputChars: cleanedText.length,
+            metadata: { source: 'malformed-json-field-salvage', ...(userMetadata?.promptMetadata || {}) }
+        });
+
+        return {
+            text: cleanedText,
+            analysis: buildEmptyImprovementAnalysis()
+        };
+    }
 
     safeLog('info', 'LLM Improvement raw response preview:', {
         isJSON: rawContent.startsWith('{'),
@@ -162,7 +252,20 @@ export async function executeResumeImprovement({
                         error: retryError.message,
                         model
                     });
+
+                    const retrySalvageResult = buildMalformedJsonFieldSalvageResult(
+                        stripLlmThinkingContent(response?.choices?.[0]?.message?.content || ''),
+                        'compact-retry'
+                    );
+                    if (retrySalvageResult) {
+                        return retrySalvageResult;
+                    }
                 }
+            }
+
+            const salvageResult = buildMalformedJsonFieldSalvageResult(rawContent, 'initial-response');
+            if (salvageResult) {
+                return salvageResult;
             }
 
             safeLog('error', 'Failed to parse LLM improvement response as JSON', {

@@ -15,9 +15,28 @@ import * as templatesService from '../../services/templates.service.js';
 import { shouldBypassCache } from '../../utils/requestCacheControl.js';
 
 const router = express.Router();
+const NULL_BYTE = String.fromCharCode(0);
+
+function stripNullBytes(value) {
+    if (typeof value === 'string') {
+        return value.split(NULL_BYTE).join('');
+    }
+
+    if (Array.isArray(value)) {
+        return value.map(stripNullBytes);
+    }
+
+    if (value && typeof value === 'object') {
+        return Object.fromEntries(
+            Object.entries(value).map(([key, entryValue]) => [key, stripNullBytes(entryValue)])
+        );
+    }
+
+    return value;
+}
 
 function normalizeTemplatePayload(payload = {}) {
-    const normalized = normalizeRequestBodyAliases(payload);
+    const normalized = stripNullBytes(normalizeRequestBodyAliases(payload));
 
     return {
         ...normalized,

@@ -982,6 +982,39 @@ Executive Summary Improvements:
             }));
         });
 
+        it('should recover improved text from malformed JSON after compact retry also fails', async () => {
+            callBusinessChatCompletion
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: {
+                            content: '{"improvedText":"<p>Improved CV v1</p>","summary":{"title":"Lead'
+                        }
+                    }]
+                })
+                .mockResolvedValueOnce({
+                    choices: [{
+                        message: {
+                            content: '{"improvedText":"<h2>Improved CV v2</h2><p>Experience renforcée</p>","summary":{"title":"Lead'
+                        }
+                    }]
+                });
+
+            const result = await improveResume(
+                '<h2>CV source</h2><p>Experience initiale</p>'.repeat(5),
+                { name: 'John' },
+                'gpt-4o',
+                '{TEXT} {ANALYSIS} {FILENAME}'
+            );
+
+            expect(result.text).toBe('<h2>Improved CV v2</h2><p>Experience renforcée</p>');
+            expect(result.analysis.globalRating).toBe(0);
+            expect(callBusinessChatCompletion).toHaveBeenCalledTimes(2);
+            expect(metrics.trackImprovementActivity).toHaveBeenCalledWith(expect.objectContaining({
+                fallbackRuns: 1,
+                metadata: expect.objectContaining({ source: 'malformed-json-field-salvage' })
+            }));
+        });
+
         it('should stop improvement retry when the deadline is already expired', async () => {
             const nowSpy = vi.spyOn(Date, 'now');
             nowSpy.mockReturnValueOnce(1_000).mockReturnValue(2_000);

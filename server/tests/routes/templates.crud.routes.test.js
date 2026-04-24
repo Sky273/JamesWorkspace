@@ -512,6 +512,34 @@ describe('Templates CRUD Routes', () => {
             expect(createArgs.firm_id).toBe('firm-123');
         });
 
+        it('should strip null bytes from template payloads before inserting', async () => {
+            mockCreateTemplate.mockResolvedValueOnce(sampleTemplateRow);
+
+            const res = await request(app)
+                .post('/api/templates')
+                .set('Authorization', 'Bearer valid-token')
+                .send({
+                    Name: 'Imported\u0000 Template',
+                    Description: 'Generated\u0000 template',
+                    HeaderContent: '<header>Logo\u0000</header>',
+                    TemplateContent: '<main>Body\u0000</main>',
+                    FooterContent: '<footer>Page\u0000</footer>',
+                    FooterHeight: 25,
+                    Stylesheet: '.cv::before { content: "\\0000"; }\u0000',
+                    Tags: ['imported\u0000', 'cv']
+                });
+
+            expect(res.status).toBe(200);
+            const createArgs = mockCreateTemplate.mock.calls[0][0];
+            expect(createArgs.name).toBe('Imported Template');
+            expect(createArgs.description).toBe('Generated template');
+            expect(createArgs.header_content).toBe('<header>Logo</header>');
+            expect(createArgs.template_content).toBe('<main>Body</main>');
+            expect(createArgs.footer_content).toBe('<footer>Page</footer>');
+            expect(createArgs.stylesheet).toBe('.cv::before { content: "\\0000"; }');
+            expect(createArgs.tags).toEqual(['imported', 'cv']);
+        });
+
         it('should create global template when admin sets firm_id to empty string', async () => {
             // Route uses: req.body.firm_id || req.body['Firm ID']
             // Then checks: requestedFirmId === '' || requestedFirmId === null
