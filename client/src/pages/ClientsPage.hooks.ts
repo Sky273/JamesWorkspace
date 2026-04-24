@@ -26,6 +26,7 @@ export interface DeleteTarget {
 }
 type ClientWithDetails = Client & { contacts?: ClientContact[] };
 export const CLIENTS_PAGE_SIZE = 12;
+const CLIENT_FILTERS: ClientFilter[] = ['all', 'client', 'prospect'];
 export type { ClientFilter, ClientsStats, CRMTab };
 type FetchClientsOptions = {
   page?: number;
@@ -103,6 +104,7 @@ export function useClientsDashboard() {
   const [detailRefreshing, setDetailRefreshing] = useState(false);
   const [returnToDetailAfterContact, setReturnToDetailAfterContact] = useState(false);
   const clientsRequestIdRef = useRef(0);
+  const dirtyClientFiltersRef = useRef<Set<ClientFilter>>(new Set());
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -117,19 +119,24 @@ export function useClientsDashboard() {
     const effectivePage = options.page ?? page;
     const effectiveSearch = options.search ?? debouncedSearch;
     const normalizedSearch = effectiveSearch.trim().toLowerCase();
+    const filterKey = activeTab;
     try {
       setLoading(true);
-      const typeFilter = getClientTypeFilter(activeTab);
+      const typeFilter = getClientTypeFilter(filterKey);
+      const forceRefresh = options.forceRefresh === true || dirtyClientFiltersRef.current.has(filterKey);
       const result = await clientService.getClients({
         page: effectivePage,
         pageSize: CLIENTS_PAGE_SIZE,
         search: effectiveSearch,
         type: typeFilter,
-        forceRefresh: options.forceRefresh,
+        forceRefresh,
       });
 
       if (requestId !== clientsRequestIdRef.current) {
         return;
+      }
+      if (forceRefresh) {
+        dirtyClientFiltersRef.current.delete(filterKey);
       }
       const nextClients = mergePreservedClientIntoResults({
         clients: result.clients,
@@ -169,6 +176,11 @@ export function useClientsDashboard() {
 
   const totalPages = Math.ceil(totalCount / CLIENTS_PAGE_SIZE);
 
+  const markAllClientFiltersDirty = useCallback(() => {
+    dirtyClientFiltersRef.current = new Set(CLIENT_FILTERS);
+    markClientsViewDirty();
+  }, []);
+
   const goToPage = useCallback(
     (newPage: number) => {
       if (newPage >= 1 && newPage <= totalPages) {
@@ -189,7 +201,7 @@ export function useClientsDashboard() {
           )));
           setSelectedClient(updatedClient);
           toast.success(t('clients.messages.clientUpdated'));
-          markClientsViewDirty();
+          markAllClientFiltersDirty();
           await fetchData({
             page,
             search: searchTerm.trim(),
@@ -203,7 +215,7 @@ export function useClientsDashboard() {
           setTotalCount((currentTotal) => currentTotal + 1);
           setPage(1);
           toast.success(t('clients.messages.clientCreated'));
-          markClientsViewDirty();
+          markAllClientFiltersDirty();
           await fetchData({
             page: 1,
             search: searchTerm.trim(),
@@ -218,7 +230,7 @@ export function useClientsDashboard() {
         toast.error(selectedClient ? t('clients.messages.errorUpdatingClient') : t('clients.messages.errorCreatingClient'));
       }
     },
-    [fetchData, page, searchTerm, selectedClient, t]
+    [fetchData, markAllClientFiltersDirty, page, searchTerm, selectedClient, t]
   );
 
   const handleContactSubmit = useCallback(
@@ -235,7 +247,7 @@ export function useClientsDashboard() {
             )),
           } : currentClient);
           toast.success(t('clients.messages.contactUpdated'));
-          markClientsViewDirty();
+          markAllClientFiltersDirty();
         } else {
           const createdContact = await clientService.createContact(selectedClient.id, formData);
           setSelectedClient((currentClient) => currentClient ? {
@@ -243,7 +255,7 @@ export function useClientsDashboard() {
             contacts: [createdContact, ...(currentClient.contacts || [])],
           } : currentClient);
           toast.success(t('clients.messages.contactCreated'));
-          markClientsViewDirty();
+          markAllClientFiltersDirty();
         }
         setContactModalOpen(false);
         setSelectedContact(null);
@@ -263,7 +275,7 @@ export function useClientsDashboard() {
         toast.error(selectedContact ? t('clients.messages.errorUpdatingContact') : t('clients.messages.errorCreatingContact'));
       }
     },
-    [fetchData, page, returnToDetailAfterContact, searchTerm, selectedClient, selectedContact, t]
+    [fetchData, markAllClientFiltersDirty, page, returnToDetailAfterContact, searchTerm, selectedClient, selectedContact, t]
   );
 
   const handleDelete = useCallback(async (): Promise<void> => {
@@ -275,7 +287,7 @@ export function useClientsDashboard() {
         setClients((currentClients) => currentClients.filter((client) => client.id !== deleteTarget.id));
         setTotalCount((currentTotal) => Math.max(0, currentTotal - 1));
         toast.success(t('clients.messages.clientDeleted'));
-        markClientsViewDirty();
+        markAllClientFiltersDirty();
       } else if (deleteTarget.type === 'contact' && deleteTarget.clientId) {
         await clientService.deleteContact(deleteTarget.clientId, deleteTarget.id);
         setSelectedClient((currentClient) => currentClient ? {
@@ -285,7 +297,7 @@ export function useClientsDashboard() {
         const refreshedClient = await clientService.getClient(deleteTarget.clientId, { forceRefresh: true });
         setSelectedClient(refreshedClient);
         toast.success(t('clients.messages.contactDeleted'));
-        markClientsViewDirty();
+        markAllClientFiltersDirty();
       }
       setDeleteModalOpen(false);
       setDeleteTarget(null);
@@ -302,7 +314,7 @@ export function useClientsDashboard() {
         toast.error(t('clients.messages.errorDeleting'));
       }
     }
-  }, [deleteTarget, fetchData, page, searchTerm, t]);
+  }, [deleteTarget, fetchData, markAllClientFiltersDirty, page, searchTerm, t]);
 
   const refreshSelectedClient = useCallback(async (): Promise<void> => {
     if (!selectedClient) {
