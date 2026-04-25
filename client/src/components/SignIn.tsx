@@ -13,6 +13,7 @@ import { resetSessionState, fetchWithCsrfRetry } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
 import TwoFactorVerify from './TwoFactorVerify';
 import AuthPageShell from './AuthPageShell';
+import Switch from './ui/Switch';
 
 type AuthErrorLike = Error & { code?: string; status?: number };
 
@@ -62,6 +63,7 @@ const SignIn = (): JSX.Element => {
   const [requires2FA, setRequires2FA] = useState<boolean>(false);
   const [pending2FAUserId, setPending2FAUserId] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [rememberMe, setRememberMe] = useState<boolean>(false);
   const formErrorId = error ? 'signin-form-error' : undefined;
 
   useEffect(() => {
@@ -275,10 +277,14 @@ const SignIn = (): JSX.Element => {
         </div>
 
         <div className="flex items-center justify-between gap-3 text-sm">
-          <label htmlFor="remember-me" className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-            <input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-700" />
+          <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+            <Switch
+              checked={rememberMe}
+              onChange={setRememberMe}
+              label={t('auth.signIn.rememberMe')}
+            />
             {t('auth.signIn.rememberMe')}
-          </label>
+          </div>
           <Link to="/forgot-password" className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
             {t('auth.signIn.forgotPassword')}
           </Link>

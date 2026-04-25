@@ -3,7 +3,7 @@
  * TypeScript version
  */
 
-import { useState, useEffect, ChangeEvent, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   ArrowPathIcon,
@@ -356,9 +356,7 @@ const SecurityLogs = (): JSX.Element => {
               fetchStats={fetchStats}
               filters={filters}
               filterOptions={filterOptions}
-              onAutoRefreshChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setAutoRefresh(e.target.checked)
-              }
+              onAutoRefreshChange={setAutoRefresh}
               onClearFilters={() => {
                 setFilters({ level: '', event: '', source: '' });
                 setCurrentPage(1);

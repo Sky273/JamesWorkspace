@@ -518,6 +518,81 @@ button.app-primary-action:disabled {
   box-shadow: 0 18px 32px rgba(163, 166, 255, 0.28);
 }
 
+button.settings-switch[type="button"] {
+  position: relative;
+  display: inline-flex;
+  width: 2.75rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 9999px;
+  background: #cbd5e1;
+  color: inherit;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.12);
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+button.settings-switch[type="button"]:hover {
+  background: #94a3b8;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.12);
+  transform: none;
+}
+
+button.settings-switch.settings-switch--checked[type="button"] {
+  background: var(--color-primary-600, #4f46e5);
+}
+
+button.settings-switch.settings-switch--checked[type="button"]:hover {
+  background: var(--color-primary-700, #4338ca);
+}
+
+.settings-switch__thumb {
+  display: block;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 9999px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.3);
+  transform: translateX(0);
+  transition: transform 0.2s ease;
+}
+
+.settings-switch--checked .settings-switch__thumb {
+  transform: translateX(1.25rem);
+}
+
+button.settings-switch[type="button"]:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 1px 2px rgba(15, 23, 42, 0.12),
+    0 0 0 3px rgba(99, 102, 241, 0.4);
+}
+
+button.settings-switch[type="button"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.dark button.settings-switch[type="button"] {
+  background: #475569;
+  box-shadow: inset 0 1px 2px rgba(2, 6, 23, 0.4);
+}
+
+.dark button.settings-switch[type="button"]:hover {
+  background: #64748b;
+}
+
+.dark button.settings-switch.settings-switch--checked[type="button"] {
+  background: var(--color-primary-500, #6366f1);
+}
+
+.dark button.settings-switch.settings-switch--checked[type="button"]:hover {
+  background: var(--color-primary-400, #818cf8);
+}
+
 /* Danger buttons - red for destructive actions */
 .btn-danger {
   background: #dc2626;

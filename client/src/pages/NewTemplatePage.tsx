@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import logger from '../utils/logger.frontend';
 import { markTemplatesViewDirty } from '../utils/viewRefreshScopes';
 import AdminFirmSelector from '../components/AdminFirmSelector';
+import Switch from '../components/ui/Switch';
 import { useAuth } from '../context/AuthContext';
 import {
   normalizeTemplateFragment,
@@ -173,8 +174,7 @@ const NewTemplatePage = (): JSX.Element => {
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>): void => {
     const target = e.target;
     const name = target.name;
-    const value = target.type === 'checkbox' ? (target as HTMLInputElement).checked : target.value;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: target.value }));
   };
 
   const updateFormField = <K extends keyof FormData>(field: K, value: FormData[K]): void => {
@@ -303,9 +303,13 @@ const NewTemplatePage = (): JSX.Element => {
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('templates.editor.footerHeight.hint', 'Hauteur réservée pour le footer dans le PDF (10-250mm)')}</p>
             </div>
 
-            <div className="flex items-center">
-              <input type="checkbox" id="popular" name="popular" checked={formData.popular} onChange={handleChange} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" />
-              <label htmlFor="popular" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">{t('templates.editor.popular.label')}</label>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={formData.popular}
+                onChange={(checked) => updateFormField('popular', checked)}
+                label={t('templates.editor.popular.label')}
+              />
+              <span className="block text-sm text-gray-700 dark:text-gray-300">{t('templates.editor.popular.label')}</span>
             </div>
 
             <div className="flex justify-end space-x-4">

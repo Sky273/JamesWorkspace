@@ -161,6 +161,42 @@ describe('LLMTab', () => {
     );
   });
 
+  it('renders boolean Ollama parameters as switches', () => {
+    const onInputChange = vi.fn();
+
+    render(
+      <LLMTab
+        formData={{
+          llmProvider: 'ollama',
+          llmModel: 'llama3.2:latest',
+          llmModelParametersJson: '{}',
+          cvMode: 'nominative',
+          webglEnabled: 'on',
+          ollamaBaseUrl: 'http://ollama.local:11434',
+        }}
+        onInputChange={onInputChange}
+        onTestConnection={vi.fn()}
+        t={(key) => key}
+        llmModelCatalog={{ ollama: [{ value: 'llama3.2:latest', label: 'llama3.2:latest' }] }}
+        llmParameterDefinitions={{
+          ollama: {
+            __global__: {
+              verbose: { key: 'verbose', type: 'boolean', label: 'Verbose mode' },
+            },
+          },
+        }}
+      />
+    );
+
+    expect(screen.queryByRole('checkbox', { name: 'Verbose mode' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('switch', { name: 'Verbose mode' }));
+
+    expect(onInputChange).toHaveBeenCalledWith(
+      'llmModelParametersJson',
+      '{\n  "ollama": {\n    "__global__": {\n      "verbose": true\n    }\n  }\n}'
+    );
+  });
+
   it('exposes Gemma Cloud as a selectable provider', () => {
     render(
       <LLMTab
@@ -254,7 +290,7 @@ describe('LLMTab', () => {
     expect(screen.getByRole('button', { name: 'Tester le modèle' })).toBeInTheDocument();
   });
 
-  it('exposes the self-service registration approval checkbox', () => {
+  it('exposes the self-service registration approval switch', () => {
     const onInputChange = vi.fn();
 
     render(
@@ -275,12 +311,13 @@ describe('LLMTab', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('checkbox', { name: "Autoriser l'enregistrement des utilisateurs sans validation préalable" }));
+    expect(screen.queryByRole('checkbox', { name: "Autoriser l'enregistrement des utilisateurs sans validation préalable" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('switch', { name: "Autoriser l'enregistrement des utilisateurs sans validation préalable" }));
 
     expect(onInputChange).toHaveBeenCalledWith('allowUserRegistrationWithoutApproval', true);
   });
 
-  it('exposes the public home checkbox in the first tab', () => {
+  it('exposes the public home switch in the first tab', () => {
     const onInputChange = vi.fn();
 
     render(
@@ -301,8 +338,35 @@ describe('LLMTab', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('checkbox', { name: /Activer la page d'accueil publique/i }));
+    expect(screen.queryByRole('checkbox', { name: /Activer la page d'accueil publique/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('switch', { name: /Activer la page d'accueil publique/i }));
 
     expect(onInputChange).toHaveBeenCalledWith('publicHomeEnabled', true);
+  });
+
+  it('exposes the WebGL setting as a switch', () => {
+    const onInputChange = vi.fn();
+
+    render(
+      <LLMTab
+        formData={{
+          llmProvider: 'openai',
+          llmModel: 'gpt-4o',
+          llmModelParametersJson: '{}',
+          cvMode: 'nominative',
+          webglEnabled: 'off',
+          ollamaBaseUrl: '',
+        }}
+        onInputChange={onInputChange}
+        onTestConnection={vi.fn()}
+        t={(key) => key}
+        llmModelCatalog={{ openai: [{ value: 'gpt-4o', label: 'gpt-4o' }] }}
+      />
+    );
+
+    expect(screen.queryByRole('checkbox', { name: 'settings.llm.webglEnabled' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('switch', { name: 'settings.llm.webglEnabled' }));
+
+    expect(onInputChange).toHaveBeenCalledWith('webglEnabled', 'on');
   });
 });

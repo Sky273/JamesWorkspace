@@ -274,8 +274,8 @@ describe('SecurityLogs', () => {
       expect(screen.getByText('login')).toBeInTheDocument();
     });
 
-    const autoRefreshCheckbox = screen.getByRole('checkbox');
-    expect(autoRefreshCheckbox).toBeChecked();
+    const autoRefreshSwitch = screen.getByRole('switch', { name: 'security.autoRefresh' });
+    expect(autoRefreshSwitch).toHaveAttribute('aria-checked', 'true');
     expect(intervalCallbacks.length).toBeGreaterThan(0);
 
     await act(async () => {
@@ -283,7 +283,7 @@ describe('SecurityLogs', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('checkbox')).not.toBeChecked();
+      expect(screen.getByRole('switch', { name: 'security.autoRefresh' })).toHaveAttribute('aria-checked', 'false');
     });
 
     const logCallsAfter401 = fetchWithAuthMock.mock.calls.filter(([url]) =>

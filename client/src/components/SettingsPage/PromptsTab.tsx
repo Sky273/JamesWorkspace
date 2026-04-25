@@ -7,6 +7,7 @@ import {
   type PromptSectionDefinition,
   type PromptVersionStateEntry,
 } from './PromptsTab.shared';
+import SettingsSwitch from './SettingsSwitch';
 
 interface PromptTextareaProps {
   promptKey: keyof FormData;
@@ -211,12 +212,11 @@ const PromptToggleCard = ({
   t: (key: string) => string;
 }): JSX.Element => (
   <div className="rounded-lg border border-gray-200 p-4 dark:border-gray-700">
-    <label className="flex items-start gap-3">
-      <input
-        type="checkbox"
+    <div className="flex items-start gap-3">
+      <SettingsSwitch
         checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        onChange={onChange}
+        label={t('settings.prompts.preAnalysisEnabled')}
       />
       <div>
         <span className="block text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -226,7 +226,7 @@ const PromptToggleCard = ({
           {t('settings.prompts.preAnalysisEnabledHelp')}
         </span>
       </div>
-    </label>
+    </div>
   </div>
 );
 

@@ -1,6 +1,7 @@
 import type { ChangeEvent } from 'react';
 import type { JsonRecord, JsonValue, ParameterDefinition } from './LLMTab.types';
 import { getNumericInputProps } from './LLMTab.utils';
+import SettingsSwitch from './SettingsSwitch';
 
 interface OllamaParametersSectionProps {
   currentModel: string;
@@ -22,16 +23,14 @@ function renderOllamaField(
 
   if (definition.type === 'boolean') {
     return (
-      <label key={inputId} htmlFor={inputId} className="flex items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800">
+      <div key={inputId} className="flex items-center justify-between gap-3 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800">
         <span className="font-medium text-gray-800 dark:text-gray-100">{definition.label}</span>
-        <input
-          id={inputId}
-          type="checkbox"
+        <SettingsSwitch
           checked={currentValue === true}
-          onChange={(event) => onFieldChange(sectionKey, definition.key, event.target.checked ? true : undefined)}
-          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          onChange={(checked) => onFieldChange(sectionKey, definition.key, checked ? true : undefined)}
+          label={definition.label}
         />
-      </label>
+      </div>
     );
   }
 

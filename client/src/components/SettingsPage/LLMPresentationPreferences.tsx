@@ -1,3 +1,5 @@
+import SettingsSwitch from './SettingsSwitch';
+
 interface LLMPresentationPreferencesProps {
   cvMode?: 'nominative' | 'anonymous';
   webglEnabled?: 'on' | 'off';
@@ -41,12 +43,11 @@ export default function LLMPresentationPreferences({
           </p>
         </div>
 
-        <label className="grid cursor-pointer grid-cols-[1.25rem_minmax(0,1fr)] items-start gap-x-4 gap-y-1 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
-          <input
-            type="checkbox"
+        <div className="grid grid-cols-[2.75rem_minmax(0,1fr)] items-start gap-x-4 gap-y-1 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+          <SettingsSwitch
             checked={webglEnabled === 'on'}
             onChange={onWebglToggle}
-            className="mt-0.5 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-600"
+            label={t('settings.llm.webglEnabled')}
           />
           <div className="min-w-0">
             <span className="block text-sm font-semibold text-white">
@@ -56,14 +57,13 @@ export default function LLMPresentationPreferences({
               {t('settings.llm.webglEnabledDescription')}
             </p>
           </div>
-        </label>
+        </div>
 
-        <label className="grid cursor-pointer grid-cols-[1.25rem_minmax(0,1fr)] items-start gap-x-4 gap-y-1 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
-          <input
-            type="checkbox"
+        <div className="grid grid-cols-[2.75rem_minmax(0,1fr)] items-start gap-x-4 gap-y-1 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+          <SettingsSwitch
             checked={publicHomeEnabled === true}
             onChange={onPublicHomeToggle}
-            className="mt-0.5 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-600"
+            label={fallbackText('settings.chatbot.publicHomeTitle', "Activer la page d'accueil publique")}
           />
           <div className="min-w-0">
             <span className="block text-sm font-semibold text-white">
@@ -76,7 +76,7 @@ export default function LLMPresentationPreferences({
               )}
             </p>
           </div>
-        </label>
+        </div>
       </div>
     </section>
   );

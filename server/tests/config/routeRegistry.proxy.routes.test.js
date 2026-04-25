@@ -47,7 +47,6 @@ vi.mock('../../routes/users.routes.js', () => ({ default: mockRouter }));
 vi.mock('../../routes/chatbot.routes.js', () => ({ default: mockRouter }));
 vi.mock('../../routes/marketRadar.routes.js', () => ({ default: mockRouter }));
 vi.mock('../../routes/rome.routes.js', () => ({ default: mockRouter }));
-vi.mock('../../routes/docs.routes.js', () => ({ default: mockRouter }));
 vi.mock('../../routes/clients.routes.js', () => ({ default: mockRouter }));
 vi.mock('../../routes/resumeSubmissions.routes.js', () => ({ default: mockRouter }));
 vi.mock('../../routes/mail.routes.js', () => ({ default: mockRouter }));
@@ -64,8 +63,6 @@ vi.mock('../../routes/backup.routes.js', () => ({ default: mockRouter }));
 vi.mock('../../routes/batchExport.routes.js', () => ({ default: mockRouter }));
 vi.mock('../../routes/batchJobs.routes.js', () => ({ default: mockRouter }));
 vi.mock('../../routes/deals.routes.js', () => ({ default: mockRouter }));
-vi.mock('../../config/swagger.js', () => ({ swaggerDocument: {} }));
-
 const mockFetch = vi.fn();
 const mockTrackBatchExportActivity = vi.fn();
 global.fetch = mockFetch;

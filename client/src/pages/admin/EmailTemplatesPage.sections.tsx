@@ -14,6 +14,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import { EmailTemplateEditor, EmailTemplatePreview } from '../../components/EmailTemplates';
+import Switch from '../../components/ui/Switch';
 import type { EmailTemplate } from '../../types/entities';
 import type {
   DuplicateFirmOption,
@@ -427,16 +428,14 @@ export const EmailTemplatesEditModal = ({
                 </div>
 
                 <div className="flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-slate-50/80 px-3 py-3 dark:border-slate-700/80 dark:bg-slate-800/70">
-                  <input
-                    type="checkbox"
-                    id="isDefault"
+                  <Switch
                     checked={form.isDefault}
-                    onChange={(e) => onChange('isDefault', e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-[var(--cv-primary)] focus:ring-[var(--cv-primary)]"
+                    onChange={(checked) => onChange('isDefault', checked)}
+                    label={t('emailTemplates.setAsDefault')}
                   />
-                  <label htmlFor="isDefault" className="text-sm text-slate-700 dark:text-slate-300">
+                  <span className="text-sm text-slate-700 dark:text-slate-300">
                     {t('emailTemplates.setAsDefault')}
-                  </label>
+                  </span>
                 </div>
 
                 <EmailTemplateEditor

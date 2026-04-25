@@ -15,6 +15,7 @@ import {
 import { fetchWithAuth, createAuthOptionsWithCsrf } from '../../utils/apiInterceptor';
 import toast from 'react-hot-toast';
 import logger from '../../utils/logger.frontend';
+import SettingsSwitch from './SettingsSwitch';
 
 interface GdprTabProps {
   t: (key: string, options?: Record<string, unknown>) => string;
@@ -490,25 +491,23 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
                 />
               </label>
 
-              <label className="md:col-span-2 flex items-center gap-2 text-sm text-gray-900 dark:text-gray-100">
-                <input
-                  type="checkbox"
+              <div className="md:col-span-2 flex items-center gap-2 text-sm text-gray-900 dark:text-gray-100">
+                <SettingsSwitch
                   checked={formState.smtpSecure}
-                  onChange={(event) => handleConfigFieldChange('smtpSecure', event.target.checked)}
-                  className="rounded border-gray-300 dark:border-gray-600"
+                  onChange={(checked) => handleConfigFieldChange('smtpSecure', checked)}
+                  label={t('settings.gdpr.smtp.secure')}
                 />
                 <span>{t('settings.gdpr.smtp.secure')}</span>
-              </label>
+              </div>
 
-              <label className="md:col-span-2 flex items-center gap-2 text-sm text-gray-900 dark:text-gray-100">
-                <input
-                  type="checkbox"
+              <div className="md:col-span-2 flex items-center gap-2 text-sm text-gray-900 dark:text-gray-100">
+                <SettingsSwitch
                   checked={formState.clearSmtpPassword}
-                  onChange={(event) => handleConfigFieldChange('clearSmtpPassword', event.target.checked)}
-                  className="rounded border-gray-300 dark:border-gray-600"
+                  onChange={(checked) => handleConfigFieldChange('clearSmtpPassword', checked)}
+                  label={t('settings.gdpr.smtp.clearPassword')}
                 />
                 <span>{t('settings.gdpr.smtp.clearPassword')}</span>
-              </label>
+              </div>
             </>
           ) : null}
         </div>

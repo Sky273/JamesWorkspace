@@ -1,9 +1,9 @@
 import { motion } from 'framer-motion';
 import { ClipboardDocumentListIcon, CommandLineIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import type { ChangeEvent } from 'react';
 import type { TFunction } from 'i18next';
 import Pagination from '../components/Pagination';
 import ResponsivePageTabs from '../components/page/ResponsivePageTabs';
+import Switch from '../components/ui/Switch';
 import type {
   ObservabilityCheckSummary,
   ObservabilityHealthResponse,
@@ -155,7 +155,7 @@ interface FiltersBarProps {
   fetchStats: () => Promise<void>;
   filters: SecurityLogFilters;
   filterOptions: SecurityLogFilterOptions;
-  onAutoRefreshChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onAutoRefreshChange: (enabled: boolean) => void;
   onClearFilters: () => void;
   onFilterChange: (next: Partial<SecurityLogFilters>) => void;
   setLoading: (value: boolean) => void;
@@ -205,10 +205,14 @@ export function SecurityFiltersBar({
           </select>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-3">
-          <label className="flex cursor-pointer items-center space-x-2">
-            <input type="checkbox" checked={autoRefresh} onChange={onAutoRefreshChange} className="rounded" />
+          <div className="flex items-center space-x-2">
+            <Switch
+              checked={autoRefresh}
+              onChange={onAutoRefreshChange}
+              label={t('security.autoRefresh')}
+            />
             <span className="text-sm text-gray-700 dark:text-gray-300">{t('security.autoRefresh')}</span>
-          </label>
+          </div>
           <button
             onClick={async () => {
               setLoading(true);

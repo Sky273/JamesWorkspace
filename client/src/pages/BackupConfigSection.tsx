@@ -11,6 +11,7 @@ import {
     ArrowPathIcon,
     ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
+import Switch from '../components/ui/Switch';
 import type { BackupSettings } from './backupPage.types';
 
 interface BackupConfigSectionProps {
@@ -229,11 +230,10 @@ export default function BackupConfigSection({
                 
                 {/* Daily */}
                 <div className="flex items-center gap-4 p-3 bg-white dark:bg-gray-800 rounded-md">
-                    <input
-                        type="checkbox"
+                    <Switch
                         checked={settings.daily_enabled}
-                        onChange={(e) => onInputChange('daily_enabled', e.target.checked)}
-                        className="w-4 h-4 text-blue-600 rounded"
+                        onChange={(checked) => onInputChange('daily_enabled', checked)}
+                        label={t('backup.daily')}
                     />
                     <span className="font-medium text-gray-900 dark:text-gray-100 w-24">
                         {t('backup.daily')}
@@ -264,11 +264,10 @@ export default function BackupConfigSection({
                 
                 {/* Weekly */}
                 <div className="flex items-center gap-4 p-3 bg-white dark:bg-gray-800 rounded-md flex-wrap">
-                    <input
-                        type="checkbox"
+                    <Switch
                         checked={settings.weekly_enabled}
-                        onChange={(e) => onInputChange('weekly_enabled', e.target.checked)}
-                        className="w-4 h-4 text-blue-600 rounded"
+                        onChange={(checked) => onInputChange('weekly_enabled', checked)}
+                        label={t('backup.weekly')}
                     />
                     <span className="font-medium text-gray-900 dark:text-gray-100 w-24">
                         {t('backup.weekly')}
@@ -309,11 +308,10 @@ export default function BackupConfigSection({
                 
                 {/* Monthly */}
                 <div className="flex items-center gap-4 p-3 bg-white dark:bg-gray-800 rounded-md flex-wrap">
-                    <input
-                        type="checkbox"
+                    <Switch
                         checked={settings.monthly_enabled}
-                        onChange={(e) => onInputChange('monthly_enabled', e.target.checked)}
-                        className="w-4 h-4 text-blue-600 rounded"
+                        onChange={(checked) => onInputChange('monthly_enabled', checked)}
+                        label={t('backup.monthly')}
                     />
                     <span className="font-medium text-gray-900 dark:text-gray-100 w-24">
                         {t('backup.monthly')}

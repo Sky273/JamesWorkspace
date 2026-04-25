@@ -241,6 +241,21 @@ describe('GdprTab', () => {
     });
   });
 
+  it('renders SMTP boolean settings as switches', async () => {
+    render(<GdprTab t={(key) => key} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'settings.gdpr.saveConfig' })).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('settings.gdpr.providerLabel'), { target: { value: 'smtp' } });
+
+    expect(screen.queryByRole('checkbox', { name: 'settings.gdpr.smtp.secure' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'settings.gdpr.smtp.clearPassword' })).not.toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'settings.gdpr.smtp.secure' })).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'settings.gdpr.smtp.clearPassword' })).toBeInTheDocument();
+  });
+
   it('sends the test email with the current form configuration', async () => {
     vi.stubGlobal('prompt', vi.fn(() => 'test@example.com'));
 

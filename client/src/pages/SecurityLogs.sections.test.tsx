@@ -105,7 +105,7 @@ describe('SecurityLogs sections', () => {
     fireEvent.click(screen.getByTitle('common.resetFilters'));
     expect(onClearFilters).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByRole('switch', { name: 'security.autoRefresh' }));
     expect(onAutoRefreshChange).toHaveBeenCalledTimes(1);
   });
 

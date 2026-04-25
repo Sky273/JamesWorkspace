@@ -222,7 +222,8 @@ describe('PromptsTab', () => {
 
     expect(screen.getByText('resume.pre-analysis.default')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('checkbox'));
+    expect(screen.queryByRole('checkbox', { name: 'settings.prompts.preAnalysisEnabled' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('switch', { name: 'settings.prompts.preAnalysisEnabled' }));
 
     expect(screen.queryByText('resume.pre-analysis.default')).not.toBeInTheDocument();
   });

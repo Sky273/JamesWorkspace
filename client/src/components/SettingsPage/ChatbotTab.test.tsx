@@ -14,6 +14,9 @@ describe('ChatbotTab', () => {
       />
     );
 
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('switch')).toHaveClass('settings-switch');
+
     fireEvent.click(screen.getByRole('switch'));
 
     expect(onInputChange).toHaveBeenNthCalledWith(1, 'chatbotEnabled', 'off');

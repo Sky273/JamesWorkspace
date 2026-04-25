@@ -112,6 +112,7 @@
     "sanitize-html": "^2.17.1",
     "ssh2-sftp-client": "^12.1.0",
     "stripe": "^22.0.1",
+    "swagger-ui-dist": "^5.32.4",
     "tailwindcss": "^4.2.1",
     "tesseract.js": "^7.0.0",
     "three": "^0.183.2",

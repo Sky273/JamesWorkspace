@@ -1,6 +1,7 @@
 import { ChangeEvent, useMemo, useState } from 'react';
 import LLMProviderModelSection from './LLMProviderModelSection';
 import LLMPresentationPreferences from './LLMPresentationPreferences';
+import SettingsSwitch from './SettingsSwitch';
 import { AdvancedJsonEditorSection, OllamaParametersSection } from './LLMTab.sections';
 import { OLLAMA_GLOBAL_KEY, type FormData, type JsonRecord, type JsonValue, type LLMTabProps } from './LLMTab.types';
 import {
@@ -230,16 +231,14 @@ const LLMTab = ({
       />
 
       <section className="rounded-3xl border border-white/10 bg-slate-950/10 p-5">
-        <label className="grid cursor-pointer grid-cols-[1.25rem_minmax(0,1fr)] items-start gap-x-4 gap-y-1 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
-          <input
-            type="checkbox"
+        <div className="grid grid-cols-[2.75rem_minmax(0,1fr)] items-start gap-x-4 gap-y-1 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+          <SettingsSwitch
             checked={formData.allowUserRegistrationWithoutApproval === true}
-            aria-label={getFallbackText(
+            label={getFallbackText(
               'settings.llm.allowUserRegistrationWithoutApprovalLabel',
               "Autoriser l'enregistrement des utilisateurs sans validation préalable"
             )}
             onChange={handleRegistrationApprovalToggle}
-            className="mt-0.5 h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-2 cursor-pointer"
           />
           <div className="min-w-0 space-y-2">
             <span className="block text-sm font-semibold text-white">
@@ -255,7 +254,7 @@ const LLMTab = ({
               )}
             </p>
           </div>
-        </label>
+        </div>
       </section>
     </div>
   );

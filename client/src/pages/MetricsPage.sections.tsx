@@ -1,4 +1,4 @@
-import type { ChangeEvent, JSX } from 'react';
+import type { JSX } from 'react';
 import { motion } from 'framer-motion';
 import {
   ArrowDownTrayIcon,
@@ -10,6 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { formatDateTime } from '../utils/dateFormatter';
 import PageHeader from '../components/page/PageHeader';
+import Switch from '../components/ui/Switch';
 import { StatCard } from './MetricsPage.parts';
 import { formatNumber, formatUptime, safeNumber } from './MetricsPage.utils';
 import type { Metrics } from './MetricsPage.types';
@@ -51,15 +52,14 @@ export function MetricsPageHeader({
           <PageHeader title={t('metrics.title')} subtitle={t('metrics.subtitle')} />
         </div>
         <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <input
-              type="checkbox"
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <Switch
               checked={autoRefresh}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => onAutoRefreshChange(e.target.checked)}
-              className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+              onChange={onAutoRefreshChange}
+              label={t('metrics.autoRefresh')}
             />
             {t('metrics.autoRefresh')}
-          </label>
+          </div>
           <button onClick={onRefresh} className="app-button-primary flex items-center gap-2 rounded-2xl px-4 py-2.5">
             <ArrowPathIcon className="w-4 h-4" />
             {t('metrics.refresh')}

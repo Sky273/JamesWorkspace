@@ -10,6 +10,7 @@ import {
   ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
 import AdminFirmSelector from '../components/AdminFirmSelector';
+import Switch from '../components/ui/Switch';
 import type { Template } from '../utils/templateService';
 import type { ExportFormats } from './batchUpload.utils';
 
@@ -49,17 +50,24 @@ export default function BatchUploadOptions({
   setSelectedFirmId
 }: BatchUploadOptionsProps) {
   const { t } = useTranslation();
+  const toggleExportFormat = (format: ExportFormats[number], checked: boolean): void => {
+    if (checked) {
+      setExportFormats(exportFormats.includes(format) ? exportFormats : [...exportFormats, format]);
+      return;
+    }
+
+    setExportFormats(exportFormats.filter((currentFormat) => currentFormat !== format));
+  };
 
   return (
     <div className="space-y-4">
       {/* Improve option */}
-      <label className="flex items-center gap-3 cursor-pointer">
-        <input
-          type="checkbox"
+      <div className="flex items-center gap-3">
+        <Switch
           checked={improveOption}
-          onChange={(e) => setImproveOption(e.target.checked)}
+          onChange={setImproveOption}
+          label={t('batchUpload.improveOption', 'AmÃ©liorer les CVs automatiquement')}
           disabled={isProcessing}
-          className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
         />
         <div className="flex items-center gap-2">
           <SparklesIcon className="w-5 h-5 text-yellow-500" />
@@ -67,7 +75,7 @@ export default function BatchUploadOptions({
             {t('batchUpload.improveOption', 'Améliorer les CVs automatiquement')}
           </span>
         </div>
-      </label>
+      </div>
       
       {improveOption && (
         <p className="text-sm text-amber-600 dark:text-amber-400 ml-8">
@@ -76,13 +84,12 @@ export default function BatchUploadOptions({
       )}
 
       {/* Export option */}
-      <label className="flex items-center gap-3 cursor-pointer">
-        <input
-          type="checkbox"
+      <div className="flex items-center gap-3">
+        <Switch
           checked={exportOption}
-          onChange={(e) => setExportOption(e.target.checked)}
+          onChange={setExportOption}
+          label={t('batchUpload.exportOption', 'Exporter les CVs aprÃ¨s traitement (ZIP)')}
           disabled={isProcessing}
-          className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
         />
         <div className="flex items-center gap-2">
           <ArrowDownTrayIcon className="w-5 h-5 text-green-500" />
@@ -90,7 +97,7 @@ export default function BatchUploadOptions({
             {t('batchUpload.exportOption', 'Exporter les CVs après traitement (ZIP)')}
           </span>
         </div>
-      </label>
+      </div>
 
       {/* Export options - template and format selection */}
       {exportOption && (
@@ -122,54 +129,33 @@ export default function BatchUploadOptions({
               {t('batchUpload.exportFormats', 'Formats d\'export (sélection multiple)')}
             </label>
             <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
+              <div className="flex items-center gap-2">
+                <Switch
                   checked={exportFormats.includes('pdf')}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setExportFormats([...exportFormats, 'pdf']);
-                    } else {
-                      setExportFormats(exportFormats.filter(f => f !== 'pdf'));
-                    }
-                  }}
+                  onChange={(checked) => toggleExportFormat('pdf', checked)}
+                  label="PDF"
                   disabled={isProcessing}
-                  className="rounded text-indigo-600 focus:ring-indigo-500"
                 />
                 <span className="text-gray-700 dark:text-gray-300">PDF</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
                   checked={exportFormats.includes('docx')}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setExportFormats([...exportFormats, 'docx']);
-                    } else {
-                      setExportFormats(exportFormats.filter(f => f !== 'docx'));
-                    }
-                  }}
+                  onChange={(checked) => toggleExportFormat('docx', checked)}
+                  label="DOCX"
                   disabled={isProcessing}
-                  className="rounded text-indigo-600 focus:ring-indigo-500"
                 />
                 <span className="text-gray-700 dark:text-gray-300">DOCX</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
                   checked={exportFormats.includes('doc')}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setExportFormats([...exportFormats, 'doc']);
-                    } else {
-                      setExportFormats(exportFormats.filter(f => f !== 'doc'));
-                    }
-                  }}
+                  onChange={(checked) => toggleExportFormat('doc', checked)}
+                  label="DOC"
                   disabled={isProcessing}
-                  className="rounded text-indigo-600 focus:ring-indigo-500"
                 />
                 <span className="text-gray-700 dark:text-gray-300">DOC</span>
-              </label>
+              </div>
             </div>
             {exportFormats.length === 0 && (
               <p className="text-xs text-red-500 mt-1">
@@ -185,13 +171,12 @@ export default function BatchUploadOptions({
       )}
 
       {/* Delete after processing option */}
-      <label className="flex items-center gap-3 cursor-pointer">
-        <input
-          type="checkbox"
+      <div className="flex items-center gap-3">
+        <Switch
           checked={deleteAfterExport}
-          onChange={(e) => setDeleteAfterExport(e.target.checked)}
+          onChange={setDeleteAfterExport}
+          label={t('batchUpload.deleteAfterOption', 'Supprimer les CVs aprÃ¨s traitement')}
           disabled={isProcessing}
-          className="w-5 h-5 text-red-600 border-gray-300 rounded focus:ring-red-500 dark:border-gray-600 dark:bg-gray-700"
         />
         <div className="flex items-center gap-2">
           <XMarkIcon className="w-5 h-5 text-red-500" />
@@ -199,7 +184,7 @@ export default function BatchUploadOptions({
             {t('batchUpload.deleteAfterOption', 'Supprimer les CVs après traitement')}
           </span>
         </div>
-      </label>
+      </div>
 
       {deleteAfterExport && (
         <p className="text-sm text-red-600 dark:text-red-400 ml-8">

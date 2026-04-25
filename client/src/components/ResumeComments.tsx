@@ -16,6 +16,7 @@ import {
   CheckIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
+import Switch from './ui/Switch';
 import { fetchWithAuth, fetchWithCsrfRetry, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
 
@@ -219,17 +220,16 @@ const ResumeComments = ({ resumeId, className = '' }: ResumeCommentsProps): JSX.
               disabled={isSubmitting}
             />
             <div className="mt-2 flex items-center justify-between">
-              <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
-                <input
-                  type="checkbox"
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <Switch
                   checked={isPrivate}
-                  onChange={(e) => setIsPrivate(e.target.checked)}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  onChange={setIsPrivate}
+                  label={t('comments.private', 'Private (only visible to me)')}
                   disabled={isSubmitting}
                 />
                 <LockClosedIcon className="h-4 w-4" />
                 {t('comments.private', 'Private (only visible to me)')}
-              </label>
+              </div>
               <button
                 type="submit"
                 disabled={!newComment.trim() || isSubmitting}

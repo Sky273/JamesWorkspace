@@ -14,10 +14,6 @@ import { shouldUseSecureCookies } from '../routes/auth/config.js';
 const isProduction = process.env.NODE_ENV === 'production';
 const unique = (values) => [...new Set(values)];
 
-const cspSwaggerSources = [
-    "https://unpkg.com"
-];
-
 const cspMapSources = [
     "https://basemaps.cartocdn.com",
     "https://*.basemaps.cartocdn.com"
@@ -55,7 +51,6 @@ const cspCloudflareScriptHashes = [
 const cspScriptSources = unique([
     "'self'",
     "blob:",            // Required: PDF.js worker scripts
-    ...cspSwaggerSources,
     ...cspMapSources,
     ...cspTurnstileSources,
     ...cspCloudflareScriptHashes
@@ -64,7 +59,6 @@ const cspScriptSources = unique([
 const cspStyleSources = unique([
     "'self'",
     ...cspFontSources.filter((source) => source === 'https://fonts.googleapis.com'),
-    ...cspSwaggerSources,
     ...cspMapSources,
     ...cspTurnstileSources
 ]);
@@ -99,7 +93,7 @@ const cspConnectSources = unique([
 //
 // CSP HARDENING (achieved):
 // - NO 'unsafe-eval' in scriptSrc (TinyMCE replaced by Tiptap which does not use eval)
-// - NO 'unsafe-inline' in scriptSrc (Swagger UI script externalized)
+// - NO 'unsafe-inline' in scriptSrc
 // - NO 'unsafe-inline' in scriptSrcAttr (no inline event handlers)
 // - object-src 'none' blocks plugins like Flash
 // - base-uri 'self' prevents base tag hijacking
@@ -107,7 +101,6 @@ const cspConnectSources = unique([
 //
 // IMPLEMENTED:
 // 1. Server-side PDF text extraction (POST /api/resumes/extract-pdf) reduces client-side PDF.js usage
-// 2. Subresource Integrity (SRI) for Swagger UI external scripts/styles (routeRegistry.js)
 // ============================================
 
 export function configureHelmet(app) {
@@ -140,7 +133,6 @@ export function configureHelmet(app) {
                     "'self'",
                     "data:",
                     "blob:",
-                    ...cspSwaggerSources, // Swagger UI favicon
                     ...cspMapSources      // MapLibre GL tiles
                 ]),
                 connectSrc: cspConnectSources,
