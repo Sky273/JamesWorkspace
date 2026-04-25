@@ -1,4 +1,5 @@
 import { readFileSync } from 'fs';
+import { openApiSchemas } from './openapiSchemas.js';
 
 const packageJson = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
 
@@ -82,11 +83,19 @@ function pathParameters(path) {
     }));
 }
 
-function requestBody(description = 'JSON request payload') {
+function schemaRef(schemaName) {
+    return { $ref: `#/components/schemas/${schemaName}` };
+}
+
+function requestBody(description = 'JSON request payload', schema = { type: 'object' }) {
     return {
         required: true,
         description,
-        content: jsonContent
+        content: {
+            'application/json': {
+                schema
+            }
+        }
     };
 }
 
@@ -134,7 +143,13 @@ function buildOperation(route) {
     }
 
     if (route.body) {
-        operation.requestBody = route.body === true ? requestBody() : route.body;
+        if (route.body === true) {
+            operation.requestBody = requestBody();
+        } else if (typeof route.body === 'string') {
+            operation.requestBody = requestBody(undefined, schemaRef(route.body));
+        } else {
+            operation.requestBody = route.body;
+        }
     }
 
     if (security !== undefined) {
@@ -160,99 +175,106 @@ export const openApiRouteCatalog = [
     route('get', '/docs/ui', 'Documentation', 'Interactive Swagger UI', { security: 'public', response: { description: 'HTML documentation shell' } }),
 
     route('get', '/auth/csrf-token', 'Authentication', 'Issue a CSRF token', { security: 'public' }),
-    route('post', '/auth/register', 'Authentication', 'Register a user', { security: 'csrf', body: true, status: 201, response: createdJson }),
-    route('post', '/auth/login', 'Authentication', 'Sign in and create a session', { security: 'csrf', body: true }),
+    route('post', '/auth/register', 'Authentication', 'Register a user', { security: 'csrf', body: 'RegisterRequest', status: 201, response: createdJson }),
+    route('post', '/auth/login', 'Authentication', 'Sign in and create a session', { security: 'csrf', body: 'SignInRequest' }),
     route('post', '/auth/logout', 'Authentication', 'End the current session', { response: noContent, status: 204 }),
     route('post', '/auth/refresh', 'Authentication', 'Rotate the refresh token and renew the session', { security: 'csrf' }),
     route('get', '/auth/me', 'Authentication', 'Return the current authenticated user', { security: 'cookie' }),
-    route('post', '/auth/request-password-reset', 'Authentication', 'Request a password reset email', { security: 'csrf', body: true }),
-    route('post', '/auth/reset-password', 'Authentication', 'Reset a password with a valid token', { security: 'csrf', body: true }),
+    route('post', '/auth/request-password-reset', 'Authentication', 'Request a password reset email', { security: 'csrf', body: 'ForgotPasswordRequest' }),
+    route('post', '/auth/reset-password', 'Authentication', 'Reset a password with a valid token', { security: 'csrf', body: 'ResetPasswordRequest' }),
 
     route('get', '/settings', 'Settings', 'Read application settings', { security: 'cookie' }),
     route('get', '/settings/defaults', 'Settings', 'Read default application settings', { security: 'cookie' }),
-    route('post', '/settings', 'Settings', 'Create or replace the canonical settings record', { body: true, status: 201, response: createdJson }),
-    route('put', '/settings/{id}', 'Settings', 'Update application settings', { body: true }),
-    route('post', '/settings/test-llm', 'Settings', 'Test the configured LLM provider', { body: true }),
+    route('post', '/settings', 'Settings', 'Create or replace the canonical settings record', { body: 'UpdateSettingsRequest', status: 201, response: createdJson }),
+    route('put', '/settings/{id}', 'Settings', 'Update application settings', { body: 'UpdateSettingsRequest' }),
+    route('post', '/settings/test-llm', 'Settings', 'Test the configured LLM provider', { body: 'UpdateSettingsRequest' }),
 
     route('get', '/resumes', 'Resumes', 'List resumes', { security: 'cookie', query: ['page', 'limit', 'search', 'status'] }),
-    route('post', '/resumes', 'Resumes', 'Create a resume record', { body: true, status: 201, response: createdJson }),
+    route('post', '/resumes', 'Resumes', 'Create a resume record', { body: 'UpdateResumeRequest', status: 201, response: createdJson }),
     route('post', '/resumes/upload', 'Resumes', 'Upload and parse a resume file', { body: { required: true, content: { 'multipart/form-data': { schema: { type: 'object' } } } }, status: 201, response: createdJson }),
     route('get', '/resumes/{id}', 'Resumes', 'Read a resume'),
-    route('put', '/resumes/{id}', 'Resumes', 'Update a resume', { body: true }),
+    route('put', '/resumes/{id}', 'Resumes', 'Update a resume', { body: 'UpdateResumeRequest' }),
     route('delete', '/resumes/{id}', 'Resumes', 'Delete a resume', { response: noContent, status: 204 }),
     route('post', '/resumes/{id}/analyze', 'Resumes', 'Run AI resume analysis', { response: acceptedJson, status: 202 }),
-    route('post', '/resumes/{id}/improve', 'Resumes', 'Run AI resume improvement', { body: true, response: acceptedJson, status: 202 }),
+    route('post', '/resumes/{id}/improve', 'Resumes', 'Run AI resume improvement', { body: 'AiModifyRequest', response: acceptedJson, status: 202 }),
     route('get', '/resumes/{id}/versions', 'Resume Versions', 'List resume versions', { security: 'cookie' }),
-    route('post', '/resumes/{id}/comments', 'Comments', 'Create a resume comment', { body: true, status: 201, response: createdJson }),
+    route('post', '/resumes/{id}/comments', 'Comments', 'Create a resume comment', { body: 'CreateCommentRequest', status: 201, response: createdJson }),
 
     route('get', '/templates', 'Templates', 'List templates', { security: 'cookie', query: ['page', 'limit', 'search', 'status'] }),
-    route('post', '/templates', 'Templates', 'Create a template', { body: true, status: 201, response: createdJson }),
+    route('post', '/templates', 'Templates', 'Create a template', { body: 'CreateTemplateRequest', status: 201, response: createdJson }),
     route('get', '/templates/{id}', 'Templates', 'Read a template'),
-    route('put', '/templates/{id}', 'Templates', 'Update a template', { body: true }),
+    route('put', '/templates/{id}', 'Templates', 'Update a template', { body: 'UpdateTemplateRequest' }),
     route('delete', '/templates/{id}', 'Templates', 'Delete a template', { response: noContent, status: 204 }),
 
     route('get', '/missions', 'Missions', 'List missions', { security: 'cookie', query: ['page', 'limit', 'search', 'status'] }),
-    route('post', '/missions', 'Missions', 'Create a mission', { body: true, status: 201, response: createdJson }),
+    route('post', '/missions', 'Missions', 'Create a mission', { body: 'CreateMissionRequest', status: 201, response: createdJson }),
     route('get', '/missions/{id}', 'Missions', 'Read a mission'),
-    route('put', '/missions/{id}', 'Missions', 'Update a mission', { body: true }),
+    route('put', '/missions/{id}', 'Missions', 'Update a mission', { body: 'UpdateMissionRequest' }),
     route('delete', '/missions/{id}', 'Missions', 'Delete a mission', { response: noContent, status: 204 }),
 
     route('get', '/adaptations', 'Adaptations', 'List adaptations', { security: 'cookie', query: ['page', 'limit', 'search', 'status'] }),
-    route('post', '/adaptations', 'Adaptations', 'Create a resume adaptation', { body: true, status: 201, response: createdJson }),
+    route('post', '/adaptations', 'Adaptations', 'Create a resume adaptation', { body: 'AiModifyRequest', status: 201, response: createdJson }),
     route('get', '/adaptations/{id}', 'Adaptations', 'Read an adaptation'),
-    route('put', '/adaptations/{id}', 'Adaptations', 'Update an adaptation', { body: true }),
+    route('put', '/adaptations/{id}', 'Adaptations', 'Update an adaptation', { body: 'UpdateAdaptationRequest' }),
 
     route('get', '/clients', 'Clients', 'List clients and prospects', { security: 'cookie', query: ['page', 'limit', 'search', 'status'] }),
-    route('post', '/clients', 'Clients', 'Create a client or prospect', { body: true, status: 201, response: createdJson }),
+    route('post', '/clients', 'Clients', 'Create a client or prospect', { body: 'CreateClientRequest', status: 201, response: createdJson }),
     route('get', '/clients/{id}', 'Clients', 'Read a client or prospect'),
-    route('put', '/clients/{id}', 'Clients', 'Update a client or prospect', { body: true }),
+    route('put', '/clients/{id}', 'Clients', 'Update a client or prospect', { body: 'UpdateClientRequest' }),
     route('delete', '/clients/{id}', 'Clients', 'Delete a client or prospect', { response: noContent, status: 204 }),
 
     route('get', '/deals', 'Deals', 'List deals', { security: 'cookie', query: ['page', 'limit', 'search', 'status'] }),
-    route('post', '/deals', 'Deals', 'Create a deal', { body: true, status: 201, response: createdJson }),
+    route('post', '/deals', 'Deals', 'Create a deal', { body: 'CreateDealRequest', status: 201, response: createdJson }),
     route('get', '/deals/{id}', 'Deals', 'Read a deal'),
-    route('put', '/deals/{id}', 'Deals', 'Update a deal', { body: true }),
+    route('put', '/deals/{id}', 'Deals', 'Update a deal', { body: 'UpdateDealRequest' }),
     route('delete', '/deals/{id}', 'Deals', 'Delete a deal', { response: noContent, status: 204 }),
 
     route('get', '/pipeline', 'Pipeline', 'List pipeline entries', { security: 'cookie', query: ['page', 'limit', 'search', 'status'] }),
-    route('post', '/pipeline', 'Pipeline', 'Add a candidate to the pipeline', { body: true, status: 201, response: createdJson }),
-    route('put', '/pipeline/{id}', 'Pipeline', 'Update a pipeline entry', { body: true }),
+    route('post', '/pipeline', 'Pipeline', 'Add a candidate to the pipeline', { body: 'CreatePipelineEntryRequest', status: 201, response: createdJson }),
+    route('put', '/pipeline/{id}', 'Pipeline', 'Update a pipeline entry', { body: 'UpdatePipelineEntryRequest' }),
 
     route('get', '/submissions', 'Submissions', 'List resume submissions', { security: 'cookie', query: ['page', 'limit', 'status'] }),
-    route('post', '/submissions', 'Submissions', 'Create a resume submission', { body: true, status: 201, response: createdJson }),
-    route('post', '/share', 'Share', 'Create a public resume share link', { body: true, status: 201, response: createdJson }),
+    route('post', '/submissions', 'Submissions', 'Create a resume submission', { body: 'CreateSubmissionRequest', status: 201, response: createdJson }),
+    route('post', '/share', 'Share', 'Create a public resume share link', { body: 'SharePdfRequest', status: 201, response: createdJson }),
     route('get', '/share/{token}', 'Share', 'Read a public shared resume', { security: 'public' }),
     route('get', '/consent/{token}', 'Consent', 'Read public consent request', { security: 'public' }),
-    route('post', '/consent/{token}', 'Consent', 'Submit public consent response', { security: 'csrf', body: true }),
+    route('post', '/consent/{token}', 'Consent', 'Submit public consent response', { security: 'csrf', body: 'ConsentRespondRequest' }),
 
-    route('post', '/chatbot/message', 'Chatbot', 'Send a chatbot message', { body: true }),
-    route('post', '/llm/proxy', 'LLM', 'Proxy an LLM request through the configured provider', { body: true }),
+    route('post', '/chatbot/message', 'Chatbot', 'Send a chatbot message', { body: 'ChatbotMessageRequest' }),
+    route('post', '/llm/proxy', 'LLM', 'Proxy an LLM request through the configured provider', { body: 'LlmProxyRequest' }),
     route('get', '/market-radar', 'Market Radar', 'Read market radar data', { security: 'cookie' }),
     route('post', '/market-radar/refresh', 'Market Radar', 'Refresh market radar data', { response: acceptedJson, status: 202 }),
     route('get', '/rome/metiers', 'ROME', 'Search ROME jobs and occupations', { security: 'cookie', query: ['search'] }),
 
     route('get', '/users', 'Users', 'List users', { security: 'cookie', query: ['page', 'limit', 'search', 'status'] }),
-    route('post', '/users', 'Users', 'Create a user', { body: true, status: 201, response: createdJson }),
-    route('put', '/users/{id}', 'Users', 'Update a user', { body: true }),
+    route('post', '/users', 'Users', 'Create a user', { body: 'CreateUserRequest', status: 201, response: createdJson }),
+    route('put', '/users/{id}', 'Users', 'Update a user', { body: 'UpdateUserRequest' }),
     route('get', '/firms', 'Firms', 'List firms', { security: 'cookie', query: ['page', 'limit', 'search', 'status'] }),
-    route('post', '/firms', 'Firms', 'Create a firm', { body: true, status: 201, response: createdJson }),
+    route('post', '/firms', 'Firms', 'Create a firm', { body: 'CreateFirmRequest', status: 201, response: createdJson }),
+    route('put', '/firms/{id}', 'Firms', 'Update a firm', { body: 'UpdateFirmRequest' }),
     route('get', '/admin/security-logs', 'Admin', 'List security logs', { security: 'cookie', query: ['page', 'limit'] }),
     route('get', '/metrics', 'Metrics', 'Read operational metrics', { security: 'cookie' }),
     route('get', '/backup/config', 'Backup', 'Read backup configuration', { security: 'cookie' }),
-    route('put', '/backup/config', 'Backup', 'Update backup configuration', { body: true }),
-    route('post', '/batch-jobs', 'Batch Jobs', 'Create a batch job', { body: true, status: 201, response: createdJson }),
+    route('put', '/backup/config', 'Backup', 'Update backup configuration', { body: 'BackupSettingsRequest' }),
+    route('post', '/batch-jobs', 'Batch Jobs', 'Create a batch import job', { body: { required: true, content: { 'multipart/form-data': { schema: { type: 'object' } } } }, status: 201, response: createdJson }),
+    route('post', '/batch-jobs/improve', 'Batch Jobs', 'Create a batch improvement job', { body: 'BatchImproveRequest', status: 201, response: createdJson }),
+    route('post', '/batch-jobs/adapt', 'Batch Jobs', 'Create a batch adaptation job', { body: 'BatchAdaptRequest', status: 201, response: createdJson }),
+    route('post', '/batch-jobs/match', 'Batch Jobs', 'Create a batch matching job', { body: 'BatchMatchRequest', status: 201, response: createdJson }),
+    route('post', '/batch-jobs/profile-search', 'Batch Jobs', 'Create a profile search job', { body: 'BatchProfileSearchRequest', status: 201, response: createdJson }),
+    route('post', '/batch-jobs/profile-analysis', 'Batch Jobs', 'Create a profile analysis job', { body: 'BatchProfileAnalysisRequest', status: 201, response: createdJson }),
+    route('post', '/batch-jobs/deal-export', 'Batch Jobs', 'Create a deal export job', { body: 'BatchDealExportRequest', status: 201, response: createdJson }),
     route('get', '/batch-jobs/{id}', 'Batch Jobs', 'Read a batch job'),
-    route('post', '/batch-export', 'Batch Export', 'Create a batch export', { body: true, status: 202, response: acceptedJson }),
+    route('post', '/batch-export', 'Batch Export', 'Create a batch export', { body: 'BatchExportRequest', status: 202, response: acceptedJson }),
     route('get', '/batch-export/{id}/download', 'Batch Export', 'Download a completed batch export', { security: 'cookie', response: binaryResponse }),
     route('get', '/gdpr-audit', 'GDPR Audit', 'List GDPR audit entries', { security: 'cookie', query: ['page', 'limit'] }),
     route('get', '/gdpr/mail/status', 'GDPR Mail', 'Read GDPR mail status', { security: 'cookie' }),
-    route('put', '/gdpr/mail/config', 'GDPR Mail', 'Update GDPR mail configuration', { body: true }),
+    route('put', '/gdpr/mail/config', 'GDPR Mail', 'Update GDPR mail configuration', { body: 'GdprMailConfigRequest' }),
     route('get', '/mail/status', 'Mail', 'Read mail integration status', { security: 'cookie' }),
-    route('post', '/calendar/events', 'Calendar', 'Create a calendar event', { body: true, status: 201, response: createdJson }),
+    route('post', '/calendar/events', 'Calendar', 'Create a calendar event', { body: 'CreateCalendarEventRequest', status: 201, response: createdJson }),
     route('get', '/tags', 'Tags', 'List tags', { security: 'cookie' }),
-    route('post', '/tags', 'Tags', 'Create a tag', { body: true, status: 201, response: createdJson }),
+    route('post', '/tags', 'Tags', 'Create a tag', { body: 'TagRenameRequest', status: 201, response: createdJson }),
     route('get', '/email-templates', 'Email Templates', 'List email templates', { security: 'cookie' }),
-    route('post', '/email-templates', 'Email Templates', 'Create an email template', { body: true, status: 201, response: createdJson })
+    route('post', '/email-templates', 'Email Templates', 'Create an email template', { body: 'CreateEmailTemplateRequest', status: 201, response: createdJson })
 ];
 
 function buildTags(catalog) {
@@ -300,17 +322,7 @@ export function buildOpenApiDocument(catalog = openApiRouteCatalog) {
                     description: 'CSRF token required for state-changing browser requests.'
                 }
             },
-            schemas: {
-                Error: {
-                    type: 'object',
-                    required: ['error'],
-                    properties: {
-                        error: { type: 'string' },
-                        code: { type: 'string' },
-                        requestId: { type: 'string' }
-                    }
-                }
-            },
+            schemas: openApiSchemas,
             responses: {
                 ValidationError: {
                     description: 'The request payload or parameters are invalid',

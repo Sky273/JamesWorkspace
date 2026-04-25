@@ -43,4 +43,21 @@ describe('OpenAPI document', () => {
         expect(openApiDocument.components.responses.Unauthorized.description).toBe('Authentication is required or expired');
         expect(openApiDocument.components.schemas.Error.required).toContain('error');
     });
+
+    it('exposes reusable domain schemas and references them from request bodies', () => {
+        expect(Object.keys(openApiDocument.components.schemas).length).toBeGreaterThanOrEqual(30);
+        expect(openApiDocument.components.schemas.SignInRequest.properties.email.format).toBe('email');
+        expect(openApiDocument.components.schemas.UpdateSettingsRequest.properties.llmProvider.enum).toContain('openai');
+        expect(openApiDocument.components.schemas.CreateClientRequest.properties.type.enum).toContain('prospect');
+        expect(openApiDocument.components.schemas.BatchImproveRequest.properties.resumeIds.items.format).toBe('uuid');
+
+        expect(openApiDocument.paths['/auth/login'].post.requestBody.content['application/json'].schema)
+            .toEqual({ $ref: '#/components/schemas/SignInRequest' });
+        expect(openApiDocument.paths['/settings'].post.requestBody.content['application/json'].schema)
+            .toEqual({ $ref: '#/components/schemas/UpdateSettingsRequest' });
+        expect(openApiDocument.paths['/clients'].post.requestBody.content['application/json'].schema)
+            .toEqual({ $ref: '#/components/schemas/CreateClientRequest' });
+        expect(openApiDocument.paths['/batch-jobs/improve'].post.requestBody.content['application/json'].schema)
+            .toEqual({ $ref: '#/components/schemas/BatchImproveRequest' });
+    });
 });
