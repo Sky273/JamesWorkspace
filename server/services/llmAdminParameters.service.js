@@ -8,6 +8,7 @@ const OLLAMA_GENERIC_MODEL_KEY = '__model__';
 
 const PROVIDER_MODEL_CATALOG = Object.freeze({
     openai: [
+        { value: 'gpt-5.5', label: 'gpt-5.5' },
         { value: 'gpt-5.4', label: 'gpt-5.4' },
         { value: 'gpt-5.4-pro', label: 'gpt-5.4-pro' },
         { value: 'gpt-5.4-mini', label: 'gpt-5.4-mini' },

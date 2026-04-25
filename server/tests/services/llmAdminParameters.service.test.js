@@ -141,4 +141,26 @@ describe('llmAdminParameters.service', () => {
             ])
         );
     });
+
+    it('exposes GPT-5.5 with reasoning controls in the OpenAI model catalog', () => {
+        const metadata = buildLlmAdminMetadata();
+
+        expect(metadata.llmModelCatalog.openai).toEqual(
+            expect.arrayContaining([
+                { value: 'gpt-5.5', label: 'gpt-5.5' }
+            ])
+        );
+        expect(metadata.llmParameterDefinitions.openai['gpt-5.5']).toEqual(expect.objectContaining({
+            reasoning_effort: expect.objectContaining({
+                options: expect.arrayContaining([
+                    { value: 'none', label: 'none' },
+                    { value: 'xhigh', label: 'xhigh' }
+                ]),
+                defaultValue: 'none'
+            }),
+            max_completion_tokens: expect.objectContaining({
+                max: 128000
+            })
+        }));
+    });
 });

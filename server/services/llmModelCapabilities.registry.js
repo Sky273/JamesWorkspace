@@ -126,6 +126,7 @@ export const PROVIDER_DEFAULT_PARAMETERS = Object.freeze({
 
 export const PROVIDER_CAPABILITIES = {
     openai: [
+        { match: /^gpt-5.5(?:$|-)/i, maxOutputTokens: 128000, tokenParameter: 'max_completion_tokens', defaultReasoningEffort: 'none', reasoningEfforts: ['none', 'low', 'medium', 'high', 'xhigh'], supportedParameters: ['verbosity'], conditionalSamplingMode: 'gpt5_2_style', responsesPreferred: true },
         { match: /^gpt-5.4-pro(?:$|-)/i, maxOutputTokens: 128000, tokenParameter: 'max_completion_tokens', defaultReasoningEffort: 'medium', reasoningEfforts: ['medium', 'high', 'xhigh'], supportedParameters: ['verbosity'], conditionalSamplingMode: 'gpt5_2_style', responsesPreferred: true, responsesOnly: true },
         { match: /^gpt-5.4(?:$|-)/i, maxOutputTokens: 128000, tokenParameter: 'max_completion_tokens', defaultReasoningEffort: 'none', reasoningEfforts: ['none', 'low', 'medium', 'high', 'xhigh'], supportedParameters: ['verbosity'], conditionalSamplingMode: 'gpt5_2_style', responsesPreferred: true },
         { match: /^gpt-5.2-pro(?:$|-)/i, maxOutputTokens: 128000, tokenParameter: 'max_completion_tokens', defaultReasoningEffort: 'medium', reasoningEfforts: ['medium', 'high', 'xhigh'], supportedParameters: ['verbosity'], conditionalSamplingMode: 'gpt5_2_style', responsesPreferred: true, responsesOnly: true },

@@ -14,7 +14,13 @@ for /f "tokens=5" %%p in ('netstat -ano ^| findstr /r /c:":443 .*LISTENING"') do
     pause
     exit /b 1
 )
-echo   Host ports 443 and 3443 are available for Docker publishing.
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr /r /c:":8443 .*LISTENING"') do (
+    echo   ERROR: Host port 8443 is already in use by PID %%p.
+    echo   Stop the conflicting service before starting the stack.
+    pause
+    exit /b 1
+)
+echo   Host ports 443 and 8443 are available for Docker publishing.
 echo.
 
 route print 0.0.0.0 | findstr /C:"NordLynx" >nul 2>&1
@@ -124,7 +130,7 @@ echo.
 echo ============================================
 echo   Stack started successfully!
 echo.
-echo   URLs: https://localhost and https://localhost:3443
+echo   URLs: https://localhost and https://localhost:8443
 echo   Admin bootstrap credentials come from DEFAULT_ADMIN_* in .env.docker
 echo ============================================
 echo.

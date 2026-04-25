@@ -83,7 +83,9 @@ vi.mock('../../services/llmModelCapabilities.service.js', () => ({
         requestedMaxTokens: requested,
         effectiveMaxTokens: requested,
         providerCap: null,
-        capabilities: {}
+        capabilities: _model === 'gpt-5.5'
+            ? { defaultReasoningEffort: 'none' }
+            : {}
     }))
 }));
 const mockMarkModelUnavailable = vi.fn();
@@ -91,7 +93,11 @@ vi.mock('../../services/llmAvailability.service.js', () => ({
     markModelUnavailable: (...args) => mockMarkModelUnavailable(...args)
 }));
 vi.mock('../../services/llmConfiguration.service.js', () => ({
-    inferProviderFallbackModel: vi.fn((_provider, model) => model === 'gpt-4o' ? 'gpt-4o-mini' : null)
+    inferProviderFallbackModel: vi.fn((_provider, model) => {
+        if (model === 'gpt-5.5') return 'gpt-5.4';
+        if (model === 'gpt-4o') return 'gpt-4o-mini';
+        return null;
+    })
 }));
 
 import axios from 'axios';
@@ -260,6 +266,51 @@ describe('OpenAI API Client', () => {
             const requestBody = axios.post.mock.calls[0][1];
             expect(requestBody.reasoning.effort).toBe('medium');
             expect(requestBody.temperature).toBeUndefined();
+        });
+
+        it('should use GPT-5.5 Responses API defaults', async () => {
+            axios.post.mockResolvedValueOnce({
+                status: 200,
+                data: {
+                    id: 'resp-55',
+                    status: 'completed',
+                    output: [{ type: 'message', content: [{ type: 'output_text', text: 'ok 5.5' }] }],
+                    usage: { input_tokens: 5, output_tokens: 10 }
+                }
+            });
+
+            const result = await callOpenAI({
+                model: 'gpt-5.5',
+                messages: [{ role: 'user', content: 'hi' }],
+                temperature: 0.7,
+                topP: 0.8
+            });
+
+            const requestBody = axios.post.mock.calls[0][1];
+            expect(result.choices[0].message.content).toBe('ok 5.5');
+            expect(axios.post).toHaveBeenCalledWith(
+                expect.stringContaining('/responses'),
+                expect.objectContaining({ model: 'gpt-5.5', input: expect.any(Array) }),
+                expect.any(Object)
+            );
+            expect(requestBody.reasoning.effort).toBe('none');
+            expect(requestBody.max_output_tokens).toBe(4096);
+            expect(requestBody.temperature).toBeUndefined();
+            expect(requestBody.top_p).toBeUndefined();
+        });
+
+        it('marks GPT-5.5 unavailable with GPT-5.4 fallback on model access denial', async () => {
+            axios.post.mockResolvedValueOnce({
+                status: 403,
+                data: { error: { message: 'You do not have access to this model' } }
+            });
+
+            await expect(callOpenAI({
+                model: 'gpt-5.5',
+                messages: [{ role: 'user', content: 'hi' }]
+            })).rejects.toThrow('You do not have access to this model');
+
+            expect(mockMarkModelUnavailable).toHaveBeenCalledWith('openai', 'gpt-5.5', 'provider_model_access_denied', 'gpt-5.4');
         });
     });
 

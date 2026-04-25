@@ -74,6 +74,7 @@ export function inferProviderFallbackModel(provider, model = '') {
     }
 
     if (normalizedProvider === 'openai') {
+        if (normalizedModel === 'gpt-5.5') return 'gpt-5.4';
         if (normalizedModel === 'gpt-5.4-pro') return 'gpt-5.4';
         if (normalizedModel === 'gpt-5.2-pro') return 'gpt-5.2';
         if (normalizedModel === 'gpt-5.1') return 'gpt-5';

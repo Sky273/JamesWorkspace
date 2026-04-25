@@ -40,7 +40,7 @@ services:
       - ./.env.docker
     ports:
       - "443:3443"
-      - "3443:3443"
+      - "8443:3443"
     volumes:
       - ./uploads:/app/uploads
       - ./logs:/app/logs
