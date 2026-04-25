@@ -803,6 +803,26 @@ describe('Batch Jobs Worker - Item Processors', () => {
         });
 
         it('should merge sparse post-analysis fields with embedded improvement analysis when the persistence analysis succeeds but is incomplete', async () => {
+            const embeddedSkillEvidence = {
+                name: 'Leadership',
+                category: 'skill',
+                evidenceScore: 0.82,
+                confidence: 0.9,
+                proof: {
+                    proofLevel: 'high',
+                    evidenceSources: ['experience']
+                }
+            };
+            const embeddedToolEvidence = {
+                name: 'Jira',
+                category: 'tool',
+                evidenceScore: 0.76,
+                confidence: 0.86,
+                proof: {
+                    proofLevel: 'medium',
+                    evidenceSources: ['tools']
+                }
+            };
             mockQuery
                 .mockResolvedValueOnce({
                     rows: [{
@@ -821,7 +841,14 @@ describe('Batch Jobs Worker - Item Processors', () => {
                     skillsRating: 80,
                     title: 'Senior PM',
                     summary: 'Résumé embarqué',
-                    tags: { skills: ['Leadership'], industries: ['Tech'], tools: ['Jira'], softSkills: ['Communication'] },
+                    tags: {
+                        skills: ['Leadership'],
+                        industries: ['Tech'],
+                        tools: ['Jira'],
+                        softSkills: ['Communication'],
+                        skillsEvidence: [embeddedSkillEvidence],
+                        toolsEvidence: [embeddedToolEvidence]
+                    },
                     suggestions: { skills: ['Mettre en avant le leadership'] }
                 }
             });
@@ -840,6 +867,28 @@ describe('Batch Jobs Worker - Item Processors', () => {
                 improved_skills: JSON.stringify(['Leadership']),
                 improved_tools: JSON.stringify(['Jira'])
             }));
+            const improvementUpdateCall = mockUpdateResume.mock.calls.find(([, data]) => data?.status === 'improved');
+            const persistedAnalysis = JSON.parse(improvementUpdateCall?.[1]?.analysis_details);
+            expect(persistedAnalysis.tags.skillsEvidence).toEqual([expect.objectContaining({
+                name: 'Leadership',
+                evidenceScore: 0.82
+            })]);
+            expect(persistedAnalysis.tags.toolsEvidence).toEqual([expect.objectContaining({
+                name: 'Jira',
+                evidenceScore: 0.76
+            })]);
+            expect(persistedAnalysis.tags.skillsEvidence).not.toContain('[object Object]');
+            expect(persistedAnalysis.tags.toolsEvidence).not.toContain('[object Object]');
+            expect(mockPersistResumeSkillEvidence).toHaveBeenCalledWith({
+                candidateId: 'res-1',
+                analysis: expect.objectContaining({
+                    tags: expect.objectContaining({
+                        skillsEvidence: [expect.objectContaining({ name: 'Leadership' })],
+                        toolsEvidence: [expect.objectContaining({ name: 'Jira' })]
+                    })
+                }),
+                phase: 'improved'
+            });
             expect(mockTrackImprovementActivity).toHaveBeenCalledWith(expect.objectContaining({
                 provider: 'batch-job',
                 event: 'post-analysis-merge',

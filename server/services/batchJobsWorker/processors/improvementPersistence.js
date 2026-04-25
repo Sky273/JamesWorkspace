@@ -3,6 +3,7 @@ import { parseScore } from '../helpers.js';
 import { getLLMSettings } from '../../settings.service.js';
 import { extractSummaryText, stringifyJsonField } from './shared.js';
 import { updateResume } from '../../resumes.service.js';
+import { persistResumeSkillEvidence } from '../../skillEvidence.service.js';
 
 export async function saveImprovedData(item, resumeId, improvedResult) {
     const improvedAnalysis = improvedResult.analysis || {};
@@ -93,6 +94,12 @@ export async function saveImprovedData(item, resumeId, improvedResult) {
         languages: stringifyJsonField(improvedAnalysis.languages),
         status: 'improved',
         improvement_date: new Date().toISOString()
+    });
+
+    await persistResumeSkillEvidence({
+        candidateId: resumeId,
+        analysis: improvedAnalysis,
+        phase: 'improved'
     });
 
     safeLog('info', 'CV improvement saved successfully', { itemId: item.id, resumeId });

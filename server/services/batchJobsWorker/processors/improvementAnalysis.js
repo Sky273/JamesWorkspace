@@ -63,6 +63,39 @@ function normalizeArray(items) {
     return [...new Set(items.map((item) => String(item || '').trim()).filter(Boolean))];
 }
 
+function isEvidenceTagKey(key) {
+    return ['skillsEvidence', 'toolsEvidence', 'softSkillsEvidence'].includes(key);
+}
+
+function normalizeEvidenceArray(items) {
+    if (!Array.isArray(items)) {
+        return [];
+    }
+
+    const unique = new Map();
+    for (const item of items) {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) {
+            continue;
+        }
+
+        const name = String(item.name || item.skill || item.tool || '').trim();
+        if (!name) {
+            continue;
+        }
+
+        const key = name.toLowerCase();
+        if (!unique.has(key)) {
+            unique.set(key, { ...item, name });
+        }
+    }
+
+    return [...unique.values()];
+}
+
+function normalizeTagArray(key, value) {
+    return isEvidenceTagKey(key) ? normalizeEvidenceArray(value) : normalizeArray(value);
+}
+
 function hasMeaningfulAnalysisValue(value) {
     if (value === undefined || value === null) {
         return false;
@@ -105,8 +138,8 @@ function mergeTagSections(primary = {}, fallback = {}) {
     const keys = new Set([...Object.keys(primary || {}), ...Object.keys(fallback || {})]);
 
     for (const key of keys) {
-        const preferred = normalizeArray(primary?.[key]);
-        const alternate = normalizeArray(fallback?.[key]);
+        const preferred = normalizeTagArray(key, primary?.[key]);
+        const alternate = normalizeTagArray(key, fallback?.[key]);
         const combined = preferred.length > 0 ? preferred : alternate;
         if (combined.length > 0) {
             merged[key] = combined;
