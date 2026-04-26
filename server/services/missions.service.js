@@ -259,12 +259,16 @@ export async function validateContact(contactId, clientId) {
  * Validate that a deal exists and belongs to the expected firm
  * @param {string} dealId
  * @param {string} expectedFirmId
- * @returns {Promise<{exists: boolean, firmMatch: boolean}>}
+ * @returns {Promise<{exists: boolean, firmMatch: boolean, clientId: string|null}>}
  */
 export async function validateDeal(dealId, expectedFirmId) {
-    const result = await query('SELECT firm_id FROM deals WHERE id = $1', [dealId]);
-    if (result.rows.length === 0) return { exists: false, firmMatch: false };
-    return { exists: true, firmMatch: result.rows[0].firm_id === expectedFirmId };
+    const result = await query('SELECT firm_id, client_id FROM deals WHERE id = $1', [dealId]);
+    if (result.rows.length === 0) return { exists: false, firmMatch: false, clientId: null };
+    return {
+        exists: true,
+        firmMatch: result.rows[0].firm_id === expectedFirmId,
+        clientId: result.rows[0].client_id || null
+    };
 }
 
 export async function validateMissionAssociations({ clientId, contactId, dealId, expectedFirmId }) {
@@ -296,6 +300,9 @@ export async function validateMissionAssociations({ clientId, contactId, dealId,
         }
         if (!dealCheck.firmMatch) {
             return { ok: false, status: 403, error: 'Deal does not belong to the target firm' };
+        }
+        if (clientId && dealCheck.clientId && dealCheck.clientId !== clientId) {
+            return { ok: false, status: 400, error: 'Deal does not belong to this client' };
         }
     }
 

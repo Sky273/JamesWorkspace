@@ -324,12 +324,17 @@ describe('Missions Service', () => {
     describe('validateDeal', () => {
         it('should return exists:true, firmMatch:true if deal exists and firm matches', async () => {
             query.mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] });
-            expect(await validateDeal('d1', 'f1')).toEqual({ exists: true, firmMatch: true });
+            expect(await validateDeal('d1', 'f1')).toEqual({ exists: true, firmMatch: true, clientId: null });
+        });
+
+        it('should return the deal client when present', async () => {
+            query.mockResolvedValueOnce({ rows: [{ firm_id: 'f1', client_id: 'c1' }] });
+            expect(await validateDeal('d1', 'f1')).toEqual({ exists: true, firmMatch: true, clientId: 'c1' });
         });
 
         it('should return exists:false if not found', async () => {
             query.mockResolvedValueOnce({ rows: [] });
-            expect(await validateDeal('missing', 'f1')).toEqual({ exists: false, firmMatch: false });
+            expect(await validateDeal('missing', 'f1')).toEqual({ exists: false, firmMatch: false, clientId: null });
         });
     });
 
@@ -373,6 +378,23 @@ describe('Missions Service', () => {
                 ok: false,
                 status: 403,
                 error: 'Deal does not belong to the target firm'
+            });
+        });
+
+        it('should reject when deal client and mission client differ', async () => {
+            query
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1' }] })
+                .mockResolvedValueOnce({ rows: [{ firm_id: 'f1', client_id: 'comutitres-client' }] });
+
+            await expect(validateMissionAssociations({
+                clientId: 'cea-client',
+                contactId: null,
+                dealId: 'accord-cadre-2025',
+                expectedFirmId: 'f1'
+            })).resolves.toEqual({
+                ok: false,
+                status: 400,
+                error: 'Deal does not belong to this client'
             });
         });
     });

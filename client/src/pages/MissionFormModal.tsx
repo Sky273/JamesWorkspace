@@ -28,6 +28,7 @@ interface Deal {
   id: string;
   title: string;
   status: string;
+  client_id?: string;
   client_name?: string;
 }
 
@@ -74,6 +75,7 @@ export default function MissionFormModal({
   editorSlot,
 }: MissionFormModalProps) {
   const { t } = useTranslation();
+  const selectedDeal = deals.find((deal) => deal.id === formData['Deal ID']);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm sm:p-6">
@@ -124,10 +126,11 @@ export default function MissionFormModal({
                 />
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  <label htmlFor="mission-title" className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                     {t('missions.missionTitle')} *
                   </label>
                   <input
+                    id="mission-title"
                     type="text"
                     required
                     value={formData.Title}
@@ -140,10 +143,11 @@ export default function MissionFormModal({
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  <label htmlFor="mission-status" className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                     {t('missions.missionStatus')}
                   </label>
                   <select
+                    id="mission-status"
                     value={formData.Status}
                     onChange={(e: ChangeEvent<HTMLSelectElement>) =>
                       setFormData({
@@ -169,14 +173,22 @@ export default function MissionFormModal({
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  <label htmlFor="mission-deal" className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                     {t('missions.deal', 'Affaire')}
                   </label>
                   <select
+                    id="mission-deal"
                     value={formData['Deal ID']}
-                    onChange={(e: ChangeEvent<HTMLSelectElement>) =>
-                      setFormData({ ...formData, 'Deal ID': e.target.value })
-                    }
+                    onChange={(e: ChangeEvent<HTMLSelectElement>) => {
+                      const nextDealId = e.target.value;
+                      const nextDeal = deals.find((deal) => deal.id === nextDealId);
+                      setFormData({
+                        ...formData,
+                        'Deal ID': nextDealId,
+                        'Client ID': nextDeal?.client_id || formData['Client ID'],
+                        'Contact ID': nextDeal?.client_id && nextDeal.client_id !== formData['Client ID'] ? '' : formData['Contact ID'],
+                      });
+                    }}
                     className={fieldClassName}
                     disabled={loadingDeals}
                   >
@@ -196,7 +208,7 @@ export default function MissionFormModal({
 
                 <div>
                   <div className="mb-2 flex items-center justify-between gap-3">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <label htmlFor="mission-client" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                       {t('missions.client', 'Client / Prospect')}
                     </label>
                     <Link
@@ -207,9 +219,16 @@ export default function MissionFormModal({
                     </Link>
                   </div>
                   <select
+                    id="mission-client"
                     value={formData['Client ID']}
                     onChange={(e: ChangeEvent<HTMLSelectElement>) => {
-                      setFormData({ ...formData, 'Client ID': e.target.value, 'Contact ID': '' });
+                      const nextClientId = e.target.value;
+                      setFormData({
+                        ...formData,
+                        'Client ID': nextClientId,
+                        'Contact ID': '',
+                        'Deal ID': selectedDeal?.client_id && selectedDeal.client_id !== nextClientId ? '' : formData['Deal ID'],
+                      });
                     }}
                     className={fieldClassName}
                     disabled={loadingClients}
@@ -228,10 +247,11 @@ export default function MissionFormModal({
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  <label htmlFor="mission-contact" className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300">
                     {t('missions.contact', 'Interlocuteur')}
                   </label>
                   <select
+                    id="mission-contact"
                     value={formData['Contact ID']}
                     onChange={(e: ChangeEvent<HTMLSelectElement>) =>
                       setFormData({ ...formData, 'Contact ID': e.target.value })

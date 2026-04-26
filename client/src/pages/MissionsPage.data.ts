@@ -40,6 +40,7 @@ export interface Deal {
   id: string;
   title: string;
   status: string;
+  client_id?: string;
   client_name?: string;
 }
 
