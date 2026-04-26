@@ -518,6 +518,22 @@ button.app-primary-action:disabled {
   box-shadow: 0 18px 32px rgba(163, 166, 255, 0.28);
 }
 
+.dark .home-dashboard-primary-action {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 58%, #8b5cf6 100%);
+  color: #ffffff;
+  border-color: rgba(196, 181, 253, 0.4);
+  box-shadow:
+    0 18px 34px rgba(79, 70, 229, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.dark .home-dashboard-primary-action:hover {
+  color: #ffffff;
+  box-shadow:
+    0 22px 40px rgba(124, 58, 237, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
 button.settings-switch[type="button"] {
   position: relative;
   display: inline-flex;

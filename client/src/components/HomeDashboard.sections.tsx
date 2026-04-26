@@ -80,15 +80,15 @@ function DashboardQuickAction({
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         onClick={onClick}
-        className="app-primary-action flex w-full items-center justify-between gap-4 rounded-2xl px-5 py-4 text-left"
+        className="app-primary-action home-dashboard-primary-action flex w-full items-center justify-between gap-4 rounded-2xl px-5 py-4 text-left"
       >
         <div className="flex min-w-0 items-center gap-4">
-          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black/10">
+          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black/10 dark:bg-white/14 dark:ring-1 dark:ring-white/20">
             <Icon className="h-6 w-6" />
           </span>
           <span className="min-w-0">
             <span className="block truncate text-base font-semibold">{label}</span>
-            <span className="block text-sm text-slate-800/80">{description}</span>
+            <span className="block text-sm text-slate-800/80 dark:text-indigo-50/90">{description}</span>
           </span>
         </div>
       </motion.button>
