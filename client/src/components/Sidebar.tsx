@@ -105,19 +105,19 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
         className={classNames(
           'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-[transform,background-color,border-color] duration-200',
           isActive
-            ? 'bg-slate-900 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] dark:bg-white/12 dark:text-white'
-            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-100'
+            ? 'bg-white/12 text-[#C4B5FD] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+            : 'text-[#BFA7FF] hover:bg-white/5 hover:text-[#E9D5FF]'
         )}
       >
         {isActive && (
-          <span className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-sky-500 dark:bg-sky-400" />
+          <span className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-sky-400" />
         )}
         <IconComponent
           className={classNames(
             'h-[18px] w-[18px] flex-shrink-0',
             isActive
-              ? 'text-sky-300 dark:text-sky-300'
-              : 'text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300'
+              ? 'text-sky-300'
+              : 'text-slate-500 group-hover:text-slate-300'
           )}
           aria-hidden={true}
         />
@@ -145,11 +145,11 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
       <div key={section.id} className="mt-5">
         {section.title && (
           <div className="mb-2 flex items-center gap-2 px-3">
-            <span className="h-1.5 w-1.5 rounded-full bg-sky-500 dark:bg-sky-400" />
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+            <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
               {section.title}
             </h3>
-            <span className="h-px flex-1 bg-gradient-to-r from-slate-200 via-slate-100 to-transparent dark:from-white/10 dark:via-white/6 dark:to-transparent" />
+            <span className="h-px flex-1 bg-gradient-to-r from-white/10 via-white/6 to-transparent" />
           </div>
         )}
         <div className="space-y-1">{visibleItems.map((item) => renderNavItem(item))}</div>
@@ -158,19 +158,19 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
   };
 
   const sidebarContent = (
-    <div className="flex min-h-0 flex-1 flex-col border-r border-slate-200/80 bg-white/96 shadow-[1px_0_0_rgba(15,23,42,0.04)] dark:border-white/6 dark:bg-[#09111f] dark:shadow-[1px_0_0_rgba(255,255,255,0.03)]">
+    <div className="flex min-h-0 flex-1 flex-col border-r border-white/6 bg-[#09111f] shadow-[1px_0_0_rgba(255,255,255,0.03)]">
       <div className="flex flex-1 flex-col overflow-y-auto px-3 pb-4 pt-4 sidebar-scrollbar">
-        <div className="flex flex-shrink-0 items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/90 px-3 py-3 dark:border-white/6 dark:bg-white/[0.03]">
+        <div className="flex flex-shrink-0 items-center justify-between rounded-2xl border border-white/6 bg-white/[0.03] px-3 py-3">
           <div className="min-w-0">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 via-indigo-500 to-violet-500 text-white shadow-[0_12px_28px_rgba(79,70,229,0.28)]">
                 <BoltIcon className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <div className="truncate text-sm font-semibold tracking-[0.02em] text-slate-900 dark:text-white">
+                <div className="truncate text-sm font-semibold tracking-[0.02em] text-white">
                   ResumeConverter
                 </div>
-                <div className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                <div className="truncate text-[11px] text-slate-400">
                   AI workspace
                 </div>
               </div>
@@ -180,7 +180,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
             type="button"
             onClick={onClose}
             aria-label={t('common.close', 'Fermer')}
-            className="rounded-xl p-1.5 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-white/8 dark:hover:text-slate-200 lg:hidden"
+            className="rounded-xl p-1.5 text-slate-400 transition-colors hover:bg-white/8 hover:text-slate-200 lg:hidden"
           >
             <XMarkIcon className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -192,7 +192,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
           {canAccessManagerScreens && renderSection(adminSection)}
           <div className="min-h-4 flex-1" />
           <div className="relative mt-4 space-y-1 pt-4">
-            <span className="absolute left-3 right-3 top-0 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent dark:via-white/10" />
+            <span className="absolute left-3 right-3 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
             {bottomItems.filter((item) => !item.adminOnly || isSuperAdmin).map((item) => renderNavItem(item))}
           </div>
         </nav>

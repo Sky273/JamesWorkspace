@@ -113,7 +113,7 @@ const DealSection = ({
     <div
       role="region"
       aria-label={`${t('resumes.groupedView.deal')}: ${deal.title}`}
-      className={`overflow-hidden rounded-[2rem] border transition-all duration-200 ${
+      className={`overflow-hidden rounded-[0.95rem] border transition-all duration-200 ${
         isDragOver
           ? 'cv-card ring-2 ring-[var(--cv-primary)] ring-offset-1 ring-offset-transparent border-[color:color-mix(in_srgb,var(--cv-primary)_40%,transparent)]'
           : isSourceDeal && isDragging
@@ -253,7 +253,7 @@ const DealSection = ({
           >
             <div className={`border-t px-4 py-5 sm:px-5 ${isDragOver ? 'border-[color:color-mix(in_srgb,var(--cv-primary)_20%,transparent)]' : 'border-slate-200/70 dark:border-white/6'}`}>
               {isDragOver ? (
-                <div className="mb-4 rounded-[1.2rem] border-2 border-dashed border-[color:color-mix(in_srgb,var(--cv-primary)_35%,transparent)] bg-[var(--cv-primary-soft)] px-4 py-4">
+                <div className="mb-4 rounded-[0.85rem] border-2 border-dashed border-[color:color-mix(in_srgb,var(--cv-primary)_35%,transparent)] bg-[var(--cv-primary-soft)] px-4 py-4">
                   <p className="text-center text-sm font-medium text-[var(--cv-primary)]">↓ {t('resumes.groupedView.dropHere')}</p>
                 </div>
               ) : null}
@@ -274,7 +274,7 @@ const DealSection = ({
 
                   <div className="space-y-3">
                     {deal.missions.map((mission) => (
-                      <div key={mission.id} className="overflow-hidden rounded-[1.5rem] border border-slate-200/70 bg-white/70 dark:border-white/6 dark:bg-white/[0.03]">
+                      <div key={mission.id} className="overflow-hidden rounded-[0.95rem] border border-slate-200/70 bg-white/70 dark:border-white/6 dark:bg-white/[0.03]">
                         <button
                           type="button"
                           onClick={() => navigate(`/missions/${mission.id}`)}
@@ -356,7 +356,7 @@ const DealSection = ({
               ) : null}
 
               {deal.resumes.length === 0 && !isDragOver && (!deal.missions || deal.missions.length === 0) ? (
-                <div className="rounded-[1.4rem] border border-dashed border-slate-300 px-4 py-10 text-center dark:border-white/10">
+                <div className="rounded-[0.95rem] border border-dashed border-slate-300 px-4 py-10 text-center dark:border-white/10">
                   <FolderPlusIcon className="mx-auto mb-3 h-10 w-10 text-slate-400 dark:text-[#7f8ab0]" />
                   <p className="text-sm text-slate-500 dark:text-[#a3aac4]">{t('resumes.groupedView.noResumes')}</p>
                 </div>

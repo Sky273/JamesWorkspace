@@ -478,3 +478,539 @@
 .resumes-editorial-shell .cv-filter-more:hover {
   color: color-mix(in srgb, var(--cv-primary) 82%, white) !important;
 }
+
+/* CVtheque visual migration: compact CRM surface inspired by the standalone mockup. */
+.resumes-editorial-shell {
+  --cv-surface-top: transparent;
+  --cv-surface-bottom: transparent;
+  --cv-surface-base-start: #f3f2ef;
+  --cv-surface-base-end: #f3f2ef;
+  --cv-panel-start: #ffffff;
+  --cv-panel-end: #ffffff;
+  --cv-card-start: #ffffff;
+  --cv-card-end: #ffffff;
+  --cv-outline: rgba(15, 23, 42, 0.1);
+  --cv-outline-strong: rgba(15, 23, 42, 0.18);
+  --cv-shadow: rgba(15, 23, 42, 0.06);
+  --cv-shadow-strong: rgba(15, 23, 42, 0.1);
+  --cv-text: #101828;
+  --cv-muted: #667085;
+  --cv-kicker-text: #667085;
+  --cv-search-input-bg: #f8fafc;
+  --cv-search-input-border: rgba(15, 23, 42, 0.12);
+  --cv-primary: #635bff;
+  --cv-primary-strong: #5147e8;
+  --cv-primary-soft: rgba(99, 91, 255, 0.1);
+  --cv-secondary: #8b5cf6;
+  --cv-secondary-soft: rgba(139, 92, 246, 0.1);
+  --cv-tertiary: #16a34a;
+  --cv-tertiary-soft: rgba(22, 163, 74, 0.1);
+  --cv-cyan: #0284c7;
+  --cv-cyan-soft: rgba(2, 132, 199, 0.1);
+  --cv-warning: #b45309;
+  --cv-warning-soft: rgba(180, 83, 9, 0.11);
+  --cv-danger: #dc2626;
+  --cv-danger-soft: rgba(220, 38, 38, 0.09);
+  --cv-ghost-bg: #ffffff;
+  --cv-ghost-hover: #f8fafc;
+  --cv-pill-bg: #f8fafc;
+  --cv-score-track-bg: #e5e7eb;
+  --cv-score-fill-solid: #16a34a;
+}
+
+.dark .resumes-editorial-shell {
+  --cv-surface-top: transparent;
+  --cv-surface-bottom: transparent;
+  --cv-surface-base-start: #111827;
+  --cv-surface-base-end: #111827;
+  --cv-panel-start: #0f172a;
+  --cv-panel-end: #0f172a;
+  --cv-card-start: #111c31;
+  --cv-card-end: #111c31;
+  --cv-outline: rgba(148, 163, 184, 0.16);
+  --cv-outline-strong: rgba(199, 210, 254, 0.26);
+  --cv-shadow: rgba(0, 0, 0, 0.28);
+  --cv-shadow-strong: rgba(0, 0, 0, 0.34);
+  --cv-text: #e5e7eb;
+  --cv-muted: #aab4c8;
+  --cv-kicker-text: #aab4c8;
+  --cv-search-input-bg: rgba(2, 6, 23, 0.38);
+  --cv-search-input-border: rgba(148, 163, 184, 0.18);
+  --cv-primary: #a5b4fc;
+  --cv-primary-strong: #818cf8;
+  --cv-primary-soft: rgba(165, 180, 252, 0.12);
+  --cv-secondary: #c4b5fd;
+  --cv-secondary-soft: rgba(196, 181, 253, 0.12);
+  --cv-tertiary: #86efac;
+  --cv-tertiary-soft: rgba(134, 239, 172, 0.12);
+  --cv-cyan: #7dd3fc;
+  --cv-cyan-soft: rgba(125, 211, 252, 0.12);
+  --cv-warning: #fbbf24;
+  --cv-warning-soft: rgba(251, 191, 36, 0.12);
+  --cv-danger: #fca5a5;
+  --cv-danger-soft: rgba(252, 165, 165, 0.12);
+  --cv-ghost-bg: rgba(15, 23, 42, 0.68);
+  --cv-ghost-hover: rgba(30, 41, 59, 0.82);
+  --cv-pill-bg: rgba(15, 23, 42, 0.76);
+  --cv-score-track-bg: rgba(148, 163, 184, 0.18);
+  --cv-score-fill-solid: #86efac;
+}
+
+.resumes-editorial-shell .cv-display {
+  letter-spacing: 0;
+}
+
+.resumes-editorial-shell .cv-surface {
+  background: linear-gradient(180deg, var(--cv-surface-base-start), var(--cv-surface-base-end));
+  border: 1px solid var(--cv-outline);
+  box-shadow: 0 16px 34px var(--cv-shadow);
+}
+
+.resumes-editorial-shell .cv-panel,
+.resumes-editorial-shell .cv-card,
+.resumes-editorial-shell .lux-card,
+.resumes-editorial-shell .cv-search-shell,
+.resumes-editorial-shell .cv-stat-card,
+.resumes-editorial-shell .cv-resume-row {
+  background: var(--cv-panel-start);
+  border: 1px solid var(--cv-outline);
+  box-shadow: 0 10px 24px var(--cv-shadow);
+}
+
+.dark .resumes-editorial-shell .cv-panel,
+.dark .resumes-editorial-shell .cv-card,
+.dark .resumes-editorial-shell .lux-card,
+.dark .resumes-editorial-shell .cv-search-shell,
+.dark .resumes-editorial-shell .cv-stat-card,
+.dark .resumes-editorial-shell .cv-resume-row {
+  background: var(--cv-card-start);
+}
+
+.resumes-editorial-shell .cv-card:hover,
+.resumes-editorial-shell .lux-card:hover,
+.resumes-editorial-shell .cv-resume-row:hover {
+  border-color: var(--cv-outline-strong);
+  box-shadow: 0 14px 30px var(--cv-shadow-strong);
+}
+
+.resumes-editorial-shell .cv-page-heading-icon {
+  background: var(--cv-primary-soft);
+  color: var(--cv-primary);
+}
+
+.resumes-editorial-shell .cv-stat-card {
+  min-height: 8.75rem;
+}
+
+.resumes-editorial-shell .cv-search-shell {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 10;
+}
+
+.resumes-editorial-shell .cv-search-input {
+  background: var(--cv-search-input-bg) !important;
+  border: 1px solid var(--cv-search-input-border) !important;
+}
+
+.resumes-editorial-shell .segmented-control {
+  background: var(--cv-panel-start);
+  border: 1px solid var(--cv-outline);
+  border-radius: 0.9rem;
+  box-shadow: none;
+}
+
+.resumes-editorial-shell .segmented-control__item {
+  border-radius: 0.7rem;
+}
+
+.resumes-editorial-shell .segmented-control__item--active,
+.resumes-editorial-shell button.cv-page-primary-action[type='button'] {
+  background: var(--cv-primary);
+  color: #ffffff;
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--cv-primary) 24%, transparent);
+}
+
+.dark .resumes-editorial-shell .segmented-control__item--active,
+.dark .resumes-editorial-shell button.cv-page-primary-action[type='button'] {
+  color: #071120;
+}
+
+.resumes-editorial-shell button.cv-filter-button-active[type='button'],
+.resumes-editorial-shell button.cv-preview-button-active[type='button'] {
+  background: var(--cv-primary-soft);
+  border-color: var(--cv-outline-strong);
+}
+
+.resumes-editorial-shell button.cv-preview-button-active[type='button'] {
+  background: var(--cv-secondary-soft);
+}
+
+.resumes-editorial-shell button.cv-danger-action[type='button'] {
+  background: var(--cv-danger-soft);
+}
+
+.resumes-editorial-shell .cv-resume-row {
+  outline: none;
+}
+
+.resumes-editorial-shell .cv-resume-row:focus-visible {
+  border-color: var(--cv-primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--cv-primary) 16%, transparent);
+}
+
+.resumes-editorial-shell .cv-resume-avatar,
+.resumes-editorial-shell .cv-resume-score,
+.resumes-editorial-shell .cv-resume-meta-pill {
+  border: 1px solid var(--cv-outline);
+  background: var(--cv-pill-bg);
+}
+
+.resumes-editorial-shell .cv-resume-score-ring {
+  display: inline-flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+}
+
+.resumes-editorial-shell .cv-resume-score-core {
+  width: 1.95rem;
+  height: 1.95rem;
+  border-radius: 9999px;
+  background: var(--cv-panel-start);
+}
+
+.dark .resumes-editorial-shell .cv-resume-score-core {
+  background: var(--cv-card-start);
+}
+
+.resumes-editorial-shell .cv-filter-category-card {
+  box-shadow: none;
+}
+
+.resumes-editorial-shell .cv-count-pill {
+  border: 1px solid var(--cv-outline);
+  background: var(--cv-pill-bg);
+}
+
+.resumes-editorial-shell .cv-count-pill-primary {
+  color: var(--cv-primary);
+}
+
+.resumes-editorial-shell .cv-count-pill-success {
+  color: var(--cv-tertiary);
+}
+
+@media (max-width: 767px) {
+  .resumes-editorial-shell .cv-search-shell {
+    position: static;
+  }
+}
+
+/* Second pass: mirror the standalone CVtheque tokens and proportions more literally. */
+.resumes-editorial-shell,
+.dark .resumes-editorial-shell {
+  --cv-accent: #6b4eff;
+  --cv-accent-hover: #5b3eee;
+  --cv-accent-soft: rgba(107, 78, 255, 0.1);
+  --cv-bg: #f3f2ef;
+  --cv-surface-base-start: #f3f2ef;
+  --cv-surface-base-end: #f3f2ef;
+  --cv-panel-start: #ffffff;
+  --cv-panel-end: #ffffff;
+  --cv-card-start: #ffffff;
+  --cv-card-end: #ffffff;
+  --cv-surface-top: transparent;
+  --cv-surface-bottom: transparent;
+  --cv-text: #18181b;
+  --cv-muted: #52525b;
+  --cv-subtle: #a1a1aa;
+  --cv-kicker-text: #a1a1aa;
+  --cv-outline: #e4e4e7;
+  --cv-outline-strong: rgba(107, 78, 255, 0.3);
+  --cv-shadow: rgba(0, 0, 0, 0.07);
+  --cv-shadow-strong: rgba(0, 0, 0, 0.13);
+  --cv-primary: #6b4eff;
+  --cv-primary-strong: #5b3eee;
+  --cv-primary-soft: rgba(107, 78, 255, 0.1);
+  --cv-secondary: #7c6cc0;
+  --cv-secondary-soft: #f4f2ff;
+  --cv-tertiary: #10b981;
+  --cv-tertiary-soft: #d1fae5;
+  --cv-cyan: #0284c7;
+  --cv-cyan-soft: #f0f9ff;
+  --cv-warning: #f59e0b;
+  --cv-warning-soft: #fef3c7;
+  --cv-danger: #f43f5e;
+  --cv-danger-soft: #fff0f0;
+  --cv-ghost-bg: #ffffff;
+  --cv-ghost-hover: rgba(107, 78, 255, 0.1);
+  --cv-pill-bg: #f3f2ef;
+  --cv-search-input-bg: #ffffff;
+  --cv-search-input-border: #e4e4e7;
+  --cv-score-track-bg: #e4e4e7;
+  --cv-score-fill-solid: #10b981;
+  color: var(--cv-text);
+}
+
+.resumes-editorial-shell {
+  background: var(--cv-bg);
+}
+
+.resumes-editorial-shell .cv-surface {
+  background: var(--cv-bg);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.resumes-editorial-shell .cv-display {
+  font-family: "Outfit", var(--font-family-sans) !important;
+  letter-spacing: -0.025em;
+}
+
+.resumes-editorial-shell,
+.resumes-editorial-shell button,
+.resumes-editorial-shell input,
+.resumes-editorial-shell textarea,
+.resumes-editorial-shell select {
+  font-family: "DM Sans", var(--font-family-sans) !important;
+}
+
+.resumes-editorial-shell .cv-kicker {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  color: var(--cv-subtle);
+}
+
+.resumes-editorial-shell .cv-view-toggle-row {
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.resumes-editorial-shell .cv-view-toggle-row .cv-kicker {
+  font-size: 10.5px;
+}
+
+.resumes-editorial-shell .segmented-control {
+  background: var(--cv-bg);
+  border: 1.5px solid var(--cv-outline);
+  border-radius: 9px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.resumes-editorial-shell .segmented-control__item {
+  min-height: 30px;
+  border-radius: 7px;
+  padding: 0 12px;
+  color: var(--cv-subtle);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.resumes-editorial-shell .segmented-control__item--active {
+  background: #ffffff;
+  color: var(--cv-accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.resumes-editorial-shell .cv-stat-card,
+.resumes-editorial-shell .cv-panel,
+.resumes-editorial-shell .cv-card {
+  background: #ffffff;
+  border: 1.5px solid transparent;
+  border-radius: 13px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 14px rgba(0, 0, 0, 0.07);
+}
+
+.resumes-editorial-shell .cv-stat-card {
+  min-height: 76px;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+
+.resumes-editorial-shell .cv-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(107, 78, 255, 0.15);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.13);
+}
+
+.resumes-editorial-shell .cv-search-shell {
+  position: static;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.resumes-editorial-shell .cv-search-input {
+  border: 1.5px solid var(--cv-outline) !important;
+  background: #ffffff !important;
+  color: var(--cv-text) !important;
+  box-shadow: none !important;
+}
+
+.resumes-editorial-shell .cv-search-input:focus-visible {
+  border-color: var(--cv-accent) !important;
+  box-shadow: none !important;
+}
+
+.resumes-editorial-shell button.cv-page-primary-action[type='button'] {
+  background: var(--cv-accent);
+  border: 0;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.resumes-editorial-shell button.cv-page-primary-action[type='button']:hover {
+  background: var(--cv-accent-hover);
+  filter: none;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(107, 78, 255, 0.35);
+}
+
+.resumes-editorial-shell .cv-ghost-button,
+.resumes-editorial-shell button.cv-filter-button-active[type='button'],
+.resumes-editorial-shell button.cv-preview-button-active[type='button'] {
+  background: #ffffff;
+  border: 1.5px solid var(--cv-outline);
+  color: var(--cv-muted);
+  box-shadow: none;
+}
+
+.resumes-editorial-shell .cv-ghost-button:hover,
+.resumes-editorial-shell button.cv-filter-button-active[type='button']:hover,
+.resumes-editorial-shell button.cv-preview-button-active[type='button']:hover {
+  border-color: var(--cv-accent);
+  color: var(--cv-accent);
+  background: var(--cv-accent-soft);
+}
+
+.resumes-editorial-shell button.cv-filter-button-active[type='button'],
+.resumes-editorial-shell button.cv-preview-button-active[type='button'] {
+  border-color: var(--cv-accent);
+  color: var(--cv-accent);
+  background: var(--cv-accent-soft);
+}
+
+.resumes-editorial-shell .cv-resume-row {
+  background: #ffffff;
+  border: 1.5px solid var(--cv-outline);
+  border-radius: 13px;
+  box-shadow: none;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.18s;
+}
+
+.resumes-editorial-shell .cv-resume-row:hover {
+  transform: translateY(-1px);
+  border-color: rgba(107, 78, 255, 0.3);
+  box-shadow: 0 4px 20px rgba(107, 78, 255, 0.1);
+}
+
+.resumes-editorial-shell .cv-resume-avatar {
+  border: 0;
+  background: var(--cv-accent) !important;
+  color: #ffffff;
+}
+
+.resumes-editorial-shell .cv-resume-status-dot {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 11px;
+  height: 11px;
+  border: 2px solid #ffffff;
+  border-radius: 9999px;
+  background: var(--cv-tertiary);
+}
+
+.resumes-editorial-shell .cv-resume-meta-pill {
+  border: 0;
+  background: transparent;
+}
+
+.resumes-editorial-shell .cv-resume-score {
+  border: 0;
+  background: transparent;
+}
+
+.resumes-editorial-shell .cv-resume-score-ring {
+  width: 58px;
+  height: 58px;
+}
+
+.resumes-editorial-shell .cv-resume-score-core {
+  width: 46px;
+  height: 46px;
+  background: #ffffff;
+}
+
+.resumes-editorial-shell .cv-status-pill,
+.resumes-editorial-shell .sbadge {
+  border: 0;
+  border-radius: 20px;
+  background: #d1fae5 !important;
+  color: #059669 !important;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  box-shadow: none;
+}
+
+.resumes-editorial-shell .cv-chip-skills,
+.resumes-editorial-shell .cv-chip-industries,
+.resumes-editorial-shell .cv-chip-tools,
+.resumes-editorial-shell .cv-chip-soft {
+  border: 1px solid var(--cv-outline);
+  border-radius: 20px;
+  background: var(--cv-bg);
+  color: var(--cv-muted);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+}
+
+.resumes-editorial-shell .cv-chip-skills {
+  border-color: #bae6fd;
+  color: #0284c7;
+  background: #f0f9ff;
+}
+
+.resumes-editorial-shell .cv-chip-industries {
+  border-color: #c4b5fd;
+  color: #6b4eff;
+  background: #f5f3ff;
+}
+
+.resumes-editorial-shell .cv-filter-category-card,
+.resumes-editorial-shell .cv-filter-chip,
+.resumes-editorial-shell .cv-active-filter-chip {
+  box-shadow: none !important;
+}
+
+.resumes-editorial-shell .cv-count-pill,
+.resumes-editorial-shell .cv-pill {
+  background: var(--cv-bg);
+  border: 1.5px solid var(--cv-outline);
+  color: var(--cv-muted);
+}
+
+.resumes-editorial-shell button.cv-danger-action[type='button'] {
+  background: #ffffff;
+  border: 1.5px solid var(--cv-outline);
+  color: var(--cv-muted);
+}
+
+.resumes-editorial-shell button.cv-danger-action[type='button']:hover {
+  border-color: var(--cv-danger);
+  color: var(--cv-danger);
+  background: #fff0f0;
+}
+
+.resumes-editorial-shell .cv-panel > div:first-child {
+  border-color: var(--cv-outline);
+}

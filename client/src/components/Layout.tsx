@@ -43,13 +43,13 @@ const getInitials = (name: string | undefined): string => {
 };
 
 const headerIconButtonClassName =
-  'group flex h-9 w-9 items-center justify-center rounded-full border border-slate-200/90 bg-white shadow-sm shadow-slate-200/50 transition-[transform,background-color,border-color] duration-200 hover:-translate-y-px hover:border-slate-300 dark:border-white/8 dark:bg-white/[0.045] dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08]';
+  'group flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#E4E4E7] bg-white shadow-none transition-[transform,background-color,border-color] duration-200 hover:-translate-y-px hover:border-[#6B4EFF]/30 hover:bg-[#F3F2EF]';
 
 const headerIconClassName =
-  'h-[18px] w-[18px] flex-shrink-0 stroke-2 text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300';
+  'h-[18px] w-[18px] flex-shrink-0 stroke-2 text-[#52525B] group-hover:text-[#18181B]';
 
 const headerSolidIconClassName =
-  'h-5 w-5 flex-shrink-0 fill-current text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300';
+  'h-5 w-5 flex-shrink-0 fill-current text-[#52525B] group-hover:text-[#18181B]';
 
 const Layout = (): JSX.Element => {
   const { user, signOut } = useAuth();
@@ -87,27 +87,7 @@ const Layout = (): JSX.Element => {
   const isResumesRoute = location.pathname === '/resumes';
   const isAdminWorkspaceRoute = location.pathname === '/admin';
   const isMissionsRoute = location.pathname === '/missions';
-  const editorialRoutes = [
-    '/resumes',
-    '/missions',
-    '/adaptations',
-    '/profile-matching',
-    '/upload',
-    '/batch-upload',
-    '/clients',
-    '/admin',
-    '/dashboard/security-logs',
-    '/dashboard/metrics',
-    '/dashboard/gdpr-audit',
-    '/dashboard/backup',
-    '/settings',
-    '/facts',
-    '/metiers',
-    '/guide',
-    '/profile',
-    '/credits-required',
-  ];
-  const isEditorialMigratedRoute = editorialRoutes.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`));
+  const isEditorialMigratedRoute = true;
   const editorialRouteClassName = isResumesRoute || isAdminWorkspaceRoute
     ? ' resumes-editorial-shell'
     : isMissionsRoute
@@ -117,7 +97,7 @@ const Layout = (): JSX.Element => {
         : '';
 
   return (
-    <div className="min-h-screen bg-app">
+    <div className="min-h-screen bg-[#F3F2EF]">
       <a href="#main-content" className="skip-link">
         {t('common.skipToContent', 'Aller au contenu principal')}
       </a>
@@ -126,7 +106,7 @@ const Layout = (): JSX.Element => {
 
       <div className="min-h-screen lg:pl-64">
         <div className={`flex min-h-screen flex-1 flex-col${isEditorialMigratedRoute ? ` editorial-migrated-shell${editorialRouteClassName}` : ''}`}>
-        <header className="pointer-events-none sticky top-0 z-40 border-b border-slate-200/80 bg-white/92 shadow-[0_1px_0_rgba(15,23,42,0.04)] backdrop-blur-xl dark:border-white/6 dark:bg-[#0c1222]/95 dark:shadow-[0_1px_0_rgba(255,255,255,0.03)]">
+        <header className="pointer-events-none sticky top-0 z-40 border-b border-[#E4E4E7] bg-white shadow-none">
           <div className="pointer-events-auto relative flex min-h-16 items-center justify-between gap-3 px-4 py-2 sm:h-16 sm:gap-4 sm:py-0 sm:px-6 lg:px-8">
             <button
               type="button"
@@ -139,14 +119,14 @@ const Layout = (): JSX.Element => {
             </button>
 
             <div className="hidden min-w-0 flex-1 items-center gap-2 sm:gap-3.5 md:flex">
-              <div className="hidden h-6 w-px bg-slate-200/80 lg:block dark:bg-white/8" />
-              <div className="min-w-0 rounded-full border border-slate-200/80 bg-white/70 px-3 py-2 dark:border-white/8 dark:bg-white/[0.03]">
+              <div className="hidden h-6 w-px bg-[#E4E4E7] lg:block" />
+              <div className="min-w-0 rounded-[9px] border border-[#E4E4E7] bg-white px-3 py-2">
                 <Breadcrumbs tone="header" />
               </div>
             </div>
 
-            <div className="ml-auto flex w-full items-center justify-end gap-2 pl-14 text-slate-700 dark:text-slate-300 sm:gap-2.5 md:w-auto md:pl-0">
-              <div className="flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50/80 px-1 py-1 shadow-sm shadow-slate-200/40 dark:border-white/8 dark:bg-white/[0.03] dark:shadow-none sm:gap-2 sm:px-1.5">
+            <div className="ml-auto flex w-full items-center justify-end gap-2 pl-14 text-[#52525B] sm:gap-2.5 md:w-auto md:pl-0">
+              <div className="flex items-center gap-1.5 rounded-[13px] border border-[#E4E4E7] bg-[#F3F2EF] px-1 py-1 shadow-none sm:gap-2 sm:px-1.5">
                 <button
                   type="button"
                   className={headerIconButtonClassName}
@@ -198,20 +178,20 @@ const Layout = (): JSX.Element => {
 
               {user && (
                 <>
-                  <div className="hidden h-7 w-px bg-slate-200/80 lg:block dark:bg-white/8" />
+                  <div className="hidden h-7 w-px bg-[#E4E4E7] lg:block" />
                   <Link
                     to="/profile"
-                    className="flex min-w-0 items-center gap-2 rounded-full border border-slate-200/90 bg-white px-1.5 py-1.5 shadow-sm shadow-slate-200/50 transition-[transform,background-color,border-color] duration-200 hover:-translate-y-px hover:border-slate-300 dark:border-white/8 dark:bg-white/[0.045] dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08] sm:gap-3 sm:px-2.5"
+                    className="flex min-w-0 items-center gap-2 rounded-[13px] border border-[#E4E4E7] bg-white px-1.5 py-1.5 shadow-none transition-[transform,background-color,border-color] duration-200 hover:-translate-y-px hover:border-[#6B4EFF]/30 hover:bg-[#F3F2EF] sm:gap-3 sm:px-2.5"
                     title={t('userProfile.viewProfile') || 'Mon compte'}
                   >
-                    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 via-violet-500 to-sky-500 text-[11px] font-semibold text-white shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+                    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[9px] bg-[#6B4EFF] text-[11px] font-semibold text-white shadow-none">
                       {getInitials(user.name)}
                     </div>
                     <div className="hidden min-w-0 lg:flex lg:flex-col">
-                      <span className="truncate text-[12px] font-semibold tracking-[0.01em] text-slate-900 dark:text-white">
+                      <span className="truncate text-[12px] font-semibold tracking-[0.01em] text-[#18181B]">
                         {user.name || t('userProfile.anonymous')}
                       </span>
-                      <span className="truncate text-[11px] text-slate-500 dark:text-slate-400">
+                      <span className="truncate text-[11px] text-[#52525B]">
                         {user.firmName || user.firm || t('userProfile.noCompany')} · {getRoleLabel(user.role)}
                       </span>
                     </div>

@@ -89,7 +89,7 @@ export function FilterPanel({
         initial="collapsed"
         animate="expanded"
         exit="collapsed"
-        className="mt-4 overflow-hidden rounded-[1.8rem] border border-slate-200/70 bg-white/80 shadow-[0_18px_40px_rgba(15,23,42,0.06)] dark:border-white/6 dark:bg-[#091328]"
+        className="mt-4 overflow-hidden rounded-[0.95rem] border border-slate-200/70 bg-white/80 shadow-[0_18px_40px_rgba(15,23,42,0.06)] dark:border-white/6 dark:bg-[#091328]"
       >
         <div className="border-b border-slate-200/70 px-4 py-4 dark:border-white/6 sm:px-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -122,13 +122,13 @@ export function FilterPanel({
                 value={globalTagQuery}
                 onChange={(event) => setGlobalTagQuery(event.target.value)}
                 placeholder={t('resumes.filterSearchPlaceholder', 'Rechercher dans tous les tags...')}
-                className="w-full rounded-[1.2rem] border border-slate-200/80 bg-white/90 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-[var(--cv-primary)] focus:ring-2 focus:ring-[var(--cv-primary)]/15 dark:border-white/10 dark:bg-white/[0.03] dark:text-[#dee5ff]"
+                className="w-full rounded-[0.85rem] border border-slate-200/80 bg-white/90 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-[var(--cv-primary)] focus:ring-2 focus:ring-[var(--cv-primary)]/15 dark:border-white/10 dark:bg-white/[0.03] dark:text-[#dee5ff]"
               />
             </label>
           </div>
 
           {selectedTags.length > 0 ? (
-            <div className="mt-4 rounded-[1.4rem] border border-slate-200/70 bg-white/70 p-4 dark:border-white/8 dark:bg-white/[0.03]">
+            <div className="mt-4 rounded-[0.85rem] border border-slate-200/70 bg-white/70 p-4 dark:border-white/8 dark:bg-white/[0.03]">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <span className="text-sm font-semibold text-slate-700 dark:text-[#dee5ff]">
                   {t('resumes.activeFilters')} ({selectedTags.length})
@@ -158,7 +158,7 @@ export function FilterPanel({
             const Icon = categoryIcons[category as keyof typeof categoryIcons] || SparklesIcon;
 
             return (
-              <section key={category} className="rounded-[1.4rem] border border-slate-200/70 bg-white/70 p-4 shadow-[0_18px_36px_rgba(15,23,42,0.08)] dark:border-white/6 dark:bg-white/[0.03]">
+              <section key={category} className="rounded-[0.95rem] border border-slate-200/70 bg-white/70 p-4 shadow-[0_18px_36px_rgba(15,23,42,0.08)] dark:border-white/6 dark:bg-white/[0.03]">
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h3 className="cv-filter-section-title flex items-center gap-2">
@@ -311,7 +311,7 @@ export function SummaryBar({ t, visibleData }: { t: TFunction; visibleData: Grou
   const hasResults = visibleData.totalAssigned + visibleData.totalUnassigned > 0;
 
   return (
-    <div className="cv-panel rounded-[1.8rem] px-4 py-4 sm:px-5">
+    <div className="cv-panel rounded-[0.95rem] px-4 py-4 sm:px-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="grid gap-3 sm:grid-cols-3 lg:flex lg:flex-wrap lg:items-center">
           <div className="flex items-center gap-3 rounded-[1.1rem] bg-white/60 px-3 py-3 dark:bg-white/[0.03]">
@@ -477,7 +477,7 @@ export function UnassignedSection({
   const hiddenCount = visibleData.unassigned.length - INITIAL_RESUMES_LIMIT;
 
   return (
-    <div className="cv-card overflow-hidden rounded-[2rem]">
+    <div className="cv-card overflow-hidden rounded-[0.95rem]">
       <button
         onClick={() => {
           if (!hasActiveFilters) {
@@ -576,7 +576,7 @@ export function DeleteConfirmModal({ deleting, onClose, onConfirm, resume, t }: 
         initial={{ opacity: 0, scale: 0.95, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 12 }}
-        className="cv-panel w-full max-w-md overflow-hidden rounded-[2rem]"
+        className="cv-panel w-full max-w-md overflow-hidden rounded-[0.95rem]"
       >
         <div className="border-b border-slate-200/70 px-6 py-5 dark:border-white/6">
           <div className="cv-kicker text-[var(--cv-danger)]">{t('common.delete')}</div>
@@ -612,7 +612,7 @@ export function DeleteConfirmModal({ deleting, onClose, onConfirm, resume, t }: 
 export function EmptyDealsState({ hasActiveFilters, t, visibleData }: { hasActiveFilters: boolean; t: TFunction; visibleData: GroupedData }): JSX.Element | null {
   if (visibleData.deals.length === 0 && !hasActiveFilters) {
     return (
-      <div className="cv-panel rounded-[2rem] p-10 text-center">
+      <div className="cv-panel rounded-[0.95rem] p-10 text-center">
         <BriefcaseIcon className="mx-auto mb-4 h-14 w-14 text-slate-400 dark:text-[#7f8ab0]" />
         <h3 className="cv-display mb-2 text-xl font-semibold text-slate-950 dark:text-[#dee5ff]">
           {t('resumes.groupedView.noDeals')}
@@ -626,7 +626,7 @@ export function EmptyDealsState({ hasActiveFilters, t, visibleData }: { hasActiv
 
   if (visibleData.deals.length === 0 && visibleData.unassigned.length === 0 && hasActiveFilters) {
     return (
-      <div className="cv-panel rounded-[2rem] p-12 text-center">
+      <div className="cv-panel rounded-[0.95rem] p-12 text-center">
         <DocumentMagnifyingGlassIcon className="mx-auto mb-4 h-16 w-16 text-slate-400 dark:text-[#7f8ab0]" />
         <h3 className="cv-display mb-2 text-xl font-semibold text-slate-950 dark:text-[#dee5ff]">
           {t('resumes.noResults')}

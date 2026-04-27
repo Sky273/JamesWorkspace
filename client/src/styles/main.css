@@ -22,17 +22,17 @@
   --breakpoint-xl: 1280px;
   --breakpoint-2xl: 1536px;
 
-  /* Primary colors */
-  --color-primary-50: #eef2ff;
-  --color-primary-100: #e0e7ff;
-  --color-primary-200: #c7d2fe;
-  --color-primary-300: #a5b4fc;
-  --color-primary-400: #818cf8;
-  --color-primary-500: #4f46e5;
-  --color-primary-600: #4338ca;
-  --color-primary-700: #3730a3;
-  --color-primary-800: #312e81;
-  --color-primary-900: #1e1b4b;
+  /* Primary colors - compact light app accent */
+  --color-primary-50: #f5f3ff;
+  --color-primary-100: #ede9fe;
+  --color-primary-200: #ddd6fe;
+  --color-primary-300: #c4b5fd;
+  --color-primary-400: #a78bfa;
+  --color-primary-500: #6b4eff;
+  --color-primary-600: #5b3eee;
+  --color-primary-700: #4c2fd6;
+  --color-primary-800: #3d25ad;
+  --color-primary-900: #2f1f83;
 
   /* Secondary colors */
   --color-secondary-50: #f8fafc;

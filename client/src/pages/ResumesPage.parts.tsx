@@ -20,7 +20,6 @@ import { SkeletonResumeList } from '../components/ui/Skeleton';
 import type { ResumeBasic } from '../components/ResumesPage/dealsGrouped.types';
 import type { Resume } from '../types/entities';
 import { getResumePreviewTags, type TagsByCategory } from './ResumesPage.data';
-import type { ResumeStats } from './ResumesPage.hooks';
 
 export const filterContentVariants: Variants = {
   expanded: {
@@ -206,10 +205,10 @@ export function ResumeFiltersPanel({
         initial="collapsed"
         animate="expanded"
         exit="collapsed"
-        className="mt-4 rounded-[1.8rem] border border-slate-200/70 bg-white/80 px-4 pb-4 dark:border-white/6 dark:bg-[#091328]"
+        className="mt-4 rounded-[0.95rem] border border-slate-200/70 bg-white/80 px-4 pb-4 dark:border-white/6 dark:bg-[#091328]"
       >
         <div className="space-y-5 pt-4">
-          <div className="flex flex-col gap-4 rounded-[1.5rem] border border-slate-200/70 bg-white/70 p-4 dark:border-white/8 dark:bg-white/[0.03] lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex flex-col gap-4 rounded-[0.85rem] border border-slate-200/70 bg-white/70 p-4 dark:border-white/8 dark:bg-white/[0.03] lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <div className="cv-kicker mb-2 inline-flex items-center gap-2">
                 <FunnelIcon className="h-4 w-4" />
@@ -231,13 +230,13 @@ export function ResumeFiltersPanel({
                 value={globalTagQuery}
                 onChange={(event) => setGlobalTagQuery(event.target.value)}
                 placeholder={t('resumes.filterSearchPlaceholder', 'Rechercher dans tous les tags...')}
-                className="w-full rounded-[1.2rem] border border-slate-200/80 bg-white/90 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-[var(--cv-primary)] focus:ring-2 focus:ring-[var(--cv-primary)]/15 dark:border-white/10 dark:bg-white/[0.03] dark:text-[var(--cv-text)]"
+                className="w-full rounded-[0.85rem] border border-slate-200/80 bg-white/90 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-[var(--cv-primary)] focus:ring-2 focus:ring-[var(--cv-primary)]/15 dark:border-white/10 dark:bg-white/[0.03] dark:text-[var(--cv-text)]"
               />
             </label>
             {selectedTags.length > 0 ? (
               <button
                 onClick={clearFilters}
-                className="cv-ghost-button inline-flex items-center justify-center gap-2 rounded-[1.2rem] px-4 py-3 text-sm font-semibold"
+                className="cv-ghost-button inline-flex items-center justify-center gap-2 rounded-[0.85rem] px-4 py-3 text-sm font-semibold"
               >
                 <XMarkIcon className="h-4 w-4" />
                 {t('common.resetFilters')}
@@ -246,7 +245,7 @@ export function ResumeFiltersPanel({
           </div>
 
           {selectedTags.length > 0 ? (
-            <div className="rounded-[1.5rem] border border-slate-200/70 bg-white/70 p-4 dark:border-white/8 dark:bg-white/[0.03]">
+            <div className="rounded-[0.85rem] border border-slate-200/70 bg-white/70 p-4 dark:border-white/8 dark:bg-white/[0.03]">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <span className="text-sm font-semibold text-slate-700 dark:text-[#dee5ff]">
                   {t('resumes.activeFilters')} ({selectedTags.length})
@@ -277,7 +276,7 @@ export function ResumeFiltersPanel({
               const hasMore = filteredTags.length > CATEGORY_PREVIEW_LIMIT;
               const Icon = categoryIcons[category] || SparklesIcon;
               return (
-                <section key={category} className="cv-filter-category-card rounded-[1.6rem] border border-slate-200/70 bg-white/75 p-4 dark:border-white/8 dark:bg-white/[0.03]">
+                <section key={category} className="cv-filter-category-card rounded-[0.95rem] border border-slate-200/70 bg-white/75 p-4 dark:border-white/8 dark:bg-white/[0.03]">
                   <div className="mb-4 flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <h3 className="cv-filter-section-title">
@@ -478,7 +477,6 @@ export function ResumesResultsGrid({
   onRefresh,
   searchQuery,
   selectedTags,
-  stats,
 }: {
   clearFilters: () => void;
   filteredResumes: Resume[];
@@ -490,22 +488,9 @@ export function ResumesResultsGrid({
   onRefresh: () => Promise<void>;
   searchQuery: string;
   selectedTags: string[];
-  stats: ResumeStats;
 }) {
   const { t } = useTranslation();
   const hasActiveFilters = searchQuery.length > 0 || selectedTags.length > 0;
-  const visibleAverage = useMemo(() => {
-    if (filteredResumes.length === 0) {
-      return 0;
-    }
-
-    const total = filteredResumes.reduce((sum, resume) => {
-      const score = Number(resume['Improved Global Rating'] ?? resume['Global Rating'] ?? 0);
-      return sum + (Number.isFinite(score) ? score : 0);
-    }, 0);
-
-    return Math.round(total / filteredResumes.length);
-  }, [filteredResumes]);
 
   const listItems = useMemo(() => {
     return filteredResumes.map((resume) => ({
@@ -565,7 +550,7 @@ export function ResumesResultsGrid({
 
   if (loading) {
     return (
-      <div className="cv-panel overflow-hidden rounded-[2rem]">
+      <div className="cv-panel overflow-hidden rounded-[0.95rem]">
         <ResultsCollectionHeader count={filteredResumes.length} hasActiveFilters={hasActiveFilters} loading={true} />
         <div className="p-5 sm:p-6">
           <SkeletonResumeList count={6} />
@@ -576,14 +561,14 @@ export function ResumesResultsGrid({
 
   if (filteredResumes.length === 0) {
     return (
-      <div className="cv-panel overflow-hidden rounded-[2rem]">
+      <div className="cv-panel overflow-hidden rounded-[0.95rem]">
         <ResultsCollectionHeader count={0} hasActiveFilters={hasActiveFilters} loading={false} />
         <div className="p-6 sm:p-8">
           <EmptyStateCard
             icon={hasActiveFilters ? FunnelIcon : DocumentPlusIcon}
             title={t('resumes.noResults')}
             description={hasActiveFilters ? t('resumes.noResultsFiltered') : t('resumes.uploadFirst')}
-            containerClassName="rounded-[1.75rem] border border-dashed border-slate-200/80 bg-white/50 p-10 text-center dark:border-white/10 dark:bg-white/[0.02]"
+            containerClassName="rounded-[0.95rem] border border-dashed border-slate-200/80 bg-white/50 p-10 text-center dark:border-white/10 dark:bg-white/[0.02]"
           />
           <div className="mt-4 flex justify-center">
             <button
@@ -601,36 +586,8 @@ export function ResumesResultsGrid({
   }
 
   return (
-    <div className="cv-panel overflow-hidden rounded-[2rem]">
+    <div className="cv-panel overflow-hidden rounded-[0.95rem]">
       <ResultsCollectionHeader count={filteredResumes.length} hasActiveFilters={hasActiveFilters} loading={false} />
-      <div className="border-b border-slate-200/70 px-5 py-4 dark:border-white/6 sm:px-6">
-        <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-[1.2rem] bg-white/70 px-4 py-3 dark:bg-white/[0.03]">
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-[#8f99b8]">
-              {t('resumes.resultsLabel', 'Résultats')}
-            </div>
-            <div className="cv-display mt-2 text-2xl font-semibold text-slate-950 dark:text-[#dee5ff]">
-              {filteredResumes.length}
-            </div>
-          </div>
-          <div className="rounded-[1.2rem] bg-white/70 px-4 py-3 dark:bg-white/[0.03]">
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-[#8f99b8]">
-              {t('resumes.score_label')}
-            </div>
-            <div className="cv-display mt-2 text-2xl font-semibold text-slate-950 dark:text-[#dee5ff]">
-              {visibleAverage}%
-            </div>
-          </div>
-          <div className="rounded-[1.2rem] bg-white/70 px-4 py-3 dark:bg-white/[0.03]">
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-500 dark:text-[#8f99b8]">
-              {t('resumes.improved', 'Optimisés')}
-            </div>
-            <div className="cv-display mt-2 text-2xl font-semibold text-slate-950 dark:text-[#dee5ff]">
-              {stats.improved}
-            </div>
-          </div>
-        </div>
-      </div>
       <div className="p-5 sm:p-6">
         <div className="space-y-3">
           {listItems.map(({ raw, basic }, index) => (

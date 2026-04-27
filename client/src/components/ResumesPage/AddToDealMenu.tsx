@@ -153,8 +153,9 @@ const ManageResumeDealsModal = ({ resumeId, onSuccess }: ManageResumeDealsModalP
   return (
     <>
       <button
+        type="button"
         onClick={openModal}
-        className="cv-ghost-button inline-flex min-h-10 items-center gap-2 rounded-[0.95rem] px-3 py-2 text-sm font-medium"
+        className="cv-ghost-button inline-flex h-[30px] items-center gap-1.5 rounded-lg px-3 text-xs font-medium"
         title={t('crm.deals.modal.manageDeals')}
       >
         <FolderIcon className="h-4 w-4" />

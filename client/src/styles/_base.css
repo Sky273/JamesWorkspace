@@ -871,3 +871,146 @@ button.settings-switch[type="button"]:disabled {
 .dark .icon-muted {
   color: var(--text-muted, #6b7280);
 }
+
+/* --- Compact light theme overrides for the protected app shell --- */
+.editorial-migrated-shell {
+  --app-bg: #f3f2ef;
+  --surface-primary: #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-muted: #f8f8f7;
+  --surface-accent: rgba(107, 78, 255, 0.1);
+  --border-subtle: #e4e4e7;
+  --border-strong: rgba(107, 78, 255, 0.3);
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-muted: #a1a1aa;
+  --color-primary-50: #f5f3ff;
+  --color-primary-100: #ede9fe;
+  --color-primary-200: #ddd6fe;
+  --color-primary-300: #c4b5fd;
+  --color-primary-400: #a78bfa;
+  --color-primary-500: #6b4eff;
+  --color-primary-600: #5b3eee;
+  --color-primary-700: #4c2fd6;
+  color: var(--text-primary);
+}
+
+.editorial-migrated-shell h2 {
+  background: transparent;
+  padding: 0;
+}
+
+.editorial-migrated-shell :is(input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="tel"], input[type="url"], input[type="search"], input[type="date"], input[type="time"], input[type="datetime-local"], textarea, select):focus-visible {
+  border-color: #6b4eff;
+  box-shadow: 0 0 0 3px rgba(107, 78, 255, 0.18);
+}
+
+.editorial-migrated-shell :is(:focus-visible, button:focus-visible, .btn:focus-visible, [role="button"]:focus-visible, a:focus-visible) {
+  outline-color: #6b4eff;
+  box-shadow: 0 0 0 3px rgba(107, 78, 255, 0.24);
+}
+
+.editorial-migrated-shell :is(.btn-primary, button[type="submit"]:not(.app-primary-action), input[type="submit"]:not(.app-primary-action), .app-primary-action, .public-cta-primary) {
+  background: #6b4eff;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.editorial-migrated-shell :is(.btn-primary, button[type="submit"]:not(.app-primary-action), input[type="submit"]:not(.app-primary-action), .app-primary-action, .public-cta-primary):hover {
+  background: #5b3eee;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(107, 78, 255, 0.35);
+}
+
+.editorial-migrated-shell .btn-outline {
+  color: #6b4eff;
+  border-color: #6b4eff;
+}
+
+.editorial-migrated-shell .btn-outline:hover {
+  background: rgba(107, 78, 255, 0.1);
+}
+
+.editorial-migrated-shell .segmented-control {
+  background: #f3f2ef;
+  border: 1.5px solid #e4e4e7;
+  border-radius: 9px;
+  box-shadow: none;
+}
+
+.editorial-migrated-shell button.segmented-control__item.segmented-control__item--active[type="button"] {
+  background: #ffffff;
+  color: #6b4eff;
+  border-color: transparent;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.editorial-migrated-shell [class*="text-blue-"],
+.editorial-migrated-shell [class*="text-indigo-"] {
+  color: #6b4eff !important;
+}
+
+.editorial-migrated-shell [class*="bg-blue-"],
+.editorial-migrated-shell [class*="bg-indigo-"] {
+  background-color: rgba(107, 78, 255, 0.1) !important;
+}
+
+.editorial-migrated-shell [class*="bg-blue-500"],
+.editorial-migrated-shell [class*="bg-blue-600"],
+.editorial-migrated-shell [class*="bg-blue-700"],
+.editorial-migrated-shell [class*="bg-indigo-500"],
+.editorial-migrated-shell [class*="bg-indigo-600"],
+.editorial-migrated-shell [class*="bg-indigo-700"] {
+  background-color: #6b4eff !important;
+}
+
+.editorial-migrated-shell [class*="border-blue-"],
+.editorial-migrated-shell [class*="border-indigo-"] {
+  border-color: rgba(107, 78, 255, 0.3) !important;
+}
+
+.editorial-migrated-shell [class*="ring-blue-"],
+.editorial-migrated-shell [class*="ring-indigo-"] {
+  --tw-ring-color: rgba(107, 78, 255, 0.24) !important;
+}
+
+.editorial-migrated-shell [class*="from-blue-"],
+.editorial-migrated-shell [class*="from-indigo-"],
+.editorial-migrated-shell [class*="via-blue-"],
+.editorial-migrated-shell [class*="via-indigo-"],
+.editorial-migrated-shell [class*="to-blue-"],
+.editorial-migrated-shell [class*="to-indigo-"] {
+  --tw-gradient-from: #6b4eff var(--tw-gradient-from-position) !important;
+  --tw-gradient-via: #7c6cc0 var(--tw-gradient-via-position) !important;
+  --tw-gradient-to: #a78bfa var(--tw-gradient-to-position) !important;
+}
+
+.editorial-migrated-shell .bg-app {
+  background: #f3f2ef;
+}
+
+.editorial-migrated-shell :is(.cv-surface, .app-page-shell, .app-page-shell-4xl, .app-page-shell-5xl, .app-page-shell-6xl) {
+  background: #f3f2ef !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.editorial-migrated-shell :is(.cv-panel, .cv-card, .lux-card, .section-shell, .glass-panel-strong, .page-hero, .app-section-card) {
+  background: #ffffff !important;
+  border: 1.5px solid #e4e4e7 !important;
+  border-radius: 13px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 14px rgba(0, 0, 0, 0.07) !important;
+}
+
+.editorial-migrated-shell :is(.cv-card, .lux-card, .app-section-card):hover {
+  border-color: rgba(107, 78, 255, 0.3) !important;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.13) !important;
+}
+
+.editorial-migrated-shell :is(.cv-search-shell, .cv-tab-strip, .app-tab-strip) {
+  background: #f3f2ef !important;
+  border: 1.5px solid #e4e4e7 !important;
+  border-radius: 13px !important;
+  box-shadow: none !important;
+}

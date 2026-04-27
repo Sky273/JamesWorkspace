@@ -54,13 +54,13 @@ const ResumesPage = (): JSX.Element => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="cv-surface mx-auto mb-8 max-w-7xl rounded-[2.5rem] p-6 sm:p-8"
+      className="cv-surface mx-auto mb-8 w-full p-4 sm:p-6 lg:p-[30px]"
     >
       <ResumesHeader />
       <ResumesViewModeToggle value={viewMode} onChange={setViewMode} />
 
       {viewMode === 'byDeal' ? (
-        <Suspense fallback={<div className="cv-panel mt-6 rounded-[2rem] p-8 text-sm text-slate-500 dark:text-[#a3aac4]">Chargement de la vue par affaire...</div>}>
+        <Suspense fallback={<div className="cv-panel mt-6 rounded-[1rem] p-8 text-sm text-slate-500 dark:text-[#a3aac4]">Chargement de la vue par affaire...</div>}>
           <ResumesByDealView allTags={allTags} refreshToken={groupedRefreshToken} stats={stats} />
         </Suspense>
       ) : (
