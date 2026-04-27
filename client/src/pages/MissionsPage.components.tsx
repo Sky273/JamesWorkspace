@@ -1,26 +1,35 @@
 import { FolderIcon, ListBulletIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 
-import PageHeader from '../components/page/PageHeader';
 import ViewModeToggle from '../components/page/ViewModeToggle';
 import Pagination from '../components/Pagination';
-import { StatsCards } from '../components/MissionsPage';
 import {
   MissionCardInDeal,
   MissionsGroupedEmptyState,
-  MissionsGroupedSummary,
   MissionsGroupedToolbar,
 } from '../components/MissionsPage/MissionsDealsGroupedView.parts';
 import MissionsDealsGroupedView from '../components/MissionsPage/MissionsDealsGroupedView';
 import type { GroupedMission } from '../components/MissionsPage/MissionsDealsGroupedView.types';
 import { SkeletonMissionList } from '../components/ui/Skeleton';
-import type { Mission, MissionStats, MissionViewMode } from './MissionsPage.hooks';
+import type { Mission, MissionViewMode } from './MissionsPage.hooks';
 import { MISSIONS_PAGE_SIZE } from './MissionsPage.hooks';
 
 export function MissionsHeader() {
   const { t } = useTranslation();
 
-  return <PageHeader title={t('missions.title')} subtitle={t('missions.subtitle')} />;
+  return (
+    <header className="missions-page-heading mb-[22px]">
+      <div className="min-w-0">
+        <div className="cv-kicker mb-2">{t('missions.title')}</div>
+        <h1 className="cv-display text-[25px] font-bold leading-tight text-[var(--cv-text)]">
+          {t('missions.title')}
+        </h1>
+        <p className="mt-0.5 max-w-2xl text-[13px] leading-5 text-[var(--cv-muted)]">
+          {t('missions.subtitle')}
+        </p>
+      </div>
+    </header>
+  );
 }
 
 export function MissionsViewModeToggle({
@@ -34,6 +43,7 @@ export function MissionsViewModeToggle({
 
   return (
     <ViewModeToggle
+      className="cv-view-toggle-row"
       label={t('missions.viewMode', 'Affichage')}
       onChange={onChange}
       options={[
@@ -58,7 +68,6 @@ export function MissionsListPanel({
   onResetSearch,
   onSearchChange,
   searchTerm,
-  stats,
   totalCount,
   totalPages,
 }: {
@@ -74,7 +83,6 @@ export function MissionsListPanel({
   onResetSearch: () => void;
   onSearchChange: (value: string) => void;
   searchTerm: string;
-  stats: MissionStats;
   totalCount: number;
   totalPages: number;
 }) {
@@ -82,7 +90,6 @@ export function MissionsListPanel({
 
   return (
     <>
-      <StatsCards stats={stats} missionsCount={totalCount} t={t} />
       <MissionsGrid
         canDeleteMission={canDeleteMission}
         currentPage={currentPage}
@@ -176,7 +183,6 @@ function MissionsGrid({
           dealCount={0}
           visibleCount={missions.length}
         />
-        <MissionsGroupedSummary dealCount={0} totalMissions={missions.length} unassignedCount={0} />
         <div className="cv-panel rounded-[2rem] p-5 sm:p-6">
           <SkeletonMissionList count={6} />
         </div>
@@ -198,7 +204,6 @@ function MissionsGrid({
           dealCount={0}
           visibleCount={0}
         />
-        <MissionsGroupedSummary dealCount={0} totalMissions={0} unassignedCount={0} />
         <MissionsGroupedEmptyState
           hasSearch={hasSearch}
           onAddMission={onAddMission}
@@ -220,22 +225,6 @@ function MissionsGrid({
         totalMissions={totalCount}
         dealCount={0}
         visibleCount={groupedMissions.length}
-      />
-
-      <MissionsGroupedSummary
-        dealCount={0}
-        totalMissions={groupedMissions.length}
-        unassignedCount={0}
-      />
-
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        totalCount={totalCount}
-        pageSize={MISSIONS_PAGE_SIZE}
-        onPageChange={onPageChange}
-        loading={loading}
-        itemName={t('missions.results')}
       />
 
       <div className="space-y-3">

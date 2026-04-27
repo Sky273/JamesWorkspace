@@ -12,6 +12,7 @@ import {
   MissionsListPanel,
   MissionsViewModeToggle,
 } from './MissionsPage.components';
+import { StatsCards } from '../components/MissionsPage';
 import { useMissionsDashboard } from './MissionsPage.hooks';
 
 const MissionsPage = (): JSX.Element => {
@@ -61,10 +62,11 @@ const MissionsPage = (): JSX.Element => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="cv-surface mx-auto mb-8 max-w-7xl rounded-[2.5rem] p-6 sm:p-8"
+      className="cv-surface missions-page-shell mx-auto mb-8 w-full max-w-7xl p-4 sm:p-6 lg:p-[30px]"
     >
       <MissionsHeader />
       <MissionsViewModeToggle value={viewMode} onChange={setViewMode} />
+      <StatsCards stats={stats} missionsCount={totalCount} t={t} />
 
       {viewMode === 'byDeal' ? (
         <MissionsByDealView
@@ -121,7 +123,6 @@ const MissionsPage = (): JSX.Element => {
           onResetSearch={resetSearch}
           onSearchChange={setSearchTerm}
           searchTerm={searchTerm}
-          stats={stats}
           totalCount={totalCount}
           totalPages={totalPages}
         />

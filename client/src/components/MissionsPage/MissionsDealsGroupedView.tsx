@@ -16,7 +16,6 @@ import {
   DealSection,
   MissionCardInDeal,
   MissionsGroupedEmptyState,
-  MissionsGroupedSummary,
   MissionsGroupedToolbar,
   canDeleteGroupedMission,
   normalizeMissionKeywordsText,
@@ -168,12 +167,6 @@ const MissionsDealsGroupedView = ({
         totalMissions={totalRawMissions}
         dealCount={filteredDeals.length}
         visibleCount={totalVisibleMissions}
-      />
-
-      <MissionsGroupedSummary
-        dealCount={filteredDeals.length}
-        totalMissions={totalVisibleMissions}
-        unassignedCount={filteredUnassigned.length}
       />
 
       {!showEmptyState ? (
