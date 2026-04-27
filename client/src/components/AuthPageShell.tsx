@@ -25,7 +25,7 @@ export default function AuthPageShell({
   backLabel = 'Retour',
 }: AuthPageShellProps): JSX.Element {
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.18),_transparent_34%),linear-gradient(180deg,_rgba(248,250,252,0.98),_rgba(241,245,249,0.94))] dark:bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.18),_transparent_34%),linear-gradient(180deg,_rgba(15,23,42,0.96),_rgba(2,6,23,0.98))]">
+    <div className="min-h-screen bg-[#f3f2ef] text-[#18181b] dark:bg-[#111827] dark:text-[#e5e7eb]">
       <div className="px-4 py-6 sm:px-6 lg:px-8">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4">
           <Link
@@ -35,7 +35,7 @@ export default function AuthPageShell({
             <ArrowLeftIcon className="h-4 w-4" />
             {backLabel}
           </Link>
-          <div className="inline-flex items-center gap-2 rounded-full border border-indigo-200/80 bg-white/85 px-4 py-2 text-sm font-semibold text-indigo-700 shadow-sm backdrop-blur dark:border-indigo-400/20 dark:bg-white/5 dark:text-indigo-200">
+          <div className="inline-flex items-center gap-2 rounded-[13px] border border-[#e4e4e7] bg-white px-4 py-2 text-sm font-semibold text-[#6b4eff] shadow-none dark:border-white/10 dark:bg-[#182235] dark:text-[#c9ccff]">
             <SparklesIcon className="h-4 w-4" />
             ResumeConverter
           </div>
@@ -45,8 +45,8 @@ export default function AuthPageShell({
       <div className="px-4 pb-12 sm:px-6 lg:px-8">
         <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[minmax(0,1fr)_480px] lg:items-center">
           <section className="hidden lg:block">
-            <div className="space-y-6 rounded-[2rem] border border-white/60 bg-white/70 p-8 shadow-[0_20px_60px_rgba(15,23,42,0.10)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.04] dark:shadow-[0_24px_60px_rgba(0,0,0,0.35)]">
-              <div className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-200">
+            <div className="space-y-5 rounded-[13px] border border-[#e4e4e7] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.05),0_4px_14px_rgba(0,0,0,0.07)] dark:border-white/10 dark:bg-[#182235] dark:shadow-none">
+              <div className="inline-flex items-center gap-2 rounded-[9px] bg-[#f4f2ff] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#6b4eff] dark:bg-white/5 dark:text-[#c9ccff]">
                 <SparklesIcon className="h-4 w-4" />
                 ResumeConverter
               </div>
@@ -65,7 +65,7 @@ export default function AuthPageShell({
                   {asidePoints.map((point) => (
                     <div
                       key={point}
-                      className="rounded-2xl border border-slate-200/70 bg-slate-50/85 px-4 py-3 text-sm font-medium text-slate-700 dark:border-white/8 dark:bg-white/[0.03] dark:text-slate-200"
+                      className="rounded-[9px] border border-[#e4e4e7] bg-[#f8f8f7] px-4 py-3 text-sm font-medium text-slate-700 dark:border-white/10 dark:bg-[#111827] dark:text-slate-200"
                     >
                       {point}
                     </div>
@@ -75,10 +75,10 @@ export default function AuthPageShell({
             </div>
           </section>
 
-          <section className="rounded-[2rem] border border-white/70 bg-white/88 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-[#0f172ad9] dark:shadow-[0_24px_60px_rgba(0,0,0,0.38)] sm:p-8">
+          <section className="rounded-[13px] border border-[#e4e4e7] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.05),0_4px_14px_rgba(0,0,0,0.07)] dark:border-white/10 dark:bg-[#182235] dark:shadow-none sm:p-7">
             <div className="mx-auto max-w-md">
               <div className="mb-8 space-y-3 text-center">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-200">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-[13px] bg-[#f4f2ff] text-[#6b4eff] dark:bg-white/5 dark:text-[#c9ccff]">
                   <SparklesIcon className="h-7 w-7" />
                 </div>
                 <h2 className="text-3xl font-bold tracking-tight text-slate-950 dark:text-white">

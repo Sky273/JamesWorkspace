@@ -62,17 +62,17 @@ const FloatingParticles = ({ className }: { className: string }) => (
 
 const COLORS = {
   searching: {
-    primary: '#6366F1',
-    secondary: '#8B5CF6',
-    tertiary: '#3B82F6',
-    gradient: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
-    particle: 'bg-indigo-400/30',
-    bg: 'from-indigo-50/60 via-transparent to-violet-50/40',
-    darkBg: 'dark:from-indigo-950/20 dark:via-transparent dark:to-violet-950/15',
-    shimmerFrom: 'from-indigo-500',
+    primary: '#6B4EFF',
+    secondary: '#7C6CC0',
+    tertiary: '#6B4EFF',
+    gradient: '#6B4EFF',
+    particle: 'bg-[#6b4eff]/25',
+    bg: 'from-[#f8f8f7] via-[#f8f8f7] to-[#f8f8f7]',
+    darkBg: 'dark:from-[#111827] dark:via-[#111827] dark:to-[#111827]',
+    shimmerFrom: 'from-[#6b4eff]',
     shimmerVia: 'via-violet-500',
-    shimmerTo: 'to-indigo-500',
-    trackBg: 'bg-indigo-100 dark:bg-indigo-900/30',
+    shimmerTo: 'to-[#6b4eff]',
+    trackBg: 'bg-[#f4f2ff] dark:bg-white/10',
   },
   analyzing: {
     primary: '#10B981',

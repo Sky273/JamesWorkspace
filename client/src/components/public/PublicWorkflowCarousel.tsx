@@ -49,7 +49,7 @@ const slides: WorkflowSlide[] = [
     title: 'Analyse structurée et lecture métier',
     description: "Le CV est décomposé en sections exploitables avec une vue d'ensemble, des signaux qualifiants et un pipeline lisible.",
     bullets: ['Vue globale', 'Compétences et tags', 'Pipeline de traitement visible'],
-    accentClassName: 'from-indigo-500/20 via-violet-500/10 to-transparent text-indigo-700 ring-indigo-500/20',
+    accentClassName: 'from-[#6b4eff]/15 via-[#7c6cc0]/10 to-transparent text-[#6b4eff] ring-[#6b4eff]/20',
     imageSrc: analysisFlowVisual,
     icon: ChartBarIcon,
   },
@@ -127,8 +127,8 @@ function PublicWorkflowCarousel(): JSX.Element {
   };
 
   return (
-    <section className="relative overflow-hidden border-y border-slate-200/70 bg-white/75 py-20 dark:border-white/10 dark:bg-slate-950/60">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(79,70,229,0.16),_transparent_36%),radial-gradient(circle_at_bottom_right,_rgba(14,165,233,0.1),_transparent_30%)]" />
+    <section className="relative overflow-hidden border-y border-[#e4e4e7] bg-[#f3f2ef] py-20 dark:border-white/10 dark:bg-[#111827]">
+      <div className="absolute inset-0 bg-transparent" />
       <div className="container relative mx-auto px-4">
         <div className="mx-auto max-w-3xl text-center">
           <span className="inline-flex rounded-full border border-slate-300/80 bg-white/80 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.28em] text-slate-500 shadow-sm shadow-slate-200/60 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300">

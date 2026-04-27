@@ -71,7 +71,7 @@ const MultiRingSpinner = ({ variant }: { variant: 'improving' | 'analyzing' }) =
     <div className="relative w-32 h-32" aria-hidden="true">
       <motion.div
         className={`absolute -inset-4 rounded-full ${isImproving
-          ? 'bg-gradient-to-br from-blue-400/10 to-indigo-500/10'
+          ? 'bg-[#6b4eff]/10'
           : 'bg-gradient-to-br from-emerald-400/10 to-teal-500/10'
         }`}
         animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.8, 0.4] }}
@@ -79,24 +79,24 @@ const MultiRingSpinner = ({ variant }: { variant: 'improving' | 'analyzing' }) =
       />
       <motion.div
         className={`absolute inset-0 rounded-full border-[3px] ${isImproving
-          ? 'border-blue-200/50 dark:border-blue-800/30'
+          ? 'border-[#6b4eff]/25 dark:border-[#a3a6ff]/25'
           : 'border-emerald-200/50 dark:border-emerald-800/30'
         }`}
         style={{
-          borderTopColor: isImproving ? 'rgb(99,102,241)' : 'rgb(16,185,129)',
-          borderRightColor: isImproving ? 'rgb(99,102,241)' : 'rgb(16,185,129)',
+          borderTopColor: isImproving ? '#6b4eff' : 'rgb(16,185,129)',
+          borderRightColor: isImproving ? '#6b4eff' : 'rgb(16,185,129)',
         }}
         animate={{ rotate: 360 }}
         transition={{ duration: 3.5, repeat: Infinity, ease: 'linear' }}
       />
       <motion.div
         className={`absolute inset-3 rounded-full border-[3px] ${isImproving
-          ? 'border-indigo-200/30 dark:border-indigo-800/20'
+          ? 'border-[#6b4eff]/20 dark:border-[#a3a6ff]/20'
           : 'border-teal-200/30 dark:border-teal-800/20'
         }`}
         style={{
-          borderBottomColor: isImproving ? 'rgb(79,70,229)' : 'rgb(13,148,136)',
-          borderLeftColor: isImproving ? 'rgb(79,70,229)' : 'rgb(13,148,136)',
+          borderBottomColor: isImproving ? '#5b3eee' : 'rgb(13,148,136)',
+          borderLeftColor: isImproving ? '#5b3eee' : 'rgb(13,148,136)',
         }}
         animate={{ rotate: -360 }}
         transition={{ duration: 2.2, repeat: Infinity, ease: 'linear' }}
@@ -116,7 +116,7 @@ const MultiRingSpinner = ({ variant }: { variant: 'improving' | 'analyzing' }) =
       <div className="absolute inset-0 flex items-center justify-center">
         <motion.div
           className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ${isImproving
-            ? 'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-indigo-500/30'
+            ? 'bg-[#6b4eff] shadow-none'
             : 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/30'
           }`}
           animate={{ scale: [1, 1.08, 1], rotate: [0, 2, -2, 0] }}
@@ -188,12 +188,12 @@ const ImprovementAnimation = ({ currentStep = 'improving', fullscreen = false }:
       aria-describedby={descriptionId}
     >
       <div className={`absolute inset-0 ${isImproving
-        ? 'bg-gradient-to-br from-blue-50/60 via-transparent to-indigo-50/40 dark:from-blue-950/20 dark:via-transparent dark:to-indigo-950/15'
+        ? 'bg-[#f8f8f7] dark:bg-[#111827]'
         : 'bg-gradient-to-br from-emerald-50/60 via-transparent to-teal-50/40 dark:from-emerald-950/20 dark:via-transparent dark:to-teal-950/15'
       }`} />
 
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-        <FloatingParticles color={isImproving ? 'bg-indigo-400/40' : 'bg-emerald-400/40'} />
+        <FloatingParticles color={isImproving ? 'bg-[#6b4eff]/30' : 'bg-emerald-400/40'} />
       </div>
 
       <div className="sr-only" id={descriptionId}>
@@ -235,14 +235,14 @@ const ImprovementAnimation = ({ currentStep = 'improving', fullscreen = false }:
 
         <div
           className={`mb-8 h-1.5 w-72 overflow-hidden rounded-full ${isImproving
-            ? 'bg-indigo-100 dark:bg-indigo-900/30'
+            ? 'bg-[#f4f2ff] dark:bg-white/10'
             : 'bg-emerald-100 dark:bg-emerald-900/30'
           }`}
           aria-hidden="true"
         >
           <motion.div
             className={`relative h-full w-1/2 rounded-full ${isImproving
-              ? 'bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500'
+              ? 'bg-[#6b4eff]'
               : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500'
             }`}
             animate={{ left: ['-50%', '100%'] }}
@@ -265,7 +265,7 @@ const ImprovementAnimation = ({ currentStep = 'improving', fullscreen = false }:
                         ? 'bg-gradient-to-br from-emerald-400 to-green-600 shadow-md shadow-green-500/20'
                         : isActive
                           ? isImproving
-                            ? 'bg-gradient-to-br from-blue-400 to-indigo-600 shadow-md shadow-indigo-500/25'
+                            ? 'bg-[#6b4eff] shadow-none'
                             : 'bg-gradient-to-br from-emerald-400 to-teal-600 shadow-md shadow-emerald-500/25'
                           : 'bg-gray-200 dark:bg-gray-700'
                     }`}

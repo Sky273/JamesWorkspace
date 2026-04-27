@@ -97,13 +97,11 @@
 /* --- Dark Mode Theme --- */
 .dark {
   color-scheme: dark;
-  --app-bg: radial-gradient(circle at top left, rgba(99, 102, 241, 0.2), transparent 30%),
-    radial-gradient(circle at top right, rgba(168, 85, 247, 0.18), transparent 24%),
-    linear-gradient(180deg, #08111f 0%, #0b1324 45%, #111827 100%);
-  --surface-primary: rgba(15, 23, 42, 0.78);
-  --surface-elevated: rgba(20, 31, 53, 0.9);
-  --surface-muted: rgba(30, 41, 59, 0.88);
-  --surface-accent: linear-gradient(135deg, rgba(79, 70, 229, 0.22), rgba(168, 85, 247, 0.16));
+  --app-bg: #111827;
+  --surface-primary: #182235;
+  --surface-elevated: #182235;
+  --surface-muted: #111827;
+  --surface-accent: rgba(163, 166, 255, 0.12);
   --border-subtle: rgba(148, 163, 184, 0.16);
   --border-strong: rgba(129, 140, 248, 0.3);
   --text-primary: #e2e8f0;

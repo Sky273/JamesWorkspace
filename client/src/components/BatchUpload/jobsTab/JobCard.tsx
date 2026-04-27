@@ -87,7 +87,7 @@ export default function JobCard({
             <div className="flex flex-col items-center gap-1">
               <div className="w-32 h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden relative">
                 <motion.div
-                  className={`h-full ${job.status === 'failed' ? 'bg-red-500' : job.status === 'completed' ? 'bg-green-500' : 'bg-gradient-to-r from-indigo-500 to-purple-500'}`}
+                  className={`h-full ${job.status === 'failed' ? 'bg-red-500' : job.status === 'completed' ? 'bg-green-500' : 'bg-[#6b4eff]'}`}
                   initial={{ width: 0 }}
                   animate={{ width: `${progressPercentage}%` }}
                   transition={{ duration: 0.5, ease: 'easeOut' }}

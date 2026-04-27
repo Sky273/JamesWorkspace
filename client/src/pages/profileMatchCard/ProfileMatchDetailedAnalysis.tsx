@@ -10,7 +10,7 @@ interface ProfileMatchDetailedAnalysisProps {
 
 export default function ProfileMatchDetailedAnalysis({ analysis, t }: ProfileMatchDetailedAnalysisProps) {
   return (
-    <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg p-4 space-y-4">
+    <div className="space-y-4 rounded-[9px] border border-[#e4e4e7] bg-[#f8f8f7] p-4 dark:border-white/10 dark:bg-[#111827]">
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
           <SparklesIcon className="w-4 h-4 text-purple-500" />

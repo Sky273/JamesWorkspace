@@ -27,13 +27,13 @@ export default function AdaptLoadingState({
     >
       <div className={`absolute inset-0 ${isAdapting
         ? 'bg-gradient-to-br from-purple-50/60 via-transparent to-fuchsia-50/40 dark:from-purple-950/30 dark:via-transparent dark:to-fuchsia-950/20'
-        : 'bg-gradient-to-br from-blue-50/60 via-transparent to-indigo-50/40 dark:from-blue-950/30 dark:via-transparent dark:to-indigo-950/20'}`} />
+        : 'bg-[#f8f8f7] dark:bg-[#111827]'}`} />
 
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {Array.from({ length: 10 }, (_, i) => (
           <motion.div
             key={i}
-            className={`absolute rounded-full ${isAdapting ? 'bg-purple-400/30' : 'bg-indigo-400/30'}`}
+            className={`absolute rounded-full ${isAdapting ? 'bg-purple-400/30' : 'bg-[#6b4eff]/25'}`}
             style={{
               left: `${isAdapting ? 8 + i * 9 : 10 + i * 9}%`,
               top: `${isAdapting ? 10 + (i % 4) * 22 : 15 + (i % 3) * 25}%`,
@@ -48,7 +48,7 @@ export default function AdaptLoadingState({
 
       <div className="relative w-32 h-32 mb-8">
         <motion.div
-          className={`absolute -inset-4 rounded-full ${isAdapting ? 'bg-gradient-to-br from-purple-400/10 to-fuchsia-500/10' : 'bg-gradient-to-br from-blue-400/10 to-indigo-500/10'}`}
+          className={`absolute -inset-4 rounded-full ${isAdapting ? 'bg-gradient-to-br from-purple-400/10 to-fuchsia-500/10' : 'bg-[#6b4eff]/10'}`}
           animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.8, 0.4] }}
           transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
         />
@@ -87,7 +87,7 @@ export default function AdaptLoadingState({
         ))}
         <div className="absolute inset-0 flex items-center justify-center">
           <motion.div
-            className={`w-14 h-14 rounded-2xl ${isAdapting ? 'bg-gradient-to-br from-purple-500 to-indigo-600 shadow-purple-500/30' : 'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-indigo-500/30'} flex items-center justify-center shadow-lg`}
+          className={`flex h-14 w-14 items-center justify-center rounded-[13px] ${isAdapting ? 'bg-[#6b4eff]' : 'bg-[#6b4eff]'} shadow-none`}
             animate={{ scale: [1, 1.08, 1], rotate: [0, isAdapting ? 3 : 2, isAdapting ? -3 : -2, 0] }}
             transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
           >
@@ -120,9 +120,9 @@ export default function AdaptLoadingState({
         </AnimatePresence>
       </div>
 
-      <div className={`relative w-64 h-1.5 rounded-full overflow-hidden mb-5 ${isAdapting ? 'bg-purple-100 dark:bg-purple-900/30' : 'bg-indigo-100 dark:bg-indigo-900/30'}`}>
+      <div className={`relative mb-5 h-1.5 w-64 overflow-hidden rounded-full ${isAdapting ? 'bg-[#f4f2ff] dark:bg-white/10' : 'bg-[#f4f2ff] dark:bg-white/10'}`}>
         <motion.div
-          className={`absolute inset-y-0 w-1/2 rounded-full ${isAdapting ? 'bg-gradient-to-r from-purple-500 via-fuchsia-500 to-purple-500' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500'}`}
+          className="absolute inset-y-0 w-1/2 rounded-full bg-[#6b4eff]"
           animate={{ left: ['-50%', '100%'] }}
           transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
         />
@@ -138,7 +138,7 @@ export default function AdaptLoadingState({
         {[0, 1, 2, 3].map(i => (
           <motion.div
             key={i}
-            className={`w-1.5 h-1.5 rounded-full ${isAdapting ? 'bg-purple-400' : 'bg-indigo-400 dark:bg-indigo-400'}`}
+            className={`h-1.5 w-1.5 rounded-full ${isAdapting ? 'bg-purple-400' : 'bg-[#6b4eff]'}`}
             animate={{ y: [0, -6, 0], opacity: [0.3, 1, 0.3] }}
             transition={{ duration: 1, repeat: Infinity, delay: i * 0.15, ease: 'easeInOut' }}
           />

@@ -16,7 +16,7 @@ interface StatCardsGridProps {
 }
 
 export default function StatCardsGrid({
-  className = 'grid grid-cols-1 gap-4 md:grid-cols-3 mb-6',
+  className = 'mb-5 grid grid-cols-1 gap-3 md:grid-cols-3',
   items,
 }: StatCardsGridProps) {
   return (
@@ -29,18 +29,18 @@ export default function StatCardsGrid({
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.08 }}
-            className="lux-card rounded-[1.75rem] p-5"
+            className="lux-card rounded-[13px] p-4"
           >
-            <div className="mb-4 flex items-start justify-between gap-4">
+            <div className="mb-2 flex items-start justify-between gap-3">
               <div>
-                <div className="cv-kicker mb-2">{item.label}</div>
-                <div className="cv-display text-3xl font-extrabold tracking-tight text-slate-950 dark:text-[var(--cv-text)]">{item.value}</div>
+                <div className="cv-kicker mb-1">{item.label}</div>
+                <div className="cv-display text-2xl font-bold tracking-tight text-[var(--cv-text)]">{item.value}</div>
               </div>
-              <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${item.iconBgClassName}`}>
-                <Icon className={`h-6 w-6 ${item.iconClassName}`} />
+              <div className={`flex h-9 w-9 items-center justify-center rounded-[9px] ${item.iconBgClassName}`}>
+                <Icon className={`h-4 w-4 ${item.iconClassName}`} />
               </div>
             </div>
-            {item.helper ? <p className="text-sm text-slate-600 dark:text-[var(--cv-muted)]">{item.helper}</p> : null}
+            {item.helper ? <p className="text-xs leading-5 text-[var(--cv-muted)]">{item.helper}</p> : null}
           </motion.div>
         );
       })}

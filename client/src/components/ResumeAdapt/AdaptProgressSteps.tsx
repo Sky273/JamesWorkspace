@@ -42,7 +42,7 @@ export default function AdaptProgressSteps({ step, t }: AdaptProgressStepsProps)
                 {s.active && (
                   <motion.div
                     className="absolute -inset-2 rounded-full"
-                    style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)' }}
+                    style={{ background: 'rgba(107,78,255,0.12)' }}
                     animate={{ scale: [1, 1.6, 1], opacity: [0.8, 0, 0.8] }}
                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                   />
@@ -52,7 +52,7 @@ export default function AdaptProgressSteps({ step, t }: AdaptProgressStepsProps)
                     s.completed
                       ? 'bg-gradient-to-br from-emerald-400 to-green-600 shadow-lg shadow-green-500/25'
                       : s.active
-                        ? 'bg-gradient-to-br from-blue-400 to-indigo-600 shadow-lg shadow-indigo-500/30'
+                        ? 'bg-[#6b4eff] shadow-none'
                         : 'bg-gray-200 dark:bg-gray-700'
                   }`}
                   animate={s.active ? { scale: [1, 1.07, 1] } : { scale: 1 }}
@@ -74,7 +74,7 @@ export default function AdaptProgressSteps({ step, t }: AdaptProgressStepsProps)
               <motion.span
                 className={`mt-2.5 text-xs font-semibold tracking-wide ${
                   s.completed ? 'text-emerald-600 dark:text-emerald-400' :
-                  s.active ? 'text-indigo-600 dark:text-blue-400' :
+                  s.active ? 'text-[#6b4eff] dark:text-[#c9ccff]' :
                   'text-gray-400 dark:text-gray-500'
                 }`}
                 animate={s.active ? { opacity: [0.7, 1, 0.7] } : { opacity: 1 }}

@@ -1,12 +1,12 @@
 /* Scoped styles for migrated editorial pages only: /resumes and /missions */
 
 .editorial-migrated-shell {
-  --cv-surface-top: rgba(111, 118, 255, 0.12);
-  --cv-surface-bottom: rgba(113, 89, 255, 0.08);
-  --cv-surface-base-start: #f8f7ff;
-  --cv-surface-base-end: #eef4ff;
-  --cv-panel-start: rgba(255, 255, 255, 0.94);
-  --cv-panel-end: rgba(244, 248, 255, 0.98);
+  --cv-surface-top: transparent;
+  --cv-surface-bottom: transparent;
+  --cv-surface-base-start: #f3f2ef;
+  --cv-surface-base-end: #f3f2ef;
+  --cv-panel-start: #ffffff;
+  --cv-panel-end: #ffffff;
   --cv-card-start: rgba(255, 255, 255, 0.94);
   --cv-card-end: rgba(241, 246, 255, 0.98);
   --cv-outline: rgba(122, 136, 185, 0.18);
@@ -664,6 +664,40 @@
   padding: 0;
 }
 
+.dark .editorial-migrated-shell,
+.dark .editorial-migrated-shell.app-editorial-shell {
+  --cv-surface-base-start: #111827;
+  --cv-surface-base-end: #111827;
+  --cv-panel-start: #182235;
+  --cv-panel-end: #182235;
+  --cv-card-start: #182235;
+  --cv-card-end: #182235;
+  --cv-outline: rgba(148, 163, 184, 0.18);
+  --cv-outline-strong: rgba(163, 166, 255, 0.28);
+  --cv-shadow: rgba(0, 0, 0, 0.22);
+  --cv-shadow-strong: rgba(0, 0, 0, 0.34);
+  --cv-text: #e5e7eb;
+  --cv-muted: #a3aab8;
+  --cv-kicker-text: #8f98aa;
+  --cv-glass: #182235;
+  --cv-search-input-bg: #111827;
+  --cv-search-input-border: rgba(148, 163, 184, 0.18);
+  --cv-ghost-bg: #182235;
+  --cv-ghost-hover: rgba(163, 166, 255, 0.12);
+  --cv-pill-bg: #111827;
+  --cv-score-track-bg: rgba(148, 163, 184, 0.18);
+  background: #111827;
+  color: var(--cv-text);
+}
+
+.dark .editorial-migrated-shell .cv-surface,
+.dark .editorial-migrated-shell .app-page-shell,
+.dark .editorial-migrated-shell .app-page-shell-4xl,
+.dark .editorial-migrated-shell .app-page-shell-5xl,
+.dark .editorial-migrated-shell .app-page-shell-6xl {
+  background: #111827;
+}
+
 .editorial-migrated-shell .cv-panel,
 .editorial-migrated-shell .cv-card,
 .editorial-migrated-shell .lux-card,
@@ -675,6 +709,18 @@
   border: 1.5px solid #e4e4e7;
   border-radius: 13px !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 14px rgba(0, 0, 0, 0.07);
+}
+
+.dark .editorial-migrated-shell .cv-panel,
+.dark .editorial-migrated-shell .cv-card,
+.dark .editorial-migrated-shell .lux-card,
+.dark .editorial-migrated-shell .section-shell,
+.dark .editorial-migrated-shell .glass-panel-strong,
+.dark .editorial-migrated-shell .page-hero,
+.dark .editorial-migrated-shell .app-section-card {
+  background: #182235;
+  border-color: rgba(148, 163, 184, 0.18);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22), 0 4px 14px rgba(0, 0, 0, 0.26);
 }
 
 .editorial-migrated-shell .cv-card:hover,
@@ -704,10 +750,24 @@
   box-shadow: none;
 }
 
+.dark .editorial-migrated-shell .cv-search-shell,
+.dark .editorial-migrated-shell .cv-tab-strip,
+.dark .editorial-migrated-shell .app-tab-strip,
+.dark .editorial-migrated-shell .segmented-control {
+  background: #111827;
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
 .editorial-migrated-shell .cv-search-input {
   background: #ffffff !important;
   border: 1.5px solid #e4e4e7 !important;
   color: #18181b !important;
+}
+
+.dark .editorial-migrated-shell .cv-search-input {
+  background: #111827 !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  color: #e5e7eb !important;
 }
 
 .editorial-migrated-shell .cv-gradient-button,
@@ -756,6 +816,108 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+.dark .editorial-migrated-shell .cv-ghost-button,
+.dark .editorial-migrated-shell .app-button-secondary,
+.dark .editorial-migrated-shell .cv-tab-pill,
+.dark .editorial-migrated-shell .app-tab-button,
+.dark .editorial-migrated-shell .segmented-control__item--active {
+  background: #182235;
+  border-color: rgba(148, 163, 184, 0.18);
+  color: #e5e7eb;
+}
+
+.dark .editorial-migrated-shell .cv-ghost-button:hover,
+.dark .editorial-migrated-shell .app-button-secondary:hover,
+.dark .editorial-migrated-shell .cv-tab-pill:hover,
+.dark .editorial-migrated-shell .app-tab-button:hover {
+  background: rgba(163, 166, 255, 0.12);
+  border-color: rgba(163, 166, 255, 0.28);
+  color: #c9ccff;
+}
+
+.editorial-migrated-shell .rounded-\[2rem\],
+.editorial-migrated-shell .rounded-\[2\.5rem\],
+.editorial-migrated-shell .rounded-\[1\.75rem\],
+.editorial-migrated-shell .rounded-3xl {
+  border-radius: 13px !important;
+}
+
+.editorial-migrated-shell .rounded-2xl,
+.editorial-migrated-shell .rounded-xl,
+.editorial-migrated-shell .rounded-lg {
+  border-radius: 9px !important;
+}
+
+.editorial-migrated-shell .bg-blue-50,
+.editorial-migrated-shell .bg-indigo-50,
+.editorial-migrated-shell .bg-purple-50,
+.editorial-migrated-shell .bg-slate-50,
+.editorial-migrated-shell .bg-gray-50 {
+  background-color: #f8f8f7 !important;
+}
+
+.editorial-migrated-shell .bg-blue-100,
+.editorial-migrated-shell .bg-indigo-100,
+.editorial-migrated-shell .bg-purple-100 {
+  background-color: #f4f2ff !important;
+}
+
+.editorial-migrated-shell .text-blue-500,
+.editorial-migrated-shell .text-blue-600,
+.editorial-migrated-shell .text-indigo-500,
+.editorial-migrated-shell .text-indigo-600,
+.editorial-migrated-shell .text-purple-600 {
+  color: #6b4eff !important;
+}
+
+.editorial-migrated-shell .border-blue-200,
+.editorial-migrated-shell .border-blue-300,
+.editorial-migrated-shell .border-indigo-200,
+.editorial-migrated-shell .border-indigo-300,
+.editorial-migrated-shell .border-gray-200,
+.editorial-migrated-shell .border-slate-200 {
+  border-color: #e4e4e7 !important;
+}
+
+.editorial-migrated-shell .focus\:ring-blue-500:focus,
+.editorial-migrated-shell .focus\:ring-indigo-500:focus,
+.editorial-migrated-shell .focus\:border-blue-500:focus,
+.editorial-migrated-shell .focus\:border-indigo-500:focus {
+  --tw-ring-color: rgba(107, 78, 255, 0.22) !important;
+  border-color: #6b4eff !important;
+}
+
+.editorial-migrated-shell .bg-gradient-to-r,
+.editorial-migrated-shell .bg-gradient-to-br {
+  background-image: none !important;
+}
+
+.editorial-migrated-shell .from-blue-500,
+.editorial-migrated-shell .from-indigo-500,
+.editorial-migrated-shell .to-blue-600,
+.editorial-migrated-shell .to-indigo-600,
+.editorial-migrated-shell .via-indigo-500 {
+  background-color: #6b4eff !important;
+}
+
+.editorial-migrated-shell .p-8 {
+  padding: 1.25rem !important;
+}
+
+.editorial-migrated-shell .p-6 {
+  padding: 1rem !important;
+}
+
+.editorial-migrated-shell .py-8 {
+  padding-top: 1.25rem !important;
+  padding-bottom: 1.25rem !important;
+}
+
+.editorial-migrated-shell .mb-10,
+.editorial-migrated-shell .mb-8 {
+  margin-bottom: 1.25rem !important;
+}
+
 /* Missions standalone visual direction. */
 .missions-editorial-shell {
   --cv-surface-base-start: #f3f2ef;
@@ -780,7 +942,7 @@
   --cv-tertiary: #16a34a;
   --cv-tertiary-soft: #e8f5e9;
   --cv-cyan: #0284c7;
-  --cv-cyan-soft: #eff6ff;
+  --cv-cyan-soft: #f8f8f7;
   --cv-warning: #d97706;
   --cv-warning-soft: #fff7ed;
   --cv-danger: #dc2626;

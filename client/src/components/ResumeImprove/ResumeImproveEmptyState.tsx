@@ -16,15 +16,15 @@ export default function ResumeImproveEmptyState({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="relative bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
+      className="relative overflow-hidden rounded-[13px] border border-[#e4e4e7] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.05),0_4px_14px_rgba(0,0,0,0.07)] dark:border-white/10 dark:bg-[#182235]"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50/60 via-transparent to-indigo-50/40 dark:from-blue-950/20 dark:via-transparent dark:to-indigo-950/15" />
+      <div className="absolute inset-0 bg-[#f8f8f7] dark:bg-[#111827]" />
 
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {Array.from({ length: 8 }, (_, i) => (
           <motion.div
             key={i}
-            className="absolute rounded-full bg-indigo-400/25"
+            className="absolute rounded-full bg-[#6b4eff]/20"
             style={{ left: `${12 + i * 11}%`, top: `${20 + (i % 3) * 25}%`, width: 3 + (i % 3), height: 3 + (i % 3) }}
             animate={{ y: [0, -14, 0], opacity: [0, 0.6, 0], scale: [0.5, 1.3, 0.5] }}
             transition={{ duration: 3 + i * 0.4, delay: i * 0.3, repeat: Infinity, ease: 'easeInOut' }}
@@ -34,7 +34,7 @@ export default function ResumeImproveEmptyState({
 
       <div className="relative flex flex-col items-center py-16 px-6">
         <motion.div
-          className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xl shadow-indigo-500/30 mb-6"
+          className="mb-6 flex h-20 w-20 items-center justify-center rounded-[13px] bg-[#6b4eff] shadow-none"
           animate={{ scale: [1, 1.06, 1], rotate: [0, 2, -2, 0] }}
           transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
         >
@@ -55,7 +55,7 @@ export default function ResumeImproveEmptyState({
 
         <motion.button
           onClick={onImprove}
-          className="inline-flex items-center gap-2.5 px-7 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold shadow-lg shadow-indigo-500/25 transition-all"
+          className="inline-flex items-center gap-2.5 rounded-[9px] bg-[#6b4eff] px-7 py-3.5 font-semibold text-white shadow-none transition-all hover:bg-[#5b3eee]"
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
         >

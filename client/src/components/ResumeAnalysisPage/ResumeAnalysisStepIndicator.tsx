@@ -26,7 +26,7 @@ export default function ResumeAnalysisStepIndicator({
       <div className="cv-panel flex flex-wrap items-center gap-y-3 rounded-[2rem] px-4 py-4 sm:px-5">
         <div className="flex items-center gap-2">
           <motion.div
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 shadow-md shadow-indigo-500/25"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#6b4eff] shadow-none"
             animate={{ scale: [1, 1.1, 1] }}
             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
           >
@@ -39,7 +39,7 @@ export default function ResumeAnalysisStepIndicator({
 
         <div className="mx-2 h-[3px] w-10 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10 sm:w-16">
           <motion.div
-            className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-emerald-500"
+            className="h-full rounded-full bg-[#6b4eff]"
             initial={false}
             animate={{ width: hasImprovedText ? '100%' : '30%' }}
             transition={{ duration: 0.6, ease: 'easeOut' }}

@@ -169,7 +169,7 @@ function PublicHomePage(): JSX.Element {
         initial="initial" 
         animate="animate" 
         exit="exit"
-        className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900"
+      className="flex min-h-screen flex-col bg-[#f3f2ef] dark:bg-[#111827]"
       >
         {/* Public Header */}
         <PublicHeader />

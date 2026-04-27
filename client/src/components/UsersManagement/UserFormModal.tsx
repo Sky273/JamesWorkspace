@@ -157,9 +157,9 @@ const UserFormModal = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? t('users.management.modal.editUser') : t('users.management.modal.addUser')}>
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 px-4 py-4 dark:border-blue-900/50 dark:from-blue-950/40 dark:to-slate-900">
+        <div className="rounded-[13px] border border-[#e4e4e7] bg-[#f8f8f7] px-4 py-4 dark:border-white/10 dark:bg-[#111827]">
           <div className="flex items-start gap-3">
-            <div className="rounded-xl bg-white/80 p-2 text-blue-600 shadow-sm dark:bg-blue-900/30 dark:text-blue-300">
+            <div className="rounded-[9px] bg-white p-2 text-[#6b4eff] shadow-sm dark:bg-[#182235] dark:text-[#c9ccff]">
               <UserCircleIcon className="h-5 w-5" />
             </div>
             <div className="min-w-0">

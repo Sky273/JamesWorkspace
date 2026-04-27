@@ -115,9 +115,9 @@ const ConsentResponsePage = (): JSX.Element => {
     // Loading state
     if (pageState === 'loading') {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+            <div className="flex min-h-screen items-center justify-center bg-[#f3f2ef] p-4">
                 <div className="text-center">
-                    <div className="h-12 w-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                    <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-[#6b4eff] border-t-transparent" />
                     <p className="text-gray-600">{t('common.loading')}</p>
                 </div>
             </div>
@@ -127,11 +127,11 @@ const ConsentResponsePage = (): JSX.Element => {
     // Error state
     if (pageState === 'error') {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+            <div className="flex min-h-screen items-center justify-center bg-[#f3f2ef] p-4">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center"
+                    className="w-full max-w-md rounded-[13px] border border-[#e4e4e7] bg-white p-8 text-center shadow-[0_1px_3px_rgba(0,0,0,0.05),0_4px_14px_rgba(0,0,0,0.07)]"
                 >
                     <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <ExclamationTriangleIcon className="h-8 w-8 text-red-600" />
@@ -154,11 +154,11 @@ const ConsentResponsePage = (): JSX.Element => {
     // Success state
     if (pageState === 'success') {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+            <div className="flex min-h-screen items-center justify-center bg-[#f3f2ef] p-4">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center"
+                    className="w-full max-w-md rounded-[13px] border border-[#e4e4e7] bg-white p-8 text-center shadow-[0_1px_3px_rgba(0,0,0,0.05),0_4px_14px_rgba(0,0,0,0.07)]"
                 >
                     <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
                         accepted ? 'bg-green-100' : 'bg-gray-100'
@@ -193,14 +193,14 @@ const ConsentResponsePage = (): JSX.Element => {
 
     // Ready state - show consent form
     return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="flex min-h-screen items-center justify-center bg-[#f3f2ef] p-4">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="max-w-lg w-full bg-white rounded-xl shadow-lg overflow-hidden"
+                className="w-full max-w-lg overflow-hidden rounded-[13px] border border-[#e4e4e7] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.05),0_4px_14px_rgba(0,0,0,0.07)]"
             >
                 {/* Header with firm logo */}
-                <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 px-8 py-6 text-center">
+                <div className="border-b border-[#e4e4e7] bg-white px-8 py-6 text-center">
                     {consentInfo?.firmLogo ? (
                         <img 
                             src={consentInfo.firmLogo} 
@@ -208,7 +208,7 @@ const ConsentResponsePage = (): JSX.Element => {
                             className="h-12 mx-auto mb-2 object-contain"
                         />
                     ) : (
-                        <h2 className="text-2xl font-bold text-white">
+                        <h2 className="text-2xl font-bold text-[#18181b]">
                             {consentInfo?.firmName}
                         </h2>
                     )}
@@ -217,8 +217,8 @@ const ConsentResponsePage = (): JSX.Element => {
                 {/* Content */}
                 <div className="p-8">
                     <div className="flex items-center gap-3 mb-6">
-                        <div className="p-2 bg-indigo-100 rounded-lg">
-                            <ShieldCheckIcon className="h-6 w-6 text-indigo-600" />
+                        <div className="rounded-[9px] bg-[#f4f2ff] p-2">
+                            <ShieldCheckIcon className="h-6 w-6 text-[#6b4eff]" />
                         </div>
                         <div>
                             <h1 className="text-xl font-bold text-gray-900">
@@ -239,8 +239,8 @@ const ConsentResponsePage = (): JSX.Element => {
                     </p>
 
                     {/* Why we process section */}
-                    <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4 mb-4">
-                        <h3 className="font-medium text-blue-900 mb-2">
+                    <div className="mb-4 rounded-[9px] border border-[#e4e4e7] bg-[#f8f8f7] p-4">
+                        <h3 className="mb-2 font-medium text-[#18181b]">
                             📋 {t('consent.response.whyWeProcess')}
                         </h3>
                         <ul className="text-sm text-gray-700 space-y-1">
@@ -305,13 +305,13 @@ const ConsentResponsePage = (): JSX.Element => {
 
                     {pageState === 'submitting' && (
                         <div className="mt-4 text-center">
-                            <div className="h-5 w-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                            <div className="mx-auto h-5 w-5 animate-spin rounded-full border-2 border-[#6b4eff] border-t-transparent" />
                         </div>
                     )}
                 </div>
 
                 {/* Footer */}
-                <div className="bg-gray-50 px-8 py-4 border-t border-gray-100">
+                <div className="border-t border-[#e4e4e7] bg-[#f8f8f7] px-8 py-4">
                     <p className="text-xs text-gray-400 text-center">
                         {t('consent.response.footer')}
                     </p>

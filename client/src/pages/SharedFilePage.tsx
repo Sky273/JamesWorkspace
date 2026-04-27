@@ -115,9 +115,9 @@ const SharedFilePage = (): JSX.Element => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-[#f3f2ef] dark:bg-[#111827]">
         <div className="text-center">
-          <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-[#6b4eff] border-t-transparent"></div>
           <p className="text-gray-600 dark:text-gray-400">
             {t('share.loading', 'Loading CV...')}
           </p>
@@ -128,8 +128,8 @@ const SharedFilePage = (): JSX.Element => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+      <div className="flex min-h-screen items-center justify-center bg-[#f3f2ef] p-4 dark:bg-[#111827]">
+        <div className="w-full max-w-md rounded-[13px] border border-[#e4e4e7] bg-white p-8 text-center shadow-[0_1px_3px_rgba(0,0,0,0.05),0_4px_14px_rgba(0,0,0,0.07)] dark:border-white/10 dark:bg-[#182235]">
           <ExclamationTriangleIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
           <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
             {t('share.errorTitle', 'Unable to load CV')}
@@ -144,8 +144,8 @@ const SharedFilePage = (): JSX.Element => {
 
   if (pdfUrl && !isMobile) {
     return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-        <div className="sticky top-0 z-10 border-b border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur px-4 py-3">
+      <div className="min-h-screen bg-[#f3f2ef] dark:bg-[#111827]">
+        <div className="sticky top-0 z-10 border-b border-[#e4e4e7] bg-white px-4 py-3 dark:border-white/10 dark:bg-[#182235]">
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
             <div className="min-w-0">
               <h1 className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{filename}</h1>
@@ -160,7 +160,7 @@ const SharedFilePage = (): JSX.Element => {
               </button>
               <button
                 onClick={handleDownload}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                className="inline-flex items-center justify-center gap-2 rounded-[9px] bg-[#6b4eff] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#5b3eee]"
               >
                 <DocumentArrowDownIcon className="h-4 w-4" />
                 {t('share.downloadPdf', 'Download')}
@@ -180,9 +180,9 @@ const SharedFilePage = (): JSX.Element => {
 
   if (isMobile && blobUrl) {
     return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 max-w-md w-full text-center">
-          <DocumentArrowDownIcon className="h-16 w-16 text-blue-500 mx-auto mb-4" />
+      <div className="flex min-h-screen items-center justify-center bg-[#f3f2ef] p-4 dark:bg-[#111827]">
+        <div className="w-full max-w-md rounded-[13px] border border-[#e4e4e7] bg-white p-8 text-center shadow-[0_1px_3px_rgba(0,0,0,0.05),0_4px_14px_rgba(0,0,0,0.07)] dark:border-white/10 dark:bg-[#182235]">
+          <DocumentArrowDownIcon className="mx-auto mb-4 h-16 w-16 text-[#6b4eff]" />
           <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
             {filename}
           </h1>
@@ -192,7 +192,7 @@ const SharedFilePage = (): JSX.Element => {
           <div className="flex flex-col gap-3">
             <button
               onClick={handleOpenInNewTab}
-              className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-[9px] bg-[#6b4eff] px-4 py-3 font-medium text-white transition-colors hover:bg-[#5b3eee]"
             >
               <EyeIcon className="h-5 w-5" />
               {t('share.openPdf', 'Open PDF')}
@@ -211,8 +211,8 @@ const SharedFilePage = (): JSX.Element => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+    <div className="flex min-h-screen items-center justify-center bg-[#f3f2ef] p-4 dark:bg-[#111827]">
+      <div className="w-full max-w-md rounded-[13px] border border-[#e4e4e7] bg-white p-8 text-center shadow-[0_1px_3px_rgba(0,0,0,0.05),0_4px_14px_rgba(0,0,0,0.07)] dark:border-white/10 dark:bg-[#182235]">
         <DocumentArrowDownIcon className="h-16 w-16 text-green-500 mx-auto mb-4" />
         <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
           {requiresManualDownload
@@ -235,7 +235,7 @@ const SharedFilePage = (): JSX.Element => {
             </button>
             <button
               onClick={handleDownload}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+              className="inline-flex items-center justify-center gap-2 rounded-[9px] bg-[#6b4eff] px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-[#5b3eee]"
             >
               <DocumentArrowDownIcon className="h-5 w-5" />
               {t('share.downloadPdf', 'Download')}

@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import type { ReactNode } from 'react';
 
 const BASE_CARD_CLASS_NAME =
-  'lux-card rounded-[1.75rem] border transition-all duration-200';
+  'lux-card rounded-[13px] border transition-all duration-200';
 
 export default function AnimatedCard({
   children,

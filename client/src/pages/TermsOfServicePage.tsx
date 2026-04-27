@@ -24,19 +24,19 @@ const TermsOfServicePage = (): JSX.Element => {
   const lastUpdated = '2026-04-07';
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#f3f2ef] px-4 py-12 dark:bg-[#111827] sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <Link
           to="/"
-          className="inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mb-8"
+          className="mb-8 inline-flex items-center text-[#6b4eff] hover:text-[#5b3eee] dark:text-[#c9ccff] dark:hover:text-white"
         >
           <ArrowLeftIcon className="h-4 w-4 mr-2" />
           {t('common.back')}
         </Link>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 md:p-12">
+        <div className="rounded-[13px] border border-[#e4e4e7] bg-white p-8 shadow-[0_1px_3px_rgba(0,0,0,0.05),0_4px_14px_rgba(0,0,0,0.07)] dark:border-white/10 dark:bg-[#182235] md:p-10">
           <div className="flex items-center gap-3 mb-8">
-            <DocumentTextIcon className="h-10 w-10 text-blue-600 dark:text-blue-400" />
+            <DocumentTextIcon className="h-10 w-10 text-[#6b4eff] dark:text-[#c9ccff]" />
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
               {t('legal.terms.title')}
             </h1>

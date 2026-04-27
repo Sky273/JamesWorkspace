@@ -285,18 +285,18 @@
 
 /* Blockquote */
 .tiptap-editor-content .tiptap blockquote {
-  border-left: 4px solid #3b82f6;
+  border-left: 4px solid #6b4eff;
   margin: 0.8em 0;
   padding: 0.5em 1em;
-  background: #eff6ff;
+  background: #f8f8f7;
   border-radius: 0 6px 6px 0;
-  color: #1e40af;
+  color: #18181b;
 }
 
 .dark .tiptap-editor-content .tiptap blockquote {
-  background: #1e3a5f;
-  color: #93c5fd;
-  border-left-color: #60a5fa;
+  background: #111827;
+  color: #e5e7eb;
+  border-left-color: #a3a6ff;
 }
 
 /* Code inline */
@@ -518,8 +518,8 @@
 }
 
 .tiptap-dropdown-item.is-active {
-  background: #eff6ff;
-  color: #2563eb;
+  background: #f4f2ff;
+  color: #6b4eff;
   font-weight: 500;
 }
 
@@ -532,8 +532,8 @@
 }
 
 .dark .tiptap-dropdown-item.is-active {
-  background: #1e3a5f;
-  color: #60a5fa;
+  background: rgba(163, 166, 255, 0.12);
+  color: #c9ccff;
 }
 
 .tiptap-dropdown-section {
@@ -1786,8 +1786,8 @@
    IMAGE TOOLBAR (contextual, below main toolbar)
    ============================================ */
 .tiptap-image-toolbar {
-  border-bottom: 1px solid #dbeafe;
-  background: linear-gradient(180deg, #eff6ff 0%, #f0f7ff 100%);
+  border-bottom: 1px solid #e4e4e7;
+  background: #f8f8f7;
   padding: 4px 8px;
   animation: tiptap-image-toolbar-in 0.15s ease-out;
 }
@@ -1798,8 +1798,8 @@
 }
 
 .dark .tiptap-image-toolbar {
-  border-bottom-color: #1e3a5f;
-  background: linear-gradient(180deg, #0f1d2e 0%, #162033 100%);
+  border-bottom-color: rgba(148, 163, 184, 0.18);
+  background: #111827;
 }
 
 .tiptap-image-toolbar-row {

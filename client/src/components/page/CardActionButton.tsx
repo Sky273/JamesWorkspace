@@ -27,8 +27,8 @@ export default function CardActionButton({
   tone?: keyof typeof toneClassNames;
 }) {
   const baseClassName = label
-    ? 'flex items-center justify-center gap-1 px-3 py-2 text-sm rounded-2xl transition-all'
-    : 'rounded-2xl p-2 transition-all';
+    ? 'flex items-center justify-center gap-1 rounded-[9px] px-3 py-2 text-sm transition-all'
+    : 'rounded-[9px] p-2 transition-all';
 
   return (
     <button

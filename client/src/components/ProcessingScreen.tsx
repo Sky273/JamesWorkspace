@@ -266,12 +266,12 @@ const ProcessingScreen = ({
         description: t('processing.steps.upload.description'),
         loadingTexts: t('processing.steps.upload.steps', { returnObjects: true }) as string[],
         colors: {
-          primary: '#3B82F6',
-          gradient: 'linear-gradient(135deg, #3B82F6, #6366F1)',
-          bg: 'from-blue-50/60 via-transparent to-indigo-50/40',
-          darkBg: 'dark:from-blue-950/20 dark:via-transparent dark:to-indigo-950/15',
-          ring: '#6366F1',
-          particle: 'bg-blue-400/30',
+          primary: '#6B4EFF',
+          gradient: '#6B4EFF',
+          bg: 'from-[#f8f8f7] via-[#f8f8f7] to-[#f8f8f7]',
+          darkBg: 'dark:from-[#111827] dark:via-[#111827] dark:to-[#111827]',
+          ring: '#6B4EFF',
+          particle: 'bg-[#6b4eff]/25',
         },
       },
       {

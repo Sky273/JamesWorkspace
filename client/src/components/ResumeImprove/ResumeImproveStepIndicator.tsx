@@ -31,11 +31,11 @@ export default function ResumeImproveStepIndicator({
           </span>
         </Link>
 
-        <div className="w-10 sm:w-16 h-[3px] mx-2 bg-gradient-to-r from-emerald-400 to-indigo-500 rounded-full" />
+        <div className="mx-2 h-[3px] w-10 rounded-full bg-[#6b4eff] sm:w-16" />
 
         <div className="flex items-center gap-2">
           <motion.div
-            className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-md shadow-indigo-500/25"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-[#6b4eff] shadow-none"
             animate={{ scale: [1, 1.1, 1] }}
             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
           >
@@ -48,7 +48,7 @@ export default function ResumeImproveStepIndicator({
 
         <div className="w-10 sm:w-16 h-[3px] mx-2 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
           <motion.div
-            className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-purple-500"
+            className="h-full rounded-full bg-[#6b4eff]"
             initial={false}
             animate={{ width: hasImprovedText ? '100%' : '30%' }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
