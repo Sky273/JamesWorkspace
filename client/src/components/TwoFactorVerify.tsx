@@ -14,6 +14,8 @@ interface TwoFactorVerifyProps {
   onCancel: () => void;
 }
 
+const authFieldClassName = 'w-full rounded-[13px] border border-[#e4e4e7] bg-white px-4 py-4 text-center font-mono text-3xl tracking-widest text-gray-900 focus:border-[#6b4eff] focus:outline-none focus:ring-2 focus:ring-[#6b4eff]/25 dark:border-white/10 dark:bg-[#111827] dark:text-gray-100';
+
 export default function TwoFactorVerify({ userId: _userId, email, password, onSuccess, onCancel }: TwoFactorVerifyProps) {
   const { t } = useTranslation();
   const [code, setCode] = useState('');
@@ -79,8 +81,8 @@ export default function TwoFactorVerify({ userId: _userId, email, password, onSu
     >
       <div className="space-y-8">
         <div className="text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
-            <ShieldCheckIcon className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[18px] bg-[#eeeaff] dark:bg-[#263052]">
+            <ShieldCheckIcon className="h-8 w-8 text-[#6b4eff] dark:text-[#c9ccff]" />
           </div>
         </div>
 
@@ -100,7 +102,7 @@ export default function TwoFactorVerify({ userId: _userId, email, password, onSu
               }}
               onKeyDown={handleKeyPress}
               placeholder={t('twoFactor.codePlaceholder')}
-              className="w-full rounded-2xl border border-gray-300 bg-white px-4 py-4 text-center font-mono text-3xl tracking-widest text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+              className={authFieldClassName}
               maxLength={8}
               autoFocus
               autoComplete="one-time-code"
@@ -123,7 +125,7 @@ export default function TwoFactorVerify({ userId: _userId, email, password, onSu
               type="button"
               onClick={onCancel}
               disabled={loading}
-              className="flex-1 rounded-2xl border border-gray-300 px-4 py-3 text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              className="flex-1 rounded-[13px] border border-[#e4e4e7] bg-white px-4 py-3 text-gray-700 transition-colors hover:bg-[#f8f8f7] disabled:opacity-50 dark:border-white/10 dark:bg-[#111827] dark:text-gray-300 dark:hover:bg-[#182235]"
             >
               {t('twoFactor.cancelButton')}
             </button>
@@ -131,12 +133,12 @@ export default function TwoFactorVerify({ userId: _userId, email, password, onSu
               type="button"
               onClick={handleVerify}
               disabled={loading || code.length < 6}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-4 py-3 transition-colors ${
+              className={`flex flex-1 items-center justify-center gap-2 rounded-[13px] px-4 py-3 transition-colors ${
                 status === 'success'
                   ? 'bg-green-600 text-white'
-                  : status === 'error'
+                : status === 'error'
                   ? 'bg-red-600 text-white hover:bg-red-700'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-[#6b4eff] text-white hover:bg-[#5b3eee]'
               } disabled:cursor-not-allowed disabled:opacity-50`}
             >
               {loading ? (

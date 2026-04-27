@@ -17,6 +17,10 @@ import Switch from './ui/Switch';
 
 type AuthErrorLike = Error & { code?: string; status?: number };
 
+const authLinkClassName = 'font-medium text-[#6b4eff] transition-colors hover:text-[#5b3eee] dark:text-[#c9ccff] dark:hover:text-white';
+const authInputClassName = 'relative block w-full border-0 bg-white px-3 py-3 text-gray-900 placeholder-gray-500 focus:z-10 focus:outline-none focus:ring-2 focus:ring-[#6b4eff]/25 sm:text-sm dark:bg-[#111827] dark:text-gray-100 dark:placeholder-gray-400';
+const authSecondaryButtonClassName = 'flex w-full items-center justify-center rounded-[13px] border border-[#e4e4e7] bg-white px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-[#f8f8f7] focus:outline-none focus:ring-2 focus:ring-[#6b4eff]/25 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-[#111827] dark:text-gray-200 dark:hover:bg-[#182235]';
+
 const resolveSignInErrorMessage = (error: unknown, t: ReturnType<typeof useTranslation>['t']): string => {
   const authError = error as AuthErrorLike | null;
   const rawMessage = authError?.message || '';
@@ -231,7 +235,7 @@ const SignIn = (): JSX.Element => {
           </div>
         ) : null}
 
-        <div className="rounded-2xl border border-slate-200 shadow-sm -space-y-px dark:border-white/10">
+        <div className="-space-y-px overflow-hidden rounded-[13px] border border-[#e4e4e7] shadow-none dark:border-white/10">
           <label htmlFor="email-address" className="sr-only">
             {t('auth.signIn.emailLabel')}
           </label>
@@ -243,7 +247,7 @@ const SignIn = (): JSX.Element => {
             required
             value={email}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-            className="relative block w-full rounded-t-2xl border-0 bg-white px-3 py-3 text-gray-900 placeholder-gray-500 focus:z-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400"
+            className={`${authInputClassName} rounded-t-[13px]`}
             placeholder={t('auth.signIn.emailPlaceholder')}
             aria-invalid={error ? 'true' : 'false'}
             aria-describedby={formErrorId}
@@ -260,7 +264,7 @@ const SignIn = (): JSX.Element => {
               required
               value={password}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-              className="relative block w-full rounded-b-2xl border-0 bg-white px-3 py-3 pr-11 text-gray-900 placeholder-gray-500 focus:z-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400"
+              className={`${authInputClassName} rounded-b-[13px] pr-11`}
               placeholder={t('auth.signIn.passwordPlaceholder')}
               aria-invalid={error ? 'true' : 'false'}
               aria-describedby={formErrorId}
@@ -285,7 +289,7 @@ const SignIn = (): JSX.Element => {
             />
             {t('auth.signIn.rememberMe')}
           </div>
-          <Link to="/forgot-password" className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
+          <Link to="/forgot-password" className={authLinkClassName}>
             {t('auth.signIn.forgotPassword')}
           </Link>
         </div>
@@ -293,7 +297,7 @@ const SignIn = (): JSX.Element => {
         <button
           type="submit"
           disabled={loading || googleLoading}
-          className="app-primary-action w-full rounded-2xl px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="app-primary-action w-full rounded-[13px] px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#6b4eff]/25 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? t('common.loading') : t('auth.signIn.signInButton')}
         </button>
@@ -303,7 +307,7 @@ const SignIn = (): JSX.Element => {
             <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="bg-white px-2 text-gray-500 dark:bg-[#0f172ad9] dark:text-gray-400">
+            <span className="bg-white px-2 text-gray-500 dark:bg-[#182235] dark:text-gray-400">
               {t('auth.signIn.orContinueWith')}
             </span>
           </div>
@@ -313,7 +317,7 @@ const SignIn = (): JSX.Element => {
           type="button"
           onClick={handleGoogleSignIn}
           disabled={loading || googleLoading}
-          className="flex w-full items-center justify-center rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+          className={authSecondaryButtonClassName}
         >
           <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -327,7 +331,7 @@ const SignIn = (): JSX.Element => {
         <div className="text-center">
           <span className="text-sm text-gray-600 dark:text-gray-400">
             {t('auth.signIn.noAccount')}{' '}
-            <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
+            <Link to="/register" className={authLinkClassName}>
               {t('common.register')}
             </Link>
           </span>

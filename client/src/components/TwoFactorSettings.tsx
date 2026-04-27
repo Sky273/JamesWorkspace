@@ -12,6 +12,9 @@ interface TwoFactorStatus {
   backupCodesRemaining: number;
 }
 
+const compactInputClassName = 'mb-4 w-full rounded-[13px] border border-[#e4e4e7] bg-white px-4 py-3 text-center font-mono text-2xl tracking-widest text-gray-900 focus:border-[#6b4eff] focus:outline-none focus:ring-2 focus:ring-[#6b4eff]/25 dark:border-white/10 dark:bg-[#111827] dark:text-gray-100';
+const compactSecondaryButtonClassName = 'flex-1 rounded-[13px] border border-[#e4e4e7] bg-white px-4 py-2 text-gray-700 transition-colors hover:bg-[#f8f8f7] dark:border-white/10 dark:bg-[#111827] dark:text-gray-300 dark:hover:bg-[#182235]';
+
 export default function TwoFactorSettings() {
   const { t } = useTranslation();
   const { authGet, authPost } = useAuthFetch();
@@ -107,7 +110,7 @@ export default function TwoFactorSettings() {
 
   if (loading) {
     return (
-      <div className="animate-pulse bg-gray-100 dark:bg-gray-700 rounded-lg p-6">
+      <div className="animate-pulse rounded-[13px] bg-[#f8f8f7] p-6 dark:bg-[#182235]">
         <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-1/3 mb-4"></div>
         <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-2/3"></div>
       </div>
@@ -115,18 +118,18 @@ export default function TwoFactorSettings() {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+    <div className="section-shell rounded-[13px] p-6">
       <div className="flex items-center gap-3 mb-4">
-        <ShieldCheckIcon className="h-6 w-6 text-blue-600" />
+        <ShieldCheckIcon className="h-6 w-6 text-[#6b4eff] dark:text-[#c9ccff]" />
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           {t('twoFactor.title')}
         </h3>
       </div>
 
       {/* OAuth notice */}
-      <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex items-start gap-2">
-        <InformationCircleIcon className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-        <p className="text-sm text-blue-700 dark:text-blue-300">
+      <div className="mb-4 flex items-start gap-2 rounded-[13px] border border-[#e4e4e7] bg-[#f8f8f7] p-3 dark:border-white/10 dark:bg-[#182235]">
+        <InformationCircleIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-[#6b4eff] dark:text-[#c9ccff]" />
+        <p className="text-sm text-slate-700 dark:text-slate-200">
           {t('twoFactor.loginOnlyNotice')}
         </p>
       </div>
@@ -159,7 +162,7 @@ export default function TwoFactorSettings() {
           <div className="flex flex-wrap gap-3 pt-4">
             <button
               onClick={() => setShowRegenerateModal(true)}
-              className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+              className="flex items-center gap-2 rounded-[13px] border border-[#e4e4e7] bg-white px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-[#f8f8f7] dark:border-white/10 dark:bg-[#111827] dark:text-gray-300 dark:hover:bg-[#182235]"
             >
               <KeyIcon className="h-4 w-4" />
               Régénérer les codes de secours
@@ -187,7 +190,7 @@ export default function TwoFactorSettings() {
 
           <button
             onClick={() => setShowSetup(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            className="flex items-center gap-2 rounded-[13px] bg-[#6b4eff] px-4 py-2 text-white transition-colors hover:bg-[#5b3eee]"
           >
             <ShieldCheckIcon className="h-5 w-5" />
             Activer 2FA
@@ -209,7 +212,7 @@ export default function TwoFactorSettings() {
       {/* Disable Modal */}
       {showDisableModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6">
+          <div className="w-full max-w-md rounded-[13px] bg-white p-6 shadow-2xl dark:bg-[#182235]">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               Désactiver 2FA
             </h3>
@@ -221,7 +224,7 @@ export default function TwoFactorSettings() {
               value={disableCode}
               onChange={(e) => setDisableCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               placeholder="000000"
-              className="w-full text-center text-2xl font-mono tracking-widest px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 mb-4"
+              className={compactInputClassName}
               maxLength={6}
               autoFocus
             />
@@ -231,7 +234,7 @@ export default function TwoFactorSettings() {
                   setShowDisableModal(false);
                   setDisableCode('');
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                className={compactSecondaryButtonClassName}
               >
                 Annuler
               </button>
@@ -250,7 +253,7 @@ export default function TwoFactorSettings() {
       {/* Regenerate Modal */}
       {showRegenerateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6">
+          <div className="w-full max-w-md rounded-[13px] bg-white p-6 shadow-2xl dark:bg-[#182235]">
             {newBackupCodes.length === 0 ? (
               <>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
@@ -265,7 +268,7 @@ export default function TwoFactorSettings() {
                   value={regenerateCode}
                   onChange={(e) => setRegenerateCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   placeholder="000000"
-                  className="w-full text-center text-2xl font-mono tracking-widest px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 mb-4"
+                  className={compactInputClassName}
                   maxLength={6}
                   autoFocus
                 />
@@ -275,14 +278,14 @@ export default function TwoFactorSettings() {
                       setShowRegenerateModal(false);
                       setRegenerateCode('');
                     }}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                    className={compactSecondaryButtonClassName}
                   >
                     Annuler
                   </button>
                   <button
                     onClick={handleRegenerate}
                     disabled={actionLoading || regenerateCode.length !== 6}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                    className="flex-1 rounded-[13px] bg-[#6b4eff] px-4 py-2 text-white transition-colors hover:bg-[#5b3eee] disabled:opacity-50"
                   >
                     {actionLoading ? 'Génération...' : 'Régénérer'}
                   </button>
@@ -302,7 +305,7 @@ export default function TwoFactorSettings() {
                   {newBackupCodes.map((code, index) => (
                     <code 
                       key={index}
-                      className="text-center font-mono text-sm bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border"
+                      className="rounded border border-[#e4e4e7] bg-[#f8f8f7] px-3 py-2 text-center font-mono text-sm dark:border-white/10 dark:bg-[#111827]"
                     >
                       {code}
                     </code>
@@ -311,7 +314,7 @@ export default function TwoFactorSettings() {
                 <div className="flex gap-3">
                   <button
                     onClick={copyBackupCodes}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                    className={compactSecondaryButtonClassName}
                   >
                     Copier
                   </button>

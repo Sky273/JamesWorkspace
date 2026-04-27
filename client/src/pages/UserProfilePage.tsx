@@ -33,6 +33,9 @@ interface UserProfile {
   firm?: string;
 }
 
+const profileFieldClassName = 'mb-0 w-full rounded-[13px] border border-[#e4e4e7] bg-white py-2.5 pl-14 pr-4 text-gray-900 focus:ring-2 focus:ring-[#6b4eff]/25 dark:border-white/10 dark:bg-[#111827] dark:text-gray-100';
+const profileFieldPlaceholderClassName = `${profileFieldClassName} placeholder:text-gray-400 dark:placeholder:text-gray-400`;
+
 const UserProfilePage = (): JSX.Element => {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -147,7 +150,7 @@ const UserProfilePage = (): JSX.Element => {
                 className={`
                   flex items-center py-4 px-1 border-b-2 font-medium text-sm
                   ${activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    ? 'border-[#6b4eff] text-[#6b4eff] dark:text-[#c9ccff]'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                   }
                 `}
@@ -164,7 +167,7 @@ const UserProfilePage = (): JSX.Element => {
         <div className="space-y-6">
           <div className="section-shell rounded-[2rem] p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
-              <UserCircleIcon className="h-6 w-6 text-blue-600" />
+              <UserCircleIcon className="h-6 w-6 text-[#6b4eff] dark:text-[#c9ccff]" />
               {t('userProfile.personalInfo')}
             </h3>
 
@@ -178,7 +181,7 @@ const UserProfilePage = (): JSX.Element => {
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  inputClassName="mb-0 w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 pl-14 pr-4 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+                  inputClassName={profileFieldClassName}
                 />
               </div>
 
@@ -191,7 +194,7 @@ const UserProfilePage = (): JSX.Element => {
                   type="email"
                   value={profile?.email || ''}
                   disabled
-                  inputClassName="mb-0 w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-600 py-2.5 pl-14 pr-4 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                  inputClassName="mb-0 w-full cursor-not-allowed rounded-[13px] border border-[#e4e4e7] bg-[#f8f8f7] py-2.5 pl-14 pr-4 text-gray-500 dark:border-white/10 dark:bg-[#182235] dark:text-gray-400"
                 />
                 <p className="text-xs text-gray-500 mt-1">{t('userProfile.emailReadonly')}</p>
               </div>
@@ -206,7 +209,7 @@ const UserProfilePage = (): JSX.Element => {
                   value={formData.jobTitle}
                   onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
                   placeholder={t('userProfile.jobTitlePlaceholder')}
-                  inputClassName="mb-0 w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 pl-14 pr-4 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500"
+                  inputClassName={profileFieldPlaceholderClassName}
                 />
               </div>
 
@@ -220,13 +223,13 @@ const UserProfilePage = (): JSX.Element => {
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder={t('userProfile.phonePlaceholder')}
-                  inputClassName="mb-0 w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 pl-14 pr-4 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500"
+                  inputClassName={profileFieldPlaceholderClassName}
                 />
               </div>
             </div>
 
             {profile?.firm && (
-              <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <div className="mt-6 rounded-[13px] bg-[#f8f8f7] p-4 dark:bg-[#182235]">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   <span className="font-medium">{t('userProfile.firm')} :</span> {profile.firm}
                 </p>
@@ -237,7 +240,7 @@ const UserProfilePage = (): JSX.Element => {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                className="flex items-center gap-2 rounded-[13px] bg-[#6b4eff] px-6 py-2 text-white transition-colors hover:bg-[#5b3eee] disabled:opacity-50"
               >
                 {saving ? (
                   <>
@@ -258,13 +261,13 @@ const UserProfilePage = (): JSX.Element => {
         <div className="space-y-6">
           <div className="section-shell rounded-[2rem] p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
-              <KeyIcon className="h-6 w-6 text-blue-600" />
+              <KeyIcon className="h-6 w-6 text-[#6b4eff] dark:text-[#c9ccff]" />
               {t('userProfile.passwordTitle')}
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-3">
               {t('userProfile.passwordHelp')}
             </p>
-            <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-900/40 dark:bg-blue-950/20 dark:text-blue-200">
+            <div className="rounded-[13px] border border-[#e4e4e7] bg-[#f8f8f7] px-4 py-3 text-sm text-slate-700 dark:border-white/10 dark:bg-[#182235] dark:text-slate-200">
               {t('userProfile.passwordEmailNotice')}
             </div>
             <div className="mt-4 flex justify-end">

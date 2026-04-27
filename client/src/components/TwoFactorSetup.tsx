@@ -15,6 +15,10 @@ interface SetupData {
   backupCodes: string[];
 }
 
+const compactPrimaryButtonClassName = 'flex w-full items-center justify-center gap-2 rounded-[13px] bg-[#6b4eff] px-4 py-3 text-white transition-colors hover:bg-[#5b3eee] disabled:opacity-50';
+const compactSecondaryButtonClassName = 'flex-1 rounded-[13px] border border-[#e4e4e7] bg-white px-4 py-3 text-gray-700 transition-colors hover:bg-[#f8f8f7] dark:border-white/10 dark:bg-[#111827] dark:text-gray-300 dark:hover:bg-[#182235]';
+const compactCodeInputClassName = 'w-full rounded-[13px] border border-[#e4e4e7] bg-white px-4 py-4 text-center font-mono text-3xl tracking-widest text-gray-900 focus:border-[#6b4eff] focus:outline-none focus:ring-2 focus:ring-[#6b4eff]/25 dark:border-white/10 dark:bg-[#111827] dark:text-gray-100';
+
 export default function TwoFactorSetup({ onClose, onSuccess }: TwoFactorSetupProps) {
   const { t: _t } = useTranslation();
   const { authPost } = useAuthFetch();
@@ -93,11 +97,11 @@ export default function TwoFactorSetup({ onClose, onSuccess }: TwoFactorSetupPro
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto relative">
+      <div className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[13px] bg-white shadow-2xl dark:bg-[#182235]">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
-            <ShieldCheckIcon className="h-6 w-6 text-blue-600" />
+            <ShieldCheckIcon className="h-6 w-6 text-[#6b4eff] dark:text-[#c9ccff]" />
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
               Authentification à deux facteurs
             </h2>
@@ -128,7 +132,7 @@ export default function TwoFactorSetup({ onClose, onSuccess }: TwoFactorSetupPro
               <button
                 onClick={startSetup}
                 disabled={loading}
-                className="w-full mt-4 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                className={`${compactPrimaryButtonClassName} mt-4`}
               >
                 {loading ? (
                   <span className="animate-spin">⏳</span>
@@ -157,17 +161,17 @@ export default function TwoFactorSetup({ onClose, onSuccess }: TwoFactorSetupPro
                 />
               </div>
               
-              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3">
+              <div className="rounded-[13px] bg-[#f8f8f7] p-3 dark:bg-[#111827]">
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                   Ou entrez ce code manuellement :
                 </p>
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 text-sm font-mono bg-white dark:bg-gray-800 px-3 py-2 rounded border">
+                  <code className="flex-1 rounded border border-[#e4e4e7] bg-white px-3 py-2 font-mono text-sm dark:border-white/10 dark:bg-[#182235]">
                     {setupData.secret}
                   </code>
                   <button
                     onClick={() => copyToClipboard(setupData.secret, 'secret')}
-                    className="p-2 text-gray-500 hover:text-blue-600"
+                    className="p-2 text-gray-500 transition-colors hover:text-[#6b4eff] dark:hover:text-[#c9ccff]"
                   >
                     {copiedSecret ? (
                       <CheckIcon className="h-5 w-5 text-green-500" />
@@ -180,7 +184,7 @@ export default function TwoFactorSetup({ onClose, onSuccess }: TwoFactorSetupPro
               
               <button
                 onClick={() => setStep('verify')}
-                className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className={compactPrimaryButtonClassName}
               >
                 Suivant
               </button>
@@ -199,7 +203,7 @@ export default function TwoFactorSetup({ onClose, onSuccess }: TwoFactorSetupPro
                 value={verificationCode}
                 onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 placeholder="000000"
-                className="w-full text-center text-3xl font-mono tracking-widest px-4 py-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+                className={compactCodeInputClassName}
                 maxLength={6}
                 autoFocus
               />
@@ -207,14 +211,14 @@ export default function TwoFactorSetup({ onClose, onSuccess }: TwoFactorSetupPro
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep('setup')}
-                  className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className={compactSecondaryButtonClassName}
                 >
                   Retour
                 </button>
                 <button
                   onClick={verifyCode}
                   disabled={loading || verificationCode.length !== 6}
-                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  className="flex-1 rounded-[13px] bg-[#6b4eff] px-4 py-3 text-white transition-colors hover:bg-[#5b3eee] disabled:opacity-50"
                 >
                   {loading ? 'Vérification...' : 'Vérifier'}
                 </button>
@@ -234,12 +238,12 @@ export default function TwoFactorSetup({ onClose, onSuccess }: TwoFactorSetupPro
                 </p>
               </div>
               
-              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
+              <div className="rounded-[13px] bg-[#f8f8f7] p-4 dark:bg-[#111827]">
                 <div className="grid grid-cols-2 gap-2">
                   {setupData.backupCodes.map((code, index) => (
                     <code 
                       key={index}
-                      className="text-center font-mono text-sm bg-white dark:bg-gray-800 px-3 py-2 rounded border"
+                      className="rounded border border-[#e4e4e7] bg-white px-3 py-2 text-center font-mono text-sm dark:border-white/10 dark:bg-[#182235]"
                     >
                       {code}
                     </code>
@@ -247,7 +251,7 @@ export default function TwoFactorSetup({ onClose, onSuccess }: TwoFactorSetupPro
                 </div>
                 <button
                   onClick={() => copyToClipboard(setupData.backupCodes.join('\n'), 'backup')}
-                  className="w-full mt-3 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center justify-center gap-2"
+                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-[13px] border border-[#e4e4e7] bg-white px-4 py-2 text-gray-700 transition-colors hover:bg-[#f8f8f7] dark:border-white/10 dark:bg-[#182235] dark:text-gray-300 dark:hover:bg-[#263052]"
                 >
                   {copiedBackup ? (
                     <>

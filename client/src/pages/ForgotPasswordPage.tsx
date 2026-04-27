@@ -10,6 +10,9 @@ import { useTranslation } from 'react-i18next';
 import { authService } from '../services/authService';
 import AuthPageShell from '../components/AuthPageShell';
 
+const authLinkClassName = 'text-sm font-medium text-[#6b4eff] transition-colors hover:text-[#5b3eee] dark:text-[#c9ccff] dark:hover:text-white';
+const authFieldClassName = 'block w-full rounded-[13px] border border-[#e4e4e7] bg-white px-3 py-3 text-gray-900 placeholder-gray-500 focus:border-[#6b4eff] focus:outline-none focus:ring-2 focus:ring-[#6b4eff]/25 sm:text-sm dark:border-white/10 dark:bg-[#111827] dark:text-gray-100 dark:placeholder-gray-400';
+
 const ForgotPasswordPage = (): JSX.Element => {
   const { t } = useTranslation();
   const [email, setEmail] = useState('');
@@ -62,7 +65,7 @@ const ForgotPasswordPage = (): JSX.Element => {
             </div>
           </div>
           <div className="mt-6 text-center">
-            <Link to="/signin" className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
+            <Link to="/signin" className={`inline-flex items-center gap-2 ${authLinkClassName}`}>
               {t('auth.forgotPassword.backToSignIn')}
               <ArrowRightIcon className="h-4 w-4" />
             </Link>
@@ -88,7 +91,7 @@ const ForgotPasswordPage = (): JSX.Element => {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="block w-full rounded-2xl border border-gray-300 bg-white px-3 py-3 text-gray-900 placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400"
+              className={authFieldClassName}
               placeholder={t('auth.forgotPassword.emailPlaceholder')}
             />
           </div>
@@ -96,13 +99,13 @@ const ForgotPasswordPage = (): JSX.Element => {
           <button
             type="submit"
             disabled={loading || !email}
-            className="app-primary-action w-full rounded-2xl px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="app-primary-action w-full rounded-[13px] px-4 py-3 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#6b4eff]/25 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? t('common.loading') : t('auth.forgotPassword.submitButton')}
           </button>
 
           <div className="text-center">
-            <Link to="/signin" className="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
+            <Link to="/signin" className={authLinkClassName}>
               {t('auth.forgotPassword.backToSignIn')}
             </Link>
           </div>
