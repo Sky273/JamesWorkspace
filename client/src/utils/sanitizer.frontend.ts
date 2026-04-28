@@ -19,6 +19,36 @@ interface SafeHtml {
   __html: string;
 }
 
+const BARE_UUID_RESOURCE_PATTERN = /^\/?[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function getAttributeValue(rawValue: string): string {
+  const trimmed = rawValue.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"'))
+    || (trimmed.startsWith('\'') && trimmed.endsWith('\''))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+
+  return trimmed;
+}
+
+function stripBareUuidResourceAttributes(html: string): string {
+  return html
+    .replace(/\s(?:src|data|poster|xlink:href)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, (attribute) => {
+      const rawValue = attribute.split('=').slice(1).join('=');
+      return BARE_UUID_RESOURCE_PATTERN.test(getAttributeValue(rawValue)) ? '' : attribute;
+    })
+    .replace(/\ssrcset\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, (attribute) => {
+      const rawValue = attribute.split('=').slice(1).join('=');
+      return getAttributeValue(rawValue)
+        .split(',')
+        .some((candidate) => BARE_UUID_RESOURCE_PATTERN.test(candidate.trim().split(/\s+/)[0] || ''))
+        ? ''
+        : attribute;
+    });
+}
+
 /**
  * Sanitize HTML content to prevent XSS attacks
  */
@@ -44,7 +74,7 @@ export const sanitizeHtml = (html: string | null | undefined, options: SanitizeO
     ...options
   };
 
-  return DOMPurify.sanitize(html, defaultConfig);
+  return stripBareUuidResourceAttributes(DOMPurify.sanitize(html, defaultConfig));
 };
 
 /**

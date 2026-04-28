@@ -8,6 +8,8 @@ import path from 'path';
 import fs from 'fs';
 import { safeLog } from '../utils/logger.backend.js';
 
+const ROOT_UUID_PATH_PATTERN = /^\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 // MIME types for pre-compressed files
 const mimeTypes = {
     '.js': 'application/javascript',
@@ -177,6 +179,11 @@ export function configureStaticFiles(app, serverDir) {
         }
         // Skip if requesting a file with extension (assets, images, etc.)
         if (path.extname(req.path) && req.path !== '/') {
+            return next();
+        }
+        // A root UUID path is never a client route. It usually means rendered
+        // HTML/CSS referenced a broken relative resource URL.
+        if (ROOT_UUID_PATH_PATTERN.test(req.path)) {
             return next();
         }
         // Serve index.html for all other routes (SPA client-side routing)

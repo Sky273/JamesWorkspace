@@ -98,6 +98,21 @@ describe('sanitizer.frontend', () => {
             const result = sanitizeHtml(html);
             expect(result).toContain('data:image/png;base64,abc123');
         });
+
+        it('should strip bare UUID image sources that would hit the SPA fallback', () => {
+            const html = '<p>Logo</p><img src="/2bb9e8df-b051-4cfd-8770-29425c602ced" alt="Logo" /><img src="2bb9e8df-b051-4cfd-8770-29425c602ced" alt="Logo" />';
+            const result = sanitizeHtml(html);
+            expect(result).not.toContain('/2bb9e8df-b051-4cfd-8770-29425c602ced');
+            expect(result).not.toContain('src="2bb9e8df-b051-4cfd-8770-29425c602ced"');
+            expect(result).toContain('Logo');
+        });
+
+        it('should strip bare UUID srcset candidates', () => {
+            const html = '<img srcset="/2bb9e8df-b051-4cfd-8770-29425c602ced 1x, data:image/png;base64,abc123 2x" alt="Logo" />';
+            const result = sanitizeHtml(html);
+            expect(result).not.toContain('/2bb9e8df-b051-4cfd-8770-29425c602ced');
+            expect(result).toContain('alt="Logo"');
+        });
     });
 
     describe('sanitizeUserHtml', () => {

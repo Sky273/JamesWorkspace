@@ -144,4 +144,17 @@ describe('configureStaticFiles', () => {
         expect(res.text).toContain('<!doctype html>');
     });
 
+    it('does not serve the SPA fallback for root UUID-like resource requests', async () => {
+        const { root, serverDir } = createFixtureDir();
+        fixtures.push(root);
+
+        const app = express();
+        configureStaticFiles(app, serverDir);
+
+        const res = await request(app).get('/2bb9e8df-b051-4cfd-8770-29425c602ced');
+
+        expect(res.status).toBe(404);
+        expect(res.text).not.toContain('<!doctype html>');
+    });
+
 });
