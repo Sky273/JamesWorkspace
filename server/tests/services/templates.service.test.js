@@ -160,6 +160,12 @@ describe('Templates Service', () => {
             expect(result.id).toBe('t1');
         });
 
+        it('should allow non-admin access to global templates', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 't-global', firm_id: null }] });
+            const result = await getTemplateByIdWithAccess('t-global', { isAdmin: false, userFirmId: 'f1' });
+            expect(result.id).toBe('t-global');
+        });
+
         it('should reject cross-firm access', async () => {
             query.mockResolvedValueOnce({ rows: [{ id: 't1', firm_id: 'f2' }] });
             await expect(getTemplateByIdWithAccess('t1', { isAdmin: false, userFirmId: 'f1' })).rejects.toMatchObject({ statusCode: 404 });

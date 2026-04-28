@@ -137,7 +137,7 @@ export async function getTemplateByIdWithAccess(id, { isAdmin, userFirmId }) {
         throw err;
     }
 
-    if (template.firm_id !== userFirmId) {
+    if (template.firm_id !== null && template.firm_id !== userFirmId) {
         const err = new Error('Template not found');
         err.statusCode = 404;
         throw err;
