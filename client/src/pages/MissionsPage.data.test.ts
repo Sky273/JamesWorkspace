@@ -23,7 +23,9 @@ describe('MissionsPage.data', () => {
       'Deal ID': '',
     });
     expect(getInitialMissionViewMode('list')).toBe('list');
-    expect(getInitialMissionViewMode('anything')).toBe('byDeal');
+    expect(getInitialMissionViewMode('byDeal')).toBe('byDeal');
+    expect(getInitialMissionViewMode('anything')).toBe('list');
+    expect(getInitialMissionViewMode()).toBe('list');
   });
 
   it('builds mission form data and submit payload', () => {

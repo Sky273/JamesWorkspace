@@ -295,9 +295,9 @@ export const EmailTemplatesDuplicateModal = ({
   }
 
   return (
-    <div className="fixed inset-0 z-[70] overflow-y-auto">
+    <div className="fixed inset-0 z-[10000] isolate overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4 sm:p-6">
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={onClose} />
+        <div className="fixed inset-0 bg-slate-500/45 backdrop-blur-[1px] transition-opacity dark:bg-slate-700/55" onClick={onClose} />
         <div className="relative w-full max-w-lg rounded-[2rem] border border-slate-200/80 bg-white p-6 shadow-[0_30px_80px_rgba(15,23,42,0.18)] dark:border-slate-700/80 dark:bg-slate-900">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -366,9 +366,9 @@ export const EmailTemplatesEditModal = ({
   onChange,
   t,
 }: EmailTemplatesEditModalProps) => (
-  <div className="fixed inset-0 z-[60] overflow-y-auto">
+  <div className="fixed inset-0 z-[10000] isolate overflow-y-auto">
     <div className="flex min-h-screen items-start justify-center p-4 pt-8 sm:p-6 sm:pt-10">
-      <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 bg-slate-500/45 backdrop-blur-[1px] transition-opacity dark:bg-slate-700/55" onClick={onClose} />
       <div className="relative flex max-h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.18)] dark:border-slate-700/80 dark:bg-slate-900">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200/80 px-5 py-4 dark:border-slate-700/80 sm:px-6">
           <div>
@@ -495,9 +495,9 @@ export const EmailTemplatesPreviewModal = ({
   previewLoading,
   onClose,
 }: EmailTemplatesPreviewModalProps) => (
-  <div className="fixed inset-0 z-[60] overflow-y-auto">
+  <div className="fixed inset-0 z-[10000] isolate overflow-y-auto">
     <div className="flex min-h-screen items-center justify-center p-4 sm:p-6">
-      <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 bg-slate-500/45 backdrop-blur-[1px] transition-opacity dark:bg-slate-700/55" onClick={onClose} />
       <div className="relative flex max-h-[88vh] w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.18)] dark:border-slate-700/80 dark:bg-slate-900">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200/80 px-5 py-4 dark:border-slate-700/80 sm:px-6">
           <div>

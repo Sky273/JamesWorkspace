@@ -499,7 +499,7 @@ const FirmCreditsPage = ({ embedded = false }: { embedded?: boolean } = {}): JSX
       </PaginationPair>
 
       {selectedFirm ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4">
+        <div className="fixed inset-0 z-[10000] isolate flex items-center justify-center bg-slate-500/45 px-4 backdrop-blur-[1px] dark:bg-slate-700/55">
           <div className="section-shell w-full max-w-lg rounded-[2rem] p-6">
             <div className="mb-4 flex items-start justify-between gap-4">
               <div>

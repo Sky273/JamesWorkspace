@@ -14,6 +14,9 @@ describe('UsersManagement Modal', () => {
 
     const dialog = screen.getByRole('dialog', { name: 'Créer un utilisateur' });
     expect(dialog).toHaveAttribute('aria-modal', 'true');
+    expect(dialog).toHaveClass('z-[10000]');
+    expect(dialog).toHaveClass('bg-slate-500/45');
+    expect(dialog).not.toHaveClass('bg-black');
     expect(screen.getByRole('button', { name: 'Fermer Créer un utilisateur' })).toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: 'Escape' });

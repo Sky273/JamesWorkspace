@@ -817,6 +817,18 @@ button.settings-switch[type="button"]:disabled {
   border-color: var(--border-subtle) !important;
 }
 
+/* Modal overlays must always sit above the app shell, footer logo, and transformed content. */
+body [class~="fixed"][class~="inset-0"][class*="z-50"],
+body [class~="fixed"][class~="inset-0"][class*="z-[50]"],
+body [class~="fixed"][class~="inset-0"][class*="z-[60]"],
+body [class~="fixed"][class~="inset-0"][class*="z-[70]"],
+body [class~="fixed"][class~="inset-0"][class*="z-[100]"],
+body [class~="fixed"][class~="inset-0"][class*="z-[120]"],
+body [class~="fixed"][class~="inset-0"][class*="z-[9999]"] {
+  z-index: 10000 !important;
+  isolation: isolate;
+}
+
 /* ============================================
    ICON SYSTEM - Standardized sizes and styles
    ============================================

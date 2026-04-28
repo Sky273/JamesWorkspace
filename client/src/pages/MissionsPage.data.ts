@@ -76,7 +76,7 @@ export const EMPTY_MISSION_FORM: MissionFormData = {
 };
 
 export function getInitialMissionViewMode(viewMode?: string | null): MissionViewMode {
-  return viewMode === 'list' ? 'list' : 'byDeal';
+  return viewMode === 'byDeal' ? 'byDeal' : 'list';
 }
 
 export function buildMissionsSearchParams(page: number, limit: number, search: string) {

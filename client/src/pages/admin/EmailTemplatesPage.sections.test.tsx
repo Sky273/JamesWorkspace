@@ -206,6 +206,7 @@ describe('EmailTemplatesPage sections', () => {
     );
 
     expect(screen.getByText('Dupliquer le template')).toBeInTheDocument();
+    expect(screen.getByText('Dupliquer le template').closest('.fixed')).toHaveClass('z-[10000]', 'isolate');
     fireEvent.change(screen.getByDisplayValue('Choisir un cabinet'), { target: { value: 'firm-2' } });
     expect(onFirmChange).toHaveBeenCalledWith('firm-2');
     fireEvent.click(screen.getByText('Annuler'));
@@ -275,6 +276,7 @@ describe('EmailTemplatesPage sections', () => {
     expect(onChange).toHaveBeenCalledWith('mjml', '<mjml>updated</mjml>');
     expect(onPreview).toHaveBeenCalledTimes(1);
     expect(onSave).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Intro édition').closest('.fixed')).toHaveClass('z-[10000]', 'isolate');
     expect(screen.getByText('preview:Sujet aperçu:<p>preview</p>')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Annuler'));
@@ -295,6 +297,7 @@ describe('EmailTemplatesPage sections', () => {
     );
 
     expect(screen.getByText('Relance client')).toBeInTheDocument();
+    expect(screen.getByText('Relance client').closest('.fixed')).toHaveClass('z-[10000]', 'isolate');
     expect(screen.getByText('preview:Sujet aperçu:<p>mail</p>')).toBeInTheDocument();
 
     fireEvent.click(screen.getAllByRole('button')[0]);

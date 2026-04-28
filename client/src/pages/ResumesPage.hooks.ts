@@ -71,7 +71,7 @@ export function useResumesDashboard() {
       }
     }
 
-    return 'byDeal';
+    return 'list';
   });
 
   useEffect(() => {

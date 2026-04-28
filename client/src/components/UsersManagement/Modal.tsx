@@ -48,7 +48,7 @@ const Modal = ({ isOpen, onClose, title, children }: ModalProps): JSX.Element | 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+      className="fixed inset-0 z-[10000] isolate flex items-center justify-center bg-slate-500/45 p-4 backdrop-blur-[1px] dark:bg-slate-700/55"
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}

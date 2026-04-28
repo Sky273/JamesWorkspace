@@ -440,7 +440,7 @@ export function TemplatesPreviewModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+    <div className="fixed inset-0 z-[10000] isolate flex items-center justify-center bg-slate-500/45 p-4 backdrop-blur-[1px] dark:bg-slate-700/55">
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <div><h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{template.Name}</h3><p className="text-sm text-gray-500 dark:text-gray-400">{template.Description}</p></div>

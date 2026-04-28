@@ -73,6 +73,12 @@ describe('useResumesDashboard refresh wiring', () => {
     });
   });
 
+  it('uses the list view by default when no route or session preference exists', () => {
+    const { result } = renderHook(() => useResumesDashboard());
+
+    expect(result.current.viewMode).toBe('list');
+  });
+
   it('forces resumes and stats refresh on runtime resumes dirty events', async () => {
     renderHook(() => useResumesDashboard());
 

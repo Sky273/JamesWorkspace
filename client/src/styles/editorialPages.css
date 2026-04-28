@@ -175,7 +175,6 @@
 
 .editorial-migrated-shell .cv-surface {
   position: relative;
-  isolation: isolate;
   background:
     radial-gradient(circle at top right, var(--cv-surface-top), transparent 28%),
     radial-gradient(circle at bottom left, var(--cv-surface-bottom), transparent 24%),
