@@ -132,19 +132,26 @@ export function useTemplatesDashboard(options: { embedded?: boolean } = {}) {
         return;
       }
       const pendingTemplate = pendingTemplateRef.current;
+      const pendingTemplateMatchesSearch = Boolean(
+        pendingTemplate?.template
+        && effectivePage === 1
+        && matchesTemplateSearch(pendingTemplate.template, effectiveSearch)
+      );
       const responseIncludesPendingTemplate = Boolean(
         pendingTemplate?.template
         && data.templates.some((template) => template.id === pendingTemplate.template.id),
       );
-      const shouldInjectPendingTemplate = Boolean(
-        pendingTemplate?.template
-        && effectivePage === 1
-        && matchesTemplateSearch(pendingTemplate.template, effectiveSearch)
-        && !responseIncludesPendingTemplate,
-      );
-      const mergedTemplates = shouldInjectPendingTemplate
-        ? [pendingTemplate!.template, ...data.templates.filter((template) => template.id !== pendingTemplate!.template.id)].slice(0, TEMPLATES_PAGE_SIZE)
+      const responseTemplates = pendingTemplateMatchesSearch && responseIncludesPendingTemplate
+        ? data.templates.map((template) => (
+            template.id === pendingTemplate!.template.id
+              ? { ...template, ...pendingTemplate!.template }
+              : template
+          ))
         : data.templates;
+      const shouldInjectPendingTemplate = Boolean(pendingTemplateMatchesSearch && !responseIncludesPendingTemplate);
+      const mergedTemplates = shouldInjectPendingTemplate
+        ? [pendingTemplate!.template, ...responseTemplates.filter((template) => template.id !== pendingTemplate!.template.id)].slice(0, TEMPLATES_PAGE_SIZE)
+        : responseTemplates;
 
       setTemplates(mergedTemplates);
       setTotalCount(shouldInjectPendingTemplate
@@ -154,7 +161,7 @@ export function useTemplatesDashboard(options: { embedded?: boolean } = {}) {
           )
         : (data.pagination.totalCount || data.templates.length));
       setHasMore(data.pagination.hasMore || false);
-      const shouldClearPendingTemplate = responseIncludesPendingTemplate
+      const shouldClearPendingTemplate = (responseIncludesPendingTemplate && options.forceRefresh === true)
         || (pendingTemplate?.template != null && !matchesTemplateSearch(pendingTemplate.template, effectiveSearch))
         || options.clearPendingTemplate === true;
       if (shouldClearPendingTemplate) {

@@ -166,6 +166,46 @@ describe('useTemplatesDashboard', () => {
     });
   });
 
+  it('keeps the navigation updated template when the first list response still contains stale data', async () => {
+    useLocationMock.mockReturnValue({
+      pathname: '/admin',
+      search: '?tab=templates',
+      state: {
+        updatedTemplate: {
+          id: 'tpl-1',
+          Name: 'Updated Template',
+          Description: 'Fresh description',
+          Status: 'active',
+        },
+      },
+    });
+
+    getTemplatesPaginatedMock.mockResolvedValue({
+      templates: [
+        {
+          id: 'tpl-1',
+          Name: 'Old Template',
+          Description: 'Stale description',
+          Status: 'active',
+        },
+      ],
+      pagination: {
+        totalCount: 1,
+        hasMore: false,
+      },
+    });
+
+    const { result } = renderHook(() => useTemplatesDashboard({ embedded: true }));
+
+    await waitFor(() => {
+      expect(result.current.filteredTemplates[0]).toEqual(expect.objectContaining({
+        id: 'tpl-1',
+        Name: 'Updated Template',
+        Description: 'Fresh description',
+      }));
+    });
+  });
+
   it('preserves the admin tab query string when clearing navigation state', async () => {
     useLocationMock.mockReturnValue({
       pathname: '/admin',

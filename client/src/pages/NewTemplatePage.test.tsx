@@ -141,6 +141,30 @@ describe('NewTemplatePage', () => {
     });
   });
 
+  it('allows saving a template without a description', async () => {
+    render(<NewTemplatePage />);
+
+    const descriptionField = screen.getByLabelText('templates.editor.description.label');
+    expect(descriptionField).not.toBeRequired();
+
+    fireEvent.change(screen.getByLabelText('templates.editor.name.label'), {
+      target: { value: 'Modele sans description' },
+    });
+    fireEvent.change(screen.getByLabelText('templates.editor.content.label'), {
+      target: { value: '<main>Contenu</main>' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'common.save' }));
+
+    await waitFor(() => {
+      expect(createTemplateMock).toHaveBeenCalledWith(expect.objectContaining({
+        name: 'Modele sans description',
+        description: '',
+        templateContent: '<main>Contenu</main>',
+      }));
+    });
+  });
+
   it('loads an existing template into the editor when editing', async () => {
     useParamsMock.mockReturnValue({ id: 'tpl-edit' });
     getTemplateByIdMock.mockResolvedValue({

@@ -224,7 +224,7 @@ const NewTemplatePage = (): JSX.Element => {
 
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('templates.editor.description.label')}</label>
-              <textarea id="description" name="description" rows={3} required value={formData.description} onChange={handleChange} placeholder={t('templates.editor.description.placeholder')} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" />
+              <textarea id="description" name="description" rows={3} value={formData.description} onChange={handleChange} placeholder={t('templates.editor.description.placeholder')} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100" />
             </div>
 
             <div className="mt-4">
