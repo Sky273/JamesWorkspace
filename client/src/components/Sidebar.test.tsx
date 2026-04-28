@@ -62,4 +62,18 @@ describe('Sidebar', () => {
     expect(screen.queryByRole('link', { name: /Utilisateurs|users/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Crédits cabinets|firm credits/i })).not.toBeInTheDocument();
   });
+  it('keeps sidebar menu item labels white despite global dark link styles', () => {
+    useAuthMock.mockReturnValue({
+      user: { role: 'admin' },
+    });
+
+    render(
+      <MemoryRouter>
+        <Sidebar />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('link', { name: /navigation\.home/i })).toHaveClass('!text-white');
+    expect(screen.getByText('navigation.home')).toHaveClass('!text-white');
+  });
 });

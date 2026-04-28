@@ -138,8 +138,8 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
         className={classNames(
           'group relative flex min-h-9 items-center gap-3 rounded-[9px] border px-3 py-2 text-[13px] font-semibold transition-[background-color,border-color,color] duration-200',
           isActive
-            ? 'border-[#7357ff]/70 bg-[#342c72] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.09)]'
-            : 'border-transparent text-[#c5d0df] hover:bg-white/[0.06] hover:text-white'
+            ? 'border-[#7357ff]/70 bg-[#342c72] !text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.09)]'
+            : 'border-transparent !text-white hover:bg-white/[0.06] hover:!text-white'
         )}
       >
         <IconComponent
@@ -151,7 +151,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
           )}
           aria-hidden={true}
         />
-        <span className="min-w-0 flex-1 truncate">{item.name}</span>
+        <span className="min-w-0 flex-1 truncate !text-white">{item.name}</span>
         {item.badge ? (
           <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#7b61ff] px-1.5 text-[10px] font-bold leading-none text-white">
             {item.badge}
