@@ -1278,6 +1278,36 @@
   color: var(--cv-text) !important;
 }
 
+.settings-compact-shell .settings-preferences-panel {
+  background: #ffffff !important;
+  border-color: #dedbe8 !important;
+  box-shadow: none !important;
+}
+
+.settings-compact-shell .settings-preference-card {
+  background: #f8f8f7 !important;
+  border-color: #dedbe8 !important;
+  box-shadow: none !important;
+}
+
+.settings-compact-shell .settings-preference-card select {
+  background: #ffffff !important;
+}
+
+.dark .settings-compact-shell .settings-preferences-panel {
+  background: #182235 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark .settings-compact-shell .settings-preference-card {
+  background: #111827 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark .settings-compact-shell .settings-preference-card select {
+  background: #182235 !important;
+}
+
 /* Missions standalone visual direction. */
 .missions-editorial-shell {
   --cv-surface-base-start: #f3f2ef;

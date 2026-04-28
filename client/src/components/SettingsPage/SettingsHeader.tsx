@@ -6,5 +6,5 @@ interface SettingsHeaderProps {
 }
 
 export default function SettingsHeader({ t }: SettingsHeaderProps): JSX.Element {
-  return <PageHeader title={t('settings.title')} subtitle={t('settings.subtitle')} />;
+  return <PageHeader title={t('navigation.settings', 'Paramètres')} subtitle={t('settings.subtitle')} />;
 }

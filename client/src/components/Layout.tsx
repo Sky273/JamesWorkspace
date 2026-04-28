@@ -104,7 +104,7 @@ const Layout = (): JSX.Element => {
       <ScrollToTop />
       <Sidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
 
-      <div className="min-h-screen lg:pl-64">
+      <div className="min-h-screen lg:pl-[240px]">
         <div className={`flex min-h-screen flex-1 flex-col${isEditorialMigratedRoute ? ` editorial-migrated-shell${editorialRouteClassName}` : ''}`}>
         <header className="pointer-events-none sticky top-0 z-40 border-b border-[#E4E4E7] bg-white shadow-none">
           <div className="pointer-events-auto relative flex min-h-16 items-center justify-between gap-3 px-4 py-2 sm:h-16 sm:gap-4 sm:py-0 sm:px-6 lg:px-8">

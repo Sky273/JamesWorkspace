@@ -6,7 +6,6 @@
 import { ForwardRefExoticComponent, RefAttributes, SVGProps } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-  BoltIcon,
   HomeIcon,
   DocumentTextIcon,
   Cog6ToothIcon,
@@ -34,6 +33,7 @@ interface NavItem {
   name: string;
   href: string;
   icon: HeroIcon;
+  badge?: string | number;
   adminOnly?: boolean;
   superAdminOnly?: boolean;
 }
@@ -58,6 +58,39 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
   const isSuperAdmin = user?.role === 'admin';
   const isLocalAdmin = user?.role === 'localAdmin';
   const canAccessManagerScreens = isSuperAdmin || isLocalAdmin;
+  const firmLabel = user?.firmName || user?.firm || 'AI workspace';
+
+  const getInitials = (name: string | undefined): string => {
+    if (!name) return 'RC';
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return 'RC';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  };
+
+  const getRoleLabel = (role: string | undefined): string => {
+    if (!role) return t('userProfile.roles.user');
+    const roleLower = role.toLowerCase();
+    if (roleLower === 'admin') return t('userProfile.roles.admin');
+    if (roleLower === 'localadmin') return t('userProfile.roles.localAdmin');
+    return t('userProfile.roles.user');
+  };
+
+  const isItemActive = (href: string): boolean => {
+    if (href === '/') {
+      return location.pathname === '/';
+    }
+
+    if (href === '/clients') {
+      return location.pathname.startsWith('/clients') || location.pathname.startsWith('/deals');
+    }
+
+    if (href === '/admin') {
+      return location.pathname === '/admin';
+    }
+
+    return location.pathname === href || location.pathname.startsWith(`${href}/`);
+  };
 
   const homeItem: NavItem = { name: t('navigation.home'), href: '/', icon: HomeIcon };
 
@@ -94,7 +127,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
   ];
 
   const renderNavItem = (item: NavItem) => {
-    const isActive = location.pathname === item.href;
+    const isActive = isItemActive(item.href);
     const IconComponent = item.icon;
 
     return (
@@ -103,25 +136,27 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
         to={item.href}
         onClick={onClose}
         className={classNames(
-          'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-[transform,background-color,border-color] duration-200',
+          'group relative flex min-h-9 items-center gap-3 rounded-[9px] border px-3 py-2 text-[13px] font-semibold transition-[background-color,border-color,color] duration-200',
           isActive
-            ? 'bg-white/12 text-[#C4B5FD] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
-            : 'text-[#BFA7FF] hover:bg-white/5 hover:text-[#E9D5FF]'
+            ? 'border-[#7357ff]/70 bg-[#342c72] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.09)]'
+            : 'border-transparent text-[#9aa8bc] hover:bg-white/[0.04] hover:text-white'
         )}
       >
-        {isActive && (
-          <span className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-sky-400" />
-        )}
         <IconComponent
           className={classNames(
-            'h-[18px] w-[18px] flex-shrink-0',
+            'h-[17px] w-[17px] flex-shrink-0 stroke-[1.8]',
             isActive
-              ? 'text-sky-300'
-              : 'text-slate-500 group-hover:text-slate-300'
+              ? 'text-[#dcd5ff]'
+              : 'text-[#66758a] group-hover:text-[#b7c3d2]'
           )}
           aria-hidden={true}
         />
-        <span className="truncate">{item.name}</span>
+        <span className="min-w-0 flex-1 truncate">{item.name}</span>
+        {item.badge ? (
+          <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#7b61ff] px-1.5 text-[10px] font-bold leading-none text-white">
+            {item.badge}
+          </span>
+        ) : null}
       </Link>
     );
   };
@@ -144,12 +179,10 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
     return (
       <div key={section.id} className="mt-5">
         {section.title && (
-          <div className="mb-2 flex items-center gap-2 px-3">
-            <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+          <div className="mb-2 px-3">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#4f6076]">
               {section.title}
             </h3>
-            <span className="h-px flex-1 bg-gradient-to-r from-white/10 via-white/6 to-transparent" />
           </div>
         )}
         <div className="space-y-1">{visibleItems.map((item) => renderNavItem(item))}</div>
@@ -158,20 +191,20 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
   };
 
   const sidebarContent = (
-    <div className="flex min-h-0 flex-1 flex-col border-r border-white/6 bg-[#09111f] shadow-[1px_0_0_rgba(255,255,255,0.03)]">
-      <div className="flex flex-1 flex-col overflow-y-auto px-3 pb-4 pt-4 sidebar-scrollbar">
-        <div className="flex flex-shrink-0 items-center justify-between rounded-2xl border border-white/6 bg-white/[0.03] px-3 py-3">
+    <div className="flex min-h-0 flex-1 flex-col border-r border-[#1d2a3b] bg-[#0b1828] shadow-[1px_0_0_rgba(255,255,255,0.03)]">
+      <div className="flex flex-1 flex-col overflow-y-auto pb-4 sidebar-scrollbar">
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-[#1d2a3b] px-4 py-5">
           <div className="min-w-0">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 via-indigo-500 to-violet-500 text-white shadow-[0_12px_28px_rgba(79,70,229,0.28)]">
-                <BoltIcon className="h-5 w-5" />
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[8px] bg-[#7b61ff] text-[11px] font-bold text-white shadow-none">
+                RC
               </div>
               <div className="min-w-0">
-                <div className="truncate text-sm font-semibold tracking-[0.02em] text-white">
+                <div className="truncate text-[13px] font-bold leading-4 text-white">
                   ResumeConverter
                 </div>
-                <div className="truncate text-[11px] text-slate-400">
-                  AI workspace
+                <div className="truncate text-[11px] leading-4 text-[#7f8da1]">
+                  {firmLabel}
                 </div>
               </div>
             </div>
@@ -180,23 +213,52 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
             type="button"
             onClick={onClose}
             aria-label={t('common.close', 'Fermer')}
-            className="rounded-xl p-1.5 text-slate-400 transition-colors hover:bg-white/8 hover:text-slate-200 lg:hidden"
+            className="rounded-[9px] p-1.5 text-[#7f8da1] transition-colors hover:bg-white/8 hover:text-white lg:hidden"
           >
             <XMarkIcon className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
 
-        <nav className="mt-5 flex flex-1 flex-col">
+        <nav className="flex flex-1 flex-col px-3 py-4">
+          <div className="mb-2 px-3">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#4f6076]">
+              {t('navigation.sectionMain', 'Navigation')}
+            </h3>
+          </div>
           <div className="space-y-1">{renderNavItem(homeItem)}</div>
           {renderSection(gestionSection)}
           {canAccessManagerScreens && renderSection(adminSection)}
           <div className="min-h-4 flex-1" />
-          <div className="relative mt-4 space-y-1 pt-4">
-            <span className="absolute left-3 right-3 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+          <div className="mt-10 mb-2 px-3">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#4f6076]">
+              {t('navigation.sectionAccount', 'Compte')}
+            </h3>
+          </div>
+          <div className="space-y-1">
             {bottomItems.filter((item) => !item.adminOnly || isSuperAdmin).map((item) => renderNavItem(item))}
           </div>
         </nav>
       </div>
+
+      {user ? (
+        <Link
+          to="/profile"
+          onClick={onClose}
+          className="flex items-center gap-2.5 border-t border-[#1d2a3b] px-4 py-4 transition-colors hover:bg-white/[0.04]"
+        >
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[8px] bg-[#7b61ff] text-[11px] font-bold text-white">
+            {getInitials(user.name)}
+          </div>
+          <div className="min-w-0">
+            <div className="truncate text-[13px] font-bold leading-4 text-white">
+              {user.name || t('userProfile.anonymous')}
+            </div>
+            <div className="truncate text-[11px] leading-4 text-[#9aa8bc]">
+              {getRoleLabel(user.role)}
+            </div>
+          </div>
+        </Link>
+      ) : null}
     </div>
   );
 
@@ -209,11 +271,11 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
             aria-hidden="true"
             onClick={onClose}
           />
-          <div className="fixed inset-y-0 left-0 flex w-72 max-w-[88vw] flex-col">{sidebarContent}</div>
+          <div className="fixed inset-y-0 left-0 flex w-[240px] max-w-[88vw] flex-col">{sidebarContent}</div>
         </div>
       )}
 
-      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">{sidebarContent}</div>
+      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-[240px] lg:flex-col">{sidebarContent}</div>
     </>
   );
 };
