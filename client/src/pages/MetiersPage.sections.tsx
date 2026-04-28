@@ -56,16 +56,15 @@ export const MetiersPageHeader = ({
   collecting,
   onCollect,
 }: MetiersPageHeaderProps) => (
-  <div className="mb-8">
+  <div className="mb-[22px]">
     <div className="flex items-center justify-between">
       <div>
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-1 h-8 rounded-full bg-primary-500" />
-          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">
+        <>
+          <h1 className="cv-display text-[25px] font-bold leading-tight text-[var(--cv-text)]">
             Métiers et Compétences
           </h1>
-        </div>
-        <p className="text-gray-500 dark:text-gray-400 ml-[1.75rem]">
+        </>
+        <p className="mt-0.5 max-w-2xl text-[13px] leading-5 text-[var(--cv-muted)]">
           Référentiel ROME 4.0 - Informatique et Télécommunications
         </p>
       </div>

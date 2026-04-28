@@ -17,6 +17,9 @@ interface ClientFormModalProps {
   t: TFunction;
 }
 
+const fieldClassName = 'w-full rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#6246ea] focus:outline-none focus:ring-2 focus:ring-[#6246ea]/20 dark:border-white/10 dark:bg-[#111827] dark:text-gray-100';
+const labelClassName = 'mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300';
+
 const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormModalProps): JSX.Element => {
   const [name, setName] = useState<string>('');
   const [type, setType] = useState<ClientType>('prospect');
@@ -94,7 +97,7 @@ const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormMod
       title={client ? t('clients.modal.editClient') : t('clients.modal.addClient')}
       size="lg"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3.5">
         {/* Admin Firm Selector - visible for admins */}
         <AdminFirmSelector
           selectedFirmId={selectedFirmId}
@@ -103,28 +106,28 @@ const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormMod
           t={t}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className={labelClassName}>
               {t('clients.modal.name')} *
             </label>
             <input
               type="text"
               value={name}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+              className={fieldClassName}
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className={labelClassName}>
               {t('clients.modal.type')} *
             </label>
             <select
               value={type}
               onChange={(e: ChangeEvent<HTMLSelectElement>) => setType(e.target.value as ClientType)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+              className={fieldClassName}
             >
               <option value="prospect">{t('clients.types.prospect')}</option>
               <option value="client">{t('clients.types.client')}</option>
@@ -132,13 +135,13 @@ const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormMod
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className={labelClassName}>
               {t('clients.modal.status')}
             </label>
             <select
               value={status}
               onChange={(e: ChangeEvent<HTMLSelectElement>) => setStatus(e.target.value as ClientStatus)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+              className={fieldClassName}
             >
               <option value="active">{t('clients.status.active')}</option>
               <option value="inactive">{t('clients.status.inactive')}</option>
@@ -146,13 +149,13 @@ const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormMod
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className={labelClassName}>
               {t('clients.modal.industry')}
             </label>
             <select
               value={industry}
               onChange={(e: ChangeEvent<HTMLSelectElement>) => setIndustry(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+              className={fieldClassName}
               disabled={loadingIndustries}
             >
               <option value="">{loadingIndustries ? t('common.loading') : t('clients.modal.selectIndustry')}</option>
@@ -165,40 +168,40 @@ const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormMod
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className={labelClassName}>
               {t('clients.modal.website')}
             </label>
             <input
               type="url"
               value={website}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setWebsite(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+              className={fieldClassName}
               placeholder="https://"
             />
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className={labelClassName}>
               {t('clients.modal.address')}
             </label>
             <input
               type="text"
               value={address}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setAddress(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+              className={fieldClassName}
               placeholder={t('clients.modal.addressPlaceholder')}
             />
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className={labelClassName}>
               {t('clients.modal.notes')}
             </label>
             <textarea
               value={notes}
               onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setNotes(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+              className={fieldClassName}
               placeholder={t('clients.modal.notesPlaceholder')}
             />
           </div>
@@ -208,13 +211,13 @@ const ClientFormModal = ({ isOpen, onClose, onSubmit, client, t }: ClientFormMod
           <button
             type="button"
             onClick={onClose}
-            className="btn btn-secondary px-4 py-2"
+            className="app-button-secondary rounded-[9px] px-4 py-2 text-sm"
           >
             {t('common.cancel')}
           </button>
           <button
             type="submit"
-            className="app-primary-action px-4 py-2"
+            className="app-primary-action rounded-[9px] px-4 py-2 text-sm"
           >
             {t('common.save')}
           </button>

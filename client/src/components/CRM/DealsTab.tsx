@@ -430,14 +430,14 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
   return (
     <div>
       {/* Toolbar */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-4">
+      <div className="section-shell mb-5 rounded-[13px]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--cv-outline)] p-3">
           <div className="flex items-center gap-2 flex-wrap">
             {/* Status filter */}
             <select
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+              className="min-h-10 rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-gray-900 dark:border-white/10 dark:bg-[#111827] dark:text-gray-100"
             >
               <option value="all">{t('crm.deals.allStatuses')}</option>
               <option value="open">{STATUS_CONFIG.open.label}</option>
@@ -450,7 +450,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
             <select
               value={clientFilter}
               onChange={(e) => { setClientFilter(e.target.value); setPage(1); }}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm min-w-[200px]"
+              className="min-h-10 min-w-[200px] rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-gray-900 dark:border-white/10 dark:bg-[#111827] dark:text-gray-100"
             >
               <option value="">{t('crm.deals.allClients')}</option>
               {clients.map(client => (
@@ -463,7 +463,7 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
             {(statusFilter !== 'all' || clientFilter) && (
               <button
                 onClick={() => { setStatusFilter('all'); setClientFilter(''); setPage(1); }}
-                className="inline-flex items-center gap-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                className="app-button-secondary inline-flex min-h-10 items-center gap-1 rounded-[9px] px-3 py-2 text-sm"
               >
                 <XMarkIcon className="w-4 h-4" />
                 {t('common.resetFilters')}
@@ -474,23 +474,23 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
           <div className="flex gap-2">
             <button
               onClick={handleRefresh}
-              className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              className="app-button-secondary inline-flex h-10 w-10 items-center justify-center rounded-[9px]"
               title={t('common.refresh')}
             >
-              <ArrowPathIcon className="w-5 h-5" />
+              <ArrowPathIcon className="h-4 w-4" />
             </button>
             <button
               onClick={openCreateModal}
-              className="app-primary-action flex items-center gap-2 px-4 py-2"
+              className="app-primary-action flex min-h-10 items-center gap-2 rounded-[9px] px-4 py-2 text-sm"
             >
-              <PlusIcon className="w-5 h-5" />
+              <PlusIcon className="h-4 w-4" />
               {t('crm.deals.add')}
             </button>
           </div>
         </div>
 
         {/* Search */}
-        <div className="p-4">
+        <div className="p-3">
           <SearchField
             containerClassName="relative"
             placeholder={t('crm.deals.searchPlaceholder')}
@@ -501,37 +501,37 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
       </div>
 
       {/* Results count */}
-      <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+      <div className="mb-3 text-sm font-medium text-gray-600 dark:text-gray-400">
         {totalCount} {t('crm.deals.results')}
       </div>
 
       {/* Deals grid */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 animate-pulse">
-              <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-3"></div>
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-2"></div>
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+            <div key={i} className="cv-card animate-pulse rounded-[13px] p-4">
+              <div className="mb-3 h-5 w-3/4 rounded bg-gray-200 dark:bg-white/10"></div>
+              <div className="mb-2 h-4 w-1/2 rounded bg-gray-200 dark:bg-white/10"></div>
+              <div className="h-4 w-2/3 rounded bg-gray-200 dark:bg-white/10"></div>
             </div>
           ))}
         </div>
       ) : deals.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
-          <BriefcaseIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+        <div className="section-shell rounded-[13px] p-10 text-center">
+          <BriefcaseIcon className="mx-auto mb-4 h-12 w-12 text-gray-400" />
           <p className="text-gray-600 dark:text-gray-400">
             {t('crm.deals.noDeals')}
           </p>
           <button
             onClick={openCreateModal}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            className="app-primary-action mt-4 inline-flex items-center gap-2 rounded-[9px] px-4 py-2 text-sm"
           >
-            <PlusIcon className="w-5 h-5" />
+            <PlusIcon className="h-4 w-4" />
             {t('crm.deals.createFirst')}
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {deals.map((deal, index) => (
             <DealCard
               key={deal.id}
@@ -547,21 +547,21 @@ const DealsTab = ({ preFilterClientId }: DealsTabProps): JSX.Element => {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="mt-6 flex justify-center gap-2">
+        <div className="mt-5 flex justify-center gap-2">
           <button
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50"
+            className="app-button-secondary rounded-[9px] px-3 py-2 text-sm disabled:opacity-50"
           >
             {t('common.previous')}
           </button>
-          <span className="px-4 py-2 text-gray-600 dark:text-gray-400">
+          <span className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
             {page} / {totalPages}
           </span>
           <button
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg disabled:opacity-50"
+            className="app-button-secondary rounded-[9px] px-3 py-2 text-sm disabled:opacity-50"
           >
             {t('common.next')}
           </button>

@@ -47,7 +47,7 @@ function getMonthKey(date: Date) {
 function getInterviewTypeTone(interviewType: Interview['interview_type']) {
   switch (interviewType) {
     case 'client':
-      return 'bg-blue-50 text-blue-700 ring-1 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20';
+      return 'bg-purple-50 text-purple-700 ring-1 ring-purple-200 dark:bg-purple-500/10 dark:text-purple-300 dark:ring-purple-500/20';
     case 'technical':
       return 'bg-purple-50 text-purple-700 ring-1 ring-purple-200 dark:bg-purple-500/10 dark:text-purple-300 dark:ring-purple-500/20';
     case 'partner':
@@ -175,8 +175,8 @@ export default function InterviewsTab(): JSX.Element {
   );
 
   return (
-    <section className="section-shell rounded-[2rem]">
-      <div className="flex flex-col gap-4 border-b border-[var(--cv-outline)] p-5 sm:flex-row sm:items-start sm:justify-between sm:p-6">
+    <section className="section-shell rounded-[13px]">
+      <div className="flex flex-col gap-4 border-b border-[var(--cv-outline)] p-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="cv-kicker mb-2">{t('crm.interviews.kicker')}</div>
           <h2 className="text-2xl font-semibold text-slate-950 dark:text-[var(--cv-text)]">{t('crm.interviews.title')}</h2>
@@ -186,15 +186,15 @@ export default function InterviewsTab(): JSX.Element {
           onClick={() => {
             void loadInterviews();
           }}
-          className="app-button-secondary inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2.5"
+          className="app-button-secondary inline-flex items-center justify-center gap-2 rounded-[9px] px-4 py-2.5 text-sm"
         >
           <ArrowPathIcon className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           {t('crm.interviews.refresh')}
         </button>
       </div>
 
-      <div className="grid gap-5 p-5 xl:grid-cols-[minmax(0,1.7fr)_360px] xl:p-6">
-        <div className="cv-card rounded-[1.75rem] border border-slate-200/70 bg-white/75 p-4 dark:border-white/8 dark:bg-white/[0.03]">
+      <div className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1.7fr)_340px]">
+        <div className="cv-card rounded-[13px] border border-slate-200/70 bg-white/75 p-4 dark:border-white/8 dark:bg-white/[0.03]">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-lg font-semibold capitalize text-slate-950 dark:text-[var(--cv-text)]">{monthLabel}</p>
@@ -205,20 +205,20 @@ export default function InterviewsTab(): JSX.Element {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
-                className="app-button-secondary inline-flex h-10 w-10 items-center justify-center rounded-2xl"
+                className="app-button-secondary inline-flex h-10 w-10 items-center justify-center rounded-[9px]"
                 aria-label={t('crm.interviews.previousMonth')}
               >
                 <ChevronLeftIcon className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setCurrentMonth(startOfMonth(new Date()))}
-                className="app-button-secondary rounded-2xl px-3 py-2 text-sm font-medium"
+                className="app-button-secondary rounded-[9px] px-3 py-2 text-sm font-medium"
               >
                 {t('crm.interviews.today')}
               </button>
               <button
                 onClick={() => setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
-                className="app-button-secondary inline-flex h-10 w-10 items-center justify-center rounded-2xl"
+                className="app-button-secondary inline-flex h-10 w-10 items-center justify-center rounded-[9px]"
                 aria-label={t('crm.interviews.nextMonth')}
               >
                 <ChevronRightIcon className="h-4 w-4" />
@@ -244,9 +244,9 @@ export default function InterviewsTab(): JSX.Element {
                 <button
                   key={key}
                   onClick={() => setSelectedDate(day)}
-                  className={`min-h-32 rounded-[1.35rem] border p-2 text-left transition-all ${
+                  className={`min-h-28 rounded-[9px] border p-2 text-left transition-all ${
                     isSelected
-                      ? 'border-[var(--cv-primary)] bg-blue-50 shadow-[0_20px_40px_-32px_rgba(37,99,235,0.45)] dark:bg-blue-500/10'
+                      ? 'border-[var(--cv-primary)] bg-[#ede9ff] shadow-[0_18px_36px_-32px_rgba(98,70,234,0.45)] dark:bg-[#263052]'
                       : 'border-slate-200/70 bg-white/80 hover:border-slate-300 dark:border-white/8 dark:bg-white/[0.03] dark:hover:border-white/15'
                   } ${!isCurrentMonth ? 'opacity-45' : ''}`}
                 >
@@ -271,7 +271,7 @@ export default function InterviewsTab(): JSX.Element {
                     {dayInterviews.slice(0, 3).map((interview) => (
                       <div
                         key={interview.id}
-                        className="rounded-2xl bg-slate-100/90 px-2.5 py-2 text-xs text-slate-700 ring-1 ring-slate-200/80 dark:bg-white/[0.04] dark:text-[var(--cv-text)] dark:ring-white/10"
+                        className="rounded-[9px] bg-slate-100/90 px-2.5 py-2 text-xs text-slate-700 ring-1 ring-slate-200/80 dark:bg-white/[0.04] dark:text-[var(--cv-text)] dark:ring-white/10"
                       >
                         <div className="font-semibold">
                           {new Intl.DateTimeFormat(isEnglish ? 'en-US' : 'fr-FR', {
@@ -296,9 +296,9 @@ export default function InterviewsTab(): JSX.Element {
           </div>
         </div>
 
-        <aside className="cv-card rounded-[1.75rem] border border-slate-200/70 bg-white/75 p-4 dark:border-white/8 dark:bg-white/[0.03]">
+        <aside className="cv-card rounded-[13px] border border-slate-200/70 bg-white/75 p-4 dark:border-white/8 dark:bg-white/[0.03]">
           <div className="mb-4 flex items-center gap-3">
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-[1.1rem] bg-blue-50 text-[var(--cv-primary)] ring-1 ring-blue-100 dark:bg-blue-500/10 dark:ring-blue-500/20">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-[9px] bg-[#ede9ff] text-[var(--cv-primary)] ring-1 ring-purple-100 dark:bg-[#263052] dark:ring-purple-500/20">
               <CalendarDaysIcon className="h-5 w-5" />
             </span>
             <div>
@@ -315,11 +315,11 @@ export default function InterviewsTab(): JSX.Element {
           </div>
 
           {loading ? (
-            <div className="rounded-[1.5rem] border border-dashed border-slate-200/80 px-4 py-10 text-center text-sm text-slate-500 dark:border-white/10 dark:text-[var(--cv-muted)]">
+            <div className="rounded-[13px] border border-dashed border-slate-200/80 px-4 py-10 text-center text-sm text-slate-500 dark:border-white/10 dark:text-[var(--cv-muted)]">
               {t('crm.interviews.loading')}
             </div>
           ) : selectedDayInterviews.length === 0 ? (
-            <div className="rounded-[1.5rem] border border-dashed border-slate-200/80 px-4 py-10 text-center text-sm text-slate-500 dark:border-white/10 dark:text-[var(--cv-muted)]">
+            <div className="rounded-[13px] border border-dashed border-slate-200/80 px-4 py-10 text-center text-sm text-slate-500 dark:border-white/10 dark:text-[var(--cv-muted)]">
               {t('crm.interviews.emptyDay')}
             </div>
           ) : (
@@ -327,7 +327,7 @@ export default function InterviewsTab(): JSX.Element {
               {selectedDayInterviews.map((interview) => (
                 <article
                   key={interview.id}
-                  className="rounded-[1.5rem] border border-slate-200/70 bg-white/85 p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.2)] dark:border-white/8 dark:bg-[color:color-mix(in_srgb,var(--cv-panel-start)_90%,black)]"
+                  className="rounded-[13px] border border-slate-200/70 bg-white/85 p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.2)] dark:border-white/8 dark:bg-[color:color-mix(in_srgb,var(--cv-panel-start)_90%,black)]"
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${getInterviewTypeTone(interview.interview_type)}`}>
@@ -376,7 +376,7 @@ export default function InterviewsTab(): JSX.Element {
                         href={interview.meeting_link}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-2 text-[var(--cv-primary)] hover:text-blue-500"
+                        className="inline-flex items-center gap-2 text-[var(--cv-primary)] hover:text-[#6246ea] dark:hover:text-[#c9ccff]"
                       >
                         <VideoCameraIcon className="h-4 w-4" />
                         {t('crm.interviews.openMeeting')}

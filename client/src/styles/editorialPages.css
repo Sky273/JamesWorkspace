@@ -918,6 +918,366 @@
   margin-bottom: 1.25rem !important;
 }
 
+/* CRM compact direction aligned with the CVtheque operational style. */
+.crm-compact-shell {
+  --cv-surface-base-start: #f3f2ef;
+  --cv-surface-base-end: #f3f2ef;
+  --cv-panel-start: #ffffff;
+  --cv-panel-end: #ffffff;
+  --cv-card-start: #ffffff;
+  --cv-card-end: #ffffff;
+  --cv-outline: #dedbe8;
+  --cv-outline-strong: rgba(98, 70, 234, 0.24);
+  --cv-shadow: rgba(26, 22, 53, 0.06);
+  --cv-shadow-strong: rgba(26, 22, 53, 0.12);
+  --cv-text: #1a1635;
+  --cv-muted: #6f6a80;
+  --cv-kicker-text: #8f8a9d;
+  --cv-primary: #6246ea;
+  --cv-primary-strong: #5236d6;
+  --cv-primary-soft: #ede9ff;
+  --cv-ghost-bg: #ffffff;
+  --cv-ghost-hover: #ede9ff;
+  --cv-search-input-bg: #ffffff;
+  --cv-search-input-border: #dedbe8;
+  background: #f3f2ef;
+  color: var(--cv-text);
+}
+
+.dark .crm-compact-shell {
+  --cv-surface-base-start: #111827;
+  --cv-surface-base-end: #111827;
+  --cv-panel-start: #182235;
+  --cv-panel-end: #182235;
+  --cv-card-start: #182235;
+  --cv-card-end: #182235;
+  --cv-outline: rgba(255, 255, 255, 0.1);
+  --cv-outline-strong: rgba(201, 204, 255, 0.26);
+  --cv-shadow: rgba(0, 0, 0, 0.22);
+  --cv-shadow-strong: rgba(0, 0, 0, 0.3);
+  --cv-text: #e5e7eb;
+  --cv-muted: #a3aac4;
+  --cv-kicker-text: #a3aac4;
+  --cv-primary: #c9ccff;
+  --cv-primary-strong: #8f95ff;
+  --cv-primary-soft: rgba(201, 204, 255, 0.12);
+  --cv-ghost-bg: #111827;
+  --cv-ghost-hover: #263052;
+  --cv-search-input-bg: #111827;
+  --cv-search-input-border: rgba(255, 255, 255, 0.1);
+}
+
+.crm-compact-shell.cv-surface,
+.crm-compact-shell .cv-surface,
+.crm-compact-shell.app-page-shell {
+  background: #f3f2ef !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.dark .crm-compact-shell.cv-surface,
+.dark .crm-compact-shell .cv-surface,
+.dark .crm-compact-shell.app-page-shell {
+  background: #111827 !important;
+}
+
+.crm-compact-shell .cv-panel,
+.crm-compact-shell .cv-card,
+.crm-compact-shell .lux-card,
+.crm-compact-shell .section-shell,
+.crm-compact-shell .cv-search-shell {
+  background: #ffffff !important;
+  border: 1px solid #dedbe8 !important;
+  border-radius: 13px !important;
+  box-shadow: 0 1px 3px rgba(26, 22, 53, 0.05), 0 4px 14px rgba(26, 22, 53, 0.06) !important;
+}
+
+.dark .crm-compact-shell .cv-panel,
+.dark .crm-compact-shell .cv-card,
+.dark .crm-compact-shell .lux-card,
+.dark .crm-compact-shell .section-shell,
+.dark .crm-compact-shell .cv-search-shell {
+  background: #182235 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.crm-compact-shell .cv-card:hover,
+.crm-compact-shell .lux-card:hover {
+  border-color: rgba(98, 70, 234, 0.22) !important;
+  box-shadow: 0 8px 28px rgba(26, 22, 53, 0.11) !important;
+  transform: translateY(-1px);
+}
+
+.crm-compact-shell .app-button-primary,
+.crm-compact-shell .app-primary-action,
+.crm-compact-shell .cv-gradient-button {
+  background: #6246ea !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.crm-compact-shell .app-button-primary:hover,
+.crm-compact-shell .app-primary-action:hover,
+.crm-compact-shell .cv-gradient-button:hover {
+  background: #5236d6 !important;
+  color: #ffffff !important;
+  filter: none !important;
+}
+
+.crm-compact-shell .app-button-secondary,
+.crm-compact-shell .cv-ghost-button {
+  background: #ffffff !important;
+  color: #6f6a80 !important;
+  border: 1px solid #dedbe8 !important;
+  box-shadow: none !important;
+}
+
+.dark .crm-compact-shell .app-button-secondary,
+.dark .crm-compact-shell .cv-ghost-button {
+  background: #111827 !important;
+  color: #d1d5db !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.crm-compact-shell input,
+.crm-compact-shell select,
+.crm-compact-shell textarea,
+.crm-compact-shell .cv-search-input {
+  background: #ffffff !important;
+  border-color: #dedbe8 !important;
+  color: #1a1635 !important;
+  box-shadow: none !important;
+}
+
+.dark .crm-compact-shell input,
+.dark .crm-compact-shell select,
+.dark .crm-compact-shell textarea,
+.dark .crm-compact-shell .cv-search-input {
+  background: #111827 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #e5e7eb !important;
+}
+
+.crm-compact-shell input:focus,
+.crm-compact-shell select:focus,
+.crm-compact-shell textarea:focus {
+  border-color: #6246ea !important;
+  box-shadow: 0 0 0 3px rgba(98, 70, 234, 0.18) !important;
+  outline: none !important;
+}
+
+.crm-compact-shell .cv-kicker {
+  color: var(--cv-kicker-text);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+}
+
+/* Settings compact direction aligned with CVtheque form density. */
+.settings-compact-shell {
+  --cv-surface-base-start: #f3f2ef;
+  --cv-surface-base-end: #f3f2ef;
+  --cv-panel-start: #ffffff;
+  --cv-panel-end: #ffffff;
+  --cv-card-start: #ffffff;
+  --cv-card-end: #ffffff;
+  --cv-outline: #dedbe8;
+  --cv-outline-strong: rgba(98, 70, 234, 0.24);
+  --cv-shadow: rgba(26, 22, 53, 0.06);
+  --cv-text: #1a1635;
+  --cv-muted: #6f6a80;
+  --cv-primary: #6246ea;
+  --cv-primary-strong: #5236d6;
+  --cv-primary-soft: #ede9ff;
+  background: #f3f2ef;
+  color: var(--cv-text);
+}
+
+.dark .settings-compact-shell {
+  --cv-surface-base-start: #111827;
+  --cv-surface-base-end: #111827;
+  --cv-panel-start: #182235;
+  --cv-panel-end: #182235;
+  --cv-card-start: #182235;
+  --cv-card-end: #182235;
+  --cv-outline: rgba(255, 255, 255, 0.1);
+  --cv-outline-strong: rgba(201, 204, 255, 0.26);
+  --cv-shadow: rgba(0, 0, 0, 0.22);
+  --cv-text: #e5e7eb;
+  --cv-muted: #a3aac4;
+  --cv-primary: #c9ccff;
+  --cv-primary-strong: #8f95ff;
+  --cv-primary-soft: rgba(201, 204, 255, 0.12);
+  background: #111827;
+}
+
+.settings-compact-shell.cv-surface,
+.settings-compact-shell .cv-surface {
+  background: #f3f2ef !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.dark .settings-compact-shell.cv-surface,
+.dark .settings-compact-shell .cv-surface {
+  background: #111827 !important;
+}
+
+.settings-compact-shell .section-shell,
+.settings-compact-shell .cv-panel,
+.settings-compact-shell .cv-card,
+.settings-compact-shell [class*='rounded-3xl'],
+.settings-compact-shell [class*='rounded-2xl'] {
+  border-radius: 13px !important;
+}
+
+.settings-compact-shell .section-shell,
+.settings-compact-shell .cv-panel,
+.settings-compact-shell .cv-card {
+  background: #ffffff !important;
+  border: 1px solid #dedbe8 !important;
+  box-shadow: 0 1px 3px rgba(26, 22, 53, 0.05), 0 4px 14px rgba(26, 22, 53, 0.06) !important;
+}
+
+.dark .settings-compact-shell .section-shell,
+.dark .settings-compact-shell .cv-panel,
+.dark .settings-compact-shell .cv-card {
+  background: #182235 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.settings-compact-shell input,
+.settings-compact-shell select,
+.settings-compact-shell textarea {
+  background: #ffffff !important;
+  border: 1px solid #dedbe8 !important;
+  border-radius: 9px !important;
+  color: #1a1635 !important;
+  box-shadow: none !important;
+}
+
+.dark .settings-compact-shell input,
+.dark .settings-compact-shell select,
+.dark .settings-compact-shell textarea {
+  background: #111827 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #e5e7eb !important;
+}
+
+.settings-compact-shell input:focus,
+.settings-compact-shell select:focus,
+.settings-compact-shell textarea:focus {
+  border-color: #6246ea !important;
+  box-shadow: 0 0 0 3px rgba(98, 70, 234, 0.18) !important;
+  outline: none !important;
+}
+
+.settings-compact-shell .bg-blue-50,
+.settings-compact-shell .bg-indigo-50,
+.settings-compact-shell .bg-gray-50,
+.settings-compact-shell .bg-slate-50 {
+  background-color: #f8f8f7 !important;
+}
+
+.settings-compact-shell .bg-blue-100,
+.settings-compact-shell .bg-indigo-100,
+.settings-compact-shell .bg-purple-100,
+.settings-compact-shell .bg-blue-900,
+.settings-compact-shell .bg-blue-500\/10,
+.settings-compact-shell .bg-blue-950\/20,
+.settings-compact-shell .bg-blue-950\/40,
+.settings-compact-shell .bg-blue-900\/20,
+.settings-compact-shell .bg-blue-900\/30,
+.settings-compact-shell .bg-blue-900\/50,
+.settings-compact-shell .hover\:bg-blue-100:hover,
+.settings-compact-shell .hover\:bg-blue-500\/20:hover {
+  background-color: #ede9ff !important;
+}
+
+.settings-compact-shell .bg-blue-600,
+.settings-compact-shell .bg-blue-500,
+.settings-compact-shell .hover\:bg-blue-700:hover {
+  background-color: #6246ea !important;
+}
+
+.settings-compact-shell .text-blue-400,
+.settings-compact-shell .text-blue-500,
+.settings-compact-shell .text-blue-600,
+.settings-compact-shell .text-blue-700,
+.settings-compact-shell .text-blue-800,
+.settings-compact-shell .text-indigo-500,
+.settings-compact-shell .text-indigo-600,
+.settings-compact-shell .text-blue-200,
+.settings-compact-shell .text-blue-300 {
+  color: #6246ea !important;
+}
+
+.dark .settings-compact-shell .text-blue-400,
+.dark .settings-compact-shell .text-blue-500,
+.dark .settings-compact-shell .text-blue-600,
+.dark .settings-compact-shell .text-blue-700,
+.dark .settings-compact-shell .text-blue-800,
+.dark .settings-compact-shell .text-indigo-500,
+.dark .settings-compact-shell .text-indigo-600,
+.dark .settings-compact-shell .text-blue-200,
+.dark .settings-compact-shell .text-blue-300 {
+  color: #c9ccff !important;
+}
+
+.settings-compact-shell .border-blue-200,
+.settings-compact-shell .border-blue-300,
+.settings-compact-shell .border-blue-400,
+.settings-compact-shell .border-blue-500\/40,
+.settings-compact-shell .border-blue-600,
+.settings-compact-shell .border-blue-800,
+.settings-compact-shell .border-blue-900\/60,
+.settings-compact-shell .border-blue-900\/70,
+.settings-compact-shell .border-blue-200\/80,
+.settings-compact-shell .border-indigo-200,
+.settings-compact-shell .border-gray-200,
+.settings-compact-shell .border-slate-200 {
+  border-color: #dedbe8 !important;
+}
+
+.dark .settings-compact-shell .bg-gray-700,
+.dark .settings-compact-shell .bg-gray-800,
+.dark .settings-compact-shell .bg-gray-900\/40,
+.dark .settings-compact-shell .bg-slate-950\/40,
+.dark .settings-compact-shell .bg-slate-900\/50,
+.dark .settings-compact-shell .bg-slate-900\/60 {
+  background-color: #111827 !important;
+}
+
+.settings-compact-shell .app-button-primary,
+.settings-compact-shell .app-primary-action,
+.settings-compact-shell .cv-gradient-button {
+  background: #6246ea !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.settings-compact-shell .app-button-secondary,
+.settings-compact-shell .cv-ghost-button {
+  background: #ffffff !important;
+  border: 1px solid #dedbe8 !important;
+  color: #6f6a80 !important;
+  box-shadow: none !important;
+}
+
+.dark .settings-compact-shell .app-button-secondary,
+.dark .settings-compact-shell .cv-ghost-button {
+  background: #111827 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #d1d5db !important;
+}
+
+.settings-compact-shell h2,
+.settings-compact-shell h3,
+.settings-compact-shell h4 {
+  color: var(--cv-text) !important;
+}
+
 /* Missions standalone visual direction. */
 .missions-editorial-shell {
   --cv-surface-base-start: #f3f2ef;

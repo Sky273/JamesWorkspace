@@ -29,15 +29,15 @@ export default function DealCard({ deal, index, onView, onEdit, onDelete }: Deal
       key={deal.id}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow"
+      transition={{ delay: index * 0.03 }}
+      className="cv-card rounded-[13px] transition-all"
     >
-      <div className="p-4">
-        <div className="flex items-start justify-between mb-3">
+      <div className="p-3.5">
+        <div className="mb-3 flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{deal.title}</h3>
-            <div className="flex items-center gap-2 mt-1">
-              <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${STATUS_CONFIG[deal.status].color}`}>
+            <h3 className="truncate text-sm font-semibold text-gray-950 dark:text-gray-100">{deal.title}</h3>
+            <div className="mt-1.5 flex items-center gap-2">
+              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS_CONFIG[deal.status].color}`}>
                 {STATUS_CONFIG[deal.status].label}
               </span>
               <span className={`text-xs ${PRIORITY_CONFIG[deal.priority].color}`} title={PRIORITY_CONFIG[deal.priority].label}>
@@ -48,14 +48,14 @@ export default function DealCard({ deal, index, onView, onEdit, onDelete }: Deal
         </div>
 
         {deal.client_name && (
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <BuildingOfficeIcon className="w-4 h-4 flex-shrink-0" />
+          <div className="mb-1.5 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <BuildingOfficeIcon className="h-4 w-4 flex-shrink-0" />
             <span className="truncate">{deal.client_name}</span>
             {deal.client_type && (
               <span className={`text-xs px-1.5 py-0.5 rounded ${
                 deal.client_type === 'client'
                   ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                  : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                  : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
               }`}>
                 {deal.client_type === 'client' ? t('clients.types.client') : t('clients.types.prospect')}
               </span>
@@ -64,8 +64,8 @@ export default function DealCard({ deal, index, onView, onEdit, onDelete }: Deal
         )}
 
         {deal.contact_name && (
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <UserIcon className="w-4 h-4 flex-shrink-0" />
+          <div className="mb-1.5 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <UserIcon className="h-4 w-4 flex-shrink-0" />
             <span className="truncate">
               {deal.contact_name}
               {deal.contact_role && <span className="text-gray-400"> • {deal.contact_role}</span>}
@@ -73,20 +73,20 @@ export default function DealCard({ deal, index, onView, onEdit, onDelete }: Deal
           </div>
         )}
 
-        <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
+        <div className="mb-2.5 flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
           <div className="flex items-center gap-1">
-            <DocumentTextIcon className="w-4 h-4 flex-shrink-0" />
+            <DocumentTextIcon className="h-4 w-4 flex-shrink-0" />
             <span>{deal.resumes_count} CV(s)</span>
           </div>
           <div className="flex items-center gap-1">
-            <BriefcaseIcon className="w-4 h-4 flex-shrink-0" />
+            <BriefcaseIcon className="h-4 w-4 flex-shrink-0" />
             <span>{deal.missions_count || 0} {t('crm.deals.missions')}</span>
           </div>
         </div>
 
         {hasBudget && (
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <CurrencyEuroIcon className="w-4 h-4 flex-shrink-0" />
+          <div className="mb-2 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <CurrencyEuroIcon className="h-4 w-4 flex-shrink-0" />
             <span className="truncate">
               {deal.budget_min != null && deal.budget_max != null
                 ? `${deal.budget_min.toLocaleString()} - ${deal.budget_max.toLocaleString()} €`
@@ -96,32 +96,32 @@ export default function DealCard({ deal, index, onView, onEdit, onDelete }: Deal
         )}
 
         {deal.notes && (
-          <p className="mb-3 line-clamp-2 text-sm text-gray-600 dark:text-gray-400">
+          <p className="mb-2.5 line-clamp-2 rounded-[9px] bg-[#f8f8f7] px-3 py-2 text-sm text-gray-600 dark:bg-white/[0.04] dark:text-gray-400">
             {deal.notes}
           </p>
         )}
 
-        <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
+        <div className="flex items-center justify-end gap-1.5 border-t border-[#e4e4e7] pt-2.5 dark:border-white/10">
           <button
             onClick={() => onView(deal)}
-            className="p-2 text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 transition-colors"
+            className="rounded-[9px] p-2 text-gray-500 transition-colors hover:bg-emerald-50 hover:text-emerald-600 dark:text-gray-400 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-300"
             title={t('common.view')}
           >
-            <EyeIcon className="w-5 h-5" />
+            <EyeIcon className="h-4 w-4" />
           </button>
           <button
             onClick={() => onEdit(deal)}
-            className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+            className="rounded-[9px] p-2 text-gray-500 transition-colors hover:bg-[#ede9ff] hover:text-[#6246ea] dark:text-gray-400 dark:hover:bg-[#263052] dark:hover:text-[#c9ccff]"
             title={t('common.edit')}
           >
-            <PencilSquareIcon className="w-5 h-5" />
+            <PencilSquareIcon className="h-4 w-4" />
           </button>
           <button
             onClick={() => onDelete(deal)}
-            className="p-2 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 transition-colors"
+            className="rounded-[9px] p-2 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-500/10 dark:hover:text-red-300"
             title={t('common.delete')}
           >
-            <TrashIcon className="w-5 h-5" />
+            <TrashIcon className="h-4 w-4" />
           </button>
         </div>
       </div>

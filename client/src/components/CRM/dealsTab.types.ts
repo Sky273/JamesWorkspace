@@ -59,7 +59,7 @@ export interface DealsTabProps {
 }
 
 export const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  open: { label: 'En cours', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
+  open: { label: 'En cours', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' },
   won: { label: 'Gagnée', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' },
   lost: { label: 'Perdue', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' },
   on_hold: { label: 'En attente', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' }
@@ -67,7 +67,7 @@ export const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 
 export const PRIORITY_CONFIG: Record<string, { label: string; color: string; icon: string }> = {
   low: { label: 'Basse', color: 'text-gray-500', icon: '○' },
-  medium: { label: 'Moyenne', color: 'text-blue-500', icon: '●' },
+  medium: { label: 'Moyenne', color: 'text-[#6246ea]', icon: '●' },
   high: { label: 'Haute', color: 'text-orange-500', icon: '●●' },
   urgent: { label: 'Urgente', color: 'text-red-500', icon: '●●●' }
 };

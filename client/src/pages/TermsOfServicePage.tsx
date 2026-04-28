@@ -4,7 +4,7 @@
 
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { ArrowLeftIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 
 const TermsOfServicePage = (): JSX.Element => {
   const { t } = useTranslation();
@@ -35,9 +35,8 @@ const TermsOfServicePage = (): JSX.Element => {
         </Link>
 
         <div className="rounded-[13px] border border-[#e4e4e7] bg-white p-8 shadow-[0_1px_3px_rgba(0,0,0,0.05),0_4px_14px_rgba(0,0,0,0.07)] dark:border-white/10 dark:bg-[#182235] md:p-10">
-          <div className="flex items-center gap-3 mb-8">
-            <DocumentTextIcon className="h-10 w-10 text-[#6b4eff] dark:text-[#c9ccff]" />
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+          <div className="mb-[22px]">
+            <h1 className="cv-display text-[25px] font-bold leading-tight text-[var(--cv-text)]">
               {t('legal.terms.title')}
             </h1>
           </div>

@@ -61,7 +61,7 @@ const ClientDetailModal = ({
   const getTypeColor = (type: string): string => {
     return type === 'client' 
       ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-      : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+      : 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
   };
 
   const getStatusColor = (status: string): string => {
@@ -69,7 +69,7 @@ const ClientDetailModal = ({
       case 'accepted': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
       case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
       case 'viewed': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
-      case 'sent': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+      case 'sent': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
     }
   };
@@ -81,12 +81,12 @@ const ClientDetailModal = ({
       title={client.name}
       size="xl"
     >
-      <div className="space-y-6">
+      <div className="space-y-5">
         {/* Header */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
-              <BuildingOfficeIcon className="w-8 h-8 text-gray-600 dark:text-gray-400" />
+            <div className="rounded-[9px] bg-[#f8f8f7] p-3 dark:bg-[#111827]">
+              <BuildingOfficeIcon className="h-7 w-7 text-gray-600 dark:text-gray-400" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -103,7 +103,7 @@ const ClientDetailModal = ({
           <div className="flex items-center gap-2">
             <button
               onClick={onRefresh}
-              className="btn btn-secondary flex items-center gap-2 px-3 py-2 text-sm"
+              className="app-button-secondary flex items-center gap-2 rounded-[9px] px-3 py-2 text-sm"
               title={t('common.refresh')}
               aria-label={t('common.refresh')}
               disabled={refreshing}
@@ -115,14 +115,14 @@ const ClientDetailModal = ({
                 onClose();
                 navigate(`/clients?tab=deals&clientId=${client.id}`);
               }}
-              className="app-primary-action flex items-center gap-2 px-3 py-2 text-sm"
+              className="app-primary-action flex items-center gap-2 rounded-[9px] px-3 py-2 text-sm"
             >
               <FolderIcon className="w-4 h-4" />
               {t('crm.tabs.deals')}
             </button>
             <button
               onClick={onEditClient}
-              className="btn btn-secondary flex items-center gap-2 px-3 py-2 text-sm"
+              className="app-button-secondary flex items-center gap-2 rounded-[9px] px-3 py-2 text-sm"
             >
               <PencilSquareIcon className="w-4 h-4" />
               {t('common.edit')}
@@ -131,11 +131,11 @@ const ClientDetailModal = ({
         </div>
 
         {/* Info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+        <div className="grid grid-cols-1 gap-3 rounded-[13px] bg-[#f8f8f7] p-4 dark:bg-[#111827] md:grid-cols-2">
           {client.website && (
             <div className="flex items-center gap-2 text-sm">
               <GlobeAltIcon className="w-5 h-5 text-gray-400" />
-              <a href={client.website} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+              <a href={client.website} target="_blank" rel="noopener noreferrer" className="text-[#6246ea] hover:underline dark:text-[#c9ccff]">
                 {client.website}
               </a>
             </div>
@@ -161,7 +161,7 @@ const ClientDetailModal = ({
               onClick={() => setActiveTab('contacts')}
               className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'contacts'
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  ? 'border-[#6246ea] text-[#6246ea] dark:text-[#c9ccff]'
                   : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
               }`}
             >
@@ -174,7 +174,7 @@ const ClientDetailModal = ({
               onClick={() => setActiveTab('submissions')}
               className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'submissions'
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  ? 'border-[#6246ea] text-[#6246ea] dark:text-[#c9ccff]'
                   : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400'
               }`}
             >
@@ -196,7 +196,7 @@ const ClientDetailModal = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={onRefresh}
-                  className="btn btn-secondary flex items-center gap-2 px-3 py-2 text-sm"
+                  className="app-button-secondary flex items-center gap-2 rounded-[9px] px-3 py-2 text-sm"
                   title={t('common.refresh')}
                   aria-label={`${t('common.refresh')} ${t('clients.tabs.contacts')}`}
                   disabled={refreshing}
@@ -205,7 +205,7 @@ const ClientDetailModal = ({
                 </button>
                 <button
                   onClick={onAddContact}
-                  className="btn btn-secondary flex items-center gap-2 px-3 py-2 text-sm"
+                  className="app-button-secondary flex items-center gap-2 rounded-[9px] px-3 py-2 text-sm"
                 >
                   <PlusIcon className="w-4 h-4" />
                   {t('clients.addContact')}
@@ -218,10 +218,10 @@ const ClientDetailModal = ({
                 {client.contacts.map((contact) => (
                   <div 
                     key={contact.id} 
-                    className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+                    className="flex items-center justify-between rounded-[13px] border border-[#dedbe8] bg-white p-3 dark:border-white/10 dark:bg-[#111827]"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full">
+                      <div className="rounded-[9px] bg-[#f8f8f7] p-2 dark:bg-[#182235]">
                         <UserGroupIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                       </div>
                       <div>
@@ -236,7 +236,7 @@ const ClientDetailModal = ({
                         )}
                         <div className="flex items-center gap-4 mt-1">
                           {contact.email && (
-                            <a href={`mailto:${contact.email}`} className="flex items-center gap-1 text-sm text-blue-500 hover:underline">
+                            <a href={`mailto:${contact.email}`} className="flex items-center gap-1 text-sm text-[#6246ea] hover:underline dark:text-[#c9ccff]">
                               <EnvelopeIcon className="w-4 h-4" />
                               {contact.email}
                             </a>
@@ -288,7 +288,7 @@ const ClientDetailModal = ({
                 {client.recentSubmissions.map((submission) => (
                   <div 
                     key={submission.id} 
-                    className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+                    className="flex items-center justify-between rounded-[13px] border border-[#dedbe8] bg-white p-3 dark:border-white/10 dark:bg-[#111827]"
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2">

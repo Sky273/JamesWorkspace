@@ -14,17 +14,17 @@ export default function SettingsActionsFooter({
   t
 }: SettingsActionsFooterProps): JSX.Element {
   return (
-    <div className="mt-8 flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
+    <div className="mt-6 flex items-center justify-between border-t border-[#dedbe8] pt-4 dark:border-white/10">
       <button
         onClick={onReset}
-        className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+        className="app-button-secondary rounded-[9px] px-4 py-2 text-sm font-medium"
       >
         {t('settings.reset')}
       </button>
       <button
         onClick={onSave}
         disabled={saving}
-        className={`app-primary-action px-6 py-2 font-medium ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
+        className={`app-primary-action rounded-[9px] px-5 py-2 text-sm font-medium ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         {saving ? t('settings.saving') : t('settings.save')}
       </button>

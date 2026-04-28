@@ -354,7 +354,7 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <ArrowPathIcon className="w-8 h-8 animate-spin text-blue-500" />
+        <ArrowPathIcon className="h-8 w-8 animate-spin text-[#6246ea] dark:text-[#c9ccff]" />
       </div>
     );
   }
@@ -366,31 +366,31 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
   const gmailConfigWarning = !mailConfig.googleClientConfigured;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
-          <ShieldCheckIcon className="w-6 h-6 text-green-600" />
+        <h2 className="mb-1 flex items-center gap-2 text-base font-semibold text-[var(--cv-text)]">
+          <ShieldCheckIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-300" />
           {t('settings.gdpr.title')}
         </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-sm text-[var(--cv-muted)]">
           {t('settings.gdpr.description')}
         </p>
       </div>
 
-      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+      <div className="rounded-[13px] border border-[#dedbe8] bg-[#f8f8f7] p-4 dark:border-white/10 dark:bg-[#111827]">
         <div className="flex items-center justify-between gap-4 mb-6">
           <div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+            <h3 className="text-sm font-semibold text-[var(--cv-text)]">
               {t('settings.gdpr.mailSystemTitle')}
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <p className="mt-1 text-sm text-[var(--cv-muted)]">
               {t('settings.gdpr.mailSystemDescription')}
             </p>
           </div>
           <button
             onClick={handleSaveConfig}
             disabled={savingConfig}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+            className="app-primary-action flex items-center gap-2 rounded-[9px] px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             {savingConfig ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : null}
             {t('settings.gdpr.saveConfig')}
@@ -399,11 +399,11 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('settings.gdpr.providerLabel')}</span>
+            <span className="text-sm font-medium text-[var(--cv-text)]">{t('settings.gdpr.providerLabel')}</span>
             <select
               value={formState.provider}
               onChange={(event) => handleConfigFieldChange('provider', event.target.value as GdprMailConfigForm['provider'])}
-              className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+              className="rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-[var(--cv-text)] dark:border-white/10 dark:bg-[#111827] dark:text-gray-100"
             >
               <option value="gmail">{t('settings.gdpr.providers.gmail')}</option>
               <option value="smtp">{t('settings.gdpr.providers.smtp')}</option>
@@ -411,87 +411,87 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
             </select>
           </label>
 
-          <div className="rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2">
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('settings.gdpr.currentRuntimeLabel')}</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 dark:border-white/10 dark:bg-[#182235]">
+            <p className="text-sm font-medium text-[var(--cv-text)]">{t('settings.gdpr.currentRuntimeLabel')}</p>
+            <p className="text-sm text-[var(--cv-muted)]">
               {providerLabel} • {mailConfig.source === 'database' ? t('settings.gdpr.configSource.database') : t('settings.gdpr.configSource.environment')}
             </p>
           </div>
 
           <label className="flex flex-col gap-1 md:col-span-2">
-            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('settings.gdpr.gmailRedirectUriLabel')}</span>
+            <span className="text-sm font-medium text-[var(--cv-text)]">{t('settings.gdpr.gmailRedirectUriLabel')}</span>
             <input
               type="url"
               value={formState.googleGdprRedirectUri}
               onChange={(event) => handleConfigFieldChange('googleGdprRedirectUri', event.target.value)}
-              className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+              className="rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-[var(--cv-text)] dark:border-white/10 dark:bg-[#111827] dark:text-gray-100"
             />
           </label>
 
           {showSmtpFields ? (
             <>
               <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('settings.gdpr.smtp.host')}</span>
+                <span className="text-sm font-medium text-[var(--cv-text)]">{t('settings.gdpr.smtp.host')}</span>
                 <input
                   type="text"
                   value={formState.smtpHost}
                   onChange={(event) => handleConfigFieldChange('smtpHost', event.target.value)}
-                  className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+                  className="rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-[var(--cv-text)] dark:border-white/10 dark:bg-[#111827] dark:text-gray-100"
                 />
               </label>
 
               <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('settings.gdpr.smtp.port')}</span>
+                <span className="text-sm font-medium text-[var(--cv-text)]">{t('settings.gdpr.smtp.port')}</span>
                 <input
                   type="number"
                   value={formState.smtpPort}
                   onChange={(event) => handleConfigFieldChange('smtpPort', Number(event.target.value))}
-                  className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+                  className="rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-[var(--cv-text)] dark:border-white/10 dark:bg-[#111827] dark:text-gray-100"
                 />
               </label>
 
               <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('settings.gdpr.smtp.user')}</span>
+                <span className="text-sm font-medium text-[var(--cv-text)]">{t('settings.gdpr.smtp.user')}</span>
                 <input
                   type="text"
                   value={formState.smtpUser}
                   onChange={(event) => handleConfigFieldChange('smtpUser', event.target.value)}
-                  className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+                  className="rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-[var(--cv-text)] dark:border-white/10 dark:bg-[#111827] dark:text-gray-100"
                 />
               </label>
 
               <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('settings.gdpr.smtp.password')}</span>
+                <span className="text-sm font-medium text-[var(--cv-text)]">{t('settings.gdpr.smtp.password')}</span>
                 <input
                   type="password"
                   value={formState.smtpPassword}
                   onChange={(event) => handleConfigFieldChange('smtpPassword', event.target.value)}
                   placeholder={mailConfig.hasSmtpPassword ? t('settings.gdpr.smtp.passwordPlaceholder') : ''}
-                  className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+                  className="rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-[var(--cv-text)] dark:border-white/10 dark:bg-[#111827] dark:text-gray-100"
                 />
               </label>
 
               <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('settings.gdpr.smtp.fromName')}</span>
+                <span className="text-sm font-medium text-[var(--cv-text)]">{t('settings.gdpr.smtp.fromName')}</span>
                 <input
                   type="text"
                   value={formState.smtpFromName}
                   onChange={(event) => handleConfigFieldChange('smtpFromName', event.target.value)}
-                  className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+                  className="rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-[var(--cv-text)] dark:border-white/10 dark:bg-[#111827] dark:text-gray-100"
                 />
               </label>
 
               <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('settings.gdpr.smtp.fromEmail')}</span>
+                <span className="text-sm font-medium text-[var(--cv-text)]">{t('settings.gdpr.smtp.fromEmail')}</span>
                 <input
                   type="email"
                   value={formState.smtpFromEmail}
                   onChange={(event) => handleConfigFieldChange('smtpFromEmail', event.target.value)}
-                  className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+                  className="rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-[var(--cv-text)] dark:border-white/10 dark:bg-[#111827] dark:text-gray-100"
                 />
               </label>
 
-              <div className="md:col-span-2 flex items-center gap-2 text-sm text-gray-900 dark:text-gray-100">
+              <div className="md:col-span-2 flex items-center gap-2 text-sm text-[var(--cv-text)]">
                 <SettingsSwitch
                   checked={formState.smtpSecure}
                   onChange={(checked) => handleConfigFieldChange('smtpSecure', checked)}
@@ -500,7 +500,7 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
                 <span>{t('settings.gdpr.smtp.secure')}</span>
               </div>
 
-              <div className="md:col-span-2 flex items-center gap-2 text-sm text-gray-900 dark:text-gray-100">
+              <div className="md:col-span-2 flex items-center gap-2 text-sm text-[var(--cv-text)]">
                 <SettingsSwitch
                   checked={formState.clearSmtpPassword}
                   onChange={(checked) => handleConfigFieldChange('clearSmtpPassword', checked)}
@@ -519,32 +519,32 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
         ) : null}
       </div>
 
-      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
-          <EnvelopeIcon className="w-5 h-5" />
+      <div className="rounded-[13px] border border-[#dedbe8] bg-[#f8f8f7] p-4 dark:border-white/10 dark:bg-[#111827]">
+        <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--cv-text)]">
+          <EnvelopeIcon className="h-4 w-4 text-[#6246ea] dark:text-[#c9ccff]" />
           {t('settings.gdpr.emailConfig')}
         </h3>
 
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
+          <div className="flex items-center justify-between rounded-[13px] border border-[#dedbe8] bg-white p-4 dark:border-white/10 dark:bg-[#182235]">
             <div className="flex items-center gap-3">
               {mailStatus?.connected ? (
-                <CheckCircleIcon className="w-8 h-8 text-green-500" />
+                <CheckCircleIcon className="h-7 w-7 text-green-500" />
               ) : (
-                <XCircleIcon className="w-8 h-8 text-gray-400" />
+                <XCircleIcon className="h-7 w-7 text-gray-400" />
               )}
               <div>
-                <p className="font-medium text-gray-900 dark:text-gray-100">
+                <p className="font-medium text-[var(--cv-text)]">
                   {mailStatus?.connected
                     ? t('settings.gdpr.connected')
                     : t('settings.gdpr.notConnected')}
                 </p>
                 {mailStatus?.email ? (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-[var(--cv-muted)]">
                     {mailStatus.email}
                   </p>
                 ) : null}
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-[var(--cv-muted)]">
                   {mailStatus?.managedByConfiguration
                     ? `${providerLabel} - ${t('settings.gdpr.configSource.server')}`
                     : providerLabel}
@@ -561,7 +561,7 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
               <button
                 onClick={handleTestSend}
                 disabled={testingSend}
-                className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 border border-blue-600 dark:border-blue-400 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-50"
+                className="app-button-secondary rounded-[9px] px-4 py-2 text-sm font-medium disabled:opacity-50"
               >
                 {testingSend ? (
                   <ArrowPathIcon className="w-4 h-4 animate-spin" />
@@ -573,7 +573,7 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
                 <button
                   onClick={handleDisconnect}
                   disabled={disconnecting}
-                  className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 border border-red-600 dark:border-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50"
+                  className="rounded-[9px] border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50 dark:border-red-500/40 dark:bg-[#111827] dark:text-red-300 dark:hover:bg-red-500/10"
                 >
                   {disconnecting ? (
                     <ArrowPathIcon className="w-4 h-4 animate-spin" />
@@ -586,7 +586,7 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
                 <button
                   onClick={handleConnect}
                   disabled={connecting}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                  className="app-primary-action flex items-center gap-2 rounded-[9px] px-4 py-2 text-sm font-medium disabled:opacity-50"
                 >
                   {connecting ? (
                     <ArrowPathIcon className="w-4 h-4 animate-spin" />
@@ -602,12 +602,12 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
+            className="rounded-[13px] border border-[#dedbe8] bg-white p-4 dark:border-white/10 dark:bg-[#182235]"
           >
-            <h4 className="font-medium text-blue-800 dark:text-blue-300 mb-2">
+            <h4 className="mb-2 font-semibold text-[var(--cv-text)]">
               {t('settings.gdpr.infoTitle')}
             </h4>
-            <ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1 list-disc list-inside">
+            <ul className="list-inside list-disc space-y-1 text-sm text-[var(--cv-muted)]">
               <li>{t('settings.gdpr.info1')}</li>
               <li>{t('settings.gdpr.info2')}</li>
               <li>{t('settings.gdpr.info3')}</li>
@@ -616,23 +616,23 @@ export const GdprTab = ({ t }: GdprTabProps): JSX.Element => {
         </div>
       </div>
 
-      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+      <div className="rounded-[13px] border border-[#dedbe8] bg-[#f8f8f7] p-4 dark:border-white/10 dark:bg-[#111827]">
+        <h3 className="mb-4 text-sm font-semibold text-[var(--cv-text)]">
           {t('settings.gdpr.consentSettings')}
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
-            <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.gdpr.tokenExpiry')}</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">14 {t('settings.gdpr.days')}</p>
+          <div className="rounded-[13px] border border-[#dedbe8] bg-white p-4 dark:border-white/10 dark:bg-[#182235]">
+            <p className="text-sm text-[var(--cv-muted)]">{t('settings.gdpr.tokenExpiry')}</p>
+            <p className="text-xl font-bold text-[var(--cv-text)]">14 {t('settings.gdpr.days')}</p>
           </div>
-          <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
-            <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.gdpr.retention')}</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">2 {t('settings.gdpr.years')}</p>
+          <div className="rounded-[13px] border border-[#dedbe8] bg-white p-4 dark:border-white/10 dark:bg-[#182235]">
+            <p className="text-sm text-[var(--cv-muted)]">{t('settings.gdpr.retention')}</p>
+            <p className="text-xl font-bold text-[var(--cv-text)]">2 {t('settings.gdpr.years')}</p>
           </div>
-          <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
-            <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.gdpr.reminder')}</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">7 {t('settings.gdpr.days')}</p>
+          <div className="rounded-[13px] border border-[#dedbe8] bg-white p-4 dark:border-white/10 dark:bg-[#182235]">
+            <p className="text-sm text-[var(--cv-muted)]">{t('settings.gdpr.reminder')}</p>
+            <p className="text-xl font-bold text-[var(--cv-text)]">7 {t('settings.gdpr.days')}</p>
           </div>
         </div>
       </div>

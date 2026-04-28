@@ -45,12 +45,12 @@ const WeightsTab = ({ formData, onInputChange, totalWeight, t }: WeightsTabProps
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+        <h2 className="mb-1 text-base font-semibold text-[var(--cv-text)]">
           {t('settings.weights.title')}
         </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+        <p className="text-sm text-[var(--cv-muted)]">
           {t('settings.weights.description')}
         </p>
       </div>
@@ -61,10 +61,10 @@ const WeightsTab = ({ formData, onInputChange, totalWeight, t }: WeightsTabProps
         onInputChange={onInputChange}
       />
 
-      <div className={`p-4 rounded-lg ${
+      <div className={`rounded-[13px] border p-4 ${
         totalWeight === 100
-          ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
-          : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+          ? 'border-green-200 bg-green-50 dark:border-green-500/30 dark:bg-green-500/10'
+          : 'border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10'
       }`}>
         <div className="flex items-center justify-between">
           <span className={`font-medium ${
@@ -74,7 +74,7 @@ const WeightsTab = ({ formData, onInputChange, totalWeight, t }: WeightsTabProps
           }`}>
             {t('settings.weights.total')}
           </span>
-          <span className={`text-2xl font-bold ${
+          <span className={`text-xl font-bold ${
             totalWeight === 100
               ? 'text-green-600 dark:text-green-400'
               : 'text-red-600 dark:text-red-400'
@@ -89,7 +89,7 @@ const WeightsTab = ({ formData, onInputChange, totalWeight, t }: WeightsTabProps
         )}
       </div>
 
-      <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+      <div className="border-t border-[#dedbe8] pt-5 dark:border-white/10">
         <WeightGroupSection
           title={t('settings.weights.localRankingTitle')}
           description={t('settings.weights.localRankingDescription')}

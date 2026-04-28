@@ -23,8 +23,8 @@ function renderOllamaField(
 
   if (definition.type === 'boolean') {
     return (
-      <div key={inputId} className="flex items-center justify-between gap-3 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800">
-        <span className="font-medium text-gray-800 dark:text-gray-100">{definition.label}</span>
+      <div key={inputId} className="flex items-center justify-between gap-3 rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-[#182235]">
+        <span className="font-medium text-[var(--cv-text)]">{definition.label}</span>
         <SettingsSwitch
           checked={currentValue === true}
           onChange={(checked) => onFieldChange(sectionKey, definition.key, checked ? true : undefined)}
@@ -37,12 +37,12 @@ function renderOllamaField(
   if (definition.type === 'enum' && definition.options) {
     return (
       <label key={inputId} htmlFor={inputId} className="block space-y-2">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{definition.label}</span>
+        <span className="text-sm font-medium text-[var(--cv-muted)]">{definition.label}</span>
         <select
           id={inputId}
           value={typeof currentValue === 'string' ? currentValue : ''}
           onChange={(event) => onFieldChange(sectionKey, definition.key, event.target.value || undefined)}
-          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+          className="w-full rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-[var(--cv-text)] dark:border-white/10 dark:bg-[#111827] dark:text-gray-100"
         >
           <option value="">Utiliser la valeur par défaut</option>
           {definition.options.map((option) => (
@@ -56,7 +56,7 @@ function renderOllamaField(
   if (definition.type === 'array') {
     return (
       <label key={inputId} htmlFor={inputId} className="block space-y-2">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{definition.label}</span>
+        <span className="text-sm font-medium text-[var(--cv-muted)]">{definition.label}</span>
         <input
           id={inputId}
           type="text"
@@ -66,7 +66,7 @@ function renderOllamaField(
             onFieldChange(sectionKey, definition.key, values.length > 0 ? values : undefined);
           }}
           placeholder="value1, value2"
-          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+          className="w-full rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-[var(--cv-text)] dark:border-white/10 dark:bg-[#111827] dark:text-gray-100"
         />
       </label>
     );
@@ -78,7 +78,7 @@ function renderOllamaField(
 
   return (
     <label key={inputId} htmlFor={inputId} className="block space-y-2">
-      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{definition.label}</span>
+      <span className="text-sm font-medium text-[var(--cv-muted)]">{definition.label}</span>
       <input
         id={inputId}
         type={inputType}
@@ -101,7 +101,7 @@ function renderOllamaField(
 
           onFieldChange(sectionKey, definition.key, rawValue);
         }}
-        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+        className="w-full rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-[var(--cv-text)] dark:border-white/10 dark:bg-[#111827] dark:text-gray-100"
       />
     </label>
   );

@@ -230,8 +230,8 @@ const LLMTab = ({
         fallbackText={getFallbackText}
       />
 
-      <section className="rounded-3xl border border-white/10 bg-slate-950/10 p-5">
-        <div className="grid grid-cols-[2.75rem_minmax(0,1fr)] items-start gap-x-4 gap-y-1 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+      <section className="rounded-[13px] border border-[#dedbe8] bg-[#f8f8f7] p-4 dark:border-white/10 dark:bg-[#111827]">
+        <div className="grid grid-cols-[2.75rem_minmax(0,1fr)] items-start gap-x-4 gap-y-1 rounded-[13px] border border-[#dedbe8] bg-white p-4 dark:border-white/10 dark:bg-[#182235]">
           <SettingsSwitch
             checked={formData.allowUserRegistrationWithoutApproval === true}
             label={getFallbackText(
@@ -241,13 +241,13 @@ const LLMTab = ({
             onChange={handleRegistrationApprovalToggle}
           />
           <div className="min-w-0 space-y-2">
-            <span className="block text-sm font-semibold text-white">
+            <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
               {getFallbackText(
                 'settings.llm.allowUserRegistrationWithoutApprovalLabel',
                 "Autoriser l'enregistrement des utilisateurs sans validation préalable"
               )}
             </span>
-            <p className="max-w-3xl text-sm text-slate-300">
+            <p className="max-w-3xl text-sm text-gray-600 dark:text-gray-400">
               {getFallbackText(
                 'settings.llm.allowUserRegistrationWithoutApprovalDescription',
                 "Quand cette option est active, chaque nouvel utilisateur inscrit obtient directement un cabinet de test dédié, un compte actif et un email de confirmation."

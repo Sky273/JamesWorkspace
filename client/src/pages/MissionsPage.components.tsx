@@ -1,6 +1,7 @@
 import { FolderIcon, ListBulletIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 
+import PageHeader from '../components/page/PageHeader';
 import ViewModeToggle from '../components/page/ViewModeToggle';
 import Pagination from '../components/Pagination';
 import {
@@ -17,19 +18,7 @@ import { MISSIONS_PAGE_SIZE } from './MissionsPage.hooks';
 export function MissionsHeader() {
   const { t } = useTranslation();
 
-  return (
-    <header className="missions-page-heading mb-[22px]">
-      <div className="min-w-0">
-        <div className="cv-kicker mb-2">{t('missions.title')}</div>
-        <h1 className="cv-display text-[25px] font-bold leading-tight text-[var(--cv-text)]">
-          {t('missions.title')}
-        </h1>
-        <p className="mt-0.5 max-w-2xl text-[13px] leading-5 text-[var(--cv-muted)]">
-          {t('missions.subtitle')}
-        </p>
-      </div>
-    </header>
-  );
+  return <PageHeader title={t('missions.title')} subtitle={t('missions.subtitle')} />;
 }
 
 export function MissionsViewModeToggle({

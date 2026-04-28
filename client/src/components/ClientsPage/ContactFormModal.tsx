@@ -15,6 +15,9 @@ interface ContactFormModalProps {
   t: (key: string) => string;
 }
 
+const fieldClassName = 'w-full rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#6246ea] focus:outline-none focus:ring-2 focus:ring-[#6246ea]/20 dark:border-white/10 dark:bg-[#111827] dark:text-gray-100';
+const labelClassName = 'mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300';
+
 const ContactFormModal = ({ isOpen, onClose, onSubmit, contact, t }: ContactFormModalProps): JSX.Element => {
   const [name, setName] = useState<string>('');
   const [role, setRole] = useState<string>('');
@@ -55,55 +58,55 @@ const ContactFormModal = ({ isOpen, onClose, onSubmit, contact, t }: ContactForm
       onClose={onClose} 
       title={contact ? t('clients.modal.editContact') : t('clients.modal.addContact')}
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3.5">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className={labelClassName}>
             {t('clients.modal.contactName')} *
           </label>
           <input
             type="text"
             value={name}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+            className={fieldClassName}
             required
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className={labelClassName}>
             {t('clients.modal.role')}
           </label>
           <input
             type="text"
             value={role}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setRole(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+            className={fieldClassName}
             placeholder={t('clients.modal.rolePlaceholder')}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className={labelClassName}>
             {t('clients.modal.email')}
           </label>
           <input
             type="email"
             value={email}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+            className={fieldClassName}
             placeholder="email@example.com"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className={labelClassName}>
             {t('clients.modal.phone')}
           </label>
           <input
             type="tel"
             value={phone}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setPhone(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
+            className={fieldClassName}
             placeholder="+33 1 23 45 67 89"
           />
         </div>
@@ -123,13 +126,13 @@ const ContactFormModal = ({ isOpen, onClose, onSubmit, contact, t }: ContactForm
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+            className="app-button-secondary rounded-[9px] px-4 py-2 text-sm"
           >
             {t('common.cancel')}
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            className="app-primary-action rounded-[9px] px-4 py-2 text-sm"
           >
             {t('common.save')}
           </button>

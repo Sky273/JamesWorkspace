@@ -24,14 +24,16 @@ interface DpoTabProps {
 }
 
 export const DpoTab = ({ formData, onInputChange, t }: DpoTabProps): JSX.Element => {
+  const inputClassName = 'mb-0 w-full rounded-[9px] border border-[#dedbe8] bg-white py-2.5 pl-12 pr-4 text-sm text-[var(--cv-text)] placeholder:text-[#8f8a9d] focus:border-[#6246ea] focus:ring-2 focus:ring-[#6246ea]/20 dark:border-white/10 dark:bg-[#111827] dark:text-gray-100 dark:placeholder:text-gray-500';
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
-          <UserCircleIcon className="w-6 h-6 text-blue-600" />
+        <h2 className="mb-1 flex items-center gap-2 text-base font-semibold text-[var(--cv-text)]">
+          <UserCircleIcon className="h-5 w-5 text-[#6246ea] dark:text-[#c9ccff]" />
           {t('settings.dpo.title')}
         </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-sm text-[var(--cv-muted)]">
           {t('settings.dpo.description')}
         </p>
       </div>
@@ -40,16 +42,16 @@ export const DpoTab = ({ formData, onInputChange, t }: DpoTabProps): JSX.Element
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6"
+        className="rounded-[13px] border border-[#dedbe8] bg-[#f8f8f7] p-4 dark:border-white/10 dark:bg-[#111827]"
       >
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
-          <UserCircleIcon className="w-5 h-5" />
+        <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-[var(--cv-text)]">
+          <UserCircleIcon className="h-4 w-4 text-[#6246ea] dark:text-[#c9ccff]" />
           {t('settings.dpo.dpoSection')}
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="mb-1 block text-sm font-medium text-[var(--cv-muted)]">
               {t('settings.dpo.dpoName')}
             </label>
             <InputWithLeadingIcon
@@ -58,12 +60,12 @@ export const DpoTab = ({ formData, onInputChange, t }: DpoTabProps): JSX.Element
               value={formData['DPO Name'] || ''}
               onChange={(e) => onInputChange('DPO Name', e.target.value)}
               placeholder={t('settings.dpo.dpoNamePlaceholder')}
-              inputClassName="mb-0 w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2.5 pl-14 pr-4 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              inputClassName={inputClassName}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="mb-1 block text-sm font-medium text-[var(--cv-muted)]">
               {t('settings.dpo.dpoEmail')}
             </label>
             <InputWithLeadingIcon
@@ -72,12 +74,12 @@ export const DpoTab = ({ formData, onInputChange, t }: DpoTabProps): JSX.Element
               value={formData['DPO Email'] || ''}
               onChange={(e) => onInputChange('DPO Email', e.target.value)}
               placeholder={t('settings.dpo.emailPlaceholder')}
-              inputClassName="mb-0 w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2.5 pl-14 pr-4 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              inputClassName={inputClassName}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="mb-1 block text-sm font-medium text-[var(--cv-muted)]">
               {t('settings.dpo.dpoPhone')}
             </label>
             <InputWithLeadingIcon
@@ -86,7 +88,7 @@ export const DpoTab = ({ formData, onInputChange, t }: DpoTabProps): JSX.Element
               value={formData['DPO Phone'] || ''}
               onChange={(e) => onInputChange('DPO Phone', e.target.value)}
               placeholder={t('settings.dpo.phonePlaceholder')}
-              inputClassName="mb-0 w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-2.5 pl-14 pr-4 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              inputClassName={inputClassName}
             />
           </div>
         </div>
@@ -97,12 +99,12 @@ export const DpoTab = ({ formData, onInputChange, t }: DpoTabProps): JSX.Element
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
+        className="rounded-[13px] border border-[#dedbe8] bg-white p-4 dark:border-white/10 dark:bg-[#182235]"
       >
-        <h4 className="font-medium text-blue-800 dark:text-blue-300 mb-2">
+        <h4 className="mb-2 font-semibold text-[var(--cv-text)]">
           {t('settings.dpo.infoTitle')}
         </h4>
-        <p className="text-sm text-blue-700 dark:text-blue-400">
+        <p className="text-sm text-[var(--cv-muted)]">
           {t('settings.dpo.infoContent')}
         </p>
       </motion.div>

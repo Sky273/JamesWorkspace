@@ -22,54 +22,54 @@ export default function LLMPresentationPreferences({
   fallbackText
 }: LLMPresentationPreferencesProps): JSX.Element {
   return (
-    <section className="rounded-3xl border border-white/10 bg-slate-950/10 p-5">
+    <section className="rounded-[13px] border border-[#dedbe8] bg-[#f8f8f7] p-4 dark:border-white/10 dark:bg-[#111827]">
       <div className="space-y-5">
-        <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4">
-          <label className="mb-2 block text-sm font-semibold text-white">
+        <div className="rounded-[13px] border border-[#dedbe8] bg-white p-4 dark:border-white/10 dark:bg-[#182235]">
+          <label className="mb-2 block text-sm font-semibold text-gray-900 dark:text-gray-100">
             {t('settings.llm.cvMode')}
           </label>
           <select
             value={cvMode || 'nominative'}
             onChange={onCvModeChange}
-            className="w-full rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-3 text-sm text-slate-100 focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-[9px] border border-[#dedbe8] bg-white px-4 py-3 text-sm text-gray-900 focus:ring-2 focus:ring-[#6246ea]/20 dark:border-white/10 dark:bg-[#111827] dark:text-gray-100"
           >
             <option value="nominative">{fallbackText('settings.llm.cvModeNominative', 'Nominatif')}</option>
             <option value="anonymous">{fallbackText('settings.llm.cvModeAnonymous', 'Anonyme')}</option>
           </select>
-          <p className="mt-3 text-sm text-slate-300">
+          <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
             {cvMode === 'anonymous'
               ? fallbackText('settings.llm.cvModeAnonymousDescription', 'Le CV améliore sera anonymisé.')
               : fallbackText('settings.llm.cvModeNominativeDescription', 'Le CV améliore conserve les informations nominatives.')}
           </p>
         </div>
 
-        <div className="grid grid-cols-[2.75rem_minmax(0,1fr)] items-start gap-x-4 gap-y-1 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+        <div className="grid grid-cols-[2.75rem_minmax(0,1fr)] items-start gap-x-4 gap-y-1 rounded-[13px] border border-[#dedbe8] bg-white p-4 dark:border-white/10 dark:bg-[#182235]">
           <SettingsSwitch
             checked={webglEnabled === 'on'}
             onChange={onWebglToggle}
             label={t('settings.llm.webglEnabled')}
           />
           <div className="min-w-0">
-            <span className="block text-sm font-semibold text-white">
+            <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
               {t('settings.llm.webglEnabled')}
             </span>
-            <p className="mt-1 text-sm text-slate-300">
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
               {t('settings.llm.webglEnabledDescription')}
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-[2.75rem_minmax(0,1fr)] items-start gap-x-4 gap-y-1 rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+        <div className="grid grid-cols-[2.75rem_minmax(0,1fr)] items-start gap-x-4 gap-y-1 rounded-[13px] border border-[#dedbe8] bg-white p-4 dark:border-white/10 dark:bg-[#182235]">
           <SettingsSwitch
             checked={publicHomeEnabled === true}
             onChange={onPublicHomeToggle}
             label={fallbackText('settings.chatbot.publicHomeTitle', "Activer la page d'accueil publique")}
           />
           <div className="min-w-0">
-            <span className="block text-sm font-semibold text-white">
+            <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">
               {fallbackText('settings.chatbot.publicHomeTitle', "Activer la page d'accueil publique")}
             </span>
-            <p className="mt-1 text-sm text-slate-300">
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
               {fallbackText(
                 'settings.chatbot.publicHomeDescription',
                 'Affiche la page /welcome aux visiteurs non connectés au lieu de les rediriger vers la connexion.'

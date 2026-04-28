@@ -20,38 +20,38 @@ export default function DealDeleteModal({ open, deal, saving, onDelete, onClose 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
           onClick={onClose}
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6"
+            className="w-full max-w-md rounded-[13px] border border-[#dedbe8] bg-white p-5 shadow-xl dark:border-white/10 dark:bg-[#182235]"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
+            <h3 className="mb-2 text-lg font-bold text-gray-900 dark:text-gray-100">
               {t('crm.deals.confirmDelete')}
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
+            <p className="mb-4 text-gray-600 dark:text-gray-400">
               {t('crm.deals.deleteWarning')} <strong>{deal.title}</strong> ?
             </p>
             {deal.resumes_count > 0 && (
-              <p className="text-amber-600 dark:text-amber-400 text-sm mb-4">
+              <p className="mb-4 rounded-[9px] bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
                 {t('common.warning')} {t('crm.deals.resumesAssociatedWarning', { count: deal.resumes_count })}
               </p>
             )}
             <div className="flex justify-end gap-3">
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                className="app-button-secondary rounded-[9px] px-4 py-2 text-sm"
               >
                 {t('common.cancel')}
               </button>
               <button
                 onClick={onDelete}
                 disabled={saving}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50"
+                className="rounded-[9px] bg-red-600 px-4 py-2 text-sm text-white transition-colors hover:bg-red-700 disabled:opacity-50"
               >
                 {saving ? t('common.deleting') : t('common.delete')}
               </button>

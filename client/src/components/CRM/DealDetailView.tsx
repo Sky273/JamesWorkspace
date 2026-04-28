@@ -109,7 +109,7 @@ export default function DealDetailView({ dealId, onBack, onEdit, restoreScrollY 
 
   if (loading) {
     return (
-      <div className="editorial-migrated-shell min-h-screen px-4 py-6 sm:px-6 sm:py-8">
+      <div className="editorial-migrated-shell crm-compact-shell min-h-screen px-4 py-6 sm:px-6 sm:py-8">
         <div className="cv-surface mx-auto max-w-7xl rounded-[2.5rem] p-6 sm:p-8">
           <div className="cv-panel flex items-center justify-center rounded-[2rem] py-24">
             <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-[var(--cv-primary)]" />
@@ -121,7 +121,7 @@ export default function DealDetailView({ dealId, onBack, onEdit, restoreScrollY 
 
   if (error || !deal) {
     return (
-      <div className="editorial-migrated-shell min-h-screen px-4 py-6 sm:px-6 sm:py-8">
+      <div className="editorial-migrated-shell crm-compact-shell min-h-screen px-4 py-6 sm:px-6 sm:py-8">
         <div className="cv-surface mx-auto max-w-7xl rounded-[2.5rem] p-6 sm:p-8">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <div className="cv-panel rounded-[2rem] p-8 text-center sm:p-12">
@@ -151,7 +151,7 @@ export default function DealDetailView({ dealId, onBack, onEdit, restoreScrollY 
   }
 
   return (
-    <div className="editorial-migrated-shell min-h-screen px-4 py-6 sm:px-6 sm:py-8">
+    <div className="editorial-migrated-shell crm-compact-shell min-h-screen px-4 py-6 sm:px-6 sm:py-8">
       <div className="cv-surface mx-auto max-w-7xl rounded-[2.5rem] p-6 sm:p-8">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="mb-4 flex items-center justify-between gap-3">
           {onBack ? (

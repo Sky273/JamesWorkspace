@@ -28,7 +28,7 @@ const CRMPage = (): JSX.Element => {
   const dashboard = useClientsDashboard();
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="cv-surface app-page-shell">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="editorial-migrated-shell crm-compact-shell cv-surface app-page-shell">
       <CRMHeader />
 
       <CRMMainTabs

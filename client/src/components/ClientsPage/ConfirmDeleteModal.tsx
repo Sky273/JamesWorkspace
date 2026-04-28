@@ -25,14 +25,14 @@ const ConfirmDeleteModal = ({ isOpen, onClose, onConfirm, message, t }: ConfirmD
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+            className="app-button-secondary rounded-[9px] px-4 py-2 text-sm"
           >
             {t('common.cancel')}
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            className="rounded-[9px] bg-red-600 px-4 py-2 text-sm text-white transition-colors hover:bg-red-700"
           >
             {t('common.delete')}
           </button>

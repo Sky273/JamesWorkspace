@@ -2,6 +2,7 @@ import { FolderIcon, ListBulletIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 
 import ConfirmDialog from '../components/page/ConfirmDialog';
+import PageHeader from '../components/page/PageHeader';
 import ViewModeToggle from '../components/page/ViewModeToggle';
 import Pagination from '../components/Pagination';
 import {
@@ -21,18 +22,7 @@ import { ResumeFiltersPanel, ResumesResultsGrid } from './ResumesPage.parts';
 export function ResumesHeader() {
   const { t } = useTranslation();
 
-  return (
-    <header className="cv-page-heading mb-[22px]">
-      <div className="min-w-0">
-        <h1 className="cv-display text-[25px] font-bold leading-tight text-[var(--cv-text)]">
-          {t('resumes.title')}
-        </h1>
-        <p className="mt-0.5 text-[13px] leading-5 text-[var(--cv-muted)]">
-          {t('resumes.subtitle')}
-        </p>
-      </div>
-    </header>
-  );
+  return <PageHeader title={t('resumes.title')} subtitle={t('resumes.subtitle')} />;
 }
 
 export function ResumesViewModeToggle({

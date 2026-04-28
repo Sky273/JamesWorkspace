@@ -30,7 +30,7 @@ import { CLIENTS_PAGE_SIZE } from './ClientsPage.hooks';
 function getTypeColor(type: ClientType): string {
   return type === 'client'
     ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-    : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+    : 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
 }
 
 export function CRMHeader() {
@@ -75,22 +75,22 @@ export function CRMStatsCards({ stats }: { stats: ClientsStats }) {
   const { t } = useTranslation();
 
   return (
-    <div className="grid grid-cols-2 gap-4 mb-6 md:grid-cols-4">
-      <div className="lux-card flex items-center gap-3 rounded-[1.75rem] p-4">
-        <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg"><BuildingOfficeIcon className="w-6 h-6 text-green-600 dark:text-green-400" /></div>
-        <div><div className="text-sm text-gray-600 dark:text-gray-400">{t('clients.stats.clients')}</div><div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalClients}</div></div>
+    <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="lux-card flex items-center gap-3 rounded-[13px] p-3">
+        <div className="rounded-[9px] bg-green-100 p-2 dark:bg-green-900/30"><BuildingOfficeIcon className="h-5 w-5 text-green-600 dark:text-green-400" /></div>
+        <div><div className="text-xs font-medium uppercase tracking-[0.07em] text-gray-500 dark:text-gray-400">{t('clients.stats.clients')}</div><div className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.totalClients}</div></div>
       </div>
-      <div className="lux-card flex items-center gap-3 rounded-[1.75rem] p-4">
-        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg"><BriefcaseIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" /></div>
-        <div><div className="text-sm text-gray-600 dark:text-gray-400">{t('clients.stats.prospects')}</div><div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalProspects}</div></div>
+      <div className="lux-card flex items-center gap-3 rounded-[13px] p-3">
+        <div className="rounded-[9px] bg-purple-100 p-2 dark:bg-purple-900/30"><BriefcaseIcon className="h-5 w-5 text-[#6246ea] dark:text-[#c9ccff]" /></div>
+        <div><div className="text-xs font-medium uppercase tracking-[0.07em] text-gray-500 dark:text-gray-400">{t('clients.stats.prospects')}</div><div className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.totalProspects}</div></div>
       </div>
-      <div className="lux-card flex items-center gap-3 rounded-[1.75rem] p-4">
-        <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg"><UserGroupIcon className="w-6 h-6 text-purple-600 dark:text-purple-400" /></div>
-        <div><div className="text-sm text-gray-600 dark:text-gray-400">{t('clients.stats.contacts')}</div><div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalContacts}</div></div>
+      <div className="lux-card flex items-center gap-3 rounded-[13px] p-3">
+        <div className="rounded-[9px] bg-purple-100 p-2 dark:bg-purple-900/30"><UserGroupIcon className="h-5 w-5 text-[#6246ea] dark:text-[#c9ccff]" /></div>
+        <div><div className="text-xs font-medium uppercase tracking-[0.07em] text-gray-500 dark:text-gray-400">{t('clients.stats.contacts')}</div><div className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.totalContacts}</div></div>
       </div>
-      <div className="lux-card flex items-center gap-3 rounded-[1.75rem] p-4">
-        <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg"><PaperAirplaneIcon className="w-6 h-6 text-orange-600 dark:text-orange-400" /></div>
-        <div><div className="text-sm text-gray-600 dark:text-gray-400">{t('clients.stats.submissions')}</div><div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.totalSubmissions}</div></div>
+      <div className="lux-card flex items-center gap-3 rounded-[13px] p-3">
+        <div className="rounded-[9px] bg-orange-100 p-2 dark:bg-orange-900/30"><PaperAirplaneIcon className="h-5 w-5 text-orange-600 dark:text-orange-400" /></div>
+        <div><div className="text-xs font-medium uppercase tracking-[0.07em] text-gray-500 dark:text-gray-400">{t('clients.stats.submissions')}</div><div className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.totalSubmissions}</div></div>
       </div>
     </div>
   );
@@ -114,8 +114,8 @@ export function ClientsToolbar({
   const { t } = useTranslation();
 
   return (
-    <div className="section-shell mb-6 rounded-[2rem]">
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--cv-outline)] p-4">
+    <div className="section-shell mb-5 rounded-[13px]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--cv-outline)] p-3">
         <div className="min-w-0 flex-1">
           <ViewModeToggle
             className="mb-0"
@@ -132,16 +132,16 @@ export function ClientsToolbar({
         <div className="flex gap-2">
           <button
             onClick={onRefresh}
-            className="app-button-secondary rounded-2xl p-2.5"
+            className="app-button-secondary rounded-[9px] p-2.5"
             title={t('common.refresh')}
             aria-label={t('common.refresh')}
           >
             <ArrowPathIcon className="w-5 h-5" />
           </button>
-          <button onClick={onCreateClient} className="app-button-primary flex items-center gap-2 rounded-2xl px-4 py-2.5"><PlusIcon className="w-5 h-5" />{t('clients.addClient')}</button>
+          <button onClick={onCreateClient} className="app-button-primary flex items-center gap-2 rounded-[9px] px-4 py-2.5 text-sm"><PlusIcon className="h-4 w-4" />{t('clients.addClient')}</button>
         </div>
       </div>
-      <div className="p-4">
+      <div className="p-3">
         <div className="flex items-center gap-3">
           <SearchField
             containerClassName="relative flex-1"
@@ -149,7 +149,7 @@ export function ClientsToolbar({
             value={searchTerm}
             onChange={onSearchTermChange}
           />
-          {searchTerm && <button onClick={() => onSearchTermChange('')} className="app-button-secondary inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm font-medium" title={t('common.resetFilters')}><XMarkIcon className="w-4 h-4" /></button>}
+          {searchTerm && <button onClick={() => onSearchTermChange('')} className="app-button-secondary inline-flex items-center gap-1.5 rounded-[9px] px-3 py-2 text-sm font-medium" title={t('common.resetFilters')}><XMarkIcon className="h-4 w-4" /></button>}
         </div>
       </div>
     </div>
@@ -178,26 +178,26 @@ export function ClientsResults({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
       {clients.length === 0 ? (
-        <div className="section-shell col-span-full rounded-[2rem] p-12 text-center">
-          <BuildingOfficeIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+        <div className="section-shell col-span-full rounded-[13px] p-10 text-center">
+          <BuildingOfficeIcon className="mx-auto mb-4 h-12 w-12 text-gray-400" />
           <p className="text-gray-600 dark:text-gray-400">{t('clients.noClients')}</p>
         </div>
       ) : (
         clients.map((client, index) => (
-          <motion.div key={client.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }} className="lux-card rounded-[1.75rem] transition-all hover:-translate-y-0.5">
-            <div className="p-4">
-              <div className="flex items-start justify-between mb-3">
+          <motion.div key={client.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.03 }} className="lux-card rounded-[13px] transition-all hover:-translate-y-0.5">
+            <div className="p-3.5">
+              <div className="mb-3 flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg"><BuildingOfficeIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" /></div>
+                  <div className="rounded-[9px] bg-gray-100 p-2 dark:bg-white/5"><BuildingOfficeIcon className="h-5 w-5 text-gray-600 dark:text-gray-400" /></div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">{client.name}</h3>
+                    <h3 className="font-semibold text-gray-950 dark:text-gray-100">{client.name}</h3>
                     {client.industry && <p className="text-sm text-gray-500 dark:text-gray-400">{client.industry}</p>}
                   </div>
                 </div>
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getTypeColor(client.type)}`}>{t(`clients.types.${client.type}`)}</span>
+                <span className={`rounded-full px-2 py-1 text-[11px] font-semibold ${getTypeColor(client.type)}`}>{t(`clients.types.${client.type}`)}</span>
               </div>
               <div className="space-y-2 mb-4">
-                {client.website && <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400"><GlobeAltIcon className="w-4 h-4" /><a href={client.website} target="_blank" rel="noopener noreferrer" className="hover:text-blue-500 truncate">{client.website}</a></div>}
+                {client.website && <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400"><GlobeAltIcon className="w-4 h-4" /><a href={client.website} target="_blank" rel="noopener noreferrer" className="truncate hover:text-[#6246ea] dark:hover:text-[#c9ccff]">{client.website}</a></div>}
                 {client.address && <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400"><MapPinIcon className="w-4 h-4 flex-shrink-0" /><span className="truncate">{client.address}</span></div>}
               </div>
               <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mb-2">
@@ -205,9 +205,9 @@ export function ClientsResults({
                 <div className="flex items-center gap-1"><PaperAirplaneIcon className="w-4 h-4" /><span>{client.submissions_count || 0} {t('clients.submissionsLabel')}</span></div>
               </div>
               <div className="flex items-center gap-1 mb-4"><BuildingOfficeIcon className="w-3 h-3 text-gray-400" /><span className="text-xs text-gray-400 dark:text-gray-500">{client.firm_name || t('clients.noFirm')}</span></div>
-              <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
-                <button onClick={() => onOpenClientDetail(client)} className="app-button-primary flex flex-1 items-center justify-center gap-1 rounded-2xl px-3 py-2 text-sm"><EyeIcon className="w-4 h-4" />{t('common.view')}</button>
-                <button onClick={() => onEditClient(client)} className="app-button-secondary flex flex-1 items-center justify-center gap-1 rounded-2xl px-3 py-2 text-sm"><PencilSquareIcon className="w-4 h-4" />{t('common.edit')}</button>
+              <div className="flex items-center gap-2 border-t border-[#e4e4e7] pt-3 dark:border-white/10">
+                <button onClick={() => onOpenClientDetail(client)} className="app-button-primary flex flex-1 items-center justify-center gap-1 rounded-[9px] px-3 py-2 text-sm"><EyeIcon className="w-4 h-4" />{t('common.view')}</button>
+                <button onClick={() => onEditClient(client)} className="app-button-secondary flex flex-1 items-center justify-center gap-1 rounded-[9px] px-3 py-2 text-sm"><PencilSquareIcon className="w-4 h-4" />{t('common.edit')}</button>
                 <button
                   onClick={() => onDeleteClient(client)}
                   disabled={(client.submissions_count || 0) > 0}

@@ -15,6 +15,9 @@ interface DealFormModalProps {
   onClientChange: (clientId: string) => void;
 }
 
+const fieldClassName = 'w-full rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#6246ea] focus:outline-none focus:ring-2 focus:ring-[#6246ea]/20 dark:border-white/10 dark:bg-[#111827] dark:text-gray-100';
+const labelClassName = 'mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300';
+
 export default function DealFormModal({
   open,
   isEditing,
@@ -36,37 +39,37 @@ export default function DealFormModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
           onClick={onClose}
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[13px] border border-[#dedbe8] bg-white shadow-xl dark:border-white/10 dark:bg-[#182235]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+            <div className="p-5">
+              <h2 className="mb-4 text-lg font-bold text-gray-900 dark:text-gray-100">
                 {isEditing ? t('crm.deals.editTitle') : t('crm.deals.createTitle')}
               </h2>
 
-              <form onSubmit={onSubmit} className="space-y-4">
+              <form onSubmit={onSubmit} className="space-y-3.5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className={labelClassName}>
                     {t('crm.deals.name')} *
                   </label>
                   <input
                     type="text"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    className={fieldClassName}
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className={labelClassName}>
                     {t('crm.deals.client')}
                   </label>
                   <select
@@ -75,7 +78,7 @@ export default function DealFormModal({
                       setFormData({ ...formData, client_id: e.target.value, contact_id: '' });
                       onClientChange(e.target.value);
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    className={fieldClassName}
                   >
                     <option value="">{t('crm.deals.selectClient')}</option>
                     {clients.map(client => (
@@ -87,13 +90,13 @@ export default function DealFormModal({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className={labelClassName}>
                     {t('crm.deals.contact')}
                   </label>
                   <select
                     value={formData.contact_id || ''}
                     onChange={(e) => setFormData({ ...formData, contact_id: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    className={fieldClassName}
                     disabled={!formData.client_id}
                   >
                     <option value="">{t('crm.deals.selectContact')}</option>
@@ -110,15 +113,15 @@ export default function DealFormModal({
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className={labelClassName}>
                       {t('crm.deals.status')}
                     </label>
                     <select
                       value={formData.status}
                       onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      className={fieldClassName}
                     >
                       <option value="open">{STATUS_CONFIG.open.label}</option>
                       <option value="won">{STATUS_CONFIG.won.label}</option>
@@ -127,13 +130,13 @@ export default function DealFormModal({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className={labelClassName}>
                       {t('crm.deals.priority')}
                     </label>
                     <select
                       value={formData.priority}
                       onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      className={fieldClassName}
                     >
                       <option value="low">{PRIORITY_CONFIG.low.label}</option>
                       <option value="medium">{PRIORITY_CONFIG.medium.label}</option>
@@ -143,34 +146,34 @@ export default function DealFormModal({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className={labelClassName}>
                       {t('crm.deals.startDate')}
                     </label>
                     <input
                       type="date"
                       value={formData.expected_start_date || ''}
                       onChange={(e) => setFormData({ ...formData, expected_start_date: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      className={fieldClassName}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className={labelClassName}>
                       {t('crm.deals.endDate')}
                     </label>
                     <input
                       type="date"
                       value={formData.expected_end_date || ''}
                       onChange={(e) => setFormData({ ...formData, expected_end_date: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      className={fieldClassName}
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className={labelClassName}>
                       {t('crm.deals.budgetMin')}
                     </label>
                     <input
@@ -182,12 +185,12 @@ export default function DealFormModal({
                         ...formData,
                         budget_min: e.target.value === '' ? '' : Number(e.target.value)
                       })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      className={fieldClassName}
                       placeholder={t('crm.deals.budgetMinPlaceholder')}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className={labelClassName}>
                       {t('crm.deals.budgetMax')}
                     </label>
                     <input
@@ -199,43 +202,43 @@ export default function DealFormModal({
                         ...formData,
                         budget_max: e.target.value === '' ? '' : Number(e.target.value)
                       })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      className={fieldClassName}
                       placeholder={t('crm.deals.budgetMaxPlaceholder')}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className={labelClassName}>
                     {t('crm.deals.description')}
                   </label>
                   <textarea
                     value={formData.description || ''}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    className={fieldClassName}
                     placeholder={t('crm.deals.descriptionPlaceholder')}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label className={labelClassName}>
                     {t('crm.deals.notes')}
                   </label>
                   <textarea
                     value={formData.notes || ''}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     rows={5}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    className={fieldClassName}
                     placeholder={t('crm.deals.notesPlaceholder')}
                   />
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4">
-                  <button type="button" onClick={onClose} className="btn btn-secondary px-4 py-2">
+                  <button type="button" onClick={onClose} className="app-button-secondary rounded-[9px] px-4 py-2 text-sm">
                     {t('common.cancel')}
                   </button>
-                  <button type="submit" disabled={saving} className={`app-primary-action px-4 py-2 ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                  <button type="submit" disabled={saving} className={`app-primary-action rounded-[9px] px-4 py-2 text-sm ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}>
                     {saving ? t('common.saving') : t('common.save')}
                   </button>
                 </div>

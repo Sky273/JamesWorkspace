@@ -7,7 +7,7 @@ interface SettingsApiDocsPanelProps {
 
 export default function SettingsApiDocsPanel({ t }: SettingsApiDocsPanelProps): JSX.Element {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
           {t('settings.apiDocs.title')}
@@ -17,7 +17,7 @@ export default function SettingsApiDocsPanel({ t }: SettingsApiDocsPanelProps): 
         </p>
       </div>
 
-      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+      <div className="rounded-[13px] border border-[#dedbe8] bg-[#f8f8f7] p-4 dark:border-white/10 dark:bg-[#111827]">
         <div className="flex items-center justify-between">
           <div>
             <h4 className="font-medium text-gray-900 dark:text-gray-100">{t('settings.apiDocs.swaggerUi')}</h4>
@@ -27,7 +27,7 @@ export default function SettingsApiDocsPanel({ t }: SettingsApiDocsPanelProps): 
           </div>
           <button
             onClick={() => window.open(`/api/docs/ui?v=${Date.now()}`, '_blank')}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium text-sm"
+            className="app-primary-action inline-flex items-center rounded-[9px] px-4 py-2 text-sm font-medium"
           >
             <DocumentTextIcon className="w-5 h-5 mr-2" />
             {t('settings.apiDocs.openSwagger')}
@@ -35,7 +35,7 @@ export default function SettingsApiDocsPanel({ t }: SettingsApiDocsPanelProps): 
         </div>
       </div>
 
-      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+      <div className="rounded-[13px] border border-[#dedbe8] bg-[#f8f8f7] p-4 dark:border-white/10 dark:bg-[#111827]">
         <div className="flex items-center justify-between">
           <div>
             <h4 className="font-medium text-gray-900 dark:text-gray-100">{t('settings.apiDocs.openApiJson')}</h4>
@@ -45,7 +45,7 @@ export default function SettingsApiDocsPanel({ t }: SettingsApiDocsPanelProps): 
           </div>
           <button
             onClick={() => window.open(`/api/docs?v=${Date.now()}`, '_blank')}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-600 font-medium text-sm"
+            className="app-button-secondary inline-flex items-center rounded-[9px] px-4 py-2 text-sm font-medium"
           >
             {t('settings.apiDocs.viewJson')}
           </button>

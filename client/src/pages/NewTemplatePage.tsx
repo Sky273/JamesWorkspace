@@ -184,12 +184,9 @@ const NewTemplatePage = (): JSX.Element => {
   return (
     <div className="container mx-auto px-4 py-8">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        <div className="mb-[22px] flex items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="w-1 h-8 rounded-full bg-primary-500" />
-              <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100">{t(id ? 'templates.editor.title.edit' : 'templates.editor.title.new')}</h1>
-            </div>
+            <h1 className="cv-display text-[25px] font-bold leading-tight text-[var(--cv-text)]">{t(id ? 'templates.editor.title.edit' : 'templates.editor.title.new')}</h1>
           </div>
           <button onClick={() => navigate(ADMIN_TEMPLATES_ROUTE)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100">{t('common.cancel')}</button>
         </div>

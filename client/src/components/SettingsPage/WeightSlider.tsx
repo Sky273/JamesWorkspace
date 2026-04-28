@@ -11,7 +11,7 @@ export default function WeightSlider({
 }: WeightSliderProps): JSX.Element {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+      <label className="mb-2 block text-sm font-medium text-[var(--cv-muted)]">
         {label}
       </label>
       <div className="flex items-center space-x-4">
@@ -21,7 +21,7 @@ export default function WeightSlider({
           max="50"
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="flex-1"
+          className="flex-1 accent-[#6246ea]"
         />
         <input
           type="number"
@@ -29,9 +29,9 @@ export default function WeightSlider({
           max="100"
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="w-20 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+          className="w-20 rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-[var(--cv-text)] dark:border-white/10 dark:bg-[#111827] dark:text-gray-100"
         />
-        <span className="text-gray-600 dark:text-gray-400">%</span>
+        <span className="text-[var(--cv-muted)]">%</span>
       </div>
     </div>
   );
