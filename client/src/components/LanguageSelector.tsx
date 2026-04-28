@@ -57,7 +57,7 @@ const HeaderLanguageIcon = (): JSX.Element => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
-    className="h-[18px] w-[18px] flex-shrink-0 text-[#52525B] transition-colors duration-200 group-hover:text-[#18181B]"
+    className="h-[18px] w-[18px] flex-shrink-0 text-[#52525B] transition-colors duration-200 group-hover:text-[#18181B] dark:text-[#c4cad4] dark:group-hover:text-[#f4f5f7]"
     aria-hidden="true"
   >
     <circle cx="12" cy="12" r="8.5" />
@@ -129,7 +129,7 @@ const LanguageSelector = ({ variant = 'default' }: LanguageSelectorProps): JSX.E
   }, [isOpen]);
 
   const buttonClassName = isHeader
-    ? 'group flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#E4E4E7] bg-white shadow-none transition-all hover:-translate-y-px hover:border-[#6B4EFF]/30 hover:bg-[#F3F2EF]'
+    ? 'group flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#E4E4E7] bg-white shadow-none transition-all hover:-translate-y-px hover:border-[#6B4EFF]/30 hover:bg-[#F3F2EF] dark:border-[#343a46] dark:bg-[#22262e] dark:hover:border-[#7c5cff]/45 dark:hover:bg-[#2a2f38]'
     : 'p-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300';
 
 
@@ -137,7 +137,7 @@ const LanguageSelector = ({ variant = 'default' }: LanguageSelectorProps): JSX.E
     ? createPortal(
         <div
           ref={menuRef}
-          className="fixed z-[70] w-40 origin-top-right rounded-[13px] border border-[#E4E4E7] bg-white p-1 shadow-[0_1px_3px_rgba(0,0,0,0.05),0_4px_14px_rgba(0,0,0,0.07)] focus:outline-none"
+          className="fixed z-[70] w-40 origin-top-right rounded-[13px] border border-[#E4E4E7] bg-white p-1 shadow-[0_1px_3px_rgba(0,0,0,0.05),0_4px_14px_rgba(0,0,0,0.07)] focus:outline-none dark:border-[#343a46] dark:bg-[#22262e]"
           style={menuPosition}
         >
           {languages.map((language) => {
@@ -151,8 +151,8 @@ const LanguageSelector = ({ variant = 'default' }: LanguageSelectorProps): JSX.E
                 }}
                 className={`flex w-full items-center rounded-lg px-3 py-2 text-sm ${
                   isActive
-                    ? 'bg-[#F5F3FF] text-[#18181B]'
-                    : 'text-[#52525B] hover:bg-[#F3F2EF] hover:text-[#18181B]'
+                    ? 'bg-[#F5F3FF] text-[#18181B] dark:bg-[#7c5cff]/16 dark:text-[#f4f5f7]'
+                    : 'text-[#52525B] hover:bg-[#F3F2EF] hover:text-[#18181B] dark:text-[#c4cad4] dark:hover:bg-[#2a2f38] dark:hover:text-[#f4f5f7]'
                 }`}
               >
                 <span className="mr-2 flex-shrink-0">{flags[language.code]()}</span>

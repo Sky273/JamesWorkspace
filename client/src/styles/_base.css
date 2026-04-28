@@ -39,9 +39,9 @@ body {
 .dark .auth-field:-webkit-autofill:hover,
 .dark .auth-field:-webkit-autofill:focus,
 .dark .auth-field:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 1000px #111827 inset !important;
-  -webkit-text-fill-color: #f3f4f6 !important;
-  caret-color: #f3f4f6;
+  -webkit-box-shadow: 0 0 0 1000px #2a2f38 inset !important;
+  -webkit-text-fill-color: #f4f5f7 !important;
+  caret-color: #f4f5f7;
 }
 
 /* --- Typography Base --- */
@@ -63,7 +63,7 @@ h2 {
 }
 
 .dark h2 {
-  background: #182235;
+  background: #22262e;
 }
 h2:first-child { margin-top: 0; }
 h3 { font-size: var(--font-size-xl); margin-top: 1.25em; margin-bottom: 0.5em; }
@@ -827,6 +827,64 @@ body [class~="fixed"][class~="inset-0"][class*="z-[120]"],
 body [class~="fixed"][class~="inset-0"][class*="z-[9999]"] {
   z-index: 10000 !important;
   isolation: isolate;
+}
+
+/* Soft dark mode palette overrides for legacy utility classes that still
+   encode the previous blue-black theme directly in JSX. */
+.dark [class*="dark:bg-[#111827]"] {
+  background-color: #2a2f38 !important;
+}
+
+.dark [class*="dark:bg-[#182235]"] {
+  background-color: #22262e !important;
+}
+
+.dark [class*="dark:hover:bg-[#182235]"]:hover,
+.dark [class*="dark:hover:bg-[#263052]"]:hover {
+  background-color: #323844 !important;
+}
+
+.dark [class*="dark:from-[#111827]"],
+.dark [class*="dark:via-[#111827]"],
+.dark [class*="dark:to-[#111827]"] {
+  --tw-gradient-from: #181b20 var(--tw-gradient-from-position) !important;
+  --tw-gradient-via: #181b20 var(--tw-gradient-via-position) !important;
+  --tw-gradient-to: #181b20 var(--tw-gradient-to-position) !important;
+}
+
+.dark .dark\:bg-gray-900,
+.dark .dark\:bg-slate-950,
+.dark .dark\:bg-slate-900 {
+  background-color: #181b20 !important;
+}
+
+.dark .dark\:bg-gray-800,
+.dark .dark\:bg-slate-800 {
+  background-color: #22262e !important;
+}
+
+.dark .dark\:bg-gray-700,
+.dark .dark\:bg-slate-700 {
+  background-color: #2a2f38 !important;
+}
+
+.dark .dark\:border-gray-700,
+.dark .dark\:border-slate-700,
+.dark .dark\:border-gray-600,
+.dark .dark\:border-slate-600 {
+  border-color: #343a46 !important;
+}
+
+.dark .dark\:text-gray-100,
+.dark .dark\:text-slate-100 {
+  color: #f4f5f7 !important;
+}
+
+.dark .dark\:text-gray-300,
+.dark .dark\:text-slate-300,
+.dark .dark\:text-gray-400,
+.dark .dark\:text-slate-400 {
+  color: #c4cad4 !important;
 }
 
 /* ============================================

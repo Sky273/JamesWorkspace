@@ -152,15 +152,15 @@ const HealthIndicator = ({
       <div
         className={
           isHeader
-            ? 'group flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-slate-600 shadow-sm shadow-slate-200/50 transition-all hover:-translate-y-px hover:border-slate-300 dark:border-white/8 dark:bg-white/[0.045] dark:text-slate-300 dark:shadow-none dark:hover:border-white/12 dark:hover:bg-white/[0.08]'
+            ? 'group flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-3.5 py-2 text-slate-600 shadow-sm shadow-slate-200/50 transition-all hover:-translate-y-px hover:border-slate-300 dark:border-[#343a46] dark:bg-[#22262e] dark:text-[#c4cad4] dark:shadow-none dark:hover:border-[#7c5cff]/45 dark:hover:bg-[#2a2f38]'
             : 'flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700'
         }
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <SignalIcon
           className={
-            isHeader
-              ? 'h-[18px] w-[18px] stroke-2 text-slate-400 transition-colors duration-200 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300'
+          isHeader
+              ? 'h-[18px] w-[18px] stroke-2 text-slate-400 transition-colors duration-200 group-hover:text-slate-600 dark:text-[#8f98a8] dark:group-hover:text-[#f4f5f7]'
               : 'h-4 w-4 text-gray-400 dark:text-gray-500'
           }
           aria-hidden="true"
@@ -171,7 +171,7 @@ const HealthIndicator = ({
         <span
           className={
             isHeader
-              ? 'hidden text-xs text-slate-600 dark:text-slate-300 sm:inline'
+              ? 'hidden text-xs text-slate-600 dark:text-[#c4cad4] sm:inline'
               : 'hidden text-xs text-gray-500 dark:text-gray-400 sm:inline'
           }
         >
@@ -187,7 +187,7 @@ const HealthIndicator = ({
           <span
             className={
               isHeader
-                ? 'hidden text-[11px] text-slate-500 dark:text-slate-400 sm:inline'
+                ? 'hidden text-[11px] text-slate-500 dark:text-[#8f98a8] sm:inline'
                 : 'hidden text-[11px] text-gray-500 dark:text-gray-400 sm:inline'
             }
           >

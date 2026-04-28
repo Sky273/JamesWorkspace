@@ -43,13 +43,13 @@ const getInitials = (name: string | undefined): string => {
 };
 
 const headerIconButtonClassName =
-  'group flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#E4E4E7] bg-white shadow-none transition-[transform,background-color,border-color] duration-200 hover:-translate-y-px hover:border-[#6B4EFF]/30 hover:bg-[#F3F2EF]';
+  'group flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#E4E4E7] bg-white shadow-none transition-[transform,background-color,border-color] duration-200 hover:-translate-y-px hover:border-[#6B4EFF]/30 hover:bg-[#F3F2EF] dark:border-[#343a46] dark:bg-[#22262e] dark:hover:border-[#7c5cff]/45 dark:hover:bg-[#2a2f38]';
 
 const headerIconClassName =
-  'h-[18px] w-[18px] flex-shrink-0 stroke-2 text-[#52525B] group-hover:text-[#18181B]';
+  'h-[18px] w-[18px] flex-shrink-0 stroke-2 text-[#52525B] group-hover:text-[#18181B] dark:text-[#c4cad4] dark:group-hover:text-[#f4f5f7]';
 
 const headerSolidIconClassName =
-  'h-5 w-5 flex-shrink-0 fill-current text-[#52525B] group-hover:text-[#18181B]';
+  'h-5 w-5 flex-shrink-0 fill-current text-[#52525B] group-hover:text-[#18181B] dark:text-[#c4cad4] dark:group-hover:text-[#f4f5f7]';
 
 const Layout = (): JSX.Element => {
   const { user, signOut } = useAuth();
@@ -97,7 +97,7 @@ const Layout = (): JSX.Element => {
         : '';
 
   return (
-    <div className="min-h-screen bg-[#F3F2EF]">
+    <div className="min-h-screen bg-[#F3F2EF] dark:bg-[#181b20]">
       <a href="#main-content" className="skip-link">
         {t('common.skipToContent', 'Aller au contenu principal')}
       </a>
@@ -106,7 +106,7 @@ const Layout = (): JSX.Element => {
 
       <div className="min-h-screen lg:pl-[240px]">
         <div className={`flex min-h-screen flex-1 flex-col${isEditorialMigratedRoute ? ` editorial-migrated-shell${editorialRouteClassName}` : ''}`}>
-        <header className="pointer-events-none sticky top-0 z-40 border-b border-[#E4E4E7] bg-white shadow-none">
+        <header className="pointer-events-none sticky top-0 z-40 border-b border-[#E4E4E7] bg-white shadow-none dark:border-[#343a46] dark:bg-[#22262e]">
           <div className="pointer-events-auto relative flex min-h-16 items-center justify-between gap-3 px-4 py-2 sm:h-16 sm:gap-4 sm:py-0 sm:px-6 lg:px-8">
             <button
               type="button"
@@ -119,14 +119,14 @@ const Layout = (): JSX.Element => {
             </button>
 
             <div className="hidden min-w-0 flex-1 items-center gap-2 sm:gap-3.5 md:flex">
-              <div className="hidden h-6 w-px bg-[#E4E4E7] lg:block" />
-              <div className="min-w-0 rounded-[9px] border border-[#E4E4E7] bg-white px-3 py-2">
+              <div className="hidden h-6 w-px bg-[#E4E4E7] dark:bg-[#343a46] lg:block" />
+              <div className="min-w-0 rounded-[9px] border border-[#E4E4E7] bg-white px-3 py-2 dark:border-[#343a46] dark:bg-[#2a2f38]">
                 <Breadcrumbs tone="header" />
               </div>
             </div>
 
-            <div className="ml-auto flex w-full items-center justify-end gap-2 pl-14 text-[#52525B] sm:gap-2.5 md:w-auto md:pl-0">
-              <div className="flex items-center gap-1.5 rounded-[13px] border border-[#E4E4E7] bg-[#F3F2EF] px-1 py-1 shadow-none sm:gap-2 sm:px-1.5">
+            <div className="ml-auto flex w-full items-center justify-end gap-2 pl-14 text-[#52525B] dark:text-[#c4cad4] sm:gap-2.5 md:w-auto md:pl-0">
+              <div className="flex items-center gap-1.5 rounded-[13px] border border-[#E4E4E7] bg-[#F3F2EF] px-1 py-1 shadow-none dark:border-[#343a46] dark:bg-[#2a2f38] sm:gap-2 sm:px-1.5">
                 <button
                   type="button"
                   className={headerIconButtonClassName}
@@ -178,20 +178,20 @@ const Layout = (): JSX.Element => {
 
               {user && (
                 <>
-                  <div className="hidden h-7 w-px bg-[#E4E4E7] lg:block" />
+                  <div className="hidden h-7 w-px bg-[#E4E4E7] dark:bg-[#343a46] lg:block" />
                   <Link
                     to="/profile"
-                    className="flex min-w-0 items-center gap-2 rounded-[13px] border border-[#E4E4E7] bg-white px-1.5 py-1.5 shadow-none transition-[transform,background-color,border-color] duration-200 hover:-translate-y-px hover:border-[#6B4EFF]/30 hover:bg-[#F3F2EF] sm:gap-3 sm:px-2.5"
+                    className="flex min-w-0 items-center gap-2 rounded-[13px] border border-[#E4E4E7] bg-white px-1.5 py-1.5 shadow-none transition-[transform,background-color,border-color] duration-200 hover:-translate-y-px hover:border-[#6B4EFF]/30 hover:bg-[#F3F2EF] dark:border-[#343a46] dark:bg-[#22262e] dark:hover:border-[#7c5cff]/45 dark:hover:bg-[#2a2f38] sm:gap-3 sm:px-2.5"
                     title={t('userProfile.viewProfile') || 'Mon compte'}
                   >
-                    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[9px] bg-[#6B4EFF] text-[11px] font-semibold text-white shadow-none">
+                    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[9px] bg-[#6B4EFF] text-[11px] font-semibold text-white shadow-none dark:bg-[#7c5cff]">
                       {getInitials(user.name)}
                     </div>
                     <div className="hidden min-w-0 lg:flex lg:flex-col">
-                      <span className="truncate text-[12px] font-semibold tracking-[0.01em] text-[#18181B]">
+                      <span className="truncate text-[12px] font-semibold tracking-[0.01em] text-[#18181B] dark:text-[#f4f5f7]">
                         {user.name || t('userProfile.anonymous')}
                       </span>
-                      <span className="truncate text-[11px] text-[#52525B]">
+                      <span className="truncate text-[11px] text-[#52525B] dark:text-[#c4cad4]">
                         {user.firmName || user.firm || t('userProfile.noCompany')} · {getRoleLabel(user.role)}
                       </span>
                     </div>

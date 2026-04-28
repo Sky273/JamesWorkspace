@@ -138,7 +138,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
         className={classNames(
           'group relative flex min-h-9 items-center gap-3 rounded-[9px] border px-3 py-2 text-[13px] font-semibold transition-[background-color,border-color,color] duration-200',
           isActive
-            ? 'border-[#7357ff]/70 bg-[#342c72] !text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.09)]'
+            ? 'border-[#7c5cff]/70 bg-[#33295f] !text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.09)]'
             : 'border-transparent !text-white hover:bg-white/[0.06] hover:!text-white'
         )}
       >
@@ -146,14 +146,14 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
           className={classNames(
             'h-[17px] w-[17px] flex-shrink-0 stroke-[1.8]',
             isActive
-              ? 'text-[#dcd5ff]'
-              : 'text-[#94a3b8] group-hover:text-[#d8e1ee]'
+              ? 'text-[#e4ddff]'
+              : 'text-[#c4cad4] group-hover:text-white'
           )}
           aria-hidden={true}
         />
         <span className="min-w-0 flex-1 truncate !text-white">{item.name}</span>
         {item.badge ? (
-          <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#7b61ff] px-1.5 text-[10px] font-bold leading-none text-white">
+          <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#7c5cff] px-1.5 text-[10px] font-bold leading-none text-white">
             {item.badge}
           </span>
         ) : null}
@@ -180,7 +180,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
       <div key={section.id} className="mt-1">
         {section.title && (
           <div className="mb-1 px-3">
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#4f6076]">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#687080]">
               {section.title}
             </h3>
           </div>
@@ -191,19 +191,19 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
   };
 
   const sidebarContent = (
-    <div className="flex min-h-0 flex-1 flex-col border-r border-[#1d2a3b] bg-[#0b1828] shadow-[1px_0_0_rgba(255,255,255,0.03)]">
+    <div className="flex min-h-0 flex-1 flex-col border-r border-[#252b34] bg-[#111722] shadow-[1px_0_0_rgba(255,255,255,0.03)]">
       <div className="flex flex-1 flex-col overflow-y-auto pb-4 sidebar-scrollbar">
-        <div className="flex flex-shrink-0 items-center justify-between border-b border-[#1d2a3b] px-4 py-5">
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-[#252b34] px-4 py-5">
           <div className="min-w-0">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[8px] bg-[#7b61ff] text-[11px] font-bold text-white shadow-none">
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[8px] bg-[#7c5cff] text-[11px] font-bold text-white shadow-none">
                 RC
               </div>
               <div className="min-w-0">
                 <div className="truncate text-[13px] font-bold leading-4 text-white">
                   ResumeConverter
                 </div>
-                <div className="truncate text-[11px] leading-4 text-[#7f8da1]">
+                <div className="truncate text-[11px] leading-4 text-[#8f98a8]">
                   {firmLabel}
                 </div>
               </div>
@@ -213,7 +213,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
             type="button"
             onClick={onClose}
             aria-label={t('common.close', 'Fermer')}
-            className="rounded-[9px] p-1.5 text-[#7f8da1] transition-colors hover:bg-white/8 hover:text-white lg:hidden"
+            className="rounded-[9px] p-1.5 text-[#8f98a8] transition-colors hover:bg-white/8 hover:text-white lg:hidden"
           >
             <XMarkIcon className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -221,7 +221,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
 
         <nav className="flex flex-1 flex-col px-3 py-4">
           <div className="mb-1 px-3">
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#4f6076]">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#687080]">
               {t('navigation.sectionMain', 'Navigation')}
             </h3>
           </div>
@@ -230,7 +230,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
           {canAccessManagerScreens && renderSection(adminSection)}
           <div className="min-h-0 flex-1" />
           <div className="mb-1 mt-1 px-3">
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#4f6076]">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#687080]">
               {t('navigation.sectionAccount', 'Compte')}
             </h3>
           </div>
@@ -244,16 +244,16 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
         <Link
           to="/profile"
           onClick={onClose}
-          className="flex items-center gap-2.5 border-t border-[#1d2a3b] px-4 py-4 transition-colors hover:bg-white/[0.04]"
+          className="flex items-center gap-2.5 border-t border-[#252b34] px-4 py-4 transition-colors hover:bg-white/[0.04]"
         >
-          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[8px] bg-[#7b61ff] text-[11px] font-bold text-white">
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[8px] bg-[#7c5cff] text-[11px] font-bold text-white">
             {getInitials(user.name)}
           </div>
           <div className="min-w-0">
             <div className="truncate text-[13px] font-bold leading-4 text-white">
               {user.name || t('userProfile.anonymous')}
             </div>
-            <div className="truncate text-[11px] leading-4 text-[#9aa8bc]">
+            <div className="truncate text-[11px] leading-4 text-[#c4cad4]">
               {getRoleLabel(user.role)}
             </div>
           </div>

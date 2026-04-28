@@ -665,12 +665,12 @@
 
 .dark .editorial-migrated-shell,
 .dark .editorial-migrated-shell.app-editorial-shell {
-  --cv-surface-base-start: #111827;
-  --cv-surface-base-end: #111827;
-  --cv-panel-start: #182235;
-  --cv-panel-end: #182235;
-  --cv-card-start: #182235;
-  --cv-card-end: #182235;
+  --cv-surface-base-start: #181b20;
+  --cv-surface-base-end: #181b20;
+  --cv-panel-start: #22262e;
+  --cv-panel-end: #22262e;
+  --cv-card-start: #22262e;
+  --cv-card-end: #22262e;
   --cv-outline: rgba(148, 163, 184, 0.18);
   --cv-outline-strong: rgba(163, 166, 255, 0.28);
   --cv-shadow: rgba(0, 0, 0, 0.22);
@@ -678,14 +678,14 @@
   --cv-text: #e5e7eb;
   --cv-muted: #a3aab8;
   --cv-kicker-text: #8f98aa;
-  --cv-glass: #182235;
-  --cv-search-input-bg: #111827;
+  --cv-glass: #22262e;
+  --cv-search-input-bg: #181b20;
   --cv-search-input-border: rgba(148, 163, 184, 0.18);
-  --cv-ghost-bg: #182235;
+  --cv-ghost-bg: #22262e;
   --cv-ghost-hover: rgba(163, 166, 255, 0.12);
-  --cv-pill-bg: #111827;
+  --cv-pill-bg: #181b20;
   --cv-score-track-bg: rgba(148, 163, 184, 0.18);
-  background: #111827;
+  background: #181b20;
   color: var(--cv-text);
 }
 
@@ -694,7 +694,7 @@
 .dark .editorial-migrated-shell .app-page-shell-4xl,
 .dark .editorial-migrated-shell .app-page-shell-5xl,
 .dark .editorial-migrated-shell .app-page-shell-6xl {
-  background: #111827;
+  background: #181b20;
 }
 
 .editorial-migrated-shell .cv-panel,
@@ -717,7 +717,7 @@
 .dark .editorial-migrated-shell .glass-panel-strong,
 .dark .editorial-migrated-shell .page-hero,
 .dark .editorial-migrated-shell .app-section-card {
-  background: #182235;
+  background: #22262e;
   border-color: rgba(148, 163, 184, 0.18);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22), 0 4px 14px rgba(0, 0, 0, 0.26);
 }
@@ -753,7 +753,7 @@
 .dark .editorial-migrated-shell .cv-tab-strip,
 .dark .editorial-migrated-shell .app-tab-strip,
 .dark .editorial-migrated-shell .segmented-control {
-  background: #111827;
+  background: #181b20;
   border-color: rgba(148, 163, 184, 0.18);
 }
 
@@ -764,7 +764,7 @@
 }
 
 .dark .editorial-migrated-shell .cv-search-input {
-  background: #111827 !important;
+  background: #181b20 !important;
   border-color: rgba(148, 163, 184, 0.18) !important;
   color: #e5e7eb !important;
 }
@@ -820,7 +820,7 @@
 .dark .editorial-migrated-shell .cv-tab-pill,
 .dark .editorial-migrated-shell .app-tab-button,
 .dark .editorial-migrated-shell .segmented-control__item--active {
-  background: #182235;
+  background: #22262e;
   border-color: rgba(148, 163, 184, 0.18);
   color: #e5e7eb;
 }
@@ -944,12 +944,12 @@
 }
 
 .dark .crm-compact-shell {
-  --cv-surface-base-start: #111827;
-  --cv-surface-base-end: #111827;
-  --cv-panel-start: #182235;
-  --cv-panel-end: #182235;
-  --cv-card-start: #182235;
-  --cv-card-end: #182235;
+  --cv-surface-base-start: #181b20;
+  --cv-surface-base-end: #181b20;
+  --cv-panel-start: #22262e;
+  --cv-panel-end: #22262e;
+  --cv-card-start: #22262e;
+  --cv-card-end: #22262e;
   --cv-outline: rgba(255, 255, 255, 0.1);
   --cv-outline-strong: rgba(201, 204, 255, 0.26);
   --cv-shadow: rgba(0, 0, 0, 0.22);
@@ -960,9 +960,9 @@
   --cv-primary: #c9ccff;
   --cv-primary-strong: #8f95ff;
   --cv-primary-soft: rgba(201, 204, 255, 0.12);
-  --cv-ghost-bg: #111827;
+  --cv-ghost-bg: #181b20;
   --cv-ghost-hover: #263052;
-  --cv-search-input-bg: #111827;
+  --cv-search-input-bg: #181b20;
   --cv-search-input-border: rgba(255, 255, 255, 0.1);
 }
 
@@ -977,7 +977,7 @@
 .dark .crm-compact-shell.cv-surface,
 .dark .crm-compact-shell .cv-surface,
 .dark .crm-compact-shell.app-page-shell {
-  background: #111827 !important;
+  background: #181b20 !important;
 }
 
 .crm-compact-shell .cv-panel,
@@ -996,7 +996,7 @@
 .dark .crm-compact-shell .lux-card,
 .dark .crm-compact-shell .section-shell,
 .dark .crm-compact-shell .cv-search-shell {
-  background: #182235 !important;
+  background: #22262e !important;
   border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
@@ -1034,7 +1034,7 @@
 
 .dark .crm-compact-shell .app-button-secondary,
 .dark .crm-compact-shell .cv-ghost-button {
-  background: #111827 !important;
+  background: #181b20 !important;
   color: #d1d5db !important;
   border-color: rgba(255, 255, 255, 0.1) !important;
 }
@@ -1053,7 +1053,7 @@
 .dark .crm-compact-shell select,
 .dark .crm-compact-shell textarea,
 .dark .crm-compact-shell .cv-search-input {
-  background: #111827 !important;
+  background: #181b20 !important;
   border-color: rgba(255, 255, 255, 0.1) !important;
   color: #e5e7eb !important;
 }
@@ -1093,12 +1093,12 @@
 }
 
 .dark .settings-compact-shell {
-  --cv-surface-base-start: #111827;
-  --cv-surface-base-end: #111827;
-  --cv-panel-start: #182235;
-  --cv-panel-end: #182235;
-  --cv-card-start: #182235;
-  --cv-card-end: #182235;
+  --cv-surface-base-start: #181b20;
+  --cv-surface-base-end: #181b20;
+  --cv-panel-start: #22262e;
+  --cv-panel-end: #22262e;
+  --cv-card-start: #22262e;
+  --cv-card-end: #22262e;
   --cv-outline: rgba(255, 255, 255, 0.1);
   --cv-outline-strong: rgba(201, 204, 255, 0.26);
   --cv-shadow: rgba(0, 0, 0, 0.22);
@@ -1107,7 +1107,7 @@
   --cv-primary: #c9ccff;
   --cv-primary-strong: #8f95ff;
   --cv-primary-soft: rgba(201, 204, 255, 0.12);
-  background: #111827;
+  background: #181b20;
 }
 
 .settings-compact-shell.cv-surface,
@@ -1119,7 +1119,7 @@
 
 .dark .settings-compact-shell.cv-surface,
 .dark .settings-compact-shell .cv-surface {
-  background: #111827 !important;
+  background: #181b20 !important;
 }
 
 .settings-compact-shell .section-shell,
@@ -1141,7 +1141,7 @@
 .dark .settings-compact-shell .section-shell,
 .dark .settings-compact-shell .cv-panel,
 .dark .settings-compact-shell .cv-card {
-  background: #182235 !important;
+  background: #22262e !important;
   border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
@@ -1158,7 +1158,7 @@
 .dark .settings-compact-shell input,
 .dark .settings-compact-shell select,
 .dark .settings-compact-shell textarea {
-  background: #111827 !important;
+  background: #181b20 !important;
   border-color: rgba(255, 255, 255, 0.1) !important;
   color: #e5e7eb !important;
 }
@@ -1244,7 +1244,7 @@
 .dark .settings-compact-shell .bg-slate-950\/40,
 .dark .settings-compact-shell .bg-slate-900\/50,
 .dark .settings-compact-shell .bg-slate-900\/60 {
-  background-color: #111827 !important;
+  background-color: #181b20 !important;
 }
 
 .settings-compact-shell .app-button-primary,
@@ -1266,7 +1266,7 @@
 
 .dark .settings-compact-shell .app-button-secondary,
 .dark .settings-compact-shell .cv-ghost-button {
-  background: #111827 !important;
+  background: #181b20 !important;
   border-color: rgba(255, 255, 255, 0.1) !important;
   color: #d1d5db !important;
 }
@@ -1294,17 +1294,17 @@
 }
 
 .dark .settings-compact-shell .settings-preferences-panel {
-  background: #182235 !important;
+  background: #22262e !important;
   border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 .dark .settings-compact-shell .settings-preference-card {
-  background: #111827 !important;
+  background: #181b20 !important;
   border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
 .dark .settings-compact-shell .settings-preference-card select {
-  background: #182235 !important;
+  background: #22262e !important;
 }
 
 .settings-compact-shell .settings-test-model-button {
@@ -1327,7 +1327,7 @@
 }
 
 .dark .settings-compact-shell .settings-test-model-button {
-  background: #111827 !important;
+  background: #181b20 !important;
   border-color: rgba(255, 255, 255, 0.1) !important;
   color: #c9ccff !important;
 }
@@ -1338,7 +1338,7 @@
 }
 
 .dark .settings-compact-shell .settings-test-model-button:disabled {
-  background: #111827 !important;
+  background: #181b20 !important;
   border-color: rgba(255, 255, 255, 0.08) !important;
   color: #6b7280 !important;
 }
@@ -1464,4 +1464,141 @@
   background: #ffffff;
   color: #6246ea;
   box-shadow: 0 1px 3px rgba(26, 22, 53, 0.1);
+}
+
+/* Soft dark mode aligned with the compact light CRM/CVtheque visual language. */
+.dark .editorial-migrated-shell,
+.dark .editorial-migrated-shell.app-editorial-shell,
+.dark .settings-compact-shell,
+.dark .missions-editorial-shell {
+  --cv-surface-base-start: #181b20;
+  --cv-surface-base-end: #181b20;
+  --cv-panel-start: #22262e;
+  --cv-panel-end: #22262e;
+  --cv-card-start: #22262e;
+  --cv-card-end: #22262e;
+  --cv-outline: #343a46;
+  --cv-outline-strong: rgba(124, 92, 255, 0.42);
+  --cv-shadow: rgba(0, 0, 0, 0.32);
+  --cv-shadow-strong: rgba(0, 0, 0, 0.42);
+  --cv-text: #f4f5f7;
+  --cv-muted: #c4cad4;
+  --cv-subtle: #8f98a8;
+  --cv-kicker-text: #8f98a8;
+  --cv-glass: #22262e;
+  --cv-search-input-bg: #2a2f38;
+  --cv-search-input-border: #343a46;
+  --cv-primary: #7c5cff;
+  --cv-primary-strong: #8b72ff;
+  --cv-primary-soft: rgba(124, 92, 255, 0.16);
+  --cv-secondary: #a78bfa;
+  --cv-secondary-soft: rgba(167, 139, 250, 0.14);
+  --cv-tertiary: #22c55e;
+  --cv-tertiary-soft: rgba(34, 197, 94, 0.14);
+  --cv-cyan: #60a5fa;
+  --cv-cyan-soft: rgba(96, 165, 250, 0.14);
+  --cv-warning: #f59e0b;
+  --cv-warning-soft: rgba(245, 158, 11, 0.14);
+  --cv-danger: #ef4444;
+  --cv-danger-soft: rgba(239, 68, 68, 0.14);
+  --cv-ghost-bg: #2a2f38;
+  --cv-ghost-hover: #323844;
+  --cv-pill-bg: #2a2f38;
+  --cv-score-track-bg: #343a46;
+  background: #181b20 !important;
+  color: var(--cv-text);
+}
+
+.dark .editorial-migrated-shell .cv-surface,
+.dark .editorial-migrated-shell .app-page-shell,
+.dark .editorial-migrated-shell .app-page-shell-4xl,
+.dark .editorial-migrated-shell .app-page-shell-5xl,
+.dark .editorial-migrated-shell .app-page-shell-6xl,
+.dark .missions-editorial-shell .cv-surface,
+.dark .missions-editorial-shell .missions-page-shell {
+  background: #181b20 !important;
+}
+
+.dark .editorial-migrated-shell .cv-panel,
+.dark .editorial-migrated-shell .cv-card,
+.dark .editorial-migrated-shell .lux-card,
+.dark .editorial-migrated-shell .section-shell,
+.dark .editorial-migrated-shell .glass-panel-strong,
+.dark .editorial-migrated-shell .page-hero,
+.dark .editorial-migrated-shell .app-section-card,
+.dark .settings-compact-shell .settings-preferences-panel,
+.dark .missions-editorial-shell .cv-panel,
+.dark .missions-editorial-shell .cv-card,
+.dark .missions-editorial-shell .cv-search-shell,
+.dark .missions-editorial-shell .cv-stat-card {
+  background: #22262e !important;
+  border-color: #343a46 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22), 0 4px 14px rgba(0, 0, 0, 0.24) !important;
+}
+
+.dark .settings-compact-shell .settings-preference-card,
+.dark .editorial-migrated-shell .cv-search-shell,
+.dark .editorial-migrated-shell .cv-tab-strip,
+.dark .editorial-migrated-shell .app-tab-strip,
+.dark .editorial-migrated-shell .segmented-control,
+.dark .missions-editorial-shell .cv-tab-strip,
+.dark .missions-editorial-shell .segmented-control {
+  background: #2a2f38 !important;
+  border-color: #343a46 !important;
+}
+
+.dark .editorial-migrated-shell .cv-search-input,
+.dark .editorial-migrated-shell input[type="search"],
+.dark .editorial-migrated-shell input[type="text"],
+.dark .missions-editorial-shell .cv-search-input,
+.dark .missions-editorial-shell input[type="search"],
+.dark .missions-editorial-shell input[type="text"],
+.dark .settings-compact-shell input,
+.dark .settings-compact-shell textarea,
+.dark .settings-compact-shell select {
+  background: #2a2f38 !important;
+  border-color: #343a46 !important;
+  color: #f4f5f7 !important;
+}
+
+.dark .editorial-migrated-shell .cv-ghost-button,
+.dark .editorial-migrated-shell .app-button-secondary,
+.dark .editorial-migrated-shell .cv-tab-pill,
+.dark .editorial-migrated-shell .app-tab-button,
+.dark .editorial-migrated-shell .segmented-control__item--active,
+.dark .settings-compact-shell .app-button-secondary,
+.dark .settings-compact-shell .cv-ghost-button,
+.dark .settings-compact-shell .settings-test-model-button,
+.dark .missions-editorial-shell .cv-ghost-button,
+.dark .missions-editorial-shell .segmented-control__item--active {
+  background: #2a2f38 !important;
+  border-color: #343a46 !important;
+  color: #f4f5f7 !important;
+}
+
+.dark .editorial-migrated-shell .cv-ghost-button:hover,
+.dark .editorial-migrated-shell .app-button-secondary:hover,
+.dark .editorial-migrated-shell .cv-tab-pill:hover,
+.dark .editorial-migrated-shell .app-tab-button:hover,
+.dark .settings-compact-shell .settings-test-model-button:hover:not(:disabled),
+.dark .missions-editorial-shell .cv-ghost-button:hover {
+  background: #323844 !important;
+  border-color: rgba(124, 92, 255, 0.42) !important;
+  color: #8b72ff !important;
+}
+
+.dark .editorial-migrated-shell .cv-gradient-button,
+.dark .editorial-migrated-shell .app-button-primary,
+.dark .editorial-migrated-shell .cv-tab-pill-active,
+.dark .editorial-migrated-shell .app-tab-button-active,
+.dark .editorial-migrated-shell button.cv-page-primary-action[type='button'],
+.dark .settings-compact-shell .app-button-primary,
+.dark .settings-compact-shell .app-primary-action,
+.dark .settings-compact-shell .cv-gradient-button,
+.dark .missions-editorial-shell .cv-page-primary-action,
+.dark .missions-editorial-shell .cv-gradient-button {
+  background: #7c5cff !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+  box-shadow: 0 12px 24px rgba(124, 92, 255, 0.22) !important;
 }

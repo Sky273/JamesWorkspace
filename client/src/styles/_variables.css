@@ -97,17 +97,17 @@
 /* --- Dark Mode Theme --- */
 .dark {
   color-scheme: dark;
-  --app-bg: #111827;
-  --surface-primary: #182235;
-  --surface-elevated: #182235;
-  --surface-muted: #111827;
-  --surface-accent: rgba(163, 166, 255, 0.12);
-  --border-subtle: rgba(148, 163, 184, 0.16);
-  --border-strong: rgba(129, 140, 248, 0.3);
-  --text-primary: #e2e8f0;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --shadow-soft: 0 14px 40px -18px rgba(2, 6, 23, 0.5);
-  --shadow-card: 0 24px 70px -38px rgba(15, 23, 42, 0.85);
-  --shadow-card-hover: 0 34px 90px -44px rgba(79, 70, 229, 0.45);
+  --app-bg: #181b20;
+  --surface-primary: #22262e;
+  --surface-elevated: #22262e;
+  --surface-muted: #2a2f38;
+  --surface-accent: rgba(124, 92, 255, 0.16);
+  --border-subtle: #343a46;
+  --border-strong: rgba(124, 92, 255, 0.42);
+  --text-primary: #f4f5f7;
+  --text-secondary: #c4cad4;
+  --text-muted: #8f98a8;
+  --shadow-soft: 0 12px 34px -20px rgba(0, 0, 0, 0.58);
+  --shadow-card: 0 18px 48px -30px rgba(0, 0, 0, 0.68);
+  --shadow-card-hover: 0 24px 60px -34px rgba(124, 92, 255, 0.32);
 }
