@@ -139,7 +139,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
           'group relative flex min-h-9 items-center gap-3 rounded-[9px] border px-3 py-2 text-[13px] font-semibold transition-[background-color,border-color,color] duration-200',
           isActive
             ? 'border-[#7357ff]/70 bg-[#342c72] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.09)]'
-            : 'border-transparent text-[#9aa8bc] hover:bg-white/[0.04] hover:text-white'
+            : 'border-transparent text-[#c5d0df] hover:bg-white/[0.06] hover:text-white'
         )}
       >
         <IconComponent
@@ -147,7 +147,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
             'h-[17px] w-[17px] flex-shrink-0 stroke-[1.8]',
             isActive
               ? 'text-[#dcd5ff]'
-              : 'text-[#66758a] group-hover:text-[#b7c3d2]'
+              : 'text-[#94a3b8] group-hover:text-[#d8e1ee]'
           )}
           aria-hidden={true}
         />

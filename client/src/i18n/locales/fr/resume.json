@@ -84,10 +84,10 @@
     },
     "steps": {
       "analysis": "Analyse",
-      "improve": "Améliorer",
+      "improve": "Amélioration",
       "viewImproved": "Voir l'amélioration",
       "view": "Voir",
-      "export": "Exporter"
+      "export": "Export"
     },
     "improve": {
       "title": "Amélioration du CV",

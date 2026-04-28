@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeftIcon, ArrowPathIcon, DocumentArrowDownIcon, CheckCircleIcon, SparklesIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, ArrowPathIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
 import ExportTab from '../components/ResumeAnalysis/ExportTab';
 import ConsentBadge, { ConsentStatus } from '../components/ConsentBadge';
 import SendEmailModal from '../components/ResumeAnalysis/SendEmailModal';
 import PageHeader from '../components/page/PageHeader';
+import ResumeWorkflowSteps from '../components/ResumeWorkflowSteps';
 import { useResumeExportPage } from './ResumeExportPage.hooks';
 
 const ResumeExportPage = (): JSX.Element => {
@@ -84,6 +85,8 @@ const ResumeExportPage = (): JSX.Element => {
     );
   }
 
+  const resumeId = id ?? currentResume.id;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -132,67 +135,12 @@ const ResumeExportPage = (): JSX.Element => {
           </div>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="section-shell mb-6 rounded-[2rem] p-5 sm:p-6"
-        >
-          <div className="flex items-center">
-            <Link to={`/resumes/${id}/analysis`} className="flex items-center gap-2 group">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center shadow-sm shadow-green-500/20">
-                <CheckCircleIcon className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 group-hover:underline">
-                {t('resume.steps.analysis')}
-              </span>
-            </Link>
-
-            <div className="w-10 sm:w-16 h-[3px] mx-2 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full" />
-
-            {hasImprovedText ? (
-              <Link to={`/resumes/${id}/improve`} className="flex items-center gap-2 group">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center shadow-sm shadow-green-500/20">
-                  <CheckCircleIcon className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 group-hover:underline">
-                  {t('resume.steps.improve')}
-                </span>
-              </Link>
-            ) : (
-              <Link to={`/resumes/${id}/analysis`} className="flex items-center gap-2 group">
-                <div className="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center group-hover:border-indigo-400 transition-colors">
-                  <SparklesIcon className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-indigo-500 transition-colors" />
-                </div>
-                <span className="text-sm text-gray-500 dark:text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                  {t('resume.steps.improve')}
-                </span>
-              </Link>
-            )}
-
-            <div className="w-10 sm:w-16 h-[3px] mx-2 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
-              <motion.div
-                className="h-full rounded-full bg-gradient-to-r from-green-400 to-purple-500"
-                initial={false}
-                animate={{ width: hasImprovedText ? '100%' : '40%' }}
-                transition={{ duration: 0.6, ease: 'easeOut' }}
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <motion.div
-                className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-fuchsia-600 flex items-center justify-center shadow-md shadow-purple-500/25"
-                animate={{ scale: [1, 1.1, 1] }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                <ArrowDownTrayIcon className="w-4 h-4 text-white" />
-              </motion.div>
-              <span className="text-sm font-semibold text-purple-600 dark:text-purple-400">
-                {t('resume.steps.export')}
-              </span>
-            </div>
-          </div>
-        </motion.div>
+        <ResumeWorkflowSteps
+          resumeId={resumeId}
+          currentStep="export"
+          hasImprovedText={hasImprovedText}
+          t={t}
+        />
 
         <div className="section-shell rounded-[2rem] p-6">
           <ExportTab

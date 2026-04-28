@@ -64,6 +64,7 @@ describe('Layout', () => {
     expect(screen.getByText('LM')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Aller au contenu principal' })).toHaveAttribute('href', '#main-content');
     expect(document.getElementById('main-content')).toBeInTheDocument();
+    expect(document.getElementById('main-content')).not.toHaveClass('z-0');
 
     fireEvent.click(screen.getByRole('button', { name: 'common.openMenu' }));
     expect(screen.getByText('sidebar:true')).toBeInTheDocument();
