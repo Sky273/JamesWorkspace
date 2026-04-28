@@ -37,6 +37,24 @@ describe('templateFragments', () => {
     );
   });
 
+  it('removes stylesheet URL references that would trigger browser refreshes or PDF rejection', () => {
+    const stylesheet = `
+      <style>
+        @import url("https://example.test/theme.css");
+        .page { background-image: url("/2bb9e8df-b051-4cfd-8770-29425c602ced"); }
+        .avatar { background: url(2bb9e8df-b051-4cfd-8770-29425c602ced) center / cover no-repeat; }
+        .logo { background-image: url("data:image/png;base64,AAA"); }
+      </style>
+    `;
+
+    const result = normalizeTemplateStylesheet(stylesheet);
+
+    expect(result).not.toContain('@import');
+    expect(result).not.toContain('/2bb9e8df-b051-4cfd-8770-29425c602ced');
+    expect(result).not.toContain('url(2bb9e8df-b051-4cfd-8770-29425c602ced)');
+    expect(result).toContain('url("data:image/png;base64,AAA")');
+  });
+
   it('summarizes oversized raw fragments versus normalized payload', () => {
     const summary = summarizeTemplatePayload({
       HeaderContent: '<html><body><header><p>Head</p></header></body></html>',

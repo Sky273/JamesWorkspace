@@ -110,6 +110,11 @@ export function normalizeTemplateFragment(
 export function normalizeTemplateStylesheet(stylesheet: string | undefined): string {
   return String(stylesheet || '')
     .replace(/<\/?style\b[^>]*>/gi, '')
+    .replace(/@import\b[^;]*(?:;|$)/gi, '')
+    .replace(/url\(\s*(?:"([^"]*)"|'([^']*)'|([^)]*?))\s*\)/gi, (match, doubleQuoted: string, singleQuoted: string, unquoted: string) => {
+      const rawUrl = (doubleQuoted || singleQuoted || unquoted || '').trim();
+      return /^data:image\//i.test(decodeBasicHtmlEntities(rawUrl)) ? match : 'none';
+    })
     .trim();
 }
 

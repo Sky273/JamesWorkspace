@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 
 import { sanitizeHtml } from '../utils/sanitizer.frontend';
-import { removeUnsupportedDocumentResources } from '../utils/templateFragments';
+import { normalizeTemplateStylesheet, removeUnsupportedDocumentResources } from '../utils/templateFragments';
 
 interface TemplatePreviewFrameProps {
   stylesheet?: string;
@@ -13,17 +13,6 @@ interface TemplatePreviewFrameProps {
   scale?: number;
 }
 
-const normalizeStylesheet = (stylesheet?: string): string => {
-  if (!stylesheet) {
-    return '';
-  }
-
-  return stylesheet
-    .replace(/<\/?style\b[^>]*>/gi, '')
-    .replace(/<\/?script\b[^>]*>/gi, '')
-    .trim();
-};
-
 const TemplatePreviewFrame = ({
   stylesheet,
   headerContent,
@@ -34,7 +23,7 @@ const TemplatePreviewFrame = ({
   scale = 1,
 }: TemplatePreviewFrameProps): JSX.Element => {
   const srcDoc = useMemo(() => {
-    const safeStylesheet = normalizeStylesheet(stylesheet);
+    const safeStylesheet = normalizeTemplateStylesheet(stylesheet);
     const safeHeader = removeUnsupportedDocumentResources(sanitizeHtml(headerContent));
     const safeContent = removeUnsupportedDocumentResources(sanitizeHtml(templateContent));
     const safeFooter = removeUnsupportedDocumentResources(sanitizeHtml(footerContent));
