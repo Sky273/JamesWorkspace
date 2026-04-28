@@ -25,6 +25,25 @@ body {
   color: var(--text-primary);
 }
 
+.auth-field:-webkit-autofill,
+.auth-field:-webkit-autofill:hover,
+.auth-field:-webkit-autofill:focus,
+.auth-field:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #18181b !important;
+  caret-color: #18181b;
+  transition: background-color 9999s ease-out;
+}
+
+.dark .auth-field:-webkit-autofill,
+.dark .auth-field:-webkit-autofill:hover,
+.dark .auth-field:-webkit-autofill:focus,
+.dark .auth-field:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #111827 inset !important;
+  -webkit-text-fill-color: #f3f4f6 !important;
+  caret-color: #f3f4f6;
+}
+
 /* --- Typography Base --- */
 h1, h2, h3, h4, h5, h6 {
   margin: 0;

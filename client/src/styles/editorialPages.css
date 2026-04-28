@@ -1308,6 +1308,42 @@
   background: #182235 !important;
 }
 
+.settings-compact-shell .settings-test-model-button {
+  background: #ffffff !important;
+  border-color: #dedbe8 !important;
+  color: #6246ea !important;
+  box-shadow: none !important;
+}
+
+.settings-compact-shell .settings-test-model-button:hover:not(:disabled) {
+  background: #ede9ff !important;
+  border-color: rgba(98, 70, 234, 0.28) !important;
+  color: #5236d6 !important;
+}
+
+.settings-compact-shell .settings-test-model-button:disabled {
+  background: #f8f8f7 !important;
+  border-color: #dedbe8 !important;
+  color: #8f8a9d !important;
+}
+
+.dark .settings-compact-shell .settings-test-model-button {
+  background: #111827 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #c9ccff !important;
+}
+
+.dark .settings-compact-shell .settings-test-model-button:hover:not(:disabled) {
+  background: rgba(201, 204, 255, 0.12) !important;
+  border-color: rgba(201, 204, 255, 0.28) !important;
+}
+
+.dark .settings-compact-shell .settings-test-model-button:disabled {
+  background: #111827 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #6b7280 !important;
+}
+
 /* Missions standalone visual direction. */
 .missions-editorial-shell {
   --cv-surface-base-start: #f3f2ef;

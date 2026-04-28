@@ -202,7 +202,7 @@ export default function LLMProviderModelSection({
           type="button"
           onClick={() => void onTestConnection()}
           disabled={!canTestConnection || testingConnection}
-          className="app-button-secondary inline-flex min-h-10 items-center rounded-[9px] px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
+          className="settings-test-model-button inline-flex min-h-10 items-center justify-center rounded-[9px] border px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
         >
           {testingConnection ? 'Test en cours...' : 'Tester le modèle'}
         </button>

@@ -11,7 +11,7 @@ import { authService } from '../services/authService';
 import AuthPageShell from '../components/AuthPageShell';
 
 const authLinkClassName = 'text-sm font-medium text-[#6b4eff] transition-colors hover:text-[#5b3eee] dark:text-[#c9ccff] dark:hover:text-white';
-const authFieldClassName = 'block w-full rounded-[13px] border border-[#e4e4e7] bg-white px-3 py-3 pr-11 text-gray-900 placeholder-gray-500 focus:border-[#6b4eff] focus:outline-none focus:ring-2 focus:ring-[#6b4eff]/25 sm:text-sm dark:border-white/10 dark:bg-[#111827] dark:text-gray-100 dark:placeholder-gray-400';
+const authFieldClassName = 'auth-field block w-full rounded-[13px] border border-[#e4e4e7] bg-white px-3 py-3 pr-11 text-gray-900 placeholder-gray-500 focus:border-[#6b4eff] focus:outline-none focus:ring-2 focus:ring-[#6b4eff]/25 sm:text-sm dark:border-white/10 dark:bg-[#111827] dark:text-gray-100 dark:placeholder-gray-400';
 
 const ResetPasswordPage = (): JSX.Element => {
   const { t } = useTranslation();

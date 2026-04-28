@@ -177,15 +177,15 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
     if (visibleItems.length === 0) return null;
 
     return (
-      <div key={section.id} className="mt-5">
+      <div key={section.id} className="mt-1">
         {section.title && (
-          <div className="mb-2 px-3">
+          <div className="mb-1 px-3">
             <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#4f6076]">
               {section.title}
             </h3>
           </div>
         )}
-        <div className="space-y-1">{visibleItems.map((item) => renderNavItem(item))}</div>
+        <div className="space-y-0.5">{visibleItems.map((item) => renderNavItem(item))}</div>
       </div>
     );
   };
@@ -220,21 +220,21 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
         </div>
 
         <nav className="flex flex-1 flex-col px-3 py-4">
-          <div className="mb-2 px-3">
+          <div className="mb-1 px-3">
             <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#4f6076]">
               {t('navigation.sectionMain', 'Navigation')}
             </h3>
           </div>
-          <div className="space-y-1">{renderNavItem(homeItem)}</div>
+          <div className="space-y-0.5">{renderNavItem(homeItem)}</div>
           {renderSection(gestionSection)}
           {canAccessManagerScreens && renderSection(adminSection)}
-          <div className="min-h-4 flex-1" />
-          <div className="mt-10 mb-2 px-3">
+          <div className="min-h-0 flex-1" />
+          <div className="mb-1 mt-1 px-3">
             <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#4f6076]">
               {t('navigation.sectionAccount', 'Compte')}
             </h3>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {bottomItems.filter((item) => !item.adminOnly || isSuperAdmin).map((item) => renderNavItem(item))}
           </div>
         </nav>

@@ -46,7 +46,7 @@ const TURNSTILE_SITE_KEY = (
 ).trim();
 const TURNSTILE_SCRIPT_ID = 'cf-turnstile-script';
 const authLinkClassName = 'font-medium text-[#6b4eff] transition-colors hover:text-[#5b3eee] dark:text-[#c9ccff] dark:hover:text-white';
-const authInputClassName = 'relative block w-full border-0 bg-white px-3 py-3 text-gray-900 placeholder-gray-500 focus:z-10 focus:outline-none focus:ring-2 focus:ring-[#6b4eff]/25 sm:text-sm dark:bg-[#111827] dark:text-gray-100 dark:placeholder-gray-400';
+const authInputClassName = 'auth-field relative block w-full border-0 bg-white px-3 py-3 text-gray-900 placeholder-gray-500 focus:z-10 focus:outline-none focus:ring-2 focus:ring-[#6b4eff]/25 sm:text-sm dark:bg-[#111827] dark:text-gray-100 dark:placeholder-gray-400';
 const authSecondaryButtonClassName = 'flex w-full items-center justify-center rounded-[13px] border border-[#e4e4e7] bg-white px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-[#f8f8f7] focus:outline-none focus:ring-2 focus:ring-[#6b4eff]/25 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-[#111827] dark:text-gray-200 dark:hover:bg-[#182235]';
 
 const Register = (): JSX.Element => {
