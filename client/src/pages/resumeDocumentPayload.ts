@@ -5,6 +5,7 @@ import {
   applyTemplatePlaceholders,
   normalizeTemplateFragment,
   normalizeTemplateStylesheet,
+  removeUnsupportedDocumentResources,
   templateUsesLogoPlaceholder,
 } from '../utils/templateFragments';
 import { getFirmIdFromRecord, resolveFirmLogoMarkup } from '../utils/firmLogo';
@@ -54,20 +55,20 @@ export async function processResumeTemplate(
     })
     : '';
 
-  const processedBody = applyTemplatePlaceholders(template.TemplateContent, {
+  const processedBody = removeUnsupportedDocumentResources(applyTemplatePlaceholders(template.TemplateContent, {
     name: candidateName,
     title: candidateTitle,
     content,
     logoMarkup,
-  });
-  const processedHeader = applyTemplatePlaceholders(
+  }));
+  const processedHeader = removeUnsupportedDocumentResources(applyTemplatePlaceholders(
     normalizeTemplateFragment(template.HeaderContent, 'header'),
     { name: candidateName, title: candidateTitle, logoMarkup }
-  );
-  const processedFooter = applyTemplatePlaceholders(
+  ));
+  const processedFooter = removeUnsupportedDocumentResources(applyTemplatePlaceholders(
     normalizeTemplateFragment(template.FooterContent, 'footer'),
     { name: candidateName, title: candidateTitle, logoMarkup }
-  );
+  ));
 
   return {
     body: processedBody,

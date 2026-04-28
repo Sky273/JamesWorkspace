@@ -3,6 +3,7 @@ import {
   applyTemplatePlaceholders,
   normalizeTemplateFragment,
   normalizeTemplateStylesheet,
+  removeUnsupportedDocumentResources,
   summarizeTemplatePayload,
   templateUsesLogoPlaceholder,
 } from './templateFragments';
@@ -71,5 +72,24 @@ describe('templateFragments', () => {
       HeaderContent: '',
       FooterContent: '',
     })).toBe(false);
+  });
+
+  it('removes bare UUID image sources that would hit the SPA fallback', () => {
+    const fragment = '<footer><img src="/2bb9e8df-b051-4cfd-8770-29425c602ced" /><img src="2bb9e8df-b051-4cfd-8770-29425c602ced" /><span>Footer</span></footer>';
+
+    const result = removeUnsupportedDocumentResources(fragment);
+
+    expect(result).not.toContain('/2bb9e8df-b051-4cfd-8770-29425c602ced');
+    expect(result).not.toContain('src="2bb9e8df-b051-4cfd-8770-29425c602ced"');
+    expect(result).toContain('<span>Footer</span>');
+  });
+
+  it('keeps embedded data images while removing http resources', () => {
+    const fragment = '<header><img src="data:image/png;base64,AAA" /><img src="https://example.test/logo.png" /></header>';
+
+    const result = removeUnsupportedDocumentResources(fragment);
+
+    expect(result).toContain('src="data:image/png;base64,AAA"');
+    expect(result).not.toContain('https://example.test/logo.png');
   });
 });

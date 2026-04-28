@@ -110,4 +110,22 @@ describe('resumeDocumentPayload', () => {
     expect(payload.headerContent).not.toContain('-logo-');
     expect(payload.footerContent).not.toContain('-logo-');
   });
+
+  it('removes unsupported external resources before sending fragments to the PDF server', async () => {
+    const templateWithExternalFooterImage = {
+      TemplateContent: '<main><a href="https://example.test/profile">-content-</a><img src="data:image/png;base64,AAA" /></main>',
+      HeaderContent: '<header><img src="https://resumeconverter.net/api/firms/2bb9e8df-b051-4cfd-8770-29425c602ced/logo/image" /></header>',
+      FooterContent: '<footer><img src="https://resumeconverter.net/api/firms/2bb9e8df-b051-4cfd-8770-29425c602ced/logo/image" /><span>-title-</span></footer>',
+      FooterHeight: 25,
+      Stylesheet: '',
+    };
+
+    const payload = await buildExportPayload(resume as never, templateWithExternalFooterImage, 'pdf');
+
+    expect(payload.htmlContent).not.toContain('https://example.test/profile');
+    expect(payload.htmlContent).toContain('src="data:image/png;base64,AAA"');
+    expect(payload.headerContent).not.toContain('https://resumeconverter.net');
+    expect(payload.footerContent).not.toContain('https://resumeconverter.net');
+    expect(payload.footerContent).toContain('<span>Engineer</span>');
+  });
 });

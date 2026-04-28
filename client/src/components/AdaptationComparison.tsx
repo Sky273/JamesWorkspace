@@ -17,6 +17,7 @@ import {
   applyTemplatePlaceholders,
   normalizeTemplateFragment,
   normalizeTemplateStylesheet,
+  removeUnsupportedDocumentResources,
   summarizeTemplatePayload,
 } from '../utils/templateFragments';
 import type { ExportFormat } from './ResumeAnalysis/ExportTab';
@@ -84,20 +85,20 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
 
       const stylesheet = normalizeTemplateStylesheet(template.Stylesheet);
       const logoMarkup = '';
-      const processedBody = applyTemplatePlaceholders(template.TemplateContent, {
+      const processedBody = removeUnsupportedDocumentResources(applyTemplatePlaceholders(template.TemplateContent, {
         name,
         title,
         content,
         logoMarkup,
-      });
-      const processedHeader = applyTemplatePlaceholders(
+      }));
+      const processedHeader = removeUnsupportedDocumentResources(applyTemplatePlaceholders(
         normalizeTemplateFragment(template.HeaderContent, 'header'),
         { name, title, logoMarkup }
-      );
-      const processedFooter = applyTemplatePlaceholders(
+      ));
+      const processedFooter = removeUnsupportedDocumentResources(applyTemplatePlaceholders(
         normalizeTemplateFragment(template.FooterContent, 'footer'),
         { name, title, logoMarkup }
-      );
+      ));
       logger.warn('Adaptation export payload normalized', {
         templateId: template.id,
         filename: simplifiedFilename,

@@ -3,6 +3,7 @@ import {
   applyTemplatePlaceholders,
   normalizeTemplateFragment,
   normalizeTemplateStylesheet,
+  removeUnsupportedDocumentResources,
   templateUsesLogoPlaceholder,
 } from '../utils/templateFragments';
 import { getFirmIdFromRecord, resolveFirmLogoMarkup } from '../utils/firmLogo';
@@ -41,15 +42,17 @@ export async function buildTemplateHtml(
     })
     : '';
 
-  const processedBody = applyTemplatePlaceholders(template.TemplateContent, { name, title, content, logoMarkup });
-  const processedHeader = applyTemplatePlaceholders(
+  const processedBody = removeUnsupportedDocumentResources(
+    applyTemplatePlaceholders(template.TemplateContent, { name, title, content, logoMarkup })
+  );
+  const processedHeader = removeUnsupportedDocumentResources(applyTemplatePlaceholders(
     normalizeTemplateFragment(template.HeaderContent, 'header'),
     { name, title, logoMarkup }
-  );
-  const processedFooter = applyTemplatePlaceholders(
+  ));
+  const processedFooter = removeUnsupportedDocumentResources(applyTemplatePlaceholders(
     normalizeTemplateFragment(template.FooterContent, 'footer'),
     { name, title, logoMarkup }
-  );
+  ));
 
   return { processedBody, processedHeader, processedFooter, name, title };
 }

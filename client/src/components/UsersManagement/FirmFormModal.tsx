@@ -8,6 +8,7 @@ import { PhotoIcon, TrashIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import Modal from './Modal';
 import userService from '../../utils/userService';
+import { normalizeFirmLogoUrl } from '../../utils/logoUrl';
 
 interface Firm {
   id?: string;
@@ -32,9 +33,10 @@ const FirmFormModal = ({ isOpen, onClose, onSubmit, firm, t }: FirmFormModalProp
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const normalizedLogoUrl = normalizeFirmLogoUrl(firm?.logo_url, firm?.id);
     setName(firm?.name || '');
-    setLogoUrl(firm?.logo_url || '');
-    setLogoPreview(firm?.logo_url || '');
+    setLogoUrl(normalizedLogoUrl);
+    setLogoPreview(normalizedLogoUrl);
     setSelectedFile(null);
   }, [firm, isOpen]);
 

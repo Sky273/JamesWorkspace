@@ -15,6 +15,7 @@ import {
     ExclamationTriangleIcon,
     ClockIcon
 } from '@heroicons/react/24/outline';
+import { normalizeFirmLogoUrl } from '../utils/logoUrl';
 
 interface ConsentInfo {
     candidateName: string;
@@ -33,6 +34,7 @@ const ConsentResponsePage = (): JSX.Element => {
     const [consentInfo, setConsentInfo] = useState<ConsentInfo | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [accepted, setAccepted] = useState<boolean | null>(null);
+    const firmLogoUrl = normalizeFirmLogoUrl(consentInfo?.firmLogo);
 
     // Check for action in URL (from email links)
     const actionFromUrl = searchParams.get('action');
@@ -201,10 +203,10 @@ const ConsentResponsePage = (): JSX.Element => {
             >
                 {/* Header with firm logo */}
                 <div className="border-b border-[#e4e4e7] bg-white px-8 py-6 text-center">
-                    {consentInfo?.firmLogo ? (
-                        <img 
-                            src={consentInfo.firmLogo} 
-                            alt={consentInfo.firmName}
+                    {firmLogoUrl ? (
+                        <img
+                            src={firmLogoUrl}
+                            alt={consentInfo?.firmName || ''}
                             className="h-12 mx-auto mb-2 object-contain"
                         />
                     ) : (

@@ -14,6 +14,7 @@ import {
   AUTH_ERROR_PATTERNS
 } from '../utils/apiInterceptor';
 import logger from '../utils/logger.frontend';
+import { normalizeFirmLogoUrl } from '../utils/logoUrl';
 
 const SESSION_RESTORE_TIMEOUT_MS = 10000;
 
@@ -210,7 +211,7 @@ const normalizeUser = (user: UserLike | null | undefined): User | null => {
     firmId,
     firmName,
     firm: firmName,
-    firmLogo: firstNonEmptyString(user.firmLogo),
+    firmLogo: normalizeFirmLogoUrl(firstNonEmptyString(user.firmLogo), firmId),
     firm_id: firmId,
     customerId: firmId,
     customerName: firmName,

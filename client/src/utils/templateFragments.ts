@@ -6,6 +6,7 @@ interface PlaceholderValues {
 }
 
 type TemplateSection = 'header' | 'footer';
+const BARE_UUID_PATTERN = /^\/?[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function stripDocumentWrappers(fragment: string): string {
   if (!fragment.trim()) {
@@ -30,6 +31,68 @@ function extractSemanticFragment(fragment: string, section: TemplateSection): st
   }
 
   return fragment;
+}
+
+function decodeBasicHtmlEntities(value: string): string {
+  return value
+    .replace(/&#(\d+);?/gi, (_, code: string) => {
+      const parsed = Number.parseInt(code, 10);
+      return Number.isFinite(parsed) ? String.fromCodePoint(parsed) : _;
+    })
+    .replace(/&#x([0-9a-f]+);?/gi, (_, code: string) => {
+      const parsed = Number.parseInt(code, 16);
+      return Number.isFinite(parsed) ? String.fromCodePoint(parsed) : _;
+    })
+    .replace(/&(quot|apos|amp|lt|gt);/gi, (match, entity: string) => {
+      switch (entity.toLowerCase()) {
+        case 'quot':
+          return '"';
+        case 'apos':
+          return '\'';
+        case 'amp':
+          return '&';
+        case 'lt':
+          return '<';
+        case 'gt':
+          return '>';
+        default:
+          return match;
+      }
+    });
+}
+
+function isUnsupportedDocumentResource(value: string): boolean {
+  const decodedValue = decodeBasicHtmlEntities(value.trim());
+  return /^(?:https?:|file:|ftp:|chrome:|blob:|\/\/)/i.test(decodedValue)
+    || BARE_UUID_PATTERN.test(decodedValue);
+}
+
+function getAttributeValue(rawValue: string): string {
+  const trimmed = rawValue.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"'))
+    || (trimmed.startsWith('\'') && trimmed.endsWith('\''))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+
+  return trimmed;
+}
+
+export function removeUnsupportedDocumentResources(fragment: string | undefined): string {
+  return String(fragment || '')
+    .replace(/\s(?:src|href|data|poster|action|formaction|xlink:href)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, (attribute) => {
+      const rawValue = attribute.split('=').slice(1).join('=');
+      return isUnsupportedDocumentResource(getAttributeValue(rawValue)) ? '' : attribute;
+    })
+    .replace(/\ssrcset\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, (attribute) => {
+      const rawValue = attribute.split('=').slice(1).join('=');
+      return getAttributeValue(rawValue)
+        .split(',')
+        .some((candidate) => isUnsupportedDocumentResource(candidate.trim().split(/\s+/)[0] || ''))
+        ? ''
+        : attribute;
+    });
 }
 
 export function normalizeTemplateFragment(

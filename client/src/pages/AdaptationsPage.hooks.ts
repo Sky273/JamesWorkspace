@@ -16,6 +16,7 @@ import {
   applyTemplatePlaceholders,
   normalizeTemplateFragment,
   normalizeTemplateStylesheet,
+  removeUnsupportedDocumentResources,
   summarizeTemplatePayload,
   templateUsesLogoPlaceholder,
 } from '../utils/templateFragments';
@@ -329,20 +330,20 @@ export function useAdaptationsDashboard() {
           resumeId,
         })
         : '';
-      const processedBody = applyTemplatePlaceholders(template.TemplateContent, {
+      const processedBody = removeUnsupportedDocumentResources(applyTemplatePlaceholders(template.TemplateContent, {
         name: candidateName,
         title: candidateTitle,
         content,
         logoMarkup,
-      });
-      const processedHeader = applyTemplatePlaceholders(
+      }));
+      const processedHeader = removeUnsupportedDocumentResources(applyTemplatePlaceholders(
         normalizeTemplateFragment(template.HeaderContent, 'header'),
         { name: candidateName, title: candidateTitle, logoMarkup }
-      );
-      const processedFooter = applyTemplatePlaceholders(
+      ));
+      const processedFooter = removeUnsupportedDocumentResources(applyTemplatePlaceholders(
         normalizeTemplateFragment(template.FooterContent, 'footer'),
         { name: candidateName, title: candidateTitle, logoMarkup }
-      );
+      ));
       logger.warn('Adaptation export payload normalized', {
         templateId: template.id,
         filename: `${baseFilename.replace(/[^a-zA-Z0-9_]/g, '')}.${selectedExportFormat}`,

@@ -5,6 +5,7 @@
 
 import { authDelete, authPost, authPut, fetchWithAuth, createAuthOptions, fetchCsrfToken } from './apiInterceptor';
 import logger from './logger.frontend';
+import { normalizeFirmLogoUrl } from './logoUrl';
 
 // ============================================
 // TYPES
@@ -190,6 +191,12 @@ const userService = {
       invitationSent: user?.invitationSent
     };
   },
+  normalizeFirm(firm: Firm): Firm {
+    return {
+      ...firm,
+      logo_url: normalizeFirmLogoUrl(firm.logo_url, firm.id),
+    };
+  },
   // ============================================
   // FIRMS (formerly Customers)
   // ============================================
@@ -202,7 +209,7 @@ const userService = {
       const data = await response.json();
       const firms = data.data || data;
       logger.log('Fetched firms:', firms);
-      return firms;
+      return firms.map((firm: Firm) => this.normalizeFirm(firm));
     } catch (error) {
       logger.error('Error fetching firms:', error);
       throw error;
@@ -229,13 +236,13 @@ const userService = {
       
       if (data.data && data.pagination) {
         return {
-          firms: data.data,
+          firms: data.data.map((firm: Firm) => this.normalizeFirm(firm)),
           pagination: data.pagination
         };
       }
       
       return {
-        firms: Array.isArray(data) ? data : [],
+        firms: Array.isArray(data) ? data.map((firm: Firm) => this.normalizeFirm(firm)) : [],
         pagination: {
           page: 1,
           pageSize: Array.isArray(data) ? data.length : 0,
