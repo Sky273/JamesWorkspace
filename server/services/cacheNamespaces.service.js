@@ -183,6 +183,10 @@ class VersionedCacheNamespace {
         this.stats.loads++;
         const pendingLoad = (async () => {
             const loaded = await loader();
+            const currentVersion = await this.resolveScopeVersion(scope);
+            if (currentVersion !== version) {
+                return loaded;
+            }
             await this.set(logicalKey, loaded, { ...options, scope });
             return loaded;
         })().finally(() => {

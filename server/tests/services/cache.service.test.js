@@ -99,6 +99,36 @@ describe('cache.service', () => {
         );
     });
 
+    it('does not store a stale in-flight load after its scope was invalidated', async () => {
+        let resolveStaleLoad;
+        const staleLoader = vi.fn(() => new Promise((resolve) => {
+            resolveStaleLoad = resolve;
+        }));
+
+        const staleLoadPromise = templatesCache.getOrLoad(
+            'detail:tpl-1',
+            staleLoader,
+            { scope: CACHE_KEYS.templates.ALL_TEMPLATES }
+        );
+
+        for (let attempt = 0; attempt < 5 && typeof resolveStaleLoad !== 'function'; attempt++) {
+            await Promise.resolve();
+        }
+        await templatesCache.invalidate(CACHE_KEYS.templates.ALL_TEMPLATES);
+        resolveStaleLoad({ id: 'tpl-1', name: 'Old Template' });
+
+        await expect(staleLoadPromise).resolves.toEqual({ id: 'tpl-1', name: 'Old Template' });
+
+        const freshLoader = vi.fn(async () => ({ id: 'tpl-1', name: 'Updated Template' }));
+        await expect(templatesCache.getOrLoad(
+            'detail:tpl-1',
+            freshLoader,
+            { scope: CACHE_KEYS.templates.ALL_TEMPLATES }
+        )).resolves.toEqual({ id: 'tpl-1', name: 'Updated Template' });
+
+        expect(freshLoader).toHaveBeenCalledTimes(1);
+    });
+
     it('reports application cache usage clearly when Redis is configured but memory backend is selected', async () => {
         await cleanupAllCaches();
         vi.resetModules();
