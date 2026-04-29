@@ -15,11 +15,7 @@ import { markTemplatesViewDirty } from '../utils/viewRefreshScopes';
 import AdminFirmSelector from '../components/AdminFirmSelector';
 import Switch from '../components/ui/Switch';
 import { useAuth } from '../context/AuthContext';
-import {
-  normalizeTemplateFragment,
-  normalizeTemplateStylesheet,
-  summarizeTemplatePayload,
-} from '../utils/templateFragments';
+import { summarizeTemplatePayload } from '../utils/templateFragments';
 
 interface FormData {
   name: string;
@@ -36,6 +32,7 @@ interface FormData {
 }
 
 const ADMIN_TEMPLATES_ROUTE = '/admin?tab=templates';
+const rawTemplateField = (value: string | undefined): string => (typeof value === 'string' ? value : '');
 
 const NewTemplatePage = (): JSX.Element => {
   const navigate = useNavigate();
@@ -82,18 +79,15 @@ const NewTemplatePage = (): JSX.Element => {
       }
       try {
         setLoading(true);
-        const template = await templateService.getTemplateById(id);
-        const normalizedHeaderContent = normalizeTemplateFragment(template.HeaderContent, 'header');
-        const normalizedFooterContent = normalizeTemplateFragment(template.FooterContent, 'footer');
-        const normalizedStylesheet = normalizeTemplateStylesheet(template.Stylesheet);
+        const template = await templateService.getTemplateById(id, { forceRefresh: true });
         const newFormData = {
           name: template.Name || '',
           description: template.Description || '',
-          headerContent: normalizedHeaderContent,
-          templateContent: template.TemplateContent || '',
-          footerContent: normalizedFooterContent,
+          headerContent: rawTemplateField(template.HeaderContent),
+          templateContent: rawTemplateField(template.TemplateContent),
+          footerContent: rawTemplateField(template.FooterContent),
           footerHeight: template.FooterHeight || 25,
-          stylesheet: normalizedStylesheet,
+          stylesheet: rawTemplateField(template.Stylesheet),
           status: template.Status?.charAt(0).toUpperCase() + template.Status?.slice(1).toLowerCase() || 'Active',
           popular: template.Popular || false,
           tags: template.Tags || [],
@@ -119,17 +113,14 @@ const NewTemplatePage = (): JSX.Element => {
     if (!formData.templateContent?.trim()) { toast.error(t('templates.editor.validation.contentRequired')); return; }
 
     try {
-      const normalizedHeaderContent = normalizeTemplateFragment(formData.headerContent, 'header');
-      const normalizedFooterContent = normalizeTemplateFragment(formData.footerContent, 'footer');
-      const normalizedStylesheet = normalizeTemplateStylesheet(formData.stylesheet);
       const templateData: TemplateData = {
         name: formData.name,
         description: formData.description,
-        headerContent: normalizedHeaderContent,
+        headerContent: formData.headerContent,
         templateContent: formData.templateContent,
-        footerContent: normalizedFooterContent,
+        footerContent: formData.footerContent,
         footerHeight: formData.footerHeight,
-        stylesheet: normalizedStylesheet,
+        stylesheet: formData.stylesheet,
         tags: Array.isArray(formData.tags) ? formData.tags : [],
         popular: Boolean(formData.popular),
         status: formData.status || 'Active'

@@ -220,20 +220,10 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
         </div>
 
         <nav className="flex flex-1 flex-col px-2.5 py-2.5">
-          <div className="mb-0.5 px-2.5">
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#687080]">
-              {t('navigation.sectionMain', 'Navigation')}
-            </h3>
-          </div>
           <div className="space-y-px">{renderNavItem(homeItem)}</div>
           {renderSection(gestionSection)}
           {canAccessManagerScreens && renderSection(adminSection)}
           <div className="min-h-0 flex-1" />
-          <div className="mb-0.5 mt-0.5 px-2.5">
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#687080]">
-              {t('navigation.sectionAccount', 'Compte')}
-            </h3>
-          </div>
           <div className="space-y-px">
             {bottomItems.filter((item) => !item.adminOnly || isSuperAdmin).map((item) => renderNavItem(item))}
           </div>

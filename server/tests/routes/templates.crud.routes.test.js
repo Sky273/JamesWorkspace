@@ -388,7 +388,23 @@ describe('Templates CRUD Routes', () => {
             expect(res.status).toBe(200);
             expect(mockGetTemplateByIdWithAccess).toHaveBeenCalledWith('tpl-123', {
                 isAdmin: false,
-                userFirmId: 'firm-123'
+                userFirmId: 'firm-123',
+                bypassCache: false
+            });
+        });
+
+        it('should bypass cache on explicit detail refresh', async () => {
+            mockGetTemplateByIdWithAccess.mockResolvedValueOnce(sampleTemplateRow);
+
+            const res = await request(app)
+                .get('/api/templates/tpl-123?refresh=1')
+                .set('Authorization', 'Bearer valid-token');
+
+            expect(res.status).toBe(200);
+            expect(mockGetTemplateByIdWithAccess).toHaveBeenCalledWith('tpl-123', {
+                isAdmin: true,
+                userFirmId: 'firm-123',
+                bypassCache: true
             });
         });
     });

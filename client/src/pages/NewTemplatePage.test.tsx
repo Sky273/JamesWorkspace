@@ -10,6 +10,7 @@ const {
   useParamsMock,
   useAuthMock,
   markTemplatesViewDirtyMock,
+  tMock,
 } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
   createTemplateMock: vi.fn(),
@@ -18,6 +19,7 @@ const {
   useParamsMock: vi.fn(),
   useAuthMock: vi.fn(),
   markTemplatesViewDirtyMock: vi.fn(),
+  tMock: (key: string) => key,
 }));
 
 vi.mock('react-router-dom', () => ({
@@ -33,7 +35,7 @@ vi.mock('framer-motion', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: tMock,
   }),
 }));
 
@@ -185,16 +187,89 @@ describe('NewTemplatePage', () => {
     render(<NewTemplatePage />);
 
     await waitFor(() => {
-      expect(getTemplateByIdMock).toHaveBeenCalledWith('tpl-edit');
+      expect(getTemplateByIdMock).toHaveBeenCalledWith('tpl-edit', { forceRefresh: true });
     });
 
     expect(screen.getByDisplayValue('Modele charge')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Description chargee')).toBeInTheDocument();
     expect(screen.getByLabelText('templates.editor.content.label')).toHaveValue('<main><p>Corps</p></main>');
-    expect(screen.getByDisplayValue('<header><div>Entete</div></header>')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('<footer><div>Pied</div></footer>')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('body { color: red; }')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('<html><body><header><div>Entete</div></header></body></html>')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('<html><body><footer><div>Pied</div></footer></body></html>')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('<style>body { color: red; }</style>')).toBeInTheDocument();
     expect(screen.getByDisplayValue('42')).toBeInTheDocument();
   });
 
+  it('keeps raw template fragments unchanged when loading an existing template', async () => {
+    useParamsMock.mockReturnValue({ id: 'tpl-raw' });
+    getTemplateByIdMock.mockResolvedValue({
+      id: 'tpl-raw',
+      Name: 'Modele brut',
+      HeaderContent: '<html><head><style>.print-only{}</style></head><body><header><img src="/asset.png">Entete</header></body></html>',
+      TemplateContent: '<main><p>-content-</p></main>',
+      FooterContent: '<html><body><footer><a href="https://example.test">Lien</a></footer></body></html>',
+      Stylesheet: '<style>@import url("https://example.test/theme.css"); .hero { background: url("/hero.png"); }</style>',
+      Status: 'active',
+    });
+
+    render(<NewTemplatePage />);
+
+    await waitFor(() => {
+      expect(getTemplateByIdMock).toHaveBeenCalledWith('tpl-raw', { forceRefresh: true });
+    });
+
+    expect(document.querySelector('#headerContent')).toHaveValue(
+      '<html><head><style>.print-only{}</style></head><body><header><img src="/asset.png">Entete</header></body></html>',
+    );
+    expect(document.querySelector('#footerContent')).toHaveValue(
+      '<html><body><footer><a href="https://example.test">Lien</a></footer></body></html>',
+    );
+    expect(screen.getByLabelText('templates.editor.stylesheet.label')).toHaveValue(
+      '<style>@import url("https://example.test/theme.css"); .hero { background: url("/hero.png"); }</style>',
+    );
+  });
+
+  it('saves raw template fragments without preview/export normalization', async () => {
+    useParamsMock.mockReturnValue({ id: 'tpl-save' });
+    getTemplateByIdMock.mockResolvedValue({
+      id: 'tpl-save',
+      Name: 'Modele a sauvegarder',
+      TemplateContent: '<main>-content-</main>',
+      Status: 'active',
+    });
+    updateTemplateMock.mockResolvedValue({
+      id: 'tpl-save',
+      Name: 'Modele a sauvegarder',
+      Status: 'active',
+    });
+
+    render(<NewTemplatePage />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Modele a sauvegarder')).toBeInTheDocument();
+    });
+
+    const rawHeader = '<html><body><header><img src="/logo.png">Entete</header></body></html>';
+    const rawFooter = '<html><body><footer><a href="https://example.test">Footer</a></footer></body></html>';
+    const rawStylesheet = '<style>@import url("https://example.test/theme.css"); .hero { background: url("/hero.png"); }</style>';
+
+    fireEvent.change(document.querySelector('#headerContent') as HTMLTextAreaElement, {
+      target: { value: rawHeader },
+    });
+    fireEvent.change(document.querySelector('#footerContent') as HTMLTextAreaElement, {
+      target: { value: rawFooter },
+    });
+    fireEvent.change(screen.getByLabelText('templates.editor.stylesheet.label'), {
+      target: { value: rawStylesheet },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'common.save' }));
+
+    await waitFor(() => {
+      expect(updateTemplateMock).toHaveBeenCalledWith('tpl-save', expect.objectContaining({
+        headerContent: rawHeader,
+        footerContent: rawFooter,
+        stylesheet: rawStylesheet,
+      }));
+    });
+  });
 });

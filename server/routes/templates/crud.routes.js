@@ -118,7 +118,8 @@ router.get('/:id', authenticateToken, validateParams('id'), async (req, res) => 
         const { id } = req.params;
         const isAdmin = isUserAdmin(req);
         const userFirmId = await getUserFirmId(req);
-        const template = await templatesService.getTemplateByIdWithAccess(id, { isAdmin, userFirmId });
+        const bypassCache = shouldBypassCache(req);
+        const template = await templatesService.getTemplateByIdWithAccess(id, { isAdmin, userFirmId, bypassCache });
         
         // Map to frontend format (using PascalCase for compatibility)
         res.json(mapTemplateToFrontend(template));
@@ -203,7 +204,7 @@ router.put('/:id', authenticateToken, requireUserManager, validateParams('id'), 
         }
         
         // Get existing template to check firm_id
-        const existingTemplate = await templatesService.getTemplateById(id);
+        const existingTemplate = await templatesService.getTemplateById(id, { bypassCache: true });
 
         if (!isAdmin && existingTemplate.firm_id !== userFirmId) {
             return res.status(404).json({ error: 'Template not found' });
@@ -273,7 +274,7 @@ router.delete('/:id', authenticateToken, requireUserManager, validateParams('id'
         }
 
         if (!isAdmin) {
-            const existingTemplate = await templatesService.getTemplateById(id);
+            const existingTemplate = await templatesService.getTemplateById(id, { bypassCache: true });
             if (existingTemplate.firm_id !== userFirmId) {
                 return res.status(404).json({ error: 'Template not found' });
             }
@@ -314,7 +315,7 @@ router.post('/:id/duplicate', authenticateToken, requireUserManager, validatePar
             return res.status(403).json({ error: 'No firm association' });
         }
 
-        const sourceTemplate = await templatesService.getTemplateById(id);
+        const sourceTemplate = await templatesService.getTemplateById(id, { bypassCache: true });
 
         if (!isAdmin && sourceTemplate.firm_id !== userFirmId) {
             return res.status(404).json({ error: 'Template not found' });

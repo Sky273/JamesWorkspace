@@ -110,8 +110,8 @@ export async function listTemplates({ isAdmin, userFirmId, search, status, page 
  * @returns {Promise<Object>}
  * @throws {Object} error with statusCode 404
  */
-export async function getTemplateById(id) {
-    return templatesCache.getOrLoad(`detail:${id}`, async () => {
+export async function getTemplateById(id, { bypassCache = false } = {}) {
+    const loader = async () => {
         const result = await query('SELECT * FROM templates WHERE id = $1', [id]);
         if (result.rows.length === 0) {
             const err = new Error('Template not found');
@@ -119,13 +119,19 @@ export async function getTemplateById(id) {
             throw err;
         }
         return result.rows[0];
-    }, {
+    };
+
+    if (bypassCache) {
+        return loader();
+    }
+
+    return templatesCache.getOrLoad(`detail:${id}`, loader, {
         scope: CACHE_KEYS.templates.ALL_TEMPLATES
     });
 }
 
-export async function getTemplateByIdWithAccess(id, { isAdmin, userFirmId }) {
-    const template = await getTemplateById(id);
+export async function getTemplateByIdWithAccess(id, { isAdmin, userFirmId, bypassCache = false }) {
+    const template = await getTemplateById(id, { bypassCache });
 
     if (isAdmin) {
         return template;

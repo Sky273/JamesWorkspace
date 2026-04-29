@@ -145,6 +145,15 @@ describe('Templates Service', () => {
                 expect(err.statusCode).toBe(404);
             }
         });
+
+        it('should bypass cache when explicitly requested', async () => {
+            query.mockResolvedValueOnce({ rows: [{ id: 't1', name: 'Fresh' }] });
+
+            const result = await getTemplateById('t1', { bypassCache: true });
+
+            expect(result).toEqual({ id: 't1', name: 'Fresh' });
+            expect(mockTemplatesCache.getOrLoad).not.toHaveBeenCalled();
+        });
     });
 
     describe('getTemplateByIdWithAccess', () => {

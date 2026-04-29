@@ -52,6 +52,10 @@ export interface GetTemplatesPaginatedParams {
     forceRefresh?: boolean;
 }
 
+export interface GetTemplateByIdOptions {
+    forceRefresh?: boolean;
+}
+
 interface SanitizedTemplateData {
     Name: string;
     Description?: string;
@@ -119,9 +123,9 @@ const sanitizeTemplateData = (data: TemplateData): SanitizedTemplateData => {
     const sanitized: SanitizedTemplateData = {
         Name: data.name?.trim() || '',
         Description: data.description?.trim(),
-        HeaderContent: data.headerContent?.trim() || '',
-        TemplateContent: data.templateContent?.trim() || '',
-        FooterContent: data.footerContent?.trim() || '',
+        HeaderContent: typeof data.headerContent === 'string' ? data.headerContent : '',
+        TemplateContent: typeof data.templateContent === 'string' ? data.templateContent : '',
+        FooterContent: typeof data.footerContent === 'string' ? data.footerContent : '',
         FooterHeight: typeof data.footerHeight === 'number' ? data.footerHeight : 25,
         Status: data.status || 'Active',
         Tags: Array.isArray(data.tags) ? data.tags : [],
@@ -134,7 +138,7 @@ const sanitizeTemplateData = (data: TemplateData): SanitizedTemplateData => {
 
     // Only include Stylesheet if it's a string
     if (typeof data.stylesheet === 'string') {
-        sanitized.Stylesheet = data.stylesheet.trim();
+        sanitized.Stylesheet = data.stylesheet;
     }
 
     // Empty string from the admin selector means a global template.
@@ -205,9 +209,12 @@ export const templateService = {
         }
     },
 
-    async getTemplateById(id: string): Promise<Template> {
+    async getTemplateById(id: string, options: GetTemplateByIdOptions = {}): Promise<Template> {
         try {
-            const response = await fetchWithAuth(`/api/templates/${id}`, createAuthOptions());
+            const params = new URLSearchParams();
+            if (options.forceRefresh) params.append('refresh', '1');
+            const query = params.toString();
+            const response = await fetchWithAuth(`/api/templates/${id}${query ? `?${query}` : ''}`, createAuthOptions());
             if (!response.ok) {
                 throw new Error('Failed to fetch template');
             }

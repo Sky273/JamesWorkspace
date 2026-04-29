@@ -76,4 +76,19 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: /navigation\.home/i })).toHaveClass('!text-white');
     expect(screen.getByText('navigation.home')).toHaveClass('!text-white');
   });
+
+  it('does not render redundant section headings in the compact sidebar', () => {
+    useAuthMock.mockReturnValue({
+      user: { role: 'admin' },
+    });
+
+    render(
+      <MemoryRouter>
+        <Sidebar />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByText('Navigation')).not.toBeInTheDocument();
+    expect(screen.queryByText('Compte')).not.toBeInTheDocument();
+  });
 });
