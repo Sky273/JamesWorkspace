@@ -143,6 +143,16 @@ describe('HTML Builder', () => {
       expect(result).toContain('-webkit-print-color-adjust: exact');
     });
 
+    it('should include template stylesheet in the native footer template', () => {
+      const result = buildPuppeteerFooter(
+        '<footer class="cv-footer"><span>Footer</span></footer>',
+        '.cv-footer { color: #123456; font-weight: 700; }'
+      );
+
+      expect(result).toContain('.cv-footer { color: #123456; font-weight: 700; }');
+      expect(result).toContain('<footer class="cv-footer"><span>Footer</span></footer>');
+    });
+
     it('should preserve footer HTML structure', () => {
       const result = buildPuppeteerFooter('<table><tr><td>Left</td><td>Right</td></tr></table>');
       expect(result).toContain('<table>');

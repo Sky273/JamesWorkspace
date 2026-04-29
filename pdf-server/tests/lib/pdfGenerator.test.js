@@ -257,6 +257,41 @@ describe('pdfGenerator', () => {
     }));
   }, 10000);
 
+  it('passes the template stylesheet into the native footer template', async () => {
+    const fakePage = {
+      setRequestInterception: vi.fn().mockResolvedValue(),
+      on: vi.fn(),
+      setContent: vi.fn().mockResolvedValue(),
+      pdf: vi.fn().mockResolvedValue(Buffer.from('%PDF-1.4 styled footer')),
+      close: vi.fn().mockResolvedValue()
+    };
+    const fakeBrowser = {
+      isConnected: vi.fn(() => true),
+      on: vi.fn(),
+      newPage: vi.fn().mockResolvedValue(fakePage),
+      close: vi.fn()
+    };
+
+    const puppeteer = require('puppeteer');
+    vi.spyOn(puppeteer, 'launch').mockResolvedValue(fakeBrowser);
+
+    const pdfGenerator = loadPdfGenerator();
+    pdfGenerator._internal.resetBrowserState();
+
+    await expect(pdfGenerator.generatePdf({
+      htmlContent: '<main>Body</main>',
+      stylesheet: '.cv-footer { color: #123456; font-weight: 700; }',
+      headerContent: '',
+      footerContent: '<footer class="cv-footer">Styled footer</footer>',
+      footerHeight: 25
+    })).resolves.toEqual(Buffer.from('%PDF-1.4 styled footer'));
+
+    expect(fakePage.pdf).toHaveBeenCalledWith(expect.objectContaining({
+      displayHeaderFooter: true,
+      footerTemplate: expect.stringContaining('.cv-footer { color: #123456; font-weight: 700; }')
+    }));
+  }, 10000);
+
   it('logs advanced page diagnostics when Puppeteer fails', async () => {
     const logger = require('../../lib/logger.cjs');
     const logSpy = vi.spyOn(logger, 'log').mockImplementation(() => {});

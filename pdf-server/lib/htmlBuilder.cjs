@@ -124,9 +124,10 @@ function buildPuppeteerHtml({ htmlContent, stylesheet, headerContent, footerCont
  * Build Puppeteer footer template
  * Puppeteer requires specific HTML template for footers with inline styles
  * @param {string} footerContent - Footer HTML content
+ * @param {string} stylesheet - Template stylesheet that must also apply inside Puppeteer's isolated footer template
  * @returns {string} Puppeteer footer template
  */
-function buildPuppeteerFooter(footerContent) {
+function buildPuppeteerFooter(footerContent, stylesheet = '') {
   if (!footerContent || !footerContent.trim()) {
     return '<span></span>';
   }
@@ -134,11 +135,13 @@ function buildPuppeteerFooter(footerContent) {
   if (!processedFooter) {
     return '<span></span>';
   }
+  const styleTag = stylesheet && stylesheet.trim() !== '' ? `${stylesheet}\n` : '';
   
   // Puppeteer footer template with inline styles
   // Note: External CSS doesn't apply to footer template, everything must be inline
   return `
     <style>
+      ${styleTag}
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; margin: 0; padding: 0; }
     </style>
     <div style="width: 100%; font-size: 8px; padding: 2mm 10mm; box-sizing: border-box; -webkit-print-color-adjust: exact; line-height: 1.2;">

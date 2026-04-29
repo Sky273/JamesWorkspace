@@ -495,7 +495,7 @@ async function generatePdf({ htmlContent, stylesheet, headerContent, footerConte
     if (normalizedFooterContent && footerRenderMode === 'native-template') {
       pdfOptions.displayHeaderFooter = true;
       pdfOptions.headerTemplate = '<span></span>'; // Empty header (we use inline header)
-      pdfOptions.footerTemplate = buildPuppeteerFooter(normalizedFooterContent);
+      pdfOptions.footerTemplate = buildPuppeteerFooter(normalizedFooterContent, stylesheet);
     }
 
     stage = 'rendering-pdf';
