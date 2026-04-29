@@ -136,7 +136,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
         to={item.href}
         onClick={onClose}
         className={classNames(
-          'group relative flex min-h-9 items-center gap-3 rounded-[9px] border px-3 py-2 text-[13px] font-semibold transition-[background-color,border-color,color] duration-200',
+          'group relative flex min-h-8 items-center gap-2.5 rounded-[8px] border px-2.5 py-1.5 text-[12.5px] font-semibold transition-[background-color,border-color,color] duration-200',
           isActive
             ? 'border-[#7c5cff]/70 bg-[#33295f] !text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.09)]'
             : 'border-transparent !text-white hover:bg-white/[0.06] hover:!text-white'
@@ -177,7 +177,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
     if (visibleItems.length === 0) return null;
 
     return (
-      <div key={section.id} className="mt-1">
+      <div key={section.id} className="mt-0.5">
         {section.title && (
           <div className="mb-1 px-3">
             <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#687080]">
@@ -185,15 +185,15 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
             </h3>
           </div>
         )}
-        <div className="space-y-0.5">{visibleItems.map((item) => renderNavItem(item))}</div>
+        <div className="space-y-px">{visibleItems.map((item) => renderNavItem(item))}</div>
       </div>
     );
   };
 
   const sidebarContent = (
     <div className="flex min-h-0 flex-1 flex-col border-r border-[#252b34] bg-[#111722] shadow-[1px_0_0_rgba(255,255,255,0.03)]">
-      <div className="flex flex-1 flex-col overflow-y-auto pb-4 sidebar-scrollbar">
-        <div className="flex flex-shrink-0 items-center justify-between border-b border-[#252b34] px-4 py-5">
+      <div className="flex flex-1 flex-col overflow-y-auto pb-2 sidebar-scrollbar">
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-[#252b34] px-3.5 py-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[8px] bg-[#7c5cff] text-[11px] font-bold text-white shadow-none">
@@ -219,22 +219,22 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
           </button>
         </div>
 
-        <nav className="flex flex-1 flex-col px-3 py-4">
-          <div className="mb-1 px-3">
+        <nav className="flex flex-1 flex-col px-2.5 py-2.5">
+          <div className="mb-0.5 px-2.5">
             <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#687080]">
               {t('navigation.sectionMain', 'Navigation')}
             </h3>
           </div>
-          <div className="space-y-0.5">{renderNavItem(homeItem)}</div>
+          <div className="space-y-px">{renderNavItem(homeItem)}</div>
           {renderSection(gestionSection)}
           {canAccessManagerScreens && renderSection(adminSection)}
           <div className="min-h-0 flex-1" />
-          <div className="mb-1 mt-1 px-3">
+          <div className="mb-0.5 mt-0.5 px-2.5">
             <h3 className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#687080]">
               {t('navigation.sectionAccount', 'Compte')}
             </h3>
           </div>
-          <div className="space-y-0.5">
+          <div className="space-y-px">
             {bottomItems.filter((item) => !item.adminOnly || isSuperAdmin).map((item) => renderNavItem(item))}
           </div>
         </nav>
@@ -244,7 +244,7 @@ const Sidebar = ({ isOpen = false, onClose }: SidebarProps): JSX.Element => {
         <Link
           to="/profile"
           onClick={onClose}
-          className="flex items-center gap-2.5 border-t border-[#252b34] px-4 py-4 transition-colors hover:bg-white/[0.04]"
+          className="flex items-center gap-2.5 border-t border-[#252b34] px-3.5 py-2.5 transition-colors hover:bg-white/[0.04]"
         >
           <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[8px] bg-[#7c5cff] text-[11px] font-bold text-white">
             {getInitials(user.name)}
