@@ -12,7 +12,7 @@ describe('OpenAPI document', () => {
 
         expect(document.openapi).toBe('3.1.0');
         expect(document.info.title).toBe('ResumeConverter API');
-        expect(document.info.version).toBe('1.9.2');
+        expect(document.info.version).toBe('1.9.3');
         expect(document.servers).toEqual([{ url: '/api', description: 'Same-origin API root' }]);
         expect(document.paths['/auth/login'].post.tags).toEqual(['Authentication']);
         expect(document.paths['/resumes'].get.tags).toEqual(['Resumes']);

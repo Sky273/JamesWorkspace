@@ -1,3 +1,26 @@
+## v1.9.3 - 2026-04-30
+### Fiabilisation des modèles de CV, export PDF et finition du mode sombre
+
+#### Modèles de CV
+- Correction des problèmes d'enregistrement et de rechargement des modèles de CV pour éviter les retours à une version obsolète après sauvegarde.
+- Renforcement de la prise en compte immédiate des modifications de modèle dans les exports PDF.
+- Amélioration de la reconstruction des modèles à partir d'un CV source avec séparation header, contenu, footer et feuille de style.
+
+#### Export PDF
+- Correction de l'application des styles CSS du footer pendant l'export PDF.
+- Ajustement de la gestion de la hauteur du footer afin que la limite basse du contenu tienne compte de l'espace réservé au footer sans créer d'espace excessif.
+- Correction des recouvrements entre texte du CV et footer sur les exports paginés.
+
+#### Interface et mode sombre
+- Réduction de l'espacement du menu latéral et suppression des titres de section inutiles pour éviter le scroll vertical.
+- Harmonisation des onglets partagés en mode sombre, avec onglet actif violet.
+- Correction transverse des textes, titres, badges, tuiles statistiques, champs, breadcrumbs, paginations, éditeurs Tiptap et aperçus de CV en mode sombre.
+- Correction de plusieurs écrans métiers encore partiellement en thème clair : CVthèque, missions, CRM, administration, radar marché, jobs, logs de sécurité, journal RGPD et guide utilisateur.
+
+#### Qualité
+- Alignement de la version applicative sur `v1.9.3`.
+
+---
 ## v1.9.2 - 2026-04-21
 ### Fiabilisation du pipeline mission et gestion des suppressions depuis les écrans de détail CV
 
