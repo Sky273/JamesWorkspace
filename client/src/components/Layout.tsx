@@ -17,6 +17,7 @@ import HeaderActions from './HeaderActions';
 
 const ChatBot = lazy(() => import('./ChatBot'));
 const HealthIndicator = lazy(() => import('./HealthIndicator'));
+const AboutModal = lazy(() => import('./AboutModal'));
 
 const getCookie = (name: string): string | null => {
   const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
@@ -55,6 +56,7 @@ const Layout = (): JSX.Element => {
     }
     return 'light';
   });
+  const [isAboutOpen, setIsAboutOpen] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const { t } = useTranslation();
 
@@ -122,6 +124,7 @@ const Layout = (): JSX.Element => {
               <HeaderActions
                 theme={theme}
                 onToggleTheme={toggleTheme}
+                onOpenAbout={() => setIsAboutOpen(true)}
               />
 
               <div className="hidden sm:block">
@@ -184,6 +187,12 @@ const Layout = (): JSX.Element => {
           <ChatBot />
         </Suspense>
       </DeferredRender>
+
+      {isAboutOpen ? (
+        <Suspense fallback={null}>
+          <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
+        </Suspense>
+      ) : null}
     </div>
   );
 };

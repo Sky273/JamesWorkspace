@@ -70,7 +70,8 @@ describe('Layout', () => {
     expect(screen.getByText('sidebar:true')).toBeInTheDocument();
 
     expect(screen.queryByRole('button', { name: 'common.about' })).toBeNull();
-    expect(screen.getByText(/^v\d+\.\d+\.\d+/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Afficher la version et le changelog' }));
+    expect(await screen.findByText('about-modal')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTitle('common.signOut'));
     expect(signOutMock).toHaveBeenCalled();

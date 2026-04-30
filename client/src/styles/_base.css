@@ -1313,6 +1313,22 @@ svg[data-slot="icon"][fill="none"] {
   color: #f4f5f7 !important;
 }
 
+.dark .app-header-actions .app-header-actions__text-control,
+.dark .app-header-actions .app-header-actions__language,
+.dark .app-header-actions .app-header-actions__version {
+  color: #ffffff !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.dark .app-header-actions .app-header-actions__text-control *,
+.dark .app-header-actions .app-header-actions__language *,
+.dark .app-header-actions .app-header-actions__version * {
+  color: #ffffff !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
 .dark .batch-jobs-server-info {
   background: #151b2a !important;
   border-color: #343a46 !important;

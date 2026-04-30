@@ -344,10 +344,18 @@ describe('soft dark palette styles', () => {
   });
 
   it('applies the soft dark palette to app chrome', () => {
+    const base = readStyle('_base.css');
+
     expect(readStyle('../components/HeaderActions.tsx')).toContain('packageJson.version');
-    expect(readStyle('../components/HeaderActions.tsx')).toContain('dark:text-[#F8FAFC]');
-    expect(readStyle('../components/HeaderActions.tsx')).toContain('dark:text-[#FFFFFF]');
-    expect(readStyle('../components/LanguageSelector.tsx')).toContain('dark:text-[#F8FAFC]');
+    expect(readStyle('../components/HeaderActions.tsx')).toContain('app-header-actions__text-control');
+    expect(readStyle('../components/HeaderActions.tsx')).toContain('app-header-actions__version');
+    expect(readStyle('../components/HeaderActions.tsx')).toContain('dark:text-white');
+    expect(readStyle('../components/LanguageSelector.tsx')).toContain('app-header-actions__language');
+    expect(readStyle('../components/LanguageSelector.tsx')).toContain('dark:text-white');
+    expect(base).toContain('.dark .app-header-actions .app-header-actions__text-control');
+    expect(base).toContain('.dark .app-header-actions .app-header-actions__language');
+    expect(base).toContain('.dark .app-header-actions .app-header-actions__version');
+    expect(base).toContain('-webkit-text-fill-color: #ffffff !important');
     expect(readStyle('../components/HeaderActions.tsx')).not.toContain('ComputerDesktopIcon');
     expect(readStyle('../components/HeaderActions.tsx')).not.toContain('InformationCircleIcon');
     expect(readStyle('../components/HeaderActions.tsx')).not.toContain('MoonIcon');

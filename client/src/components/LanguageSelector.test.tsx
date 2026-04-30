@@ -41,7 +41,8 @@ describe('LanguageSelector', () => {
 
     const button = screen.getByRole('button', { name: 'header.changeLanguage' });
     expect(button).toHaveClass('inline-flex', 'h-9', 'w-9');
-    expect(button).toHaveClass('dark:text-[#F8FAFC]');
+    expect(button).toHaveClass('app-header-actions__language');
+    expect(button).toHaveClass('dark:text-white');
     expect(button).toHaveTextContent('fr');
     expect(button.querySelector('svg')).toBeNull();
   });

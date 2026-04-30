@@ -129,7 +129,7 @@ const LanguageSelector = ({ variant = 'default' }: LanguageSelectorProps): JSX.E
   }, [isOpen]);
 
   const buttonClassName = isHeader
-    ? 'inline-flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#E4E4E7] bg-white text-[#3F3F46] shadow-none dark:border-[#3f4754] dark:bg-[#1b2028] dark:text-[#F8FAFC]'
+    ? 'app-header-actions__language inline-flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#E4E4E7] bg-white text-[#3F3F46] shadow-none dark:border-[#536071] dark:bg-[#151b2a] dark:text-white'
     : 'p-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300';
 
 

@@ -5,20 +5,22 @@ import LanguageSelector from './LanguageSelector';
 interface HeaderActionsProps {
   theme: string;
   onToggleTheme: () => void;
+  onOpenAbout: () => void;
 }
 
 const actionGroupClassName =
-  'flex items-center gap-1.5 rounded-[13px] border border-[#E4E4E7] bg-[#F3F2EF] px-1.5 py-1 shadow-none dark:border-[#46505f] dark:bg-[#252b34]';
+  'app-header-actions flex items-center gap-1.5 rounded-[13px] border border-[#E4E4E7] bg-[#F3F2EF] px-1.5 py-1 shadow-none dark:border-[#46505f] dark:bg-[#252b34]';
 
 const actionButtonClassName =
-  'inline-flex h-9 items-center justify-center rounded-[9px] border border-[#E4E4E7] bg-white px-3 text-[12px] font-semibold text-[#3F3F46] shadow-none dark:border-[#3f4754] dark:bg-[#1b2028] dark:text-[#F8FAFC]';
+  'app-header-actions__text-control inline-flex h-9 items-center justify-center rounded-[9px] border border-[#E4E4E7] bg-white px-3 text-[12px] font-bold text-[#3F3F46] shadow-none dark:border-[#536071] dark:bg-[#151b2a] dark:text-white';
 
 const versionBadgeClassName =
-  'inline-flex h-9 items-center justify-center rounded-[9px] border border-[#E4E4E7] bg-white px-3 text-[11px] font-bold text-[#18181B] shadow-none dark:border-[#51607a] dark:bg-[#111827] dark:text-[#FFFFFF]';
+  'app-header-actions__version inline-flex h-9 items-center justify-center rounded-[9px] border border-[#E4E4E7] bg-white px-3 text-[11px] font-extrabold text-[#18181B] shadow-none dark:border-[#64748b] dark:bg-[#0f172a] dark:text-white';
 
 const HeaderActions = ({
   theme,
   onToggleTheme,
+  onOpenAbout,
 }: HeaderActionsProps): JSX.Element => {
   const { t } = useTranslation();
   const nextThemeLabel = theme === 'dark' ? t('header.theme.light') : t('header.theme.dark');
@@ -37,9 +39,14 @@ const HeaderActions = ({
 
       <LanguageSelector variant="header" />
 
-      <span className={versionBadgeClassName} aria-label={t('header.version', 'Version')}>
+      <button
+        type="button"
+        className={versionBadgeClassName}
+        onClick={onOpenAbout}
+        aria-label={t('about.openChangelog', 'Afficher la version et le changelog')}
+      >
         v{packageJson.version}
-      </span>
+      </button>
     </div>
   );
 };
