@@ -47,7 +47,7 @@ function HeaderActionButton({ onClick, title, ariaLabel, children }: HeaderActio
       onClick={onClick}
       title={title}
       aria-label={ariaLabel ?? title}
-      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/30 bg-white/12 !text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16)] transition-all hover:-translate-y-0.5 hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 [&_svg]:!text-white [&_svg]:[stroke:white]"
+      className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/30 bg-white/12 !text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16)] transition-all hover:-translate-y-0.5 hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
       type="button"
     >
       {children}
@@ -112,20 +112,20 @@ export default function ChatbotWindow({
 
               <div className="flex flex-shrink-0 items-center gap-2">
                 <HeaderActionButton onClick={onResetSize} title={resetSizeTitle}>
-                  <ArrowPathIcon className="h-5 w-5 !text-white stroke-[2.3] [stroke:white]" aria-hidden="true" />
+                  <ArrowPathIcon className="h-5 w-5 !text-white stroke-[2.3]" aria-hidden="true" />
                 </HeaderActionButton>
                 <HeaderActionButton onClick={onClear} title={clearLabel}>
-                  <TrashIcon className="h-5 w-5 !text-white stroke-[2.2] [stroke:white]" aria-hidden="true" />
+                  <TrashIcon className="h-5 w-5 !text-white stroke-[2.2]" aria-hidden="true" />
                 </HeaderActionButton>
                 <HeaderActionButton onClick={onClose} title={closeLabel} ariaLabel={closeLabel}>
-                  <XMarkIcon className="h-5 w-5 !text-white stroke-[2.4] [stroke:white]" aria-hidden="true" />
+                  <XMarkIcon className="h-5 w-5 !text-white stroke-[2.4]" aria-hidden="true" />
                 </HeaderActionButton>
               </div>
             </div>
 
             <div className="mt-4 flex items-start gap-3">
               <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/14 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]">
-                <SparklesIcon className="h-6 w-6 !text-white stroke-[2.2] [stroke:white]" />
+                <SparklesIcon className="h-6 w-6 !text-white stroke-[2.2]" />
               </div>
 
               <div className="min-w-0 flex-1">

@@ -5,19 +5,15 @@ import Sidebar from './Sidebar';
 import ScrollToTop from './ScrollToTop';
 import {
   Bars3Icon,
-  InformationCircleIcon,
-  Cog6ToothIcon,
 } from '@heroicons/react/24/outline';
 import {
-  SunIcon,
-  MoonIcon,
   ArrowRightOnRectangleIcon as ArrowRightOnRectangleSolidIcon,
 } from '@heroicons/react/24/solid';
 import { useTranslation } from 'react-i18next';
-import LanguageSelector from './LanguageSelector';
 import Footer from './Footer';
 import Breadcrumbs from './Breadcrumbs';
 import DeferredRender from './DeferredRender';
+import HeaderActions from './HeaderActions';
 
 const AboutModal = lazy(() => import('./AboutModal'));
 const ChatBot = lazy(() => import('./ChatBot'));
@@ -48,7 +44,7 @@ const headerIconButtonClassName =
 const headerIconClassName =
   'h-[18px] w-[18px] flex-shrink-0 stroke-2 text-[#52525B] group-hover:text-[#18181B] dark:text-[#c4cad4] dark:group-hover:text-[#f4f5f7]';
 
-const headerSolidIconClassName =
+const headerSignOutIconClassName =
   'h-5 w-5 flex-shrink-0 fill-current text-[#52525B] group-hover:text-[#18181B] dark:text-[#c4cad4] dark:group-hover:text-[#f4f5f7]';
 
 const Layout = (): JSX.Element => {
@@ -63,7 +59,6 @@ const Layout = (): JSX.Element => {
   const [isAboutOpen, setIsAboutOpen] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const { t } = useTranslation();
-  const isSuperAdmin = user?.role === 'admin';
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -126,47 +121,11 @@ const Layout = (): JSX.Element => {
             </div>
 
             <div className="ml-auto flex w-full items-center justify-end gap-2 pl-14 text-[#52525B] dark:text-[#c4cad4] sm:gap-2.5 md:w-auto md:pl-0">
-              <div className="flex items-center gap-1.5 rounded-[13px] border border-[#E4E4E7] bg-[#F3F2EF] px-1 py-1 shadow-none dark:border-[#343a46] dark:bg-[#2a2f38] sm:gap-2 sm:px-1.5">
-                <button
-                  type="button"
-                  className={headerIconButtonClassName}
-                  onClick={toggleTheme}
-                  aria-label={theme === 'dark' ? t('header.theme.light') : t('header.theme.dark')}
-                >
-                  <span className="sr-only">
-                    {theme === 'dark' ? t('header.theme.light') : t('header.theme.dark')}
-                  </span>
-                  {theme === 'dark' ? (
-                    <SunIcon className={headerSolidIconClassName} aria-hidden="true" />
-                  ) : (
-                    <MoonIcon className={headerSolidIconClassName} aria-hidden="true" />
-                  )}
-                </button>
-
-                <LanguageSelector variant="header" />
-
-                {isSuperAdmin ? (
-                  <Link
-                    to="/settings"
-                    className={headerIconButtonClassName}
-                    title={t('navigation.settings')}
-                    aria-label={t('navigation.settings')}
-                  >
-                    <span className="sr-only">{t('navigation.settings')}</span>
-                    <Cog6ToothIcon className={headerIconClassName} aria-hidden="true" />
-                  </Link>
-                ) : null}
-
-                <button
-                  type="button"
-                  className={headerIconButtonClassName}
-                  onClick={() => setIsAboutOpen(true)}
-                  aria-label={t('common.about')}
-                >
-                  <span className="sr-only">{t('common.about')}</span>
-                  <InformationCircleIcon className={headerIconClassName} aria-hidden="true" />
-                </button>
-              </div>
+              <HeaderActions
+                theme={theme}
+                onToggleTheme={toggleTheme}
+                onOpenAbout={() => setIsAboutOpen(true)}
+              />
 
               <div className="hidden sm:block">
                 <DeferredRender delayMs={7000}>
@@ -205,7 +164,7 @@ const Layout = (): JSX.Element => {
                     aria-label={t('common.signOut')}
                   >
                     <span className="sr-only">{t('common.signOut')}</span>
-                    <ArrowRightOnRectangleSolidIcon className={headerSolidIconClassName} aria-hidden="true" />
+                    <ArrowRightOnRectangleSolidIcon className={headerSignOutIconClassName} aria-hidden="true" />
                   </button>
                 </>
               )}

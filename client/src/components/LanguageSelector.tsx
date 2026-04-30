@@ -6,6 +6,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import {
+  headerActionButtonClassName,
+  headerActionIconClassName,
+} from './headerActionStyles';
 
 interface Language {
   code: string;
@@ -57,7 +61,7 @@ const HeaderLanguageIcon = (): JSX.Element => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
-    className="h-[18px] w-[18px] flex-shrink-0 text-[#52525B] transition-colors duration-200 group-hover:text-[#18181B] dark:text-[#c4cad4] dark:group-hover:text-[#f4f5f7]"
+    className={headerActionIconClassName}
     aria-hidden="true"
   >
     <circle cx="12" cy="12" r="8.5" />
@@ -129,7 +133,7 @@ const LanguageSelector = ({ variant = 'default' }: LanguageSelectorProps): JSX.E
   }, [isOpen]);
 
   const buttonClassName = isHeader
-    ? 'group flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#E4E4E7] bg-white shadow-none transition-all hover:-translate-y-px hover:border-[#6B4EFF]/30 hover:bg-[#F3F2EF] dark:border-[#343a46] dark:bg-[#22262e] dark:hover:border-[#7c5cff]/45 dark:hover:bg-[#2a2f38]'
+    ? headerActionButtonClassName
     : 'p-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300';
 
 
