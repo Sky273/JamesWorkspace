@@ -1061,16 +1061,16 @@
 }
 
 .dark .resumes-editorial-shell .cv-surface {
-  background: #181b20;
+  background: #181b20 !important;
 }
 
 .dark .resumes-editorial-shell .cv-stat-card,
 .dark .resumes-editorial-shell .cv-panel,
 .dark .resumes-editorial-shell .cv-card,
 .dark .resumes-editorial-shell .cv-resume-row {
-  background: #22262e;
-  border-color: #343a46;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22), 0 4px 14px rgba(0, 0, 0, 0.24);
+  background: #22262e !important;
+  border-color: #343a46 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22), 0 4px 14px rgba(0, 0, 0, 0.24) !important;
 }
 
 .dark .resumes-editorial-shell .cv-stat-card:hover,
@@ -1086,9 +1086,9 @@
 .dark .resumes-editorial-shell .cv-chip-industries,
 .dark .resumes-editorial-shell .cv-chip-tools,
 .dark .resumes-editorial-shell .cv-chip-soft {
-  background: #2a2f38;
-  border-color: #343a46;
-  color: #c4cad4;
+  background: #2a2f38 !important;
+  border-color: #343a46 !important;
+  color: #c4cad4 !important;
 }
 
 .dark .resumes-editorial-shell .segmented-control__item--active,
@@ -1096,9 +1096,9 @@
 .dark .resumes-editorial-shell button.cv-filter-button-active[type='button'],
 .dark .resumes-editorial-shell button.cv-preview-button-active[type='button'],
 .dark .resumes-editorial-shell button.cv-danger-action[type='button'] {
-  background: #2a2f38;
-  border-color: #343a46;
-  color: #f4f5f7;
+  background: #2a2f38 !important;
+  border-color: #343a46 !important;
+  color: #f4f5f7 !important;
 }
 
 .dark .resumes-editorial-shell .cv-ghost-button:hover,
@@ -1107,6 +1107,13 @@
   background: #323844;
   border-color: rgba(124, 92, 255, 0.42);
   color: #8b72ff;
+}
+
+.dark .resumes-editorial-shell button.segmented-control__item.segmented-control__item--active[type='button'] {
+  background: #7c5cff !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+  box-shadow: 0 12px 24px rgba(124, 92, 255, 0.22) !important;
 }
 
 .dark .resumes-editorial-shell button.cv-page-primary-action[type='button'] {

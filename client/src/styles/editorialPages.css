@@ -1603,6 +1603,15 @@
   box-shadow: 0 12px 24px rgba(124, 92, 255, 0.22) !important;
 }
 
+.dark .editorial-migrated-shell button.segmented-control__item.segmented-control__item--active[type='button'],
+.dark .settings-compact-shell button.segmented-control__item.segmented-control__item--active[type='button'],
+.dark .missions-editorial-shell button.segmented-control__item.segmented-control__item--active[type='button'] {
+  background: #7c5cff !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+  box-shadow: 0 12px 24px rgba(124, 92, 255, 0.22) !important;
+}
+
 /* Keep CV/editorial pages coherent in dark mode when compact light utility
    overrides normalize Tailwind light backgrounds with !important. */
 .dark .editorial-migrated-shell :is(.bg-white, .bg-gray-50, .bg-slate-50),

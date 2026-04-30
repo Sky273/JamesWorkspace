@@ -21,6 +21,29 @@ describe('soft dark palette styles', () => {
     expect(readStyle('resumesEditorial.css')).toContain('--cv-bg: #181b20');
   });
 
+  it('keeps direct CVtheque loads dark against global important shell defaults', () => {
+    const resumesEditorial = readStyle('resumesEditorial.css');
+
+    expect(resumesEditorial).toContain('.dark .resumes-editorial-shell .cv-surface');
+    expect(resumesEditorial).toContain('background: #181b20 !important');
+    expect(resumesEditorial).toContain('background: #22262e !important');
+    expect(resumesEditorial).toContain('border-color: #343a46 !important');
+  });
+
+  it('highlights active dark tabs with the usual violet accent', () => {
+    const editorialPages = readStyle('editorialPages.css');
+    const resumesEditorial = readStyle('resumesEditorial.css');
+
+    expect(editorialPages).toContain(
+      ".dark .editorial-migrated-shell button.segmented-control__item.segmented-control__item--active[type='button']"
+    );
+    expect(editorialPages).toContain('background: #7c5cff !important');
+    expect(resumesEditorial).toContain(
+      ".dark .resumes-editorial-shell button.segmented-control__item.segmented-control__item--active[type='button']"
+    );
+    expect(resumesEditorial).toContain('background: #7c5cff !important');
+  });
+
   it('applies the soft dark palette to app chrome', () => {
     expect(readStyle('../components/Layout.tsx')).toContain('dark:bg-[#22262e]');
     expect(readStyle('../components/Layout.tsx')).toContain('dark:border-[#343a46]');
