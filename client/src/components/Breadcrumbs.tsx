@@ -29,18 +29,18 @@ const Breadcrumbs = ({ items, className = '', tone = 'default' }: BreadcrumbsPro
 
   const palette = tone === 'header'
     ? {
-        nav: 'text-[13px] text-slate-500 dark:text-slate-300',
-        icon: 'text-slate-300 dark:text-slate-500',
-        home: 'text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white',
-        link: 'text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white',
-        current: 'font-medium text-slate-900 dark:text-white',
+        nav: 'app-breadcrumbs app-breadcrumbs--header text-[13px] text-slate-500 dark:text-slate-300',
+        icon: 'app-breadcrumbs__separator text-slate-300 dark:text-slate-500',
+        home: 'app-breadcrumbs__link text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white',
+        link: 'app-breadcrumbs__link text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white',
+        current: 'app-breadcrumbs__current font-medium text-slate-900 dark:text-white',
       }
     : {
-        nav: 'text-sm',
-        icon: 'text-gray-400',
-        home: 'text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
-        link: 'text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
-        current: 'font-medium text-gray-900 dark:text-gray-100',
+        nav: 'app-breadcrumbs text-sm',
+        icon: 'app-breadcrumbs__separator text-gray-400',
+        home: 'app-breadcrumbs__link text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
+        link: 'app-breadcrumbs__link text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200',
+        current: 'app-breadcrumbs__current font-medium text-gray-900 dark:text-gray-100',
       };
 
   const getDynamicLabel = (segment: string, previousSegment?: string): BreadcrumbItem | null => {

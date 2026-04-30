@@ -115,10 +115,10 @@ export function ClientsToolbar({
 
   return (
     <div className="section-shell mb-5 rounded-[13px]">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--cv-outline)] p-3">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[var(--cv-outline)] p-3">
         <div className="min-w-0 flex-1">
           <ViewModeToggle
-            className="mb-0"
+            className="crm-clients-type-toggle mb-0"
             label={t('clients.filters.type', 'Type')}
             onChange={onSetActiveTab}
             options={[
@@ -129,7 +129,7 @@ export function ClientsToolbar({
             value={activeTab}
           />
         </div>
-        <div className="flex gap-2">
+        <div className="crm-clients-toolbar-actions flex gap-2">
           <button
             onClick={onRefresh}
             className="app-button-secondary rounded-[9px] p-2.5"

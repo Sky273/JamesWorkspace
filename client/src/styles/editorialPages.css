@@ -1587,6 +1587,11 @@
   color: #8b72ff !important;
 }
 
+.dark .missions-editorial-shell .mission-card-title,
+.dark .missions-editorial-shell .mission-card-title * {
+  color: #f4f5f7 !important;
+}
+
 .dark .editorial-migrated-shell .cv-gradient-button,
 .dark .editorial-migrated-shell .app-button-primary,
 .dark .editorial-migrated-shell .cv-tab-pill-active,

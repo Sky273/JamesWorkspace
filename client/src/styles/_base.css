@@ -777,6 +777,54 @@ button.settings-switch[type="button"]:disabled {
 .text-app-muted { color: var(--text-muted); }
 
 /* --- Tailwind migration compatibility --- */
+.dark :is(.text-black, .text-slate-950, .text-slate-900, .text-gray-950, .text-gray-900, .text-zinc-950, .text-zinc-900, .text-neutral-950, .text-neutral-900) {
+  color: var(--text-primary) !important;
+}
+
+.dark :is(.text-slate-800, .text-slate-700, .text-gray-800, .text-gray-700, .text-zinc-800, .text-zinc-700, .text-neutral-800, .text-neutral-700) {
+  color: var(--text-secondary) !important;
+}
+
+.dark :is(.text-slate-600, .text-slate-500, .text-gray-600, .text-gray-500, .text-zinc-600, .text-zinc-500, .text-neutral-600, .text-neutral-500) {
+  color: var(--text-muted) !important;
+}
+
+.dark :is([class*="text-[#18181b]"], [class*="text-[#111827]"], [class*="text-[#101828]"], [class*="text-[#0f172a]"], [class*="text-[#13213f]"], [class*="text-[#1a1635]"], [class*="text-[#1f2937]"]) {
+  color: var(--text-primary) !important;
+}
+
+.dark :is([class*="text-[#334155]"], [class*="text-[#475467]"], [class*="text-[#52525b]"], [class*="text-[#5f6e92]"], [class*="text-[#667085]"], [class*="text-[#6f6a80]"]) {
+  color: var(--text-secondary) !important;
+}
+
+.dark :is(.editorial-migrated-shell, .resumes-editorial-shell, .missions-editorial-shell, .crm-compact-shell, .profile-matching-shell, .tags-management-shell, .email-templates-shell, .security-logs-shell, .gdpr-audit-shell, .user-guide-shell, .users-management-shell) :is(h1, h2, h3, h4, h5, h6, .cv-display, .page-title, .section-title, .card-title) {
+  color: #f4f5f7 !important;
+}
+
+.dark :is(.editorial-migrated-shell, .resumes-editorial-shell, .missions-editorial-shell, .crm-compact-shell, .profile-matching-shell, .tags-management-shell, .email-templates-shell, .security-logs-shell, .gdpr-audit-shell, .user-guide-shell, .users-management-shell) :is(label, .cv-kicker, .field-label, .form-label, .card-label) {
+  color: #c4cad4 !important;
+}
+
+.dark .app-breadcrumbs {
+  color: #c4cad4 !important;
+}
+
+.dark .app-breadcrumbs .app-breadcrumbs__link {
+  color: #c4cad4 !important;
+}
+
+.dark .app-breadcrumbs .app-breadcrumbs__link:hover {
+  color: #f4f5f7 !important;
+}
+
+.dark .app-breadcrumbs .app-breadcrumbs__current {
+  color: #f4f5f7 !important;
+}
+
+.dark .app-breadcrumbs .app-breadcrumbs__separator {
+  color: #8f98a8 !important;
+}
+
 .dark .dark\:text-gray-100,
 .dark .dark\:text-gray-200,
 .dark .dark\:text-gray-300 {
@@ -1142,6 +1190,14 @@ body [class~="fixed"][class~="inset-0"][class*="z-[9999]"] {
 
 .dark .crm-compact-shell .crm-stat-icon--submissions {
   background: rgba(249, 115, 22, 0.14) !important;
+}
+
+.crm-compact-shell .crm-clients-toolbar-actions {
+  align-items: flex-start;
+}
+
+.crm-compact-shell .crm-clients-toolbar-actions > button {
+  min-height: 3rem;
 }
 
 .dark .crm-compact-shell .crm-deal-status-badge--open {

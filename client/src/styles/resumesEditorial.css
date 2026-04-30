@@ -1079,6 +1079,11 @@
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.34);
 }
 
+.dark .resumes-editorial-shell .cv-resume-row .cv-library-candidate-name,
+.dark .resumes-editorial-shell .cv-resume-row .cv-library-candidate-name * {
+  color: #f4f5f7 !important;
+}
+
 .dark .resumes-editorial-shell .segmented-control,
 .dark .resumes-editorial-shell .cv-count-pill,
 .dark .resumes-editorial-shell .cv-pill,

@@ -107,6 +107,18 @@ describe('soft dark palette styles', () => {
     expect(base).toContain('background: #22262e !important');
   });
 
+  it('keeps CRM client toolbar actions aligned with the type tabs', () => {
+    const base = readStyle('_base.css');
+    const clientsComponents = readStyle('../pages/ClientsPage.components.tsx');
+
+    expect(clientsComponents).toContain('crm-clients-type-toggle');
+    expect(clientsComponents).toContain('crm-clients-toolbar-actions');
+    expect(clientsComponents).toContain('items-start justify-between');
+    expect(base).toContain('.crm-compact-shell .crm-clients-toolbar-actions');
+    expect(base).toContain('align-items: flex-start');
+    expect(base).toContain('min-height: 3rem');
+  });
+
   it('keeps CRM deal status badges dark in dark mode', () => {
     const base = readStyle('_base.css');
     const dealCard = readStyle('../components/CRM/DealCard.tsx');
@@ -120,20 +132,26 @@ describe('soft dark palette styles', () => {
 
   it('keeps CV library candidate names readable in dark mode', () => {
     const base = readStyle('_base.css');
+    const resumesEditorial = readStyle('resumesEditorial.css');
     const dealResumeCard = readStyle('../components/ResumesPage/DealResumeCard.tsx');
 
     expect(dealResumeCard).toContain('cv-library-candidate-name');
     expect(base).toContain('.dark .cv-resume-row .cv-library-candidate-name');
+    expect(resumesEditorial).toContain('.dark .resumes-editorial-shell .cv-resume-row .cv-library-candidate-name');
     expect(base).toContain('color: #f4f5f7 !important');
+    expect(resumesEditorial).toContain('color: #f4f5f7 !important');
   });
 
   it('keeps mission card titles readable in dark mode', () => {
     const base = readStyle('_base.css');
+    const editorialPages = readStyle('editorialPages.css');
     const missionParts = readStyle('../components/MissionsPage/MissionsDealsGroupedView.parts.tsx');
 
     expect(missionParts).toContain('mission-card-title');
     expect(base).toContain('.dark .mission-card-title');
+    expect(editorialPages).toContain('.dark .missions-editorial-shell .mission-card-title');
     expect(base).toContain('color: #f4f5f7 !important');
+    expect(editorialPages).toContain('color: #f4f5f7 !important');
   });
 
   it('keeps batch jobs server info panel dark in dark mode', () => {
@@ -218,12 +236,68 @@ describe('soft dark palette styles', () => {
     expect(base).toContain('background: rgba(124, 92, 255, 0.16) !important');
   });
 
-  it('keeps Tiptap editor h2 and h3 headings readable in dark mode', () => {
+  it('keeps common legacy neutral text utilities readable in dark mode', () => {
+    const base = readStyle('_base.css');
+
+    expect(base).toContain(
+      '.dark :is(.text-black, .text-slate-950, .text-slate-900, .text-gray-950, .text-gray-900, .text-zinc-950, .text-zinc-900, .text-neutral-950, .text-neutral-900)'
+    );
+    expect(base).toContain('color: var(--text-primary) !important');
+    expect(base).toContain(
+      '.dark :is(.text-slate-800, .text-slate-700, .text-gray-800, .text-gray-700, .text-zinc-800, .text-zinc-700, .text-neutral-800, .text-neutral-700)'
+    );
+    expect(base).toContain('color: var(--text-secondary) !important');
+    expect(base).toContain(
+      '.dark :is(.text-slate-600, .text-slate-500, .text-gray-600, .text-gray-500, .text-zinc-600, .text-zinc-500, .text-neutral-600, .text-neutral-500)'
+    );
+    expect(base).toContain('color: var(--text-muted) !important');
+  });
+
+  it('keeps legacy arbitrary dark text colors readable in dark mode', () => {
+    const base = readStyle('_base.css');
+
+    expect(base).toContain('[class*="text-[#18181b]"]');
+    expect(base).toContain('[class*="text-[#101828]"]');
+    expect(base).toContain('[class*="text-[#13213f]"]');
+    expect(base).toContain('[class*="text-[#1a1635]"]');
+    expect(base).toContain('color: var(--text-primary) !important');
+  });
+
+  it('keeps dark shell headings and field labels readable across screens', () => {
+    const base = readStyle('_base.css');
+
+    expect(base).toContain(
+      '.dark :is(.editorial-migrated-shell, .resumes-editorial-shell, .missions-editorial-shell, .crm-compact-shell, .profile-matching-shell, .tags-management-shell, .email-templates-shell, .security-logs-shell, .gdpr-audit-shell, .user-guide-shell, .users-management-shell)'
+    );
+    expect(base).toContain(':is(h1, h2, h3, h4, h5, h6, .cv-display, .page-title, .section-title, .card-title)');
+    expect(base).toContain('color: #f4f5f7 !important');
+    expect(base).toContain(':is(label, .cv-kicker, .field-label, .form-label, .card-label)');
+    expect(base).toContain('color: #c4cad4 !important');
+  });
+
+  it('keeps breadcrumbs readable in dark mode', () => {
+    const base = readStyle('_base.css');
+    const breadcrumbs = readStyle('../components/Breadcrumbs.tsx');
+
+    expect(breadcrumbs).toContain('app-breadcrumbs');
+    expect(breadcrumbs).toContain('app-breadcrumbs__link');
+    expect(breadcrumbs).toContain('app-breadcrumbs__current');
+    expect(breadcrumbs).toContain('app-breadcrumbs__separator');
+    expect(base).toContain('.dark .app-breadcrumbs .app-breadcrumbs__link');
+    expect(base).toContain('.dark .app-breadcrumbs .app-breadcrumbs__current');
+    expect(base).toContain('.dark .app-breadcrumbs .app-breadcrumbs__separator');
+    expect(base).toContain('color: #c4cad4 !important');
+    expect(base).toContain('color: #f4f5f7 !important');
+  });
+
+  it('keeps Tiptap editor text readable in dark mode even with imported inline colors', () => {
     const tiptap = readStyle('../components/TiptapEditor/TiptapEditor.css');
 
-    expect(tiptap).toContain('.dark .tiptap-editor-content .tiptap h2');
-    expect(tiptap).toContain('.dark .tiptap-editor-content .tiptap h3');
-    expect(tiptap).toContain('color: #f4f5f7');
+    expect(tiptap).toContain('.dark .tiptap-editor-content .tiptap :is(p, li, div, span, strong, em)');
+    expect(tiptap).toContain('.dark .tiptap-editor-content .tiptap :is(h1, h2, h3, h4, h5, h6)');
+    expect(tiptap).toContain('.dark .tiptap-editor-content .tiptap :is(h1, h2, h3, h4, h5, h6) *');
+    expect(tiptap).toContain('color: #e5e7eb !important');
+    expect(tiptap).toContain('color: #f4f5f7 !important');
   });
 
   it('applies the soft dark palette to app chrome', () => {
