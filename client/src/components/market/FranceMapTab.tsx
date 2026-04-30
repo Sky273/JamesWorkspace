@@ -204,8 +204,8 @@ export default function FranceMapTab({ className = '' }: { className?: string })
 
       {dataFreshness && <FranceMapFreshnessBanner dataFreshness={dataFreshness} t={t} />}
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className={`px-6 py-4 border-b ${
+      <div className="france-map-card bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className={`france-map-card-header px-6 py-4 border-b ${
           currentSourceOption?.color === 'red' ? 'bg-red-50 dark:bg-red-900/30 border-red-100 dark:border-red-800' :
           currentSourceOption?.color === 'emerald' ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-100 dark:border-emerald-800' :
           currentSourceOption?.color === 'blue' ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-100 dark:border-blue-800' :

@@ -199,7 +199,7 @@ export const EmailTemplatesList = ({
                   {firmLabel}: {template.firm_name || globalFirmLabel}
                 </span>
               </div>
-              <h3 className="truncate text-base font-semibold text-slate-950 dark:text-[var(--cv-text)]">{template.name}</h3>
+              <h3 className="email-template-card-title truncate text-base font-semibold text-slate-950 dark:text-[var(--cv-text)]">{template.name}</h3>
             </div>
             <div className="rounded-2xl bg-primary-50 p-2 text-primary-600 dark:bg-primary-950/30 dark:text-primary-300">
               <PaintBrushIcon className="h-5 w-5" />

@@ -20,10 +20,10 @@ export default function TagsStatsGrid({
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="rounded-[1.5rem] border border-gray-200/80 bg-white/80 p-4 shadow-sm dark:border-gray-700/80 dark:bg-gray-900/30"
+        className="tags-stat-card rounded-[1.5rem] border border-gray-200/80 bg-white/80 p-4 shadow-sm dark:border-gray-700/80 dark:bg-gray-900/30"
       >
         <div className="flex items-center gap-3">
-          <div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30">
+          <div className="tags-icon-shell rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30">
             <TagIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
@@ -41,10 +41,10 @@ export default function TagsStatsGrid({
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 * (index + 1) }}
-            className="rounded-[1.5rem] border border-gray-200/80 bg-white/80 p-4 shadow-sm dark:border-gray-700/80 dark:bg-gray-900/30"
+            className="tags-stat-card rounded-[1.5rem] border border-gray-200/80 bg-white/80 p-4 shadow-sm dark:border-gray-700/80 dark:bg-gray-900/30"
           >
             <div className="flex items-center gap-3">
-              <div className={`rounded-lg p-2 ${config.bgLight}`}>
+              <div className={`tags-icon-shell rounded-lg p-2 ${config.bgLight}`}>
                 <IconComponent className={`h-6 w-6 ${config.textColor}`} />
               </div>
               <div>

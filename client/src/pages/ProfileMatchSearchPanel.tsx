@@ -88,7 +88,7 @@ export default function ProfileMatchSearchPanel({
               value={selectedDealId}
               onChange={(e) => setSelectedDealId(e.target.value)}
               disabled={loadingMissions}
-              className="w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-slate-900 focus:border-[var(--cv-primary)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cv-primary)_20%,transparent)] dark:border-white/10 dark:bg-white/[0.04] dark:text-[var(--cv-text)]"
+              className="profile-matching-field w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-slate-900 focus:border-[var(--cv-primary)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cv-primary)_20%,transparent)] dark:border-white/10 dark:bg-white/[0.04] dark:text-[var(--cv-text)]"
             >
               <option value="">{t('profileMatching.allDeals')}</option>
               {deals.map((deal) => (
@@ -113,7 +113,7 @@ export default function ProfileMatchSearchPanel({
             value={selectedMissionId}
             onChange={(e) => setSelectedMissionId(e.target.value)}
             disabled={loadingMissions}
-            className="w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-slate-900 focus:border-[var(--cv-primary)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cv-primary)_20%,transparent)] dark:border-white/10 dark:bg-white/[0.04] dark:text-[var(--cv-text)]"
+            className="profile-matching-field w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-slate-900 focus:border-[var(--cv-primary)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cv-primary)_20%,transparent)] dark:border-white/10 dark:bg-white/[0.04] dark:text-[var(--cv-text)]"
           >
             {loadingMissions ? (
               <option>{t('profileMatching.loadingMissions')}</option>
@@ -164,7 +164,7 @@ export default function ProfileMatchSearchPanel({
                     min={0}
                     value={limit}
                     onChange={(e) => setLimit(Math.max(0, parseInt(e.target.value, 10) || 0))}
-                    className="w-full rounded-2xl border border-slate-200 bg-white/80 px-3 py-2.5 text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-[var(--cv-text)]"
+                    className="profile-matching-field w-full rounded-2xl border border-slate-200 bg-white/80 px-3 py-2.5 text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-[var(--cv-text)]"
                     placeholder={t('profileMatching.maxResultsPlaceholder')}
                   />
                 </div>
@@ -178,7 +178,7 @@ export default function ProfileMatchSearchPanel({
                     max={100}
                     value={minScore}
                     onChange={(e) => setMinScore(Math.min(100, Math.max(0, parseInt(e.target.value, 10) || 0)))}
-                    className="w-full rounded-2xl border border-slate-200 bg-white/80 px-3 py-2.5 text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-[var(--cv-text)]"
+                    className="profile-matching-field w-full rounded-2xl border border-slate-200 bg-white/80 px-3 py-2.5 text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-[var(--cv-text)]"
                   />
                 </div>
               </div>
@@ -199,7 +199,7 @@ export default function ProfileMatchSearchPanel({
                         max={100}
                         value={weights[key]}
                         onChange={(e) => setWeights((prev) => ({ ...prev, [key]: parseInt(e.target.value, 10) || 0 }))}
-                        className="w-full rounded-xl border border-slate-200 bg-white/80 px-2 py-2 text-sm text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-[var(--cv-text)]"
+                        className="profile-matching-field w-full rounded-xl border border-slate-200 bg-white/80 px-2 py-2 text-sm text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-[var(--cv-text)]"
                       />
                     </div>
                   ))}

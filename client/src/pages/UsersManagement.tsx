@@ -92,7 +92,7 @@ const UsersManagement = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className={embedded ? 'space-y-6' : 'cv-surface app-page-shell'}
+      className={embedded ? 'users-management-shell space-y-6' : 'users-management-shell cv-surface app-page-shell'}
     >
       {!embedded ? <UsersManagementHeader /> : null}
       <UsersManagementStatsCards stats={stats} showFirmsStats={canManageFirms} />

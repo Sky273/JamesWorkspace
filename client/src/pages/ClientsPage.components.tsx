@@ -29,8 +29,8 @@ import { CLIENTS_PAGE_SIZE } from './ClientsPage.hooks';
 
 function getTypeColor(type: ClientType): string {
   return type === 'client'
-    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-    : 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
+    ? 'crm-client-type-badge crm-client-type-badge--client bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+    : 'crm-client-type-badge crm-client-type-badge--prospect bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
 }
 
 export function CRMHeader() {
@@ -76,20 +76,20 @@ export function CRMStatsCards({ stats }: { stats: ClientsStats }) {
 
   return (
     <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-      <div className="lux-card flex items-center gap-3 rounded-[13px] p-3">
-        <div className="rounded-[9px] bg-green-100 p-2 dark:bg-green-900/30"><BuildingOfficeIcon className="h-5 w-5 text-green-600 dark:text-green-400" /></div>
+      <div className="crm-stat-card lux-card flex items-center gap-3 rounded-[13px] p-3">
+        <div className="crm-stat-icon crm-stat-icon--clients rounded-[9px] bg-green-100 p-2 dark:bg-green-900/30"><BuildingOfficeIcon className="h-5 w-5 text-green-600 dark:text-green-400" /></div>
         <div><div className="text-xs font-medium uppercase tracking-[0.07em] text-gray-500 dark:text-gray-400">{t('clients.stats.clients')}</div><div className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.totalClients}</div></div>
       </div>
-      <div className="lux-card flex items-center gap-3 rounded-[13px] p-3">
-        <div className="rounded-[9px] bg-purple-100 p-2 dark:bg-purple-900/30"><BriefcaseIcon className="h-5 w-5 text-[#6246ea] dark:text-[#c9ccff]" /></div>
+      <div className="crm-stat-card lux-card flex items-center gap-3 rounded-[13px] p-3">
+        <div className="crm-stat-icon crm-stat-icon--prospects rounded-[9px] bg-purple-100 p-2 dark:bg-purple-900/30"><BriefcaseIcon className="h-5 w-5 text-[#6246ea] dark:text-[#c9ccff]" /></div>
         <div><div className="text-xs font-medium uppercase tracking-[0.07em] text-gray-500 dark:text-gray-400">{t('clients.stats.prospects')}</div><div className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.totalProspects}</div></div>
       </div>
-      <div className="lux-card flex items-center gap-3 rounded-[13px] p-3">
-        <div className="rounded-[9px] bg-purple-100 p-2 dark:bg-purple-900/30"><UserGroupIcon className="h-5 w-5 text-[#6246ea] dark:text-[#c9ccff]" /></div>
+      <div className="crm-stat-card lux-card flex items-center gap-3 rounded-[13px] p-3">
+        <div className="crm-stat-icon crm-stat-icon--contacts rounded-[9px] bg-purple-100 p-2 dark:bg-purple-900/30"><UserGroupIcon className="h-5 w-5 text-[#6246ea] dark:text-[#c9ccff]" /></div>
         <div><div className="text-xs font-medium uppercase tracking-[0.07em] text-gray-500 dark:text-gray-400">{t('clients.stats.contacts')}</div><div className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.totalContacts}</div></div>
       </div>
-      <div className="lux-card flex items-center gap-3 rounded-[13px] p-3">
-        <div className="rounded-[9px] bg-orange-100 p-2 dark:bg-orange-900/30"><PaperAirplaneIcon className="h-5 w-5 text-orange-600 dark:text-orange-400" /></div>
+      <div className="crm-stat-card lux-card flex items-center gap-3 rounded-[13px] p-3">
+        <div className="crm-stat-icon crm-stat-icon--submissions rounded-[9px] bg-orange-100 p-2 dark:bg-orange-900/30"><PaperAirplaneIcon className="h-5 w-5 text-orange-600 dark:text-orange-400" /></div>
         <div><div className="text-xs font-medium uppercase tracking-[0.07em] text-gray-500 dark:text-gray-400">{t('clients.stats.submissions')}</div><div className="text-xl font-bold text-gray-900 dark:text-gray-100">{stats.totalSubmissions}</div></div>
       </div>
     </div>

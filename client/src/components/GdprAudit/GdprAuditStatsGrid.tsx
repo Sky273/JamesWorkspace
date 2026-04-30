@@ -16,7 +16,7 @@ export default function GdprAuditStatsGrid({
 
   return (
     <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
-      <div className="rounded-lg bg-white p-4 shadow dark:bg-gray-800">
+      <div className="gdpr-audit-stat-card rounded-lg bg-white p-4 shadow dark:bg-gray-800">
         <div className="text-sm text-gray-500 dark:text-gray-400">
           {t('gdprAudit.totalActions', { defaultValue: 'Actions (30j)' })}
         </div>
@@ -24,7 +24,7 @@ export default function GdprAuditStatsGrid({
           {stats.total}
         </div>
       </div>
-      <div className="rounded-lg bg-white p-4 shadow dark:bg-gray-800">
+      <div className="gdpr-audit-stat-card rounded-lg bg-white p-4 shadow dark:bg-gray-800">
         <div className="text-sm text-gray-500 dark:text-gray-400">
           {t('gdprAudit.consentActions', { defaultValue: 'Consentements' })}
         </div>
@@ -32,7 +32,7 @@ export default function GdprAuditStatsGrid({
           {stats.byCategory.consent || 0}
         </div>
       </div>
-      <div className="rounded-lg bg-white p-4 shadow dark:bg-gray-800">
+      <div className="gdpr-audit-stat-card rounded-lg bg-white p-4 shadow dark:bg-gray-800">
         <div className="text-sm text-gray-500 dark:text-gray-400">
           {t('gdprAudit.automatedActions', { defaultValue: 'Automatisées' })}
         </div>
@@ -40,7 +40,7 @@ export default function GdprAuditStatsGrid({
           {stats.automated.automated}
         </div>
       </div>
-      <div className="rounded-lg bg-white p-4 shadow dark:bg-gray-800">
+      <div className="gdpr-audit-stat-card rounded-lg bg-white p-4 shadow dark:bg-gray-800">
         <div className="text-sm text-gray-500 dark:text-gray-400">
           {t('gdprAudit.manualActions', { defaultValue: 'Manuelles' })}
         </div>

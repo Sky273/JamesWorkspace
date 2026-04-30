@@ -21,10 +21,10 @@ function UserRoleBadge({ role }: { role: string | undefined }) {
   const isAdminRole = isSuperAdmin || isLocalAdmin;
 
   const badgeClassName = isSuperAdmin
-    ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+    ? 'users-management-role-badge--admin bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
     : isLocalAdmin
-      ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300'
-      : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
+      ? 'users-management-role-badge--local-admin bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300'
+      : 'users-management-role-badge--user bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
 
   const roleLabel = isSuperAdmin
     ? t('users.management.roles.admin')
@@ -34,7 +34,7 @@ function UserRoleBadge({ role }: { role: string | undefined }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${badgeClassName}`}
+      className={`users-management-role-badge inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full ${badgeClassName}`}
     >
       {isAdminRole ? <ShieldCheckIcon className="w-3 h-3" /> : <UserIcon className="w-3 h-3" />}
       {roleLabel}

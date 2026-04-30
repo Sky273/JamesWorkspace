@@ -22,7 +22,7 @@ export default function GdprAuditFiltersPanel({
   t,
 }: GdprAuditFiltersPanelProps): JSX.Element {
   return (
-    <div className="mb-6 rounded-lg bg-white p-4 shadow dark:bg-gray-800">
+    <div className="gdpr-audit-filters-panel mb-6 rounded-lg bg-white p-4 shadow dark:bg-gray-800">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-4">
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -32,7 +32,7 @@ export default function GdprAuditFiltersPanel({
           <select
             value={filters.firmId}
             onChange={(e) => onFilterChange('firmId', e.target.value)}
-            className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+            className="gdpr-audit-field w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
           >
             <option value="">
               {t('gdprAudit.allFirms', { defaultValue: 'Tous les cabinets' })}
@@ -52,7 +52,7 @@ export default function GdprAuditFiltersPanel({
           <select
             value={filters.category}
             onChange={(e) => onFilterChange('category', e.target.value)}
-            className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+            className="gdpr-audit-field w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
           >
             <option value="">
               {t('gdprAudit.allCategories', { defaultValue: 'Toutes' })}
@@ -72,7 +72,7 @@ export default function GdprAuditFiltersPanel({
           <select
             value={filters.action}
             onChange={(e) => onFilterChange('action', e.target.value)}
-            className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+            className="gdpr-audit-field w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
           >
             <option value="">
               {t('gdprAudit.allActions', { defaultValue: 'Toutes' })}
@@ -93,7 +93,7 @@ export default function GdprAuditFiltersPanel({
           <select
             value={filters.isAutomated}
             onChange={(e) => onFilterChange('isAutomated', e.target.value)}
-            className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+            className="gdpr-audit-field w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
           >
             <option value="">{t('gdprAudit.all', { defaultValue: 'Tous' })}</option>
             <option value="true">
@@ -114,7 +114,7 @@ export default function GdprAuditFiltersPanel({
             value={filters.targetEmail}
             onChange={(e) => onFilterChange('targetEmail', e.target.value)}
             placeholder="email@example.com"
-            className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+            className="gdpr-audit-field w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
           />
         </div>
 
@@ -126,7 +126,7 @@ export default function GdprAuditFiltersPanel({
             type="date"
             value={filters.startDate}
             onChange={(e) => onFilterChange('startDate', e.target.value)}
-            className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+            className="gdpr-audit-field w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
           />
         </div>
 
@@ -138,7 +138,7 @@ export default function GdprAuditFiltersPanel({
             type="date"
             value={filters.endDate}
             onChange={(e) => onFilterChange('endDate', e.target.value)}
-            className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+            className="gdpr-audit-field w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
           />
         </div>
 

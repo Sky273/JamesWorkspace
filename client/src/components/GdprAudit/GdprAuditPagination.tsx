@@ -18,7 +18,7 @@ export default function GdprAuditPagination({
   }
 
   return (
-    <div className="flex items-center justify-between border-t border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
+    <div className="gdpr-audit-pagination flex items-center justify-between border-t border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
       <div className="text-sm text-gray-500 dark:text-gray-400">
         {t('gdprAudit.showing', { defaultValue: 'Affichage' })}{' '}
         {(pagination.page - 1) * pagination.limit + 1} -{' '}

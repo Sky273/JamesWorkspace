@@ -1032,6 +1032,279 @@ body [class~="fixed"][class~="inset-0"][class*="z-[9999]"] {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+.dark .editorial-migrated-shell .segmented-control {
+  background: #2a2f38;
+  border-color: #343a46;
+  box-shadow: none;
+}
+
+.dark .editorial-migrated-shell button.segmented-control__item[type="button"] {
+  color: #c4cad4;
+}
+
+.dark .editorial-migrated-shell button.segmented-control__item[type="button"]:hover {
+  background: #323844;
+  border-color: rgba(124, 92, 255, 0.42);
+  color: #f4f5f7;
+}
+
+.dark .editorial-migrated-shell button.segmented-control__item.segmented-control__item--active[type="button"] {
+  background: #7c5cff;
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 12px 24px rgba(124, 92, 255, 0.22);
+}
+
+.dark .tags-management-shell .tags-stat-card,
+.dark .tags-management-shell .tags-category-card {
+  background: #151b2a !important;
+  border-color: #2e3850 !important;
+  box-shadow: none !important;
+}
+
+.dark .tags-management-shell .tags-icon-shell {
+  background: rgba(124, 92, 255, 0.14) !important;
+}
+
+.dark .tags-management-shell .tags-chip {
+  background: rgba(124, 92, 255, 0.1) !important;
+  border-color: rgba(124, 92, 255, 0.5) !important;
+  color: #d8c7ff !important;
+  box-shadow: none !important;
+}
+
+.dark .tags-management-shell .tags-chip:hover {
+  background: rgba(124, 92, 255, 0.18) !important;
+  border-color: rgba(139, 114, 255, 0.72) !important;
+  color: #f4f5f7 !important;
+}
+
+.dark .editorial-migrated-shell .france-map-card {
+  background: #22262e !important;
+  border-color: #343a46 !important;
+}
+
+.dark .editorial-migrated-shell .france-map-card-header {
+  background: #22262e !important;
+  border-color: #343a46 !important;
+}
+
+.dark .profile-matching-shell .profile-matching-field {
+  background: #151b2a !important;
+  border-color: #343a46 !important;
+  color: #f4f5f7 !important;
+  box-shadow: none !important;
+}
+
+.dark .profile-matching-shell .profile-matching-field:focus {
+  border-color: #7c5cff !important;
+  box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.2) !important;
+  outline: none !important;
+}
+
+.dark .profile-matching-shell .profile-matching-field option {
+  background: #151b2a;
+  color: #f4f5f7;
+}
+
+.dark .email-templates-shell .email-template-card-title {
+  color: #f4f5f7 !important;
+}
+
+.dark .crm-compact-shell .crm-client-type-badge--prospect {
+  background: rgba(124, 92, 255, 0.16) !important;
+  color: #d8c7ff !important;
+}
+
+.dark .crm-compact-shell .crm-client-type-badge--client {
+  background: rgba(34, 197, 94, 0.14) !important;
+  color: #86efac !important;
+}
+
+.dark .crm-compact-shell .crm-stat-card {
+  background: #22262e !important;
+  border-color: #343a46 !important;
+  box-shadow: none !important;
+}
+
+.dark .crm-compact-shell .crm-stat-icon {
+  box-shadow: none !important;
+}
+
+.dark .crm-compact-shell .crm-stat-icon--clients {
+  background: rgba(34, 197, 94, 0.14) !important;
+}
+
+.dark .crm-compact-shell .crm-stat-icon--prospects,
+.dark .crm-compact-shell .crm-stat-icon--contacts {
+  background: rgba(124, 92, 255, 0.16) !important;
+}
+
+.dark .crm-compact-shell .crm-stat-icon--submissions {
+  background: rgba(249, 115, 22, 0.14) !important;
+}
+
+.dark .crm-compact-shell .crm-deal-status-badge--open {
+  background: rgba(124, 92, 255, 0.16) !important;
+  color: #d8c7ff !important;
+}
+
+.dark .crm-compact-shell .crm-deal-status-badge--won {
+  background: rgba(34, 197, 94, 0.14) !important;
+  color: #86efac !important;
+}
+
+.dark .crm-compact-shell .crm-deal-status-badge--lost {
+  background: rgba(239, 68, 68, 0.14) !important;
+  color: #fca5a5 !important;
+}
+
+.dark .crm-compact-shell .crm-deal-status-badge--on_hold {
+  background: rgba(245, 158, 11, 0.14) !important;
+  color: #fcd34d !important;
+}
+
+.dark .cv-resume-row .cv-library-candidate-name {
+  color: #f4f5f7 !important;
+}
+
+.dark .mission-card-title {
+  color: #f4f5f7 !important;
+}
+
+.dark .batch-jobs-server-info {
+  background: #151b2a !important;
+  border-color: #343a46 !important;
+}
+
+.dark .batch-jobs-server-info-content {
+  color: #d8c7ff !important;
+}
+
+.dark .batch-jobs-server-info-description {
+  color: #c4cad4 !important;
+}
+
+.dark .security-logs-shell .security-logs-stat-card,
+.dark .security-logs-shell .security-logs-filters-panel,
+.dark .security-logs-shell .security-logs-table-panel {
+  background: #22262e !important;
+  border-color: #343a46 !important;
+  box-shadow: none !important;
+}
+
+.dark .security-logs-shell .security-logs-field {
+  background: #151b2a !important;
+  border-color: #343a46 !important;
+  color: #f4f5f7 !important;
+}
+
+.dark .security-logs-shell .security-logs-field:focus {
+  border-color: #7c5cff !important;
+  box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.2) !important;
+  outline: none !important;
+}
+
+.dark .security-logs-shell .security-logs-field option {
+  background: #151b2a;
+  color: #f4f5f7;
+}
+
+.dark .security-logs-shell .security-logs-table-head,
+.dark .security-logs-shell .security-logs-table-body {
+  background: #22262e !important;
+}
+
+.dark .security-logs-shell .security-logs-table-body tr:hover {
+  background: #2a2f38 !important;
+}
+
+.dark .security-logs-shell .security-logs-badge {
+  border: 1px solid rgba(124, 92, 255, 0.32) !important;
+  background: rgba(124, 92, 255, 0.16) !important;
+  color: #d8c7ff !important;
+}
+
+.dark .gdpr-audit-shell .gdpr-audit-stat-card,
+.dark .gdpr-audit-shell .gdpr-audit-filters-panel {
+  background: #22262e !important;
+  border: 1px solid #343a46 !important;
+  box-shadow: none !important;
+}
+
+.dark .gdpr-audit-shell .gdpr-audit-field {
+  background: #151b2a !important;
+  border-color: #343a46 !important;
+  color: #f4f5f7 !important;
+}
+
+.dark .gdpr-audit-shell .gdpr-audit-field:focus {
+  border-color: #7c5cff !important;
+  box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.2) !important;
+  outline: none !important;
+}
+
+.dark .gdpr-audit-shell .gdpr-audit-field option {
+  background: #151b2a;
+  color: #f4f5f7;
+}
+
+.dark .gdpr-audit-shell .gdpr-audit-table-head,
+.dark .gdpr-audit-shell .gdpr-audit-table-body,
+.dark .gdpr-audit-shell .gdpr-audit-pagination {
+  background: #22262e !important;
+}
+
+.dark .gdpr-audit-shell .gdpr-audit-table-body tr:hover {
+  background: #2a2f38 !important;
+}
+
+.dark .gdpr-audit-shell .gdpr-audit-badge {
+  border: 1px solid rgba(124, 92, 255, 0.32) !important;
+  background: rgba(124, 92, 255, 0.16) !important;
+  color: #d8c7ff !important;
+}
+
+.dark .gdpr-audit-shell .gdpr-audit-details-block {
+  background: #151b2a !important;
+  color: #f4f5f7 !important;
+}
+
+.dark .user-guide-shell .user-guide-nav-item--active {
+  background: #7c5cff !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 24px rgba(124, 92, 255, 0.28) !important;
+}
+
+.dark .user-guide-shell .user-guide-nav-item--active svg {
+  color: #ffffff !important;
+}
+
+.dark .user-guide-shell .cv-page-heading h1,
+.dark .user-guide-shell .user-guide-content :is(h2, h3, h4, h5, h6) {
+  color: #f4f5f7 !important;
+}
+
+.dark .users-management-shell .users-management-role-badge {
+  border: 1px solid rgba(124, 92, 255, 0.32) !important;
+  box-shadow: none !important;
+}
+
+.dark .users-management-shell .users-management-role-badge--admin {
+  background: rgba(124, 92, 255, 0.16) !important;
+  color: #d8c7ff !important;
+}
+
+.dark .users-management-shell .users-management-role-badge--local-admin {
+  background: rgba(99, 102, 241, 0.16) !important;
+  color: #c7d2fe !important;
+}
+
+.dark .users-management-shell .users-management-role-badge--user {
+  background: rgba(59, 130, 246, 0.16) !important;
+  color: #bfdbfe !important;
+}
+
 .editorial-migrated-shell [class*="text-blue-"],
 .editorial-migrated-shell [class*="text-indigo-"] {
   color: #6b4eff !important;

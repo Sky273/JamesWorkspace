@@ -74,10 +74,10 @@ export default function TagsCategoryGrid({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: categoryIndex * 0.1 }}
-                className={`rounded-[1.75rem] border bg-white/90 shadow-sm ${borderClass} dark:bg-slate-900/60`}
+                className={`tags-category-card rounded-[1.75rem] border bg-white/90 shadow-sm ${borderClass} dark:bg-slate-900/60`}
               >
                 <div className={`flex items-center gap-3 border-b p-5 ${borderClass}`}>
-                  <div className={`rounded-2xl p-2.5 ${config.bgLight}`}>
+                  <div className={`tags-icon-shell rounded-2xl p-2.5 ${config.bgLight}`}>
                     <IconComponent className={`h-5 w-5 ${config.textColor}`} />
                   </div>
                   <div>
@@ -103,7 +103,7 @@ export default function TagsCategoryGrid({
                           initial={{ opacity: 0, scale: 0.8 }}
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ delay: Math.min(index * 0.01, 0.5) }}
-                          className={`group inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-medium transition-all hover:shadow-md ${config.tagBg} ${config.tagText} ${config.tagBorder}`}
+                          className={`tags-chip group inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-medium transition-all hover:shadow-md ${config.tagBg} ${config.tagText} ${config.tagBorder}`}
                         >
                           <span>{tag}</span>
                           <button
@@ -140,10 +140,10 @@ export default function TagsCategoryGrid({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: categoryIndex * 0.1 }}
-                className={`rounded-[1.75rem] border bg-white/90 shadow-sm ${borderClass} dark:bg-slate-900/60`}
+                className={`tags-category-card rounded-[1.75rem] border bg-white/90 shadow-sm ${borderClass} dark:bg-slate-900/60`}
               >
                 <div className={`flex items-center gap-3 border-b p-5 ${borderClass}`}>
-                  <div className={`rounded-2xl p-2.5 ${config.bgLight}`}>
+                  <div className={`tags-icon-shell rounded-2xl p-2.5 ${config.bgLight}`}>
                     <IconComponent className={`h-5 w-5 ${config.textColor}`} />
                   </div>
                   <div>
@@ -170,7 +170,7 @@ export default function TagsCategoryGrid({
                           initial={{ opacity: 0, scale: 0.8 }}
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ delay: Math.min(index * 0.01, 0.5) }}
-                          className={`group inline-flex cursor-pointer items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-medium transition-all hover:scale-105 hover:shadow-md ${config.tagBg} ${config.tagText} ${config.tagBorder}`}
+                          className={`tags-chip group inline-flex cursor-pointer items-center gap-1 rounded-full border px-3 py-1.5 text-sm font-medium transition-all hover:scale-105 hover:shadow-md ${config.tagBg} ${config.tagText} ${config.tagBorder}`}
                           title={t('tags.viewEscoDefinition')}
                         >
                           <span>{item.label}</span>

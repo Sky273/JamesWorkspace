@@ -206,7 +206,7 @@ const GdprAuditPage = (): JSX.Element => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45 }}
-      className="cv-surface app-page-shell max-w-6xl"
+      className="gdpr-audit-shell cv-surface app-page-shell max-w-6xl"
     >
       <div className="mb-8 flex items-start justify-between gap-4">
         <PageHeader

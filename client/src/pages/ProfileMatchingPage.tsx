@@ -211,7 +211,7 @@ const ProfileMatchingPage = (): JSX.Element => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="editorial-migrated-shell relative min-h-screen px-4 py-6 sm:px-6 sm:py-8"
+      className="editorial-migrated-shell profile-matching-shell relative min-h-screen px-4 py-6 sm:px-6 sm:py-8"
     >
       <div className="cv-surface mx-auto max-w-7xl rounded-[2.5rem] p-6 sm:p-8">
         <AnimatePresence>

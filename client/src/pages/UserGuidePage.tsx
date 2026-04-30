@@ -58,7 +58,7 @@ const UserGuidePage = (): JSX.Element => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="cv-surface app-page-shell max-w-6xl"
+      className="user-guide-shell cv-surface app-page-shell max-w-6xl"
     >
       <PageHeader title={t('userGuide.title')} subtitle={t('userGuide.subtitle')} />
 
@@ -74,7 +74,7 @@ const UserGuidePage = (): JSX.Element => {
                       onClick={() => setActiveSection(section.id)}
                       className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
                         activeSection === section.id
-                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                          ? 'user-guide-nav-item--active bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
                           : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
                       }`}
                     >
@@ -89,7 +89,7 @@ const UserGuidePage = (): JSX.Element => {
         </div>
 
         <div className="flex-1">
-          <div className="section-shell rounded-[2rem] p-6 md:p-8">
+          <div className="user-guide-content section-shell rounded-[2rem] p-6 md:p-8">
             {isLoadingGuide ? (
               <div className="flex items-center justify-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>

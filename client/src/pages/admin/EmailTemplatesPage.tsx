@@ -317,7 +317,7 @@ const EmailTemplatesPage = ({ embedded = false }: { embedded?: boolean } = {}): 
 
   if (loading) {
     return (
-      <div className={embedded ? 'max-w-6xl' : 'cv-surface app-page-shell max-w-6xl'}>
+      <div className={embedded ? 'email-templates-shell max-w-6xl' : 'email-templates-shell cv-surface app-page-shell max-w-6xl'}>
         {!embedded ? <PageHeader title={t('emailTemplates.title')} subtitle={t('emailTemplates.subtitle')} /> : null}
         <div className="section-shell rounded-[2rem] p-8">
           <div className="flex items-start gap-4">
@@ -344,7 +344,7 @@ const EmailTemplatesPage = ({ embedded = false }: { embedded?: boolean } = {}): 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45 }}
-      className={embedded ? 'max-w-6xl space-y-6' : 'cv-surface app-page-shell max-w-6xl'}
+      className={embedded ? 'email-templates-shell max-w-6xl space-y-6' : 'email-templates-shell cv-surface app-page-shell max-w-6xl'}
     >
       {!embedded ? (
         <PageHeader

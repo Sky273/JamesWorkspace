@@ -296,7 +296,7 @@ const TagsManagement = ({ embedded = false }: { embedded?: boolean } = {}): JSX.
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className={embedded ? 'max-w-6xl' : 'cv-surface app-page-shell max-w-6xl'}
+      className={embedded ? 'tags-management-shell max-w-6xl' : 'tags-management-shell cv-surface app-page-shell max-w-6xl'}
       >
         <div className="section-shell rounded-[2rem] p-8">
           <div className="flex items-start gap-4">
@@ -325,7 +325,7 @@ const TagsManagement = ({ embedded = false }: { embedded?: boolean } = {}): JSX.
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45 }}
-      className={embedded ? 'max-w-6xl space-y-6' : 'cv-surface app-page-shell max-w-6xl'}
+      className={embedded ? 'tags-management-shell max-w-6xl space-y-6' : 'tags-management-shell cv-surface app-page-shell max-w-6xl'}
     >
       {!embedded ? <PageHeader title={t('tags.title')} subtitle={t('tags.subtitle')} /> : null}
 

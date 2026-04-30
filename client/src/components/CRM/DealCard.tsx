@@ -37,7 +37,7 @@ export default function DealCard({ deal, index, onView, onEdit, onDelete }: Deal
           <div className="flex-1 min-w-0">
             <h3 className="truncate text-sm font-semibold text-gray-950 dark:text-gray-100">{deal.title}</h3>
             <div className="mt-1.5 flex items-center gap-2">
-              <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS_CONFIG[deal.status].color}`}>
+              <span className={`crm-deal-status-badge crm-deal-status-badge--${deal.status} rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS_CONFIG[deal.status].color}`}>
                 {STATUS_CONFIG[deal.status].label}
               </span>
               <span className={`text-xs ${PRIORITY_CONFIG[deal.priority].color}`} title={PRIORITY_CONFIG[deal.priority].label}>

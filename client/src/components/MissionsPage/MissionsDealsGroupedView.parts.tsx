@@ -163,7 +163,7 @@ export function MissionCardInDeal({
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h4 className="cv-display min-w-0 flex-1 truncate text-[15px] font-semibold text-[var(--cv-text)] transition-colors group-hover:text-[var(--cv-primary)]">
+                <h4 className="mission-card-title cv-display min-w-0 flex-1 truncate text-[15px] font-semibold text-[var(--cv-text)] transition-colors group-hover:text-[var(--cv-primary)]">
                   {mission.title || t('missions.noTitle')}
                 </h4>
                 <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] ${statusColor}`}>

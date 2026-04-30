@@ -284,7 +284,7 @@ const SecurityLogs = (): JSX.Element => {
 
   if (loading) {
     return (
-      <div className="cv-surface app-page-shell max-w-6xl">
+      <div className="security-logs-shell cv-surface app-page-shell max-w-6xl">
         <div className="section-shell rounded-[2rem] p-8">
           <div className="flex items-start gap-4">
             <ArrowPathIcon className="mt-1 h-6 w-6 animate-spin text-primary-500" />
@@ -311,7 +311,7 @@ const SecurityLogs = (): JSX.Element => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="cv-surface app-page-shell max-w-6xl"
+      className="security-logs-shell cv-surface app-page-shell max-w-6xl"
     >
       <PageHeader title={t('security.title')} subtitle={t('security.subtitle')} />
 

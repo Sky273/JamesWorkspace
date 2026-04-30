@@ -88,7 +88,7 @@ export default function DealResumeCard({
         <div className="flex min-w-0 items-center">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h4 className="cv-display min-w-0 flex-1 text-[15px] font-semibold text-[var(--cv-text)]">
+              <h4 className="cv-library-candidate-name cv-display min-w-0 flex-1 text-[15px] font-semibold text-[var(--cv-text)]">
                 <span className="block truncate">{resume.name || t('resumes.untitled')}</span>
               </h4>
               <span className={`cv-status-pill rounded-full px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] ${statusMeta.badge}`}>

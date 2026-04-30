@@ -29,7 +29,7 @@ export default function GdprAuditLogsTable({
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead className="bg-gray-50 dark:bg-gray-900">
+        <thead className="gdpr-audit-table-head bg-gray-50 dark:bg-gray-900">
           <tr>
             <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
               {t('gdprAudit.dateTime', { defaultValue: 'Date/Heure' })}
@@ -51,7 +51,7 @@ export default function GdprAuditLogsTable({
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
+        <tbody className="gdpr-audit-table-body divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
           {loading ? (
             <tr>
               <td colSpan={6} className="px-4 py-8 text-center">
@@ -83,7 +83,7 @@ export default function GdprAuditLogsTable({
                         {formatAction(log.action)}
                       </div>
                       <span
-                        className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${getCategoryColor(log.category)}`}
+                        className={`gdpr-audit-badge inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${getCategoryColor(log.category)}`}
                       >
                         {log.category}
                       </span>
@@ -122,12 +122,12 @@ export default function GdprAuditLogsTable({
                 </td>
                 <td className="whitespace-nowrap px-4 py-3">
                   {log.is_automated ? (
-                    <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-1 text-xs font-medium text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                    <span className="gdpr-audit-badge inline-flex items-center rounded-full bg-purple-100 px-2 py-1 text-xs font-medium text-purple-800 dark:bg-purple-900 dark:text-purple-200">
                       <CpuChipIcon className="mr-1 h-3 w-3" />
                       Auto
                     </span>
                   ) : (
-                    <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+                    <span className="gdpr-audit-badge inline-flex items-center rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-200">
                       <UserIcon className="mr-1 h-3 w-3" />
                       Manuel
                     </span>
@@ -139,7 +139,7 @@ export default function GdprAuditLogsTable({
                       <summary className="text-primary-600 hover:text-primary-700">
                         {t('gdprAudit.viewDetails', { defaultValue: 'Voir' })}
                       </summary>
-                      <pre className="mt-1 max-w-xs overflow-auto rounded bg-gray-100 p-2 text-xs dark:bg-gray-900">
+                      <pre className="gdpr-audit-details-block mt-1 max-w-xs overflow-auto rounded bg-gray-100 p-2 text-xs dark:bg-gray-900">
                         {JSON.stringify(log.details, null, 2)}
                       </pre>
                     </details>
