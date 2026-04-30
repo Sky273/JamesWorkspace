@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -52,7 +52,7 @@ describe('Layout', () => {
     document.cookie = '';
   });
 
-  it('renders the shell, toggles the mobile sidebar, opens the about modal, and signs out', async () => {
+  it('renders the shell, toggles the mobile sidebar, shows header controls, and signs out', async () => {
     render(
       <MemoryRouter>
         <Layout />
@@ -69,10 +69,8 @@ describe('Layout', () => {
     fireEvent.click(screen.getByRole('button', { name: 'common.openMenu' }));
     expect(screen.getByText('sidebar:true')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'common.about' }));
-    await waitFor(() => {
-      expect(screen.getByText('about-modal')).toBeInTheDocument();
-    });
+    expect(screen.queryByRole('button', { name: 'common.about' })).toBeNull();
+    expect(screen.getByText(/^v\d+\.\d+\.\d+/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByTitle('common.signOut'));
     expect(signOutMock).toHaveBeenCalled();

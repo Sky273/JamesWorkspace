@@ -218,7 +218,7 @@ export function getOverallHealthStatus(
 export function getMemorySummary(memory?: HealthCheck): string | null {
   if (!memory) return null;
   if (memory.heapUsed && memory.heapTotal) {
-    return `${memory.heapUsed} / ${memory.heapTotal}`;
+    return `${memory.heapUsed} sur ${memory.heapTotal}`;
   }
   if (memory.heapPercent && memory.heapUsed) {
     return `${memory.heapUsed} (${memory.heapPercent})`;

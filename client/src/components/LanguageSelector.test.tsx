@@ -40,8 +40,10 @@ describe('LanguageSelector', () => {
     render(<LanguageSelector variant="header" />);
 
     const button = screen.getByRole('button', { name: 'header.changeLanguage' });
-    expect(button).toHaveClass('group', 'h-9', 'w-9');
-    expect(button.querySelector('svg')).not.toBeNull();
+    expect(button).toHaveClass('inline-flex', 'h-9', 'w-9');
+    expect(button).toHaveClass('dark:text-[#F8FAFC]');
+    expect(button).toHaveTextContent('fr');
+    expect(button.querySelector('svg')).toBeNull();
   });
 
   it('opens the menu and changes language', async () => {

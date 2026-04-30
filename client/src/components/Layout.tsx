@@ -15,7 +15,6 @@ import Breadcrumbs from './Breadcrumbs';
 import DeferredRender from './DeferredRender';
 import HeaderActions from './HeaderActions';
 
-const AboutModal = lazy(() => import('./AboutModal'));
 const ChatBot = lazy(() => import('./ChatBot'));
 const HealthIndicator = lazy(() => import('./HealthIndicator'));
 
@@ -56,7 +55,6 @@ const Layout = (): JSX.Element => {
     }
     return 'light';
   });
-  const [isAboutOpen, setIsAboutOpen] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const { t } = useTranslation();
 
@@ -124,7 +122,6 @@ const Layout = (): JSX.Element => {
               <HeaderActions
                 theme={theme}
                 onToggleTheme={toggleTheme}
-                onOpenAbout={() => setIsAboutOpen(true)}
               />
 
               <div className="hidden sm:block">
@@ -182,11 +179,6 @@ const Layout = (): JSX.Element => {
         </div>
       </div>
 
-      {isAboutOpen ? (
-        <Suspense fallback={null}>
-          <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
-        </Suspense>
-      ) : null}
       <DeferredRender delayMs={10000}>
         <Suspense fallback={null}>
           <ChatBot />

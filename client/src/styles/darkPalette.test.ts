@@ -344,16 +344,16 @@ describe('soft dark palette styles', () => {
   });
 
   it('applies the soft dark palette to app chrome', () => {
-    expect(readStyle('../components/HeaderActions.tsx')).toContain('ComputerDesktopIcon');
+    expect(readStyle('../components/HeaderActions.tsx')).toContain('packageJson.version');
+    expect(readStyle('../components/HeaderActions.tsx')).toContain('dark:text-[#F8FAFC]');
+    expect(readStyle('../components/HeaderActions.tsx')).toContain('dark:text-[#FFFFFF]');
+    expect(readStyle('../components/LanguageSelector.tsx')).toContain('dark:text-[#F8FAFC]');
+    expect(readStyle('../components/HeaderActions.tsx')).not.toContain('ComputerDesktopIcon');
+    expect(readStyle('../components/HeaderActions.tsx')).not.toContain('InformationCircleIcon');
     expect(readStyle('../components/HeaderActions.tsx')).not.toContain('MoonIcon');
-    expect(readStyle('../components/HeaderActions.tsx')).toContain('headerActionIconClassName');
-    expect(readStyle('../components/LanguageSelector.tsx')).toContain('headerActionIconClassName');
-    expect(readStyle('../components/headerActionStyles.ts')).toContain('!text-current');
-    expect(readStyle('../components/headerActionStyles.ts')).toContain('dark:text-[#f4f5f7]');
-    expect(readStyle('../components/headerActionStyles.ts')).not.toContain('hover:text');
-    expect(readStyle('../components/headerActionStyles.ts')).not.toContain('focus-visible:ring');
     expect(readStyle('../components/HeaderActions.tsx')).not.toContain('Cog6ToothIcon');
     expect(readStyle('../components/HeaderActions.tsx')).not.toContain('navigation.settings');
+    expect(readStyle('../components/HeaderActions.tsx')).not.toContain('common.about');
     expect(readStyle('../components/Layout.tsx')).toContain('HeaderActions');
     expect(readStyle('../components/Layout.tsx')).toContain('dark:bg-[#22262e]');
     expect(readStyle('../components/Layout.tsx')).toContain('dark:border-[#343a46]');

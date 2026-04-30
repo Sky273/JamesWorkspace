@@ -171,7 +171,7 @@ describe('HealthIndicator', () => {
 
     const { unmount } = render(<HealthIndicator variant="header" showAlways />);
     expect(await screen.findByText('Dégradé')).toBeInTheDocument();
-    expect(screen.getByText(/Mémoire: 500 MB \/ 2 GB/)).toBeInTheDocument();
+    expect(screen.getByText(/Mémoire: 500 MB sur 2 GB/)).toBeInTheDocument();
 
     mockFetchWithAuth.mockReset();
     mockFetchWithAuth
@@ -285,7 +285,7 @@ describe('HealthIndicator', () => {
 
     render(<HealthIndicator variant="header" showAlways />);
     expect(await screen.findByText('Système OK')).toBeInTheDocument();
-    expect(screen.getByText(/Mémoire: 200 MB \/ 2 GB/)).toBeInTheDocument();
+    expect(screen.getByText(/Mémoire: 200 MB sur 2 GB/)).toBeInTheDocument();
   });
 
   it('shows advanced OCR as optional when the CLI pipeline is already healthy', async () => {

@@ -6,10 +6,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import {
-  headerActionButtonClassName,
-  headerActionIconClassName,
-} from './headerActionStyles';
 
 interface Language {
   code: string;
@@ -61,7 +57,7 @@ const HeaderLanguageIcon = (): JSX.Element => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
-    className={headerActionIconClassName}
+    className="h-[18px] w-[18px] flex-shrink-0 text-current"
     aria-hidden="true"
   >
     <circle cx="12" cy="12" r="8.5" />
@@ -133,7 +129,7 @@ const LanguageSelector = ({ variant = 'default' }: LanguageSelectorProps): JSX.E
   }, [isOpen]);
 
   const buttonClassName = isHeader
-    ? headerActionButtonClassName
+    ? 'inline-flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#E4E4E7] bg-white text-[#3F3F46] shadow-none dark:border-[#3f4754] dark:bg-[#1b2028] dark:text-[#F8FAFC]'
     : 'p-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300';
 
 
@@ -181,7 +177,13 @@ const LanguageSelector = ({ variant = 'default' }: LanguageSelectorProps): JSX.E
         aria-expanded={isOpen}
       >
         <span className="sr-only">{t('header.changeLanguage')}</span>
-        <HeaderLanguageIcon />
+        {isHeader ? (
+          <span aria-hidden="true" className="text-[12px] font-semibold uppercase">
+            {currentLanguage.code}
+          </span>
+        ) : (
+          <HeaderLanguageIcon />
+        )}
       </button>
       {menu}
     </>
