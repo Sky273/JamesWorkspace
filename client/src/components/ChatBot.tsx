@@ -4,7 +4,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../context/AuthContext';
@@ -22,6 +22,7 @@ const ChatBot = (): JSX.Element | null => {
   const { user } = useAuth();
   const { authPost, authGet } = useAuthFetch();
   const { chatbotEnabled, setChatbotEnabled } = useChatbot();
+  const reduceMotion = useReducedMotion();
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState<string>('');
@@ -272,6 +273,22 @@ const ChatBot = (): JSX.Element | null => {
     return null;
   }
 
+  const launcherHighlightAnimation = showHelpTooltip && !reduceMotion
+    ? {
+      scale: [1, 1.08, 1],
+      boxShadow: [
+        '0 0 0 0 rgba(124, 92, 255, 0.55), 0 14px 30px -10px rgba(124, 92, 255, 0.85)',
+        '0 0 0 18px rgba(124, 92, 255, 0), 0 18px 38px -8px rgba(124, 92, 255, 0.95)',
+        '0 0 0 0 rgba(124, 92, 255, 0.45), 0 14px 30px -10px rgba(124, 92, 255, 0.85)'
+      ]
+    }
+    : {
+      scale: 1,
+      boxShadow: showHelpTooltip
+        ? '0 14px 30px -10px rgba(124, 92, 255, 0.85)'
+        : '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+    };
+
   return (
     <>
       <div className={`fixed bottom-8 right-8 z-50 ${isOpen ? 'hidden' : 'block'}`}>
@@ -292,15 +309,27 @@ const ChatBot = (): JSX.Element | null => {
           )}
         </AnimatePresence>
 
+        <AnimatePresence>
+          {showHelpTooltip && !reduceMotion && (
+            <motion.span
+              aria-hidden="true"
+              data-testid="chatbot-launcher-highlight"
+              className="pointer-events-none absolute inset-0 rounded-full bg-primary-400/35 blur-sm"
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{
+                opacity: [0.35, 0.7, 0.35],
+                scale: [1, 1.45, 1]
+              }}
+              exit={{ opacity: 0, scale: 0.85 }}
+              transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+            />
+          )}
+        </AnimatePresence>
+
         <motion.button
           initial={{ scale: 0 }}
-          animate={{
-            scale: 1,
-            boxShadow: showHelpTooltip
-              ? ['0 0 0 0 rgba(99, 102, 241, 0.4)', '0 0 0 12px rgba(99, 102, 241, 0)', '0 0 0 0 rgba(99, 102, 241, 0.4)']
-              : '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-          }}
-          transition={showHelpTooltip ? { duration: 1.5, repeat: Infinity } : {}}
+          animate={launcherHighlightAnimation}
+          transition={showHelpTooltip && !reduceMotion ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' } : {}}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => {

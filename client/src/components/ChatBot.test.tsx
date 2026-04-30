@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import ChatBot from './ChatBot';
 
 const authGetMock = vi.fn();
@@ -67,6 +67,10 @@ describe('ChatBot', () => {
     });
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('includes the just-submitted user message in conversation history', async () => {
     render(<ChatBot />);
 
@@ -103,5 +107,18 @@ describe('ChatBot', () => {
     await waitFor(() => {
       expect(setChatbotEnabledMock).toHaveBeenCalledWith(false);
     });
+  });
+
+  it('highlights the launcher while the help tooltip is visible', async () => {
+    vi.useFakeTimers();
+
+    render(<ChatBot />);
+
+    act(() => {
+      vi.advanceTimersByTime(10000);
+    });
+
+    expect(screen.getByText('chatbot.needHelp')).toBeInTheDocument();
+    expect(screen.getByTestId('chatbot-launcher-highlight')).toBeInTheDocument();
   });
 });
