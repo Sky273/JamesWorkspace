@@ -197,7 +197,7 @@ const AdaptationViewPage = (): JSX.Element => {
 
     try {
       setExportLoading(true);
-      const template = await templateService.getTemplateById(selectedTemplate);
+      const template = await templateService.getTemplateById(selectedTemplate, { forceRefresh: true });
       if (!template) throw new Error('Template not found');
 
       const rawContent = editorRef.current?.getContent() || adaptation['Adapted Text'] || '';
@@ -341,10 +341,10 @@ const AdaptationViewPage = (): JSX.Element => {
 
             let template: Template | null = null;
             if (selectedTemplate) {
-              template = allTemplates.find((currentTemplate: Template) => currentTemplate.id === selectedTemplate) || null;
+              template = await templateService.getTemplateById(selectedTemplate, { forceRefresh: true });
             }
             if (!template) {
-              template = allTemplates[0];
+              template = await templateService.getTemplateById(allTemplates[0].id, { forceRefresh: true });
             }
 
             const rawContent = editorRef.current?.getContent() || adaptation['Adapted Text'] || '';

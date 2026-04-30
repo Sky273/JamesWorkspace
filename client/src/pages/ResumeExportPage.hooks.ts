@@ -122,7 +122,7 @@ export function useResumeExportPage() {
 
     try {
       setExportLoading(true);
-      const template = await templateService.getTemplateById(selectedTemplate) as Template | null;
+      const template = await templateService.getTemplateById(selectedTemplate, { forceRefresh: true }) as Template | null;
       if (!template) {
         throw new Error('Template not found');
       }
@@ -152,7 +152,7 @@ export function useResumeExportPage() {
       throw new Error('Template not found');
     }
 
-    const template = await templateService.getTemplateById(selectedTemplate) as Template | null;
+    const template = await templateService.getTemplateById(selectedTemplate, { forceRefresh: true }) as Template | null;
     if (!template) {
       throw new Error('Template not found');
     }

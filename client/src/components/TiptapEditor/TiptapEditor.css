@@ -11,8 +11,8 @@
 }
 
 .dark .tiptap-editor-wrapper {
-  border-color: #374151;
-  background: #1f2937;
+  border-color: #343a46;
+  background: #22262e;
 }
 
 /* ============================================
@@ -202,6 +202,11 @@
    ============================================ */
 .tiptap-editor-content {
   padding: 0;
+  background: #fff;
+}
+
+.dark .tiptap-editor-content {
+  background: #22262e;
 }
 
 .tiptap-editor-content .tiptap {
@@ -212,10 +217,12 @@
   font-size: 14px;
   line-height: 1.6;
   color: #111827;
+  background: #fff;
 }
 
 .dark .tiptap-editor-content .tiptap {
   color: #e5e7eb;
+  background: #22262e;
 }
 
 /* Headings */

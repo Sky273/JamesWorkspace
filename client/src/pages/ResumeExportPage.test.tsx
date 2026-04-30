@@ -270,7 +270,7 @@ describe('ResumeExportPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'export-now' }));
 
     await waitFor(() => {
-      expect(getTemplateByIdMock).toHaveBeenCalledWith('template-2');
+      expect(getTemplateByIdMock).toHaveBeenCalledWith('template-2', { forceRefresh: true });
     });
     expect(removeSuggestionMarkersMock).toHaveBeenCalledWith('[[suggestion]]Improved body');
     expect(fetchWithCsrfRetryMock).toHaveBeenCalledWith(
@@ -400,7 +400,7 @@ describe('ResumeExportPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'modal-generate-attachment' }));
 
     await waitFor(() => {
-      expect(getTemplateByIdMock).toHaveBeenCalledWith('template-1');
+      expect(getTemplateByIdMock).toHaveBeenCalledWith('template-1', { forceRefresh: true });
     });
 
     expect(fetchWithCsrfRetryMock).toHaveBeenCalledWith(

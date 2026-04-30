@@ -1602,3 +1602,22 @@
   color: #ffffff !important;
   box-shadow: 0 12px 24px rgba(124, 92, 255, 0.22) !important;
 }
+
+/* Keep CV/editorial pages coherent in dark mode when compact light utility
+   overrides normalize Tailwind light backgrounds with !important. */
+.dark .editorial-migrated-shell :is(.bg-white, .bg-gray-50, .bg-slate-50),
+.dark .editorial-migrated-shell :is(.dark\:bg-gray-800, .dark\:bg-gray-900\/50) {
+  background-color: #22262e !important;
+}
+
+.dark .editorial-migrated-shell :is(.bg-gray-100, .bg-gray-200) {
+  background-color: #2a2f38 !important;
+}
+
+.dark .editorial-migrated-shell :is(input.bg-white, textarea.bg-white, select.bg-white) {
+  background-color: #2a2f38 !important;
+}
+
+.dark .editorial-migrated-shell :is(.border-gray-100, .border-gray-200, .border-gray-300, .border-slate-200) {
+  border-color: #343a46 !important;
+}

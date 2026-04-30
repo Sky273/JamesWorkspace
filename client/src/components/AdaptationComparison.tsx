@@ -73,7 +73,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
       setExportLoading(true);
       if (!selectedTemplate) { toast.error(t('templates.selectTemplate')); return; }
 
-      const template = await templateService.getTemplateById(selectedTemplate);
+      const template = await templateService.getTemplateById(selectedTemplate, { forceRefresh: true });
       if (!template) throw new Error('Template not found');
 
       // Clean suggestion markers from content before export

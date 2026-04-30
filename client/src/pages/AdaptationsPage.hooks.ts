@@ -304,7 +304,7 @@ export function useAdaptationsDashboard() {
 
     try {
       setExportLoading(true);
-      const template = await templateService.getTemplateById(selectedTemplate);
+      const template = await templateService.getTemplateById(selectedTemplate, { forceRefresh: true });
       if (!template) {
         throw new Error('Template not found');
       }
