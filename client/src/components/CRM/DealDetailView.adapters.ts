@@ -5,6 +5,8 @@ export interface DealMission {
   id: string;
   title: string;
   status?: string;
+  deal_id?: string | null;
+  deal_title?: string;
   client_name?: string;
   contact_name?: string;
   contact_role?: string;
@@ -49,6 +51,11 @@ function getNumber(source: Record<string, unknown>, keys: string[]): number | un
   return undefined;
 }
 
+function getScoreString(source: Record<string, unknown>, keys: string[]): string | undefined {
+  const score = getNumber(source, keys);
+  return score === undefined ? undefined : String(score);
+}
+
 export function normalizeDeal(payload: Record<string, unknown>): DealDetail {
   return {
     id: getString(payload, ['id', 'ID']) || '',
@@ -80,6 +87,8 @@ export function normalizeMission(payload: Record<string, unknown>): DealMission 
     id: getString(payload, ['id', 'ID']) || '',
     title: getString(payload, ['title', 'Title']) || '',
     status: getString(payload, ['status', 'Status']),
+    deal_id: getString(payload, ['deal_id', 'dealId']) || null,
+    deal_title: getString(payload, ['deal_title', 'dealTitle', 'Deal Title']),
     client_name: getString(payload, ['client_name', 'clientName', 'Client Name']),
     contact_name: getString(payload, ['contact_name', 'contactName', 'Contact Name']),
     contact_role: getString(payload, ['contact_role', 'contactRole', 'Contact Role']),
@@ -94,8 +103,8 @@ export function normalizeResume(payload: Record<string, unknown>): DealResume {
     Name: getString(payload, ['name', 'Name', 'filename', 'Filename', 'file_name', 'File Name']) || '',
     Title: getString(payload, ['title', 'Title']),
     Status: (getString(payload, ['status', 'Status']) as Resume['Status']) || undefined,
-    'Global Rating': getString(payload, ['global_rating', 'globalRating', 'Global Rating']),
-    'Improved Global Rating': getString(payload, ['improved_global_rating', 'improvedGlobalRating', 'Improved Global Rating']),
+    'Global Rating': getScoreString(payload, ['global_rating', 'globalRating', 'Global Rating']),
+    'Improved Global Rating': getScoreString(payload, ['improved_global_rating', 'improvedGlobalRating', 'Improved Global Rating']),
     Skills: getString(payload, ['skills', 'Skills']),
     Industries: getString(payload, ['industries', 'Industries']),
     Tools: getString(payload, ['tools', 'Tools']),

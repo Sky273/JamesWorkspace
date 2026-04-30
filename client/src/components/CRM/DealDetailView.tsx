@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -12,15 +12,19 @@ import {
   DocumentTextIcon,
   EyeIcon,
   FolderIcon,
+  MinusIcon,
   PencilSquareIcon,
+  PlusIcon,
   TagIcon,
   UserIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { useAuthFetch } from '../../hooks/useAuthFetch';
 import ConsentBadge, { type ConsentStatus } from '../ConsentBadge';
 import { getResumePreviewTags } from '../../pages/ResumesPage.hooks';
 import logger from '../../utils/logger.frontend';
+import { markDealsViewDirty } from '../../utils/viewRefreshScopes';
 import { PRIORITY_CONFIG, STATUS_CONFIG } from './dealsTab.types';
 import { type DealDetail, type DealMission, type DealResume, normalizeDeal, normalizeMission, normalizeResume } from './DealDetailView.adapters';
 import { formatBudget, formatDealDate, getResumeStatusBadgeClass } from './DealDetailView.formatters';
@@ -35,12 +39,29 @@ interface DealDetailViewProps {
 export default function DealDetailView({ dealId, onBack, onEdit, restoreScrollY = null }: DealDetailViewProps): JSX.Element {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { authGet } = useAuthFetch();
+  const { authDelete, authGet, authPost, authPut } = useAuthFetch();
   const [deal, setDeal] = useState<DealDetail | null>(null);
   const [missions, setMissions] = useState<DealMission[]>([]);
   const [resumes, setResumes] = useState<DealResume[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showMissionPicker, setShowMissionPicker] = useState(false);
+  const [availableMissions, setAvailableMissions] = useState<DealMission[]>([]);
+  const [selectedMissionId, setSelectedMissionId] = useState('');
+  const [loadingAvailableMissions, setLoadingAvailableMissions] = useState(false);
+  const [addingMission, setAddingMission] = useState(false);
+  const [removingMissionId, setRemovingMissionId] = useState<string | null>(null);
+  const [showResumePicker, setShowResumePicker] = useState(false);
+  const [availableResumes, setAvailableResumes] = useState<DealResume[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState('');
+  const [loadingAvailableResumes, setLoadingAvailableResumes] = useState(false);
+  const [addingResume, setAddingResume] = useState(false);
+  const [removingResumeId, setRemovingResumeId] = useState<string | null>(null);
+  const loadDealErrorMessageRef = useRef(t('crm.deals.loadError'));
+
+  useEffect(() => {
+    loadDealErrorMessageRef.current = t('crm.deals.loadError');
+  }, [t]);
 
   useEffect(() => {
     let active = true;
@@ -57,7 +78,7 @@ export default function DealDetailView({ dealId, onBack, onEdit, restoreScrollY 
         ]);
 
         if (!dealResponse.ok) {
-          throw new Error(t('crm.deals.loadError'));
+          throw new Error(loadDealErrorMessageRef.current);
         }
 
         const dealPayload = await dealResponse.json();
@@ -76,8 +97,8 @@ export default function DealDetailView({ dealId, onBack, onEdit, restoreScrollY 
         if (!active) {
           return;
         }
-        setError(loadError instanceof Error ? loadError.message : t('crm.deals.loadError'));
-        toast.error(t('crm.deals.loadError'));
+        setError(loadError instanceof Error ? loadError.message : loadDealErrorMessageRef.current);
+        toast.error(loadDealErrorMessageRef.current);
       } finally {
         if (active) {
           setLoading(false);
@@ -90,7 +111,201 @@ export default function DealDetailView({ dealId, onBack, onEdit, restoreScrollY 
     return () => {
       active = false;
     };
-  }, [authGet, dealId, t]);
+  }, [authGet, dealId]);
+
+  const refreshDealMissions = async () => {
+    const missionsResponse = await authGet(`/api/deals/${dealId}/missions?refresh=1`);
+    if (!missionsResponse.ok) {
+      throw new Error(loadDealErrorMessageRef.current);
+    }
+    const missionsPayload = await missionsResponse.json();
+    setMissions(Array.isArray(missionsPayload) ? missionsPayload.map((item) => normalizeMission(item as Record<string, unknown>)) : []);
+  };
+
+  const refreshDealResumes = async () => {
+    const resumesResponse = await authGet(`/api/deals/${dealId}/resumes?refresh=1`);
+    if (!resumesResponse.ok) {
+      throw new Error(loadDealErrorMessageRef.current);
+    }
+    const resumesPayload = await resumesResponse.json();
+    setResumes(Array.isArray(resumesPayload) ? resumesPayload.map((item) => normalizeResume(item as Record<string, unknown>)) : []);
+  };
+
+  const openMissionPicker = async () => {
+    setShowMissionPicker(true);
+    setLoadingAvailableMissions(true);
+    setSelectedMissionId('');
+
+    try {
+      const response = await authGet('/api/missions?limit=100&refresh=1');
+      if (!response.ok) {
+        throw new Error('Failed to load missions');
+      }
+
+      const payload = await response.json();
+      const missionRows = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data)
+          ? payload.data
+          : Array.isArray(payload?.missions)
+            ? payload.missions
+            : [];
+      const associatedMissionIds = new Set(missions.map((mission) => mission.id));
+      const selectableMissions = missionRows
+        .map((item: Record<string, unknown>) => normalizeMission(item))
+        .filter((mission: DealMission) => mission.id && !associatedMissionIds.has(mission.id));
+
+      setAvailableMissions(selectableMissions);
+      setSelectedMissionId(selectableMissions[0]?.id || '');
+    } catch (loadError) {
+      logger.error('[DealDetailView] Error loading available missions:', loadError);
+      toast.error(t('crm.deals.loadMissionsError', 'Impossible de charger les missions'));
+    } finally {
+      setLoadingAvailableMissions(false);
+    }
+  };
+
+  const closeMissionPicker = () => {
+    if (addingMission) {
+      return;
+    }
+    setShowMissionPicker(false);
+    setAvailableMissions([]);
+    setSelectedMissionId('');
+  };
+
+  const handleAddMissionToDeal = async () => {
+    if (!selectedMissionId) {
+      return;
+    }
+
+    setAddingMission(true);
+    try {
+      const response = await authPut(`/api/missions/${selectedMissionId}`, { dealId });
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => null);
+        throw new Error(errorPayload?.error || 'Failed to attach mission');
+      }
+
+      await refreshDealMissions();
+      markDealsViewDirty();
+      toast.success(t('crm.deals.missionAdded', 'Mission ajoutée à l’affaire'));
+      closeMissionPicker();
+    } catch (addError) {
+      logger.error('[DealDetailView] Error adding mission to deal:', addError);
+      toast.error(addError instanceof Error ? addError.message : t('crm.deals.addMissionError', 'Impossible d’ajouter la mission'));
+    } finally {
+      setAddingMission(false);
+    }
+  };
+
+  const handleRemoveMissionFromDeal = async (missionId: string) => {
+    setRemovingMissionId(missionId);
+    try {
+      const response = await authPut(`/api/missions/${missionId}`, { dealId: null });
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => null);
+        throw new Error(errorPayload?.error || 'Failed to detach mission');
+      }
+
+      await refreshDealMissions();
+      markDealsViewDirty();
+      toast.success(t('crm.deals.missionRemoved', 'Mission retirée de l’affaire'));
+    } catch (removeError) {
+      logger.error('[DealDetailView] Error removing mission from deal:', removeError);
+      toast.error(removeError instanceof Error ? removeError.message : t('crm.deals.removeMissionError', 'Impossible de retirer la mission'));
+    } finally {
+      setRemovingMissionId(null);
+    }
+  };
+
+  const openResumePicker = async () => {
+    setShowResumePicker(true);
+    setLoadingAvailableResumes(true);
+    setSelectedResumeId('');
+
+    try {
+      const response = await authGet('/api/resumes?limit=100&refresh=1');
+      if (!response.ok) {
+        throw new Error('Failed to load resumes');
+      }
+
+      const payload = await response.json();
+      const resumeRows = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data)
+          ? payload.data
+          : Array.isArray(payload?.resumes)
+            ? payload.resumes
+            : [];
+      const associatedResumeIds = new Set(resumes.map((resume) => resume.id));
+      const selectableResumes = resumeRows
+        .map((item: Record<string, unknown>) => normalizeResume(item))
+        .filter((resume: DealResume) => resume.id && !associatedResumeIds.has(resume.id));
+
+      setAvailableResumes(selectableResumes);
+      setSelectedResumeId(selectableResumes[0]?.id || '');
+    } catch (loadError) {
+      logger.error('[DealDetailView] Error loading available resumes:', loadError);
+      toast.error(t('crm.deals.loadResumesError', 'Impossible de charger les CV'));
+    } finally {
+      setLoadingAvailableResumes(false);
+    }
+  };
+
+  const closeResumePicker = () => {
+    if (addingResume) {
+      return;
+    }
+    setShowResumePicker(false);
+    setAvailableResumes([]);
+    setSelectedResumeId('');
+  };
+
+  const handleAddResumeToDeal = async () => {
+    if (!selectedResumeId) {
+      return;
+    }
+
+    setAddingResume(true);
+    try {
+      const response = await authPost(`/api/deals/${dealId}/resumes`, { resumeId: selectedResumeId });
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => null);
+        throw new Error(errorPayload?.error || 'Failed to attach resume');
+      }
+
+      await refreshDealResumes();
+      markDealsViewDirty();
+      toast.success(t('crm.deals.resumeAdded', 'CV ajouté à l’affaire'));
+      closeResumePicker();
+    } catch (addError) {
+      logger.error('[DealDetailView] Error adding resume to deal:', addError);
+      toast.error(addError instanceof Error ? addError.message : t('crm.deals.addResumeError', 'Impossible d’ajouter le CV'));
+    } finally {
+      setAddingResume(false);
+    }
+  };
+
+  const handleRemoveResumeFromDeal = async (resumeId: string) => {
+    setRemovingResumeId(resumeId);
+    try {
+      const response = await authDelete(`/api/deals/${dealId}/resumes/${resumeId}`);
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => null);
+        throw new Error(errorPayload?.error || 'Failed to detach resume');
+      }
+
+      await refreshDealResumes();
+      markDealsViewDirty();
+      toast.success(t('crm.deals.resumeRemoved', 'CV retiré de l’affaire'));
+    } catch (removeError) {
+      logger.error('[DealDetailView] Error removing resume from deal:', removeError);
+      toast.error(removeError instanceof Error ? removeError.message : t('crm.deals.removeResumeError', 'Impossible de retirer le CV'));
+    } finally {
+      setRemovingResumeId(null);
+    }
+  };
 
   useEffect(() => {
     if (loading || !deal || restoreScrollY == null) {
@@ -287,11 +502,21 @@ export default function DealDetailView({ dealId, onBack, onEdit, restoreScrollY 
 
           <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
             <div className="cv-panel rounded-[2rem] p-5 sm:p-6">
-              <div className="mb-5 flex items-center gap-2">
-                <BriefcaseIcon className="h-5 w-5 text-[var(--cv-primary)]" />
-                <h2 className="text-lg font-semibold text-slate-950 dark:text-[var(--cv-text)]">
-                  {t('crm.deals.associatedMissions')}
-                </h2>
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <BriefcaseIcon className="h-5 w-5 text-[var(--cv-primary)]" />
+                  <h2 className="text-lg font-semibold text-slate-950 dark:text-[var(--cv-text)]">
+                    {t('crm.deals.associatedMissions')}
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void openMissionPicker()}
+                  className="cv-gradient-button inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold"
+                >
+                  <PlusIcon className="h-5 w-5" />
+                  {t('crm.deals.addMission', 'Ajouter une mission')}
+                </button>
               </div>
               {missions.length === 0 ? (
                 <p className="text-sm text-slate-500 dark:text-[var(--cv-muted)]">
@@ -350,13 +575,27 @@ export default function DealDetailView({ dealId, onBack, onEdit, restoreScrollY 
                           </div>
                         </div>
                       </div>
-                      <div className="p-5">
+                      <div className="flex flex-col gap-2 p-5 sm:flex-row">
                         <button
                           onClick={() => navigate(`/missions/${mission.id}`)}
-                          className="cv-ghost-button inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold"
+                          className="cv-ghost-button inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold"
                         >
                           <EyeIcon className="h-5 w-5" />
                           {t('missions.view')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleRemoveMissionFromDeal(mission.id)}
+                          disabled={removingMissionId === mission.id}
+                          className={`cv-ghost-button inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-rose-600 dark:text-rose-300 ${removingMissionId === mission.id ? 'opacity-60' : ''}`}
+                          aria-label={t('crm.deals.removeMissionFromDeal', 'Désaffecter la mission')}
+                        >
+                          {removingMissionId === mission.id ? (
+                            <span className="h-4 w-4 animate-spin rounded-full border-b-2 border-current" />
+                          ) : (
+                            <MinusIcon className="h-5 w-5" />
+                          )}
+                          <span className="sr-only sm:not-sr-only">{t('crm.deals.removeMissionShort', 'Désaffecter')}</span>
                         </button>
                       </div>
                     </article>
@@ -366,11 +605,21 @@ export default function DealDetailView({ dealId, onBack, onEdit, restoreScrollY 
             </div>
 
             <div className="cv-panel rounded-[2rem] p-5 sm:p-6">
-              <div className="mb-5 flex items-center gap-2">
-                <DocumentTextIcon className="h-5 w-5 text-[var(--cv-primary)]" />
-                <h2 className="text-lg font-semibold text-slate-950 dark:text-[var(--cv-text)]">
-                  {t('crm.deals.associatedResumes')}
-                </h2>
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <DocumentTextIcon className="h-5 w-5 text-[var(--cv-primary)]" />
+                  <h2 className="text-lg font-semibold text-slate-950 dark:text-[var(--cv-text)]">
+                    {t('crm.deals.associatedResumes')}
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void openResumePicker()}
+                  className="cv-gradient-button inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold"
+                >
+                  <PlusIcon className="h-5 w-5" />
+                  {t('crm.deals.addResume', 'Ajouter un CV')}
+                </button>
               </div>
               {resumes.length === 0 ? (
                 <p className="text-sm text-slate-500 dark:text-[var(--cv-muted)]">
@@ -484,6 +733,20 @@ export default function DealDetailView({ dealId, onBack, onEdit, restoreScrollY 
                               <EyeIcon className="h-5 w-5" />
                               {t('resumes.view')}
                             </button>
+                            <button
+                              type="button"
+                              onClick={() => void handleRemoveResumeFromDeal(resume.id)}
+                              disabled={removingResumeId === resume.id}
+                              className={`cv-ghost-button inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-rose-600 dark:text-rose-300 ${removingResumeId === resume.id ? 'opacity-60' : ''}`}
+                              aria-label={t('crm.deals.removeResumeFromDeal', 'Désaffecter le CV')}
+                            >
+                              {removingResumeId === resume.id ? (
+                                <span className="h-4 w-4 animate-spin rounded-full border-b-2 border-current" />
+                              ) : (
+                                <MinusIcon className="h-5 w-5" />
+                              )}
+                              <span className="sr-only sm:not-sr-only">{t('crm.deals.removeResumeShort', 'Désaffecter')}</span>
+                            </button>
                             {resume.added_at ? (
                               <span className="inline-flex min-h-12 items-center gap-2 rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-600 dark:bg-white/6 dark:text-[var(--cv-muted)]">
                                 <FolderIcon className="h-4 w-4" />
@@ -501,6 +764,163 @@ export default function DealDetailView({ dealId, onBack, onEdit, restoreScrollY 
           </section>
         </motion.div>
       </div>
+
+      {showMissionPicker ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6 backdrop-blur-sm">
+          <div className="cv-panel w-full max-w-xl rounded-[2rem] p-5 shadow-2xl sm:p-6">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <p className="cv-kicker text-[var(--cv-primary)]">{t('crm.deals.details')}</p>
+                <h3 className="text-xl font-bold text-slate-950 dark:text-[var(--cv-text)]">
+                  {t('crm.deals.addMission', 'Ajouter une mission')}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={closeMissionPicker}
+                disabled={addingMission}
+                className="cv-ghost-button inline-flex h-10 w-10 items-center justify-center rounded-2xl"
+                aria-label={t('common.close', 'Fermer')}
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            {loadingAvailableMissions ? (
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-slate-50 px-4 py-5 text-sm text-slate-600 dark:border-white/8 dark:bg-white/[0.03] dark:text-[var(--cv-muted)]">
+                <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-[var(--cv-primary)]" />
+                {t('crm.deals.loadingMissions', 'Chargement des missions...')}
+              </div>
+            ) : availableMissions.length === 0 ? (
+              <p className="rounded-2xl border border-slate-200/70 bg-slate-50 px-4 py-5 text-sm text-slate-600 dark:border-white/8 dark:bg-white/[0.03] dark:text-[var(--cv-muted)]">
+                {t('crm.deals.noMissionToAdd', 'Aucune mission disponible à ajouter à cette affaire.')}
+              </p>
+            ) : (
+              <div className="space-y-4">
+                <label htmlFor="deal-mission-select" className="block text-sm font-semibold text-slate-800 dark:text-[var(--cv-text)]">
+                  {t('crm.deals.selectMission', 'Sélectionner une mission')}
+                </label>
+                <select
+                  id="deal-mission-select"
+                  value={selectedMissionId}
+                  onChange={(event) => setSelectedMissionId(event.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-[var(--cv-primary)] focus:ring-2 focus:ring-[var(--cv-primary-soft)] dark:border-white/10 dark:bg-slate-900 dark:text-[var(--cv-text)]"
+                >
+                  {availableMissions.map((mission) => (
+                    <option key={mission.id} value={mission.id}>
+                      {mission.title || mission.id}{mission.deal_title ? ` - ${mission.deal_title}` : ''}
+                    </option>
+                  ))}
+                </select>
+
+                <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={closeMissionPicker}
+                    disabled={addingMission}
+                    className="cv-ghost-button inline-flex min-h-11 items-center justify-center rounded-2xl px-4 text-sm font-semibold"
+                  >
+                    {t('common.cancel', 'Annuler')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleAddMissionToDeal()}
+                    disabled={!selectedMissionId || addingMission}
+                    className={`cv-gradient-button inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl px-5 text-sm font-semibold ${!selectedMissionId || addingMission ? 'opacity-60' : ''}`}
+                  >
+                    {addingMission ? (
+                      <span className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" />
+                    ) : (
+                      <PlusIcon className="h-5 w-5" />
+                    )}
+                    {t('crm.deals.addMissionConfirm', 'Ajouter à l’affaire')}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {showResumePicker ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4 py-6 backdrop-blur-sm">
+          <div className="cv-panel w-full max-w-xl rounded-[2rem] p-5 shadow-2xl sm:p-6">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <p className="cv-kicker text-[var(--cv-primary)]">{t('crm.deals.details')}</p>
+                <h3 className="text-xl font-bold text-slate-950 dark:text-[var(--cv-text)]">
+                  {t('crm.deals.addResume', 'Ajouter un CV')}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={closeResumePicker}
+                disabled={addingResume}
+                className="cv-ghost-button inline-flex h-10 w-10 items-center justify-center rounded-2xl"
+                aria-label={t('common.close', 'Fermer')}
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            {loadingAvailableResumes ? (
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-200/70 bg-slate-50 px-4 py-5 text-sm text-slate-600 dark:border-white/8 dark:bg-white/[0.03] dark:text-[var(--cv-muted)]">
+                <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-[var(--cv-primary)]" />
+                {t('crm.deals.loadingResumes', 'Chargement des CV...')}
+              </div>
+            ) : availableResumes.length === 0 ? (
+              <p className="rounded-2xl border border-slate-200/70 bg-slate-50 px-4 py-5 text-sm text-slate-600 dark:border-white/8 dark:bg-white/[0.03] dark:text-[var(--cv-muted)]">
+                {t('crm.deals.noResumeToAdd', 'Aucun CV disponible à ajouter à cette affaire.')}
+              </p>
+            ) : (
+              <div className="space-y-4">
+                <label htmlFor="deal-resume-select" className="block text-sm font-semibold text-slate-800 dark:text-[var(--cv-text)]">
+                  {t('crm.deals.selectResume', 'Sélectionner un CV')}
+                </label>
+                <select
+                  id="deal-resume-select"
+                  value={selectedResumeId}
+                  onChange={(event) => setSelectedResumeId(event.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-[var(--cv-primary)] focus:ring-2 focus:ring-[var(--cv-primary-soft)] dark:border-white/10 dark:bg-slate-900 dark:text-[var(--cv-text)]"
+                >
+                  {availableResumes.map((resume) => {
+                    const displayName = resume.Name || resume.name || t('resumes.untitled');
+                    return (
+                      <option key={resume.id} value={resume.id}>
+                        {displayName}{resume.Title ? ` - ${resume.Title}` : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+
+                <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={closeResumePicker}
+                    disabled={addingResume}
+                    className="cv-ghost-button inline-flex min-h-11 items-center justify-center rounded-2xl px-4 text-sm font-semibold"
+                  >
+                    {t('common.cancel', 'Annuler')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleAddResumeToDeal()}
+                    disabled={!selectedResumeId || addingResume}
+                    className={`cv-gradient-button inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl px-5 text-sm font-semibold ${!selectedResumeId || addingResume ? 'opacity-60' : ''}`}
+                  >
+                    {addingResume ? (
+                      <span className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" />
+                    ) : (
+                      <PlusIcon className="h-5 w-5" />
+                    )}
+                    {t('crm.deals.addResumeConfirm', 'Ajouter à l’affaire')}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
