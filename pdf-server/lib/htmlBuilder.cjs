@@ -64,8 +64,8 @@ function buildPuppeteerHtml({ htmlContent, stylesheet, headerContent, footerCont
     ? `<footer class="pdf-footer">${normalizeInlineFooterContent(footerContent)}</footer>`
     : '';
   
-  // Calculate body padding to account for footer margin
-  const bodyPaddingBottom = hasFooter && !inlineFooter ? Math.min((footerHeight || 25) + 20, 250) : 0;
+  // Keep @page aligned with Puppeteer's bottom margin; the PDF margin remains the source of truth.
+  const bodyPaddingBottom = hasFooter && !inlineFooter ? Math.min(Math.max(Number(footerHeight || 25), 10), 250) : 0;
   
   // Puppeteer-compatible CSS
   const layoutStyles = `
@@ -86,6 +86,24 @@ function buildPuppeteerHtml({ htmlContent, stylesheet, headerContent, footerCont
       }
       .pdf-body {
         /* Content will respect @page margin */
+      }
+      .pdf-body,
+      .pdf-body section,
+      .pdf-body article,
+      .pdf-body div,
+      .pdf-body p,
+      .pdf-body ul,
+      .pdf-body ol,
+      .pdf-body li {
+        break-inside: auto !important;
+        page-break-inside: auto !important;
+      }
+      .pdf-body h1,
+      .pdf-body h2,
+      .pdf-body h3,
+      .pdf-body h4 {
+        break-after: avoid;
+        page-break-after: avoid;
       }
       .pdf-footer {
         margin-top: 16px;

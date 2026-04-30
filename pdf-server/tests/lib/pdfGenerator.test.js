@@ -292,6 +292,42 @@ describe('pdfGenerator', () => {
     }));
   }, 10000);
 
+  it('uses footerHeight directly as the reserved bottom margin for body content', async () => {
+    const fakePage = {
+      setRequestInterception: vi.fn().mockResolvedValue(),
+      on: vi.fn(),
+      setContent: vi.fn().mockResolvedValue(),
+      pdf: vi.fn().mockResolvedValue(Buffer.from('%PDF-1.4 reserved footer space')),
+      close: vi.fn().mockResolvedValue()
+    };
+    const fakeBrowser = {
+      isConnected: vi.fn(() => true),
+      on: vi.fn(),
+      newPage: vi.fn().mockResolvedValue(fakePage),
+      close: vi.fn()
+    };
+
+    const puppeteer = require('puppeteer');
+    vi.spyOn(puppeteer, 'launch').mockResolvedValue(fakeBrowser);
+
+    const pdfGenerator = loadPdfGenerator();
+    pdfGenerator._internal.resetBrowserState();
+
+    await expect(pdfGenerator.generatePdf({
+      htmlContent: '<main>Body</main>',
+      stylesheet: '',
+      headerContent: '',
+      footerContent: '<footer>Footer</footer>',
+      footerHeight: 80
+    })).resolves.toEqual(Buffer.from('%PDF-1.4 reserved footer space'));
+
+    expect(fakePage.pdf).toHaveBeenCalledWith(expect.objectContaining({
+      margin: expect.objectContaining({
+        bottom: '80mm'
+      })
+    }));
+  }, 10000);
+
   it('logs advanced page diagnostics when Puppeteer fails', async () => {
     const logger = require('../../lib/logger.cjs');
     const logSpy = vi.spyOn(logger, 'log').mockImplementation(() => {});

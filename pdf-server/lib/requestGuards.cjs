@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const PDF_SERVER_AUTH_HEADER = 'x-internal-service-token';
 const DEFAULT_RATE_LIMIT_WINDOW = 60000;
 const MIN_FOOTER_HEIGHT = 10;
-const MAX_FOOTER_HEIGHT = 120;
+const MAX_FOOTER_HEIGHT = 250;
 
 const DANGEROUS_HTML_PATTERNS = [
   /<script\b/i,

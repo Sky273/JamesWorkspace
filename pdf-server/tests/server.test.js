@@ -475,6 +475,25 @@ describe('PDF Server', () => {
       expect(res.headers['x-pdf-debug-id']).toBe('proxy-request-123');
     });
 
+    it('should preserve footerHeight values up to the documented 250mm maximum', async () => {
+      pdfGen.generatePdf.mockResolvedValue(Buffer.from('fake'));
+
+      const res = await request(app)
+        .post('/generate-pdf')
+        .set('x-internal-service-token', process.env.PDF_SERVER_INTERNAL_TOKEN)
+        .send({
+          htmlContent: '<p>Body</p>',
+          filename: 'test.pdf',
+          footerContent: '<p>Footer</p>',
+          footerHeight: 180
+        });
+
+      expect(res.status).toBe(200);
+      expect(pdfGen.generatePdf).toHaveBeenCalledWith(expect.objectContaining({
+        footerHeight: 180
+      }));
+    });
+
     it('should sanitize and bound x-request-id before exposing it', async () => {
       pdfGen.generatePdf.mockResolvedValue(Buffer.from('fake'));
       const rawRequestId = `  ../${'a'.repeat(200)}?drop=table  `;

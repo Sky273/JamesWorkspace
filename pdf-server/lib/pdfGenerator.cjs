@@ -474,9 +474,8 @@ async function generatePdf({ htmlContent, stylesheet, headerContent, footerConte
       throw abortError();
     }
 
-    // Calculate footer height for margins
-    // The margin-bottom must be at least equal to the footer height + padding
-    const footerMargin = hasFooterContent ? Math.min(customFooterHeight + 15, 250) : 10;
+    // footerHeight is the bottom page area reserved for body content, not a footer box height.
+    const footerMargin = hasFooterContent ? customFooterHeight : 10;
 
     const pdfOptions = {
       format: 'A4',

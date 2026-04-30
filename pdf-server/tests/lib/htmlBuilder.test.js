@@ -58,8 +58,7 @@ describe('HTML Builder', () => {
 
     it('should set page margin when footer is present', () => {
       const html = buildPuppeteerHtml({ htmlContent: '<p>X</p>', stylesheet: '', hasFooter: true, footerHeight: 30 });
-      // 30 + 20 = 50mm
-      expect(html).toContain('margin-bottom: 50mm');
+      expect(html).toContain('margin-bottom: 30mm');
     });
 
     it('should set zero margin when no footer', () => {
@@ -74,8 +73,7 @@ describe('HTML Builder', () => {
 
     it('should default footer height to 25mm', () => {
       const html = buildPuppeteerHtml({ htmlContent: '<p>X</p>', stylesheet: '', hasFooter: true });
-      // 25 + 20 = 45mm
-      expect(html).toContain('margin-bottom: 45mm');
+      expect(html).toContain('margin-bottom: 25mm');
     });
 
     it('should include print-color-adjust CSS', () => {
@@ -93,6 +91,21 @@ describe('HTML Builder', () => {
       });
       expect(html).toContain('<footer class="pdf-footer"><p>Footer</p></footer>');
       expect(html).toContain('margin-bottom: 0mm');
+    });
+
+    it('should allow resume body blocks to split before the footer boundary', () => {
+      const html = buildPuppeteerHtml({
+        htmlContent: '<section><h2>Experience</h2><p>Long content</p></section>',
+        stylesheet: '.experience { break-inside: avoid; page-break-inside: avoid; }',
+        hasFooter: true,
+        footerHeight: 10
+      });
+
+      expect(html).toContain('.pdf-body,');
+      expect(html).toContain('break-inside: auto !important;');
+      expect(html).toContain('page-break-inside: auto !important;');
+      expect(html.indexOf('.experience { break-inside: avoid; page-break-inside: avoid; }'))
+        .toBeLessThan(html.indexOf('.pdf-body,'));
     });
   });
 
