@@ -394,6 +394,19 @@ describe('Zod Validation Schemas', () => {
 
             expect(result.success).toBe(false);
         });
+
+        it('should keep the selected generated document format', () => {
+            const result = sharePdfSchema.safeParse({
+                htmlContent: '<p>Hello</p>',
+                filename: 'resume.docx',
+                stylesheet: '',
+                format: 'docx'
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.data.filename).toBe('resume.docx');
+            expect(result.data.format).toBe('docx');
+        });
     });
 
     describe('createMailDraftSchema', () => {

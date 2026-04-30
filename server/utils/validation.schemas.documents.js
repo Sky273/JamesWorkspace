@@ -79,14 +79,19 @@ export const sharePdfSchema = z.object({
   stylesheet: documentStylesheetSchema,
   headerContent: optionalDocumentSectionSchema,
   footerContent: optionalDocumentSectionSchema,
-  footerHeight: footerHeightSchema
+  footerHeight: footerHeightSchema,
+  format: z.preprocess(
+    (value) => typeof value === 'string' ? value.toLowerCase() : value,
+    z.enum(['pdf', 'doc', 'docx']).optional()
+  )
 }).strict().transform((data) => ({
   htmlContent: data.htmlContent,
-  filename: data.filename ? sanitizeDocumentFilename(data.filename, '') : undefined,
+  filename: data.filename ? sanitizeDocumentFilename(data.filename, data.format || '') : undefined,
   stylesheet: data.stylesheet,
   headerContent: data.headerContent,
   footerContent: data.footerContent,
-  footerHeight: data.footerHeight
+  footerHeight: data.footerHeight,
+  format: data.format || 'pdf'
 }));
 
 export const generatePdfProxySchema = z.object({

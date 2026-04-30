@@ -136,13 +136,19 @@ async function serveSharedPdfByToken(res, token) {
 
         throw error;
     }
-    const filename = pdfInfo.name ? `${pdfInfo.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf` : 'cv.pdf';
+    const format = ['pdf', 'doc', 'docx'].includes(pdfInfo.format) ? pdfInfo.format : 'pdf';
+    const contentType = format === 'pdf'
+        ? 'application/pdf'
+        : (format === 'doc'
+            ? 'application/msword'
+            : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    const filename = pdfInfo.name ? `${pdfInfo.name.replace(/[^a-zA-Z0-9_-]/g, '_')}.${format}` : `cv.${format}`;
 
     setSafeFileResponseHeaders(res, {
-        contentType: 'application/pdf',
+        contentType,
         filename,
         contentLength: stats.size,
-        inline: true
+        inline: format === 'pdf'
     });
 
     try {
@@ -203,14 +209,14 @@ async function serveOriginalFileByToken(res, token) {
 
 /**
  * POST /api/share/resume/:resumeId/generate
- * Generate a shareable PDF for an improved resume
+ * Generate a shareable document for an improved resume
  * Requires authentication
  */
 router.post('/resume/:resumeId/generate', authenticateToken, validateParams('resumeId'), userRateLimit(10, 15 * 60 * 1000), validateBody(sharePdfSchema), async (req, res) => {
     const pdfServerRequest = createAbortablePdfRequest(req, res);
     try {
         const { resumeId } = req.params;
-        const { htmlContent, filename, stylesheet, headerContent, footerContent, footerHeight } = req.body;
+        const { htmlContent, filename, stylesheet, headerContent, footerContent, footerHeight, format = 'pdf' } = req.body;
         const resume = await getAccessibleResume(req, res);
 
         if (!resume) {
@@ -238,23 +244,29 @@ router.post('/resume/:resumeId/generate', authenticateToken, validateParams('res
             });
         }
 
+        const normalizedFormat = ['doc', 'docx'].includes(format) ? format : 'pdf';
+        const endpoint = normalizedFormat === 'pdf' ? '/generate-pdf' : '/generate-docx';
         const pdfServerHeaders = getPdfServerAuthHeaders({ 'Content-Type': 'application/json' });
-        const pdfResponse = await fetch(`${pdfServerUrl}/generate-pdf`, {
+        const generationPayload = {
+            htmlContent,
+            filename: filename || 'cv',
+            stylesheet: stylesheet || '',
+            headerContent,
+            footerContent,
+            footerHeight: footerHeight || 25
+        };
+        if (normalizedFormat !== 'pdf') {
+            generationPayload.format = normalizedFormat;
+        }
+        const pdfResponse = await fetch(`${pdfServerUrl}${endpoint}`, {
             method: 'POST',
             headers: pdfServerHeaders,
             signal: pdfServerRequest.signal,
-            body: JSON.stringify({
-                htmlContent,
-                filename: filename || 'cv',
-                stylesheet: stylesheet || '',
-                headerContent,
-                footerContent,
-                footerHeight: footerHeight || 25
-            })
+            body: JSON.stringify(generationPayload)
         });
 
         if (!pdfResponse.ok) {
-            throw new Error('Failed to generate PDF');
+            throw new Error(`Failed to generate ${normalizedFormat.toUpperCase()}`);
         }
 
         const pdfBuffer = Buffer.from(await pdfResponse.arrayBuffer());
@@ -270,7 +282,7 @@ router.post('/resume/:resumeId/generate', authenticateToken, validateParams('res
             expiresAt
         });
     } catch (error) {
-        safeLog('error', 'Failed to generate shareable PDF', {
+        safeLog('error', 'Failed to generate shareable document', {
             resumeId: req.params.resumeId,
             error: error.message
         });
@@ -288,7 +300,7 @@ router.post('/resume/:resumeId/generate', authenticateToken, validateParams('res
         }
         res.status(500).json({
             success: false,
-            error: 'Failed to generate shareable PDF'
+            error: 'Failed to generate shareable document'
         });
     } finally {
         pdfServerRequest.cleanup();
@@ -379,6 +391,28 @@ router.post('/resume/:resumeId/revoke', authenticateToken, validateParams('resum
 router.get('/pdf/:token', createShareRouteHandler(
     'Failed to serve shared PDF',
     'Failed to serve PDF',
+    async (req, res) => {
+        const { token } = req.params;
+
+        if (!isValidShareToken(token)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid token'
+            });
+        }
+
+        return serveSharedPdfByToken(res, token);
+    }
+));
+
+/**
+ * GET /api/share/document/:token
+ * PUBLIC endpoint - Serve a generated shared CV document by token
+ * No authentication required
+ */
+router.get('/document/:token', createShareRouteHandler(
+    'Failed to serve shared document',
+    'Failed to serve document',
     async (req, res) => {
         const { token } = req.params;
 

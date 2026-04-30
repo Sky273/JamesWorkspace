@@ -11,6 +11,9 @@ import { createAuthOptionsWithCsrf, fetchWithCsrfRetry, prepareLongRunningReques
 import type { ExportFormat } from '../components/ResumeAnalysis/ExportTab';
 import { buildExportPayload } from './resumeDocumentPayload';
 import { resolveResumeForPage } from './resumeLoader';
+import {
+  summarizeTemplatePayload,
+} from '../utils/templateFragments';
 
 interface Template {
   id: string;
@@ -50,6 +53,9 @@ export function useResumeExportPage() {
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+  const [shareLoading, setShareLoading] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('pdf');
   const currentResumeForPage = currentResume?.id === id ? currentResume as Resume : null;
 
@@ -160,6 +166,55 @@ export function useResumeExportPage() {
     return generateAttachmentBlob(currentResume as Resume, template, format);
   }, [currentResume, selectedTemplate]);
 
+  const handleShare = useCallback(async () => {
+    if (!currentResume || !selectedTemplate) {
+      return;
+    }
+
+    setShareLoading(true);
+    setShowShareModal(true);
+
+    try {
+      const template = await templateService.getTemplateById(selectedTemplate, { forceRefresh: true }) as Template | null;
+      if (!template) {
+        throw new Error('Template not found');
+      }
+
+      const payload = await buildExportPayload(currentResume as Resume, template, selectedFormat);
+      logger.warn('Resume export share payload normalized', {
+        templateId: selectedTemplate,
+        format: selectedFormat,
+        filename: payload.filename,
+        htmlLength: payload.htmlContent.length,
+        ...summarizeTemplatePayload(template),
+      });
+
+      const options = await createAuthOptionsWithCsrf({
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      });
+
+      const response = await fetchWithCsrfRetry(`/api/share/resume/${currentResume.id}/generate`, {
+        ...options,
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }, 300000);
+
+      const data = await response.json();
+      if (data.success && data.token) {
+        setShareUrl(`${window.location.origin}/share/document/${data.token}`);
+      } else {
+        toast.error(t('share.error'));
+        setShowShareModal(false);
+      }
+    } catch (err) {
+      logger.error('Failed to generate share URL:', err);
+      toast.error(t('share.error'));
+      setShowShareModal(false);
+    } finally {
+      setShareLoading(false);
+    }
+  }, [currentResume, selectedFormat, selectedTemplate, t]);
+
   const resumeName = currentResume?.['Name'] || currentResume?.['File Name'] || 'CV';
   const hasImprovedText = !!currentResume?.['Improved Text'];
   const exportSource = hasImprovedText ? 'improved' : 'original';
@@ -176,12 +231,17 @@ export function useResumeExportPage() {
     exportLoading,
     showEmailModal,
     setShowEmailModal,
+    showShareModal,
+    setShowShareModal,
+    shareUrl,
+    shareLoading,
     selectedFormat,
     setSelectedFormat,
     resumeName,
     hasImprovedText,
     exportSource,
     handleExport,
+    handleShare,
     generateEmailAttachment,
     t,
   };

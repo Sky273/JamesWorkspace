@@ -18,8 +18,6 @@ import {
   PencilSquareIcon,
   QueueListIcon,
 } from '@heroicons/react/24/outline';
-import ShareQRCodeModal from '../components/ShareQRCodeModal';
-import { templateService } from '../utils/templateService';
 import { Resume } from '../types/entities';
 import { resumeService } from '../utils/resumeService';
 import toast from 'react-hot-toast';
@@ -37,12 +35,8 @@ import ResumeComments from '../components/ResumeComments';
 import PageHeader from '../components/page/PageHeader';
 import ConfirmDialog from '../components/page/ConfirmDialog';
 import ResponsivePageTabs, { type ResponsivePageTabOption } from '../components/page/ResponsivePageTabs';
-import { fetchWithAuth, fetchWithCsrfRetry, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
+import { fetchWithAuth, createAuthOptionsWithCsrf } from '../utils/apiInterceptor';
 import { FRONTEND_LLM_AI_MODIFICATION_TIMEOUT_MS } from '../constants/llmTimeouts';
-import {
-  summarizeTemplatePayload,
-} from '../utils/templateFragments';
-import { buildSharePayload } from './resumeDocumentPayload';
 import TiptapEditor from '../components/TiptapEditor/DeferredTiptapEditor';
 import { parseSuggestions } from '../components/TiptapEditor/suggestions.shared';
 import { removeSuggestionMarkers } from '../components/TiptapEditor/suggestionsHtml';
@@ -71,9 +65,6 @@ const ResumeImprovePage = (): JSX.Element => {
   const [localResume, setLocalResume] = useState<Resume | null>(null);
   const [editorReady, setEditorReady] = useState(false);
   const editorRef = useRef<TiptapEditorRef | null>(null);
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [shareUrl, setShareUrl] = useState<string>('');
-  const [shareLoading, setShareLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -227,59 +218,6 @@ const ResumeImprovePage = (): JSX.Element => {
     }
   }, [currentResume, setCurrentResume, t]);
 
-  // Handle share improved PDF
-  const handleShare = useCallback(async () => {
-    if (!id || !localResume) return;
-    
-    setShareLoading(true);
-    setShowShareModal(true);
-    
-    try {
-      // Get the first available template
-      const templates = await templateService.getAllTemplates();
-      if (!templates || templates.length === 0) {
-        throw new Error('No templates available');
-      }
-      const template = templates[0];
-      
-      const payload = await buildSharePayload(localResume as Resume, template);
-      logger.warn('Resume share payload normalized', {
-        templateId: template.id,
-        filename: payload.filename,
-        htmlLength: payload.htmlContent.length,
-        ...summarizeTemplatePayload(template),
-      });
-      
-      // Generate and store the PDF
-      const options = await createAuthOptionsWithCsrf({
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      const response = await fetchWithCsrfRetry(`/api/share/resume/${id}/generate`, {
-        ...options,
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-      
-      const data = await response.json();
-      
-      if (data.success && data.token) {
-        // Build URL on frontend using current origin - use /share/pdf route
-        const shareUrl = `${window.location.origin}/share/pdf/${data.token}`;
-        setShareUrl(shareUrl);
-      } else {
-        toast.error(t('share.error'));
-        setShowShareModal(false);
-      }
-    } catch (err) {
-      logger.error('Failed to generate share URL:', err);
-      toast.error(t('share.error'));
-      setShowShareModal(false);
-    } finally {
-      setShareLoading(false);
-    }
-  }, [id, localResume, t]);
-
   const handleDelete = useCallback(async () => {
     if (!localResume?.id) {
       return;
@@ -388,7 +326,6 @@ const ResumeImprovePage = (): JSX.Element => {
           isSaving={isSaving}
           editorReady={editorReady}
           onSave={handleSaveImprovedContent}
-          onShare={handleShare}
           onAdapt={() => navigate(`/resumes/${id}/adapt`)}
           onDelete={() => setShowDeleteConfirm(true)}
           deleting={deleting}
@@ -475,15 +412,6 @@ const ResumeImprovePage = (): JSX.Element => {
         )}
         </div>
       </motion.div>
-      {/* Share QR Code Modal */}
-      <ShareQRCodeModal
-        isOpen={showShareModal}
-        onClose={() => setShowShareModal(false)}
-        url={shareUrl}
-        title={t('share.improvedCV')}
-        candidateName={localResume?.['Name'] || 'CV'}
-        isLoading={shareLoading}
-      />
       <ConfirmDialog
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}

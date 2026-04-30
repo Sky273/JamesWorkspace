@@ -5,6 +5,7 @@
 
 import { ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ShareIcon } from '@heroicons/react/24/outline';
 import { createSafeHtml } from '../../utils/sanitizer.frontend';
 
 interface Resume {
@@ -29,11 +30,13 @@ interface ExportTabProps {
   exportLoading: boolean;
   onExport: () => void;
   onSendEmail?: () => void;
+  onShare?: () => void;
+  shareLoading?: boolean;
   selectedFormat?: ExportFormat;
   onFormatChange?: (format: ExportFormat) => void;
 }
 
-const ExportTab = ({ resume, templates, selectedTemplate, onTemplateChange, loadingTemplates, exportLoading, onExport, onSendEmail, selectedFormat = 'pdf', onFormatChange }: ExportTabProps): JSX.Element => {
+const ExportTab = ({ resume, templates, selectedTemplate, onTemplateChange, loadingTemplates, exportLoading, onExport, onSendEmail, onShare, shareLoading = false, selectedFormat = 'pdf', onFormatChange }: ExportTabProps): JSX.Element => {
   const { t } = useTranslation();
 
   const formatOptions: { value: ExportFormat; label: string }[] = [
@@ -115,6 +118,24 @@ const ExportTab = ({ resume, templates, selectedTemplate, onTemplateChange, load
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
                 {t('resume.analysis.exportOptions.sendEmail')}
+              </button>
+            )}
+
+            {onShare && (
+              <button
+                onClick={onShare}
+                disabled={!selectedTemplate || shareLoading}
+                className={`btn btn-secondary w-full inline-flex justify-center items-center px-4 py-2 text-sm ${!selectedTemplate || shareLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {shareLoading ? (
+                  <svg className="animate-spin -ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <ShareIcon className="w-5 h-5 mr-2" />
+                )}
+                {shareLoading ? t('share.generating', 'Generation du lien...') : t('share.button')}
               </button>
             )}
           </div>

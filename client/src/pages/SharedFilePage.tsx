@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { DocumentArrowDownIcon, ExclamationTriangleIcon, EyeIcon } from '@heroicons/react/24/outline';
 import logger from '../utils/logger.frontend';
 
-type FileType = 'pdf' | 'file';
+type FileType = 'pdf' | 'document' | 'file';
 
 const isMobileDevice = (): boolean => {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -60,9 +60,11 @@ const SharedFilePage = (): JSX.Element => {
       }
 
       try {
-        const endpoint = type === 'pdf'
-          ? `/api/share/pdf/${token}`
-          : `/api/share/file/${token}`;
+        const endpoint = type === 'file'
+          ? `/api/share/file/${token}`
+          : type === 'document'
+            ? `/api/share/document/${token}`
+            : `/api/share/pdf/${token}`;
 
         const response = await fetch(endpoint);
 

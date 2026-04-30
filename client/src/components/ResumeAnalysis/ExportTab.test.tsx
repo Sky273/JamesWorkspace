@@ -18,6 +18,7 @@ describe('ExportTab', () => {
     const onFormatChange = vi.fn();
     const onExport = vi.fn();
     const onSendEmail = vi.fn();
+    const onShare = vi.fn();
 
     render(
       <ExportTab
@@ -29,6 +30,7 @@ describe('ExportTab', () => {
         exportLoading={false}
         onExport={onExport}
         onSendEmail={onSendEmail}
+        onShare={onShare}
         selectedFormat="pdf"
         onFormatChange={onFormatChange}
       />
@@ -42,11 +44,13 @@ describe('ExportTab', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Exporter' }));
     fireEvent.click(screen.getByRole('button', { name: 'resume.analysis.exportOptions.sendEmail' }));
+    fireEvent.click(screen.getByRole('button', { name: 'share.button' }));
 
     expect(onTemplateChange).toHaveBeenCalledWith('tpl-1');
     expect(onFormatChange).toHaveBeenCalledWith('docx');
     expect(onExport).toHaveBeenCalledTimes(1);
     expect(onSendEmail).toHaveBeenCalledTimes(1);
+    expect(onShare).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Texte amélioré')).toBeInTheDocument();
   });
 
@@ -61,11 +65,13 @@ describe('ExportTab', () => {
         exportLoading={false}
         onExport={vi.fn()}
         onSendEmail={vi.fn()}
+        onShare={vi.fn()}
       />
     );
 
     expect(screen.getByRole('button', { name: 'Exporter' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'resume.analysis.exportOptions.sendEmail' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'share.button' })).toBeDisabled();
   });
 
   it('shows loading states for templates and export progress', () => {
@@ -78,10 +84,13 @@ describe('ExportTab', () => {
         loadingTemplates={true}
         exportLoading={true}
         onExport={vi.fn()}
+        onShare={vi.fn()}
+        shareLoading={true}
       />
     );
 
     expect(screen.getByText('resume.analysis.exportOptions.loadingTemplates')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'resume.analysis.exportOptions.exporting' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Generation du lien...' })).toBeDisabled();
   });
 });

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ShareIcon, RocketLaunchIcon, CheckIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { RocketLaunchIcon, CheckIcon, TrashIcon } from '@heroicons/react/24/outline';
 import type { TFunction } from 'i18next';
 import ConsentBadge, { ConsentStatus } from '../ConsentBadge';
 import type { Resume } from '../../types/entities';
@@ -11,7 +11,6 @@ interface ResumeImproveHeaderProps {
   isSaving: boolean;
   editorReady: boolean;
   onSave: () => void;
-  onShare: () => void;
   onAdapt: () => void;
   onDelete: () => void;
   deleting: boolean;
@@ -25,7 +24,6 @@ export default function ResumeImproveHeader({
   isSaving,
   editorReady,
   onSave,
-  onShare,
   onAdapt,
   onDelete,
   deleting,
@@ -103,16 +101,6 @@ export default function ResumeImproveHeader({
                   <span className="sm:hidden">{t('common.save')}</span>
                 </>
               )}
-            </button>
-
-            <button
-              onClick={onShare}
-              className="btn btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm sm:text-base"
-              title={t('share.button')}
-              type="button"
-            >
-              <ShareIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span className="hidden sm:inline">{t('share.button')}</span>
             </button>
             </>
           )}

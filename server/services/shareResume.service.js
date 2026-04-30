@@ -27,6 +27,11 @@ import {
 } from './shareResume.helpers.js';
 export { SHARE_LINK_TTL_DAYS, SHARE_LINK_TTL_MS } from './shareResume.constants.js';
 
+function getSharedDocumentExtension(filename) {
+    const extension = path.extname(typeof filename === 'string' ? filename : '').toLowerCase().replace('.', '');
+    return ['pdf', 'doc', 'docx'].includes(extension) ? extension : 'pdf';
+}
+
 /**
  * Verify the shared resume schema is present
  */
@@ -66,7 +71,7 @@ export async function initShareResumeTable() {
  * @param {string} filename - Original filename
  * @returns {Promise<{token: string, path: string, expiresAt: Date}>} Share info
  */
-export async function storeSharedPdf(resumeId, pdfBuffer, _filename) {
+export async function storeSharedPdf(resumeId, pdfBuffer, filename) {
     let pdfPath = null;
     let storedPdfPath = null;
 
@@ -75,7 +80,8 @@ export async function storeSharedPdf(resumeId, pdfBuffer, _filename) {
         const token = generateShareToken();
         const storedToken = createStoredShareToken(token);
         const expiresAt = buildShareExpiryDate();
-        storedPdfPath = token;
+        const extension = getSharedDocumentExtension(filename);
+        storedPdfPath = `${token}.${extension}`;
         pdfPath = path.join(SHARED_PDF_DIR, storedPdfPath);
 
         await fs.writeFile(pdfPath, pdfBuffer);
@@ -157,6 +163,7 @@ export async function getSharedPdfByToken(token) {
             path: resolvedPath,
             resumeId: resume.id,
             name: resume.name,
+            format: getSharedDocumentExtension(resume.shared_pdf_path),
             expiresAt: resume.shared_pdf_expires_at
         };
     } catch (error) {

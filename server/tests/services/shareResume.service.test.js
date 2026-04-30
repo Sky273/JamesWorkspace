@@ -121,7 +121,7 @@ describe('shareResume.service', () => {
         expect(fs.writeFile).toHaveBeenCalledWith(expect.stringContaining(path.join('uploads', 'shared', 'aaaaaaaa')), pdfBuffer);
         expect(query.mock.calls[1][0]).toContain('shared_pdf_token');
         expect(query.mock.calls[1][1]).toEqual([
-            'a'.repeat(64),
+            `${'a'.repeat(64)}.pdf`,
             'a'.repeat(64),
             expect.any(Date),
             'resume-123'
@@ -166,6 +166,7 @@ describe('shareResume.service', () => {
             path: expectedPath,
             resumeId: 'resume-123',
             name: 'John Doe CV',
+            format: 'pdf',
             expiresAt: expect.any(Date)
         });
     });

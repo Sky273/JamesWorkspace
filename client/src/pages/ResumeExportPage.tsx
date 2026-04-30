@@ -4,6 +4,7 @@ import { ArrowLeftIcon, ArrowPathIcon, DocumentArrowDownIcon } from '@heroicons/
 import ExportTab from '../components/ResumeAnalysis/ExportTab';
 import ConsentBadge, { ConsentStatus } from '../components/ConsentBadge';
 import SendEmailModal from '../components/ResumeAnalysis/SendEmailModal';
+import ShareQRCodeModal from '../components/ShareQRCodeModal';
 import PageHeader from '../components/page/PageHeader';
 import ResumeWorkflowSteps from '../components/ResumeWorkflowSteps';
 import { useResumeExportPage } from './ResumeExportPage.hooks';
@@ -21,12 +22,17 @@ const ResumeExportPage = (): JSX.Element => {
     exportLoading,
     showEmailModal,
     setShowEmailModal,
+    showShareModal,
+    setShowShareModal,
+    shareUrl,
+    shareLoading,
     selectedFormat,
     setSelectedFormat,
     resumeName,
     hasImprovedText,
     exportSource,
     handleExport,
+    handleShare,
     generateEmailAttachment,
     t,
   } = useResumeExportPage();
@@ -152,6 +158,8 @@ const ResumeExportPage = (): JSX.Element => {
             exportLoading={exportLoading}
             onExport={handleExport}
             onSendEmail={() => setShowEmailModal(true)}
+            onShare={handleShare}
+            shareLoading={shareLoading}
             selectedFormat={selectedFormat}
             onFormatChange={setSelectedFormat}
           />
@@ -169,6 +177,15 @@ const ResumeExportPage = (): JSX.Element => {
           onGenerateAttachment={generateEmailAttachment}
         />
       )}
+
+      <ShareQRCodeModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        url={shareUrl}
+        title={t('share.improvedCV')}
+        candidateName={(currentResume['Name'] as string) || 'CV'}
+        isLoading={shareLoading}
+      />
     </motion.div>
   );
 };

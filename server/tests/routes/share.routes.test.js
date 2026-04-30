@@ -294,6 +294,26 @@ describe('Share Routes', () => {
         expect(mockReadFile).not.toHaveBeenCalled();
     });
 
+    it('serves a shared DOC with the legacy Word MIME type', async () => {
+        mockGetSharedPdfByToken.mockResolvedValueOnce({
+            path: '/tmp/shared/cv.doc',
+            name: 'John Doe CV',
+            format: 'doc'
+        });
+        const docBuffer = Buffer.from('fake doc content');
+        mockStat.mockResolvedValueOnce({ size: docBuffer.length });
+        mockCreateReadStream.mockReturnValueOnce(Readable.from([docBuffer]));
+
+        const res = await request(app).get(`/api/share/document/${VALID_TOKEN}`);
+
+        expect(res.status).toBe(200);
+        expect(res.headers['content-type']).toContain('application/msword');
+        expect(res.headers['content-disposition']).toContain('attachment');
+        expect(res.headers['content-disposition']).toContain('John_Doe_CV.doc');
+        expect(res.headers['x-content-type-options']).toBe('nosniff');
+        expect(mockCreateReadStream).toHaveBeenCalledWith('/tmp/shared/cv.doc');
+    });
+
     it('returns 500 if the shared PDF stream fails after lookup', async () => {
         mockGetSharedPdfByToken.mockResolvedValueOnce({
             path: '/tmp/shared/cv.pdf',

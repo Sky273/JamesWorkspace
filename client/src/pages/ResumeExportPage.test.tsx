@@ -151,12 +151,31 @@ vi.mock('../components/ResumeAnalysis/SendEmailModal', () => ({
   ),
 }));
 
+vi.mock('../components/ShareQRCodeModal', () => ({
+  default: ({
+    isOpen,
+    url,
+    isLoading,
+  }: {
+    isOpen: boolean;
+    url: string;
+    isLoading?: boolean;
+  }) => (isOpen ? (
+    <div data-testid="share-modal">
+      <div>share-url:{url}</div>
+      <div>share-loading:{String(isLoading)}</div>
+    </div>
+  ) : null),
+}));
+
 vi.mock('../components/ResumeAnalysis/ExportTab', () => ({
   default: ({
     selectedTemplate,
     onTemplateChange,
     onExport,
     onSendEmail,
+    onShare,
+    shareLoading,
     selectedFormat,
     onFormatChange,
   }: {
@@ -164,6 +183,8 @@ vi.mock('../components/ResumeAnalysis/ExportTab', () => ({
     onTemplateChange: (value: string) => void;
     onExport: () => void;
     onSendEmail: () => void;
+    onShare: () => void;
+    shareLoading?: boolean;
     selectedFormat: string;
     onFormatChange: (value: 'pdf' | 'docx' | 'doc') => void;
   }) => (
@@ -174,6 +195,8 @@ vi.mock('../components/ResumeAnalysis/ExportTab', () => ({
       <button onClick={() => onFormatChange('docx')}>select-docx</button>
       <button onClick={onExport}>export-now</button>
       <button onClick={onSendEmail}>send-email</button>
+      <button onClick={onShare}>share-now</button>
+      <div data-testid="share-loading-prop">{String(shareLoading)}</div>
     </div>
   ),
 }));
@@ -419,5 +442,69 @@ describe('ResumeExportPage', () => {
       }),
       300000
     );
+  });
+
+  it('shares the selected template and selected export format from the export screen', async () => {
+    const resume = {
+      id: 'resume-1',
+      Name: 'Jane Doe',
+      Title: 'Engineer',
+      'Improved Text': '[[suggestion]]Improved body',
+      'Original Text': 'Original body',
+    };
+
+    resumeContextValue = {
+      ...resumeContextValue,
+      currentResume: resume,
+    };
+
+    getTemplateByIdMock.mockResolvedValue({
+      id: 'template-2',
+      Name: 'Executive',
+      TemplateContent: '<main>-name-|-title-|-content-</main>',
+      HeaderContent: '<header>-name-</header>',
+      FooterContent: '<footer>-title-</footer>',
+      FooterHeight: 40,
+      Stylesheet: 'body { color: red; }',
+    });
+    fetchWithCsrfRetryMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true, token: 'shared-token' }),
+    });
+
+    render(
+      <MemoryRouter>
+        <ResumeExportPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('selected-template')).toHaveTextContent('template-1');
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'select-template-2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'select-docx' }));
+    fireEvent.click(screen.getByRole('button', { name: 'share-now' }));
+
+    await waitFor(() => {
+      expect(getTemplateByIdMock).toHaveBeenCalledWith('template-2', { forceRefresh: true });
+    });
+
+    expect(fetchWithCsrfRetryMock).toHaveBeenCalledWith(
+      '/api/share/resume/resume-1/generate',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          htmlContent: '<main>Jane Doe|Engineer|Improved body</main>',
+          filename: 'Jane_Doe.docx',
+          stylesheet: 'body { color: red; }',
+          headerContent: '<header>Jane Doe</header>',
+          footerContent: '<footer>Engineer</footer>',
+          footerHeight: 40,
+          format: 'docx',
+        }),
+      }),
+      300000
+    );
+    expect(await screen.findByTestId('share-modal')).toHaveTextContent('/share/document/shared-token');
   });
 });
