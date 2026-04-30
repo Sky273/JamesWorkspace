@@ -1060,9 +1060,27 @@ body [class~="fixed"][class~="inset-0"][class*="z-[9999]"] {
   margin-right: 0.5rem;
 }
 
-/* Icon colors - inherit from parent by default */
-[class*="icon-"] {
-  color: currentColor;
+/* Icon colors - inherit from parent by default.
+   Keep the selector scoped to real icon helpers and Heroicons SVGs: broad
+   substring selectors can also match unrelated utility class strings. */
+:is(.icon-xs, .icon-sm, .icon-md, .icon-lg, .icon-xl, .icon-2xl) {
+  color: inherit;
+}
+
+svg[data-slot="icon"] {
+  display: block;
+  flex-shrink: 0;
+  opacity: 1;
+  color: inherit;
+}
+
+svg[data-slot="icon"][fill="none"] {
+  fill: none;
+  stroke: currentColor;
+}
+
+:is(button, a, [role="button"]) svg[data-slot="icon"][fill="none"] {
+  stroke: currentColor;
 }
 
 /* Muted icon style */

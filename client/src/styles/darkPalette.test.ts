@@ -107,6 +107,15 @@ describe('soft dark palette styles', () => {
     expect(base).toContain('background: #22262e !important');
   });
 
+  it('keeps the global icon system scoped to actual icons', () => {
+    const base = readStyle('_base.css');
+
+    expect(base).not.toContain('[class*="icon-"]');
+    expect(base).toContain('svg[data-slot="icon"]');
+    expect(base).toContain('svg[data-slot="icon"][fill="none"]');
+    expect(base).toContain('stroke: currentColor');
+  });
+
   it('keeps CRM client toolbar actions aligned with the type tabs', () => {
     const base = readStyle('_base.css');
     const clientsComponents = readStyle('../pages/ClientsPage.components.tsx');
