@@ -290,6 +290,37 @@ describe('soft dark palette styles', () => {
     expect(base).toContain('color: #f4f5f7 !important');
   });
 
+  it('keeps pagination components readable in dark mode', () => {
+    const base = readStyle('_base.css');
+    const pagination = readStyle('../components/Pagination.tsx');
+    const gdprPagination = readStyle('../components/GdprAudit/GdprAuditPagination.tsx');
+    const dealsTab = readStyle('../components/CRM/DealsTab.tsx');
+
+    expect(pagination).toContain('app-pagination section-shell');
+    expect(pagination).toContain('app-pagination__controls');
+    expect(gdprPagination).toContain('app-pagination gdpr-audit-pagination');
+    expect(dealsTab).toContain('app-pagination app-pagination__controls');
+    expect(base).toContain('.dark .app-pagination');
+    expect(base).toContain('.dark .app-pagination .app-button-secondary');
+    expect(base).toContain('.dark .app-pagination .app-button-primary');
+    expect(base).toContain('background: #2a2f38 !important');
+    expect(base).toContain('color: #f4f5f7 !important');
+  });
+
+  it('keeps injected resume HTML previews readable in dark mode', () => {
+    const base = readStyle('_base.css');
+    const compareTab = readStyle('../components/ResumeAnalysis/CompareTab.tsx');
+    const exportTab = readStyle('../components/ResumeAnalysis/ExportTab.tsx');
+
+    expect(compareTab).toContain('resume-html-preview');
+    expect(exportTab).toContain('resume-html-preview');
+    expect(base).toContain('.dark .resume-html-preview');
+    expect(base).toContain('.dark .resume-html-preview :is(p, li, div, span, strong, em, td, th, blockquote)');
+    expect(base).toContain('.dark .resume-html-preview :is(h1, h2, h3, h4, h5, h6)');
+    expect(base).toContain('color: #c4cad4 !important');
+    expect(base).toContain('color: #f4f5f7 !important');
+  });
+
   it('keeps Tiptap editor text readable in dark mode even with imported inline colors', () => {
     const tiptap = readStyle('../components/TiptapEditor/TiptapEditor.css');
 

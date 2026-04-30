@@ -124,7 +124,7 @@ const ExportTab = ({ resume, templates, selectedTemplate, onTemplateChange, load
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
             {t('resume.analysis.exportOptions.preview')}
           </h3>
-          <div className="prose prose-sm max-w-none dark:prose-invert max-h-96 overflow-y-auto">
+          <div className="resume-html-preview prose prose-sm max-w-none dark:prose-invert max-h-96 overflow-y-auto">
             <div 
               dangerouslySetInnerHTML={createSafeHtml(
                 resume['Improved Text'] || resume['Original Text'] || ''

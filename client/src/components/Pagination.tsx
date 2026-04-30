@@ -54,7 +54,7 @@ const Pagination = ({
   };
 
   return (
-    <div className="section-shell mt-6 rounded-[22px] px-4 py-4 sm:px-5">
+    <div className="app-pagination section-shell mt-6 rounded-[22px] px-4 py-4 sm:px-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="space-y-1">
           <p className="text-sm text-slate-600 dark:text-slate-300">
@@ -68,7 +68,7 @@ const Pagination = ({
         </div>
 
         {showNavigation && (
-          <nav aria-label={itemName ? `${itemName} pagination` : 'Pagination'} className="flex flex-wrap items-center gap-2">
+          <nav aria-label={itemName ? `${itemName} pagination` : 'Pagination'} className="app-pagination__controls flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => goToPage(1)}
@@ -107,7 +107,7 @@ const Pagination = ({
               ))}
             </div>
 
-            <span className="rounded-2xl border border-white/10 px-3 py-2 text-sm text-slate-600 dark:text-slate-300 sm:hidden">
+            <span className="app-pagination__mobile-count rounded-2xl border border-white/10 px-3 py-2 text-sm text-slate-600 dark:text-slate-300 sm:hidden">
               {currentPage} / {totalPages}
             </span>
 

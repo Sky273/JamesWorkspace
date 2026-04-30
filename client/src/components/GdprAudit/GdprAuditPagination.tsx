@@ -18,14 +18,14 @@ export default function GdprAuditPagination({
   }
 
   return (
-    <div className="gdpr-audit-pagination flex items-center justify-between border-t border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
+    <div className="app-pagination gdpr-audit-pagination flex items-center justify-between border-t border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
       <div className="text-sm text-gray-500 dark:text-gray-400">
         {t('gdprAudit.showing', { defaultValue: 'Affichage' })}{' '}
         {(pagination.page - 1) * pagination.limit + 1} -{' '}
         {Math.min(pagination.page * pagination.limit, pagination.total)}{' '}
         {t('gdprAudit.of', { defaultValue: 'sur' })} {pagination.total}
       </div>
-      <div className="flex items-center space-x-2">
+      <div className="app-pagination__controls flex items-center space-x-2">
         <button
           onClick={() => onPageChange(Math.max(1, pagination.page - 1))}
           disabled={!pagination.hasPrev}
