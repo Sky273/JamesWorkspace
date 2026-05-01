@@ -177,11 +177,11 @@ export function MissionCardInDeal({
               </div>
               {mission.content ? (
                 <div
-                  className="mt-1 line-clamp-1 text-[12.5px] text-[var(--cv-muted)]"
+                  className="mission-card-subtitle mt-1 line-clamp-1 text-[12.5px] text-[var(--cv-muted)]"
                   dangerouslySetInnerHTML={createSafeHtml(mission.content)}
                 />
               ) : (
-                <p className="mt-1 truncate text-[12.5px] text-[var(--cv-muted)]">{t('missions.noDescription')}</p>
+                <p className="mission-card-subtitle mt-1 truncate text-[12.5px] text-[var(--cv-muted)]">{t('missions.noDescription')}</p>
               )}
             </div>
           </div>

@@ -58,8 +58,8 @@
   --cv-shadow: rgba(1, 6, 16, 0.24);
   --cv-shadow-strong: rgba(1, 6, 16, 0.32);
   --cv-text: #dee5ff;
-  --cv-muted: #a3aac4;
-  --cv-kicker-text: #a3aac4;
+  --cv-muted: #c4cad4;
+  --cv-kicker-text: #c4cad4;
   --cv-glass: rgba(25, 37, 64, 0.56);
   --cv-search-input-bg: rgba(6, 14, 32, 0.28);
   --cv-search-input-border: rgba(163, 170, 196, 0.08);
@@ -531,8 +531,8 @@
   --cv-shadow: rgba(0, 0, 0, 0.28);
   --cv-shadow-strong: rgba(0, 0, 0, 0.34);
   --cv-text: #e5e7eb;
-  --cv-muted: #aab4c8;
-  --cv-kicker-text: #aab4c8;
+  --cv-muted: #c4cad4;
+  --cv-kicker-text: #c4cad4;
   --cv-search-input-bg: rgba(2, 6, 23, 0.38);
   --cv-search-input-border: rgba(148, 163, 184, 0.18);
   --cv-primary: #a5b4fc;
@@ -1030,8 +1030,8 @@
   --cv-surface-bottom: transparent;
   --cv-text: #f4f5f7;
   --cv-muted: #c4cad4;
-  --cv-subtle: #8f98a8;
-  --cv-kicker-text: #8f98a8;
+  --cv-subtle: #b4bdcc;
+  --cv-kicker-text: #c4cad4;
   --cv-outline: #343a46;
   --cv-outline-strong: rgba(124, 92, 255, 0.42);
   --cv-shadow: rgba(0, 0, 0, 0.32);
@@ -1082,6 +1082,12 @@
 .dark .resumes-editorial-shell .cv-resume-row .cv-library-candidate-name,
 .dark .resumes-editorial-shell .cv-resume-row .cv-library-candidate-name * {
   color: #f4f5f7 !important;
+}
+
+.dark .resumes-editorial-shell .cv-resume-row .cv-library-candidate-title {
+  color: #d6dbe5 !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #d6dbe5 !important;
 }
 
 .dark .resumes-editorial-shell .segmented-control,

@@ -97,7 +97,7 @@ export default function DealResumeCard({
             </div>
 
             {resume.title ? (
-              <p className="mt-px truncate text-[12.5px] text-[var(--cv-muted)]">{resume.title}</p>
+              <p className="cv-library-candidate-title mt-px truncate text-[12.5px] text-[var(--cv-muted)]">{resume.title}</p>
             ) : null}
 
             <div className="mt-1.5 flex flex-wrap items-center gap-[9px] text-[11px] text-[var(--cv-subtle)]">

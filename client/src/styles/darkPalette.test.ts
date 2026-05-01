@@ -15,7 +15,7 @@ describe('soft dark palette styles', () => {
     expect(variables).toContain('--border-subtle: #343a46');
     expect(variables).toContain('--text-primary: #f4f5f7');
     expect(variables).toContain('--text-secondary: #d6dbe5');
-    expect(variables).toContain('--text-muted: #b4bdcc');
+    expect(variables).toContain('--text-muted: #c4cad4');
   });
 
   it('keeps migrated shells on the same soft dark surfaces', () => {
@@ -267,6 +267,25 @@ describe('soft dark palette styles', () => {
     expect(base).toContain('color: var(--text-muted) !important');
   });
 
+  it('keeps dark subtitles readable across page headers and cards', () => {
+    const base = readStyle('_base.css');
+    const editorialPages = readStyle('editorialPages.css');
+    const resumesEditorial = readStyle('resumesEditorial.css');
+
+    expect(base).toContain(
+      '.dark :is(.cv-page-heading, .page-hero, .cv-card, .lux-card, .app-section-card) :is(p, small, .subtitle, .card-subtitle, .text-muted)'
+    );
+    expect(base).toContain('.dark .cv-resume-row .cv-library-candidate-title');
+    expect(base).toContain('.dark .mission-card-subtitle');
+    expect(base).toContain('#d6dbe5');
+    expect(editorialPages).toContain('--cv-muted: #c4cad4');
+    expect(editorialPages).toContain('--cv-kicker-text: #c4cad4');
+    expect(editorialPages).toContain('.dark .missions-editorial-shell .mission-card-subtitle');
+    expect(resumesEditorial).toContain('--cv-muted: #c4cad4');
+    expect(resumesEditorial).toContain('--cv-kicker-text: #c4cad4');
+    expect(resumesEditorial).toContain('.dark .resumes-editorial-shell .cv-resume-row .cv-library-candidate-title');
+  });
+
   it('keeps legacy arbitrary dark text colors readable in dark mode', () => {
     const base = readStyle('_base.css');
 
@@ -287,6 +306,18 @@ describe('soft dark palette styles', () => {
     expect(base).toContain('color: #f4f5f7 !important');
     expect(base).toContain(':is(label, .cv-kicker, .field-label, .form-label, .card-label)');
     expect(base).toContain('color: #c4cad4 !important');
+  });
+
+  it('keeps metrics cards and labels readable in dark mode', () => {
+    const metricsPage = readStyle('../pages/MetricsPage.tsx');
+    const base = readStyle('_base.css');
+
+    expect(metricsPage).toContain('metrics-page-shell');
+    expect(base).toContain('.dark .metrics-page-shell .rounded-xl.border');
+    expect(base).toContain('background-color: #262b34 !important');
+    expect(base).toContain('.dark .metrics-page-shell :is(.opacity-50, .opacity-60, .opacity-70, .opacity-80)');
+    expect(base).toContain('color: #cbd5e1 !important');
+    expect(base).toContain('.dark .metrics-page-shell :is([class*="bg-white"], [class*="bg-gray-50"], [class*="bg-slate-50"])');
   });
 
   it('keeps breadcrumbs readable in dark mode', () => {

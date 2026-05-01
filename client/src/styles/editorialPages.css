@@ -60,8 +60,8 @@
   --cv-shadow: rgba(1, 6, 16, 0.24);
   --cv-shadow-strong: rgba(1, 6, 16, 0.32);
   --cv-text: #dee5ff;
-  --cv-muted: #a3aac4;
-  --cv-kicker-text: #a3aac4;
+  --cv-muted: #c4cad4;
+  --cv-kicker-text: #c4cad4;
   --cv-glass: rgba(25, 37, 64, 0.56);
   --cv-search-input-bg: rgba(6, 14, 32, 0.28);
   --cv-search-input-border: rgba(163, 170, 196, 0.08);
@@ -723,8 +723,8 @@
   --cv-shadow: rgba(0, 0, 0, 0.22);
   --cv-shadow-strong: rgba(0, 0, 0, 0.34);
   --cv-text: #e5e7eb;
-  --cv-muted: #a3aab8;
-  --cv-kicker-text: #8f98aa;
+  --cv-muted: #c4cad4;
+  --cv-kicker-text: #c4cad4;
   --cv-glass: #22262e;
   --cv-search-input-bg: #181b20;
   --cv-search-input-border: rgba(148, 163, 184, 0.18);
@@ -1002,8 +1002,8 @@
   --cv-shadow: rgba(0, 0, 0, 0.22);
   --cv-shadow-strong: rgba(0, 0, 0, 0.3);
   --cv-text: #e5e7eb;
-  --cv-muted: #a3aac4;
-  --cv-kicker-text: #a3aac4;
+  --cv-muted: #c4cad4;
+  --cv-kicker-text: #c4cad4;
   --cv-primary: #c9ccff;
   --cv-primary-strong: #8f95ff;
   --cv-primary-soft: rgba(201, 204, 255, 0.12);
@@ -1150,7 +1150,7 @@
   --cv-outline-strong: rgba(201, 204, 255, 0.26);
   --cv-shadow: rgba(0, 0, 0, 0.22);
   --cv-text: #e5e7eb;
-  --cv-muted: #a3aac4;
+  --cv-muted: #c4cad4;
   --cv-primary: #c9ccff;
   --cv-primary-strong: #8f95ff;
   --cv-primary-soft: rgba(201, 204, 255, 0.12);
@@ -1530,8 +1530,8 @@
   --cv-shadow-strong: rgba(0, 0, 0, 0.42);
   --cv-text: #f4f5f7;
   --cv-muted: #c4cad4;
-  --cv-subtle: #8f98a8;
-  --cv-kicker-text: #8f98a8;
+  --cv-subtle: #b4bdcc;
+  --cv-kicker-text: #c4cad4;
   --cv-glass: #22262e;
   --cv-search-input-bg: #2a2f38;
   --cv-search-input-border: #343a46;
@@ -1637,6 +1637,13 @@
 .dark .missions-editorial-shell .mission-card-title,
 .dark .missions-editorial-shell .mission-card-title * {
   color: #f4f5f7 !important;
+}
+
+.dark .missions-editorial-shell .mission-card-subtitle,
+.dark .missions-editorial-shell .mission-card-subtitle * {
+  color: #d6dbe5 !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #d6dbe5 !important;
 }
 
 .dark .editorial-migrated-shell .cv-gradient-button,

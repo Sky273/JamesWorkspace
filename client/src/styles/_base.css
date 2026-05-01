@@ -802,6 +802,10 @@ button.settings-switch[type="button"]:disabled {
   color: var(--text-muted) !important;
 }
 
+.dark :is(.cv-page-heading, .page-hero, .cv-card, .lux-card, .app-section-card) :is(p, small, .subtitle, .card-subtitle, .text-muted) {
+  color: var(--text-muted) !important;
+}
+
 .dark :is([class*="text-[#18181b]"], [class*="text-[#111827]"], [class*="text-[#101828]"], [class*="text-[#0f172a]"], [class*="text-[#13213f]"], [class*="text-[#1a1635]"], [class*="text-[#1f2937]"]) {
   color: var(--text-primary) !important;
 }
@@ -816,6 +820,48 @@ button.settings-switch[type="button"]:disabled {
 
 .dark :is(.editorial-migrated-shell, .resumes-editorial-shell, .missions-editorial-shell, .crm-compact-shell, .profile-matching-shell, .tags-management-shell, .email-templates-shell, .security-logs-shell, .gdpr-audit-shell, .user-guide-shell, .users-management-shell) :is(label, .cv-kicker, .field-label, .form-label, .card-label) {
   color: #c4cad4 !important;
+}
+
+.dark .metrics-page-shell {
+  color: #f4f5f7;
+}
+
+.dark .metrics-page-shell .section-shell {
+  background: #22262e !important;
+  border-color: #343a46 !important;
+}
+
+.dark .metrics-page-shell .rounded-xl.border {
+  background-color: #262b34 !important;
+  color: #edf1f7 !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+}
+
+.dark .metrics-page-shell :is([class*="bg-white"], [class*="bg-gray-50"], [class*="bg-slate-50"]) {
+  background-color: #2f3540 !important;
+}
+
+.dark .metrics-page-shell :is(.opacity-50, .opacity-60, .opacity-70, .opacity-80) {
+  opacity: 1 !important;
+}
+
+.dark .metrics-page-shell :is(p, span, th, td, li, div).opacity-50,
+.dark .metrics-page-shell :is(p, span, th, td, li, div).opacity-60,
+.dark .metrics-page-shell :is(p, span, th, td, li, div).opacity-70,
+.dark .metrics-page-shell :is(p, span, th, td, li, div).opacity-80 {
+  color: #cbd5e1 !important;
+}
+
+.dark .metrics-page-shell :is(.text-gray-400, .text-gray-500, .text-gray-600, .text-slate-400, .text-slate-500, .text-slate-600) {
+  color: #cbd5e1 !important;
+}
+
+.dark .metrics-page-shell :is(.font-semibold, .font-bold) {
+  color: #f8fafc;
+}
+
+.dark .metrics-page-shell table :is(th, td) {
+  color: #dbe3ee;
 }
 
 .dark .app-breadcrumbs {
@@ -1324,6 +1370,14 @@ svg[data-slot="icon"][fill="none"] {
 
 .dark .mission-card-title {
   color: #f4f5f7 !important;
+}
+
+.dark .cv-resume-row .cv-library-candidate-title,
+.dark .mission-card-subtitle,
+.dark .mission-card-subtitle * {
+  color: #d6dbe5 !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #d6dbe5 !important;
 }
 
 .dark .app-header-actions .app-header-actions__text-control,

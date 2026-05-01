@@ -363,7 +363,7 @@ const MetricsPage = (): JSX.Element => {
   );
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="cv-surface app-page-shell max-w-6xl">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="metrics-page-shell cv-surface app-page-shell max-w-6xl">
       <MetricsPageHeader
         autoRefresh={autoRefresh}
         lastUpdated={lastUpdated}
