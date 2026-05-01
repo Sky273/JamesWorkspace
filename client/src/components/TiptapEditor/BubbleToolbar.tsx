@@ -5,6 +5,7 @@
 
 import type { Editor } from '@tiptap/react';
 import { useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface BubbleToolbarProps {
   editor: Editor;
@@ -71,6 +72,7 @@ const toInputValue = (value: string | null | undefined) => value ?? '';
 // ============================================
 
 const ImageBubble = ({ editor }: { editor: Editor }) => {
+  const { t } = useTranslation();
   const attrs = editor.getAttributes('image') as ImageAttributes;
   const [panel, setPanel] = useState<ImagePanel>('quick');
 
@@ -183,7 +185,7 @@ const ImageBubble = ({ editor }: { editor: Editor }) => {
 
           <span className="tiptap-bubble-divider" />
 
-          <TB onClick={() => editor.chain().focus().deleteSelection().run()} title="Supprimer l'image" className="tiptap-bubble-danger">
+          <TB onClick={() => editor.chain().focus().deleteSelection().run()} title={t('tiptap.image.delete')} className="tiptap-bubble-danger">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           </TB>
         </>
@@ -193,31 +195,31 @@ const ImageBubble = ({ editor }: { editor: Editor }) => {
       {panel === 'dimensions' && (
         <div className="tiptap-bubble-props">
           <div className="tiptap-bubble-props-header">
-            <span>Dimensions & texte</span>
+            <span>{t('tiptap.image.dimensionsText')}</span>
             <button type="button" className="tiptap-bubble-props-back" onClick={() => setPanel('quick')}>←</button>
           </div>
           <label>
-            <span>Largeur</span>
+            <span>{t('tiptap.image.width')}</span>
             <input type="text" value={width} onChange={(e) => setWidth(e.target.value)} placeholder="ex: 300px, 50%" />
           </label>
           <label>
-            <span>Hauteur</span>
+            <span>{t('tiptap.image.height')}</span>
             <input type="text" value={height} onChange={(e) => setHeight(e.target.value)} placeholder="auto" />
           </label>
           <label>
             <span>Alt</span>
-            <input type="text" value={alt} onChange={(e) => setAlt(e.target.value)} placeholder="Description de l'image" />
+            <input type="text" value={alt} onChange={(e) => setAlt(e.target.value)} placeholder={t('tiptap.image.altPlaceholder')} />
           </label>
           <label>
-            <span>Titre</span>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre au survol" />
+            <span>{t('tiptap.image.title')}</span>
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('tiptap.image.titlePlaceholder')} />
           </label>
           <div className="tiptap-bubble-props-actions">
             <button type="button" className="tiptap-bubble-props-apply" onClick={() => {
               updateMultipleAttrs({ width, height, alt, title });
               setPanel('quick');
-            }}>Appliquer</button>
-            <button type="button" className="tiptap-bubble-props-cancel" onClick={() => setPanel('quick')}>Annuler</button>
+            }}>{t('common.apply')}</button>
+            <button type="button" className="tiptap-bubble-props-cancel" onClick={() => setPanel('quick')}>{t('common.cancel')}</button>
           </div>
         </div>
       )}
@@ -226,7 +228,7 @@ const ImageBubble = ({ editor }: { editor: Editor }) => {
       {panel === 'style' && (
         <div className="tiptap-bubble-props">
           <div className="tiptap-bubble-props-header">
-            <span>Bordure & ombre</span>
+            <span>{t('tiptap.image.borderShadow')}</span>
             <button type="button" className="tiptap-bubble-props-back" onClick={() => setPanel('quick')}>←</button>
           </div>
 
@@ -276,8 +278,8 @@ const ImageBubble = ({ editor }: { editor: Editor }) => {
             <button type="button" className="tiptap-bubble-props-apply" onClick={() => {
               updateMultipleAttrs({ borderWidth, borderStyle, borderColor, borderRadius });
               setPanel('quick');
-            }}>Appliquer</button>
-            <button type="button" className="tiptap-bubble-props-cancel" onClick={() => setPanel('quick')}>Annuler</button>
+            }}>{t('common.apply')}</button>
+            <button type="button" className="tiptap-bubble-props-cancel" onClick={() => setPanel('quick')}>{t('common.cancel')}</button>
           </div>
         </div>
       )}
@@ -286,7 +288,7 @@ const ImageBubble = ({ editor }: { editor: Editor }) => {
       {panel === 'advanced' && (
         <div className="tiptap-bubble-props">
           <div className="tiptap-bubble-props-header">
-            <span>Marges & espacement</span>
+            <span>{t('tiptap.image.spacing')}</span>
             <button type="button" className="tiptap-bubble-props-back" onClick={() => setPanel('quick')}>←</button>
           </div>
           <label>
@@ -296,7 +298,7 @@ const ImageBubble = ({ editor }: { editor: Editor }) => {
           <div className="tiptap-bubble-props-btn-row">
             {[['0', '0'], ['8px', '8px'], ['16px', '16px'], ['0 auto', 'Centré']].map(([v, l]) => (
               <button key={v} type="button" className="tiptap-props-btn" onClick={() => { setMargin(v); updateAttr('margin', v); }}>
-                {l}
+                {l === 'Centré' ? t('tiptap.image.centered') : l}
               </button>
             ))}
           </div>
@@ -315,8 +317,8 @@ const ImageBubble = ({ editor }: { editor: Editor }) => {
             <button type="button" className="tiptap-bubble-props-apply" onClick={() => {
               updateMultipleAttrs({ margin, padding });
               setPanel('quick');
-            }}>Appliquer</button>
-            <button type="button" className="tiptap-bubble-props-cancel" onClick={() => setPanel('quick')}>Annuler</button>
+            }}>{t('common.apply')}</button>
+            <button type="button" className="tiptap-bubble-props-cancel" onClick={() => setPanel('quick')}>{t('common.cancel')}</button>
           </div>
         </div>
       )}
@@ -329,16 +331,17 @@ const ImageBubble = ({ editor }: { editor: Editor }) => {
 // ============================================
 
 const LinkBubble = ({ editor, onSetLink }: { editor: Editor; onSetLink: () => void }) => {
+  const { t } = useTranslation();
   const href = editor.getAttributes('link').href || '';
   return (
     <div className="tiptap-bubble-menu tiptap-bubble-link">
       <a href={href} target="_blank" rel="noopener noreferrer" className="tiptap-bubble-link-url" title={href}>
         {href.length > 40 ? href.slice(0, 40) + '…' : href}
       </a>
-      <TB onClick={onSetLink} title="Modifier le lien">
+      <TB onClick={onSetLink} title={t('tiptap.editLink')}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
       </TB>
-      <TB onClick={() => editor.chain().focus().unsetLink().run()} title="Supprimer le lien" className="tiptap-bubble-danger">
+      <TB onClick={() => editor.chain().focus().unsetLink().run()} title={t('tiptap.removeLink')} className="tiptap-bubble-danger">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m18.84 12.25 1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="m5.16 11.75-1.72 1.71a5 5 0 0 0 7.07 7.07l1.72-1.71"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
       </TB>
     </div>

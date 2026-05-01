@@ -63,6 +63,8 @@ describe('EmailTemplatesPage sections', () => {
         totalTemplates={5}
         introLabel="Intro"
         hintLabel="Astuce"
+        kickerLabel="Administration email"
+        refreshLabel="Actualiser"
         totalLabel="Total"
         defaultLabel="Défaut"
         systemLabel="Système"
@@ -293,6 +295,7 @@ describe('EmailTemplatesPage sections', () => {
         previewSubject="Sujet aperçu"
         previewLoading={false}
         onClose={onClose}
+        t={(key) => key}
       />
     );
 

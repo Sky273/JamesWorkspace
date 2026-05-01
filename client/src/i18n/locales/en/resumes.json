@@ -67,6 +67,7 @@
     "viewByDeal": "By deal",
     "backToDealsView": "Back to deals view",
     "backToDealDetail": "Back to deal",
+    "loadingByDealView": "Loading by-deal view...",
     "groupedView": {
       "deals": "deals",
       "assigned": "assigned CVs",

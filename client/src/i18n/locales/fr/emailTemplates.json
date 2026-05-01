@@ -4,6 +4,7 @@
     "subtitle": "Gérez vos templates d'email pour l'envoi de CV",
     "createNew": "Nouveau template",
     "editTemplate": "Modifier le template",
+    "kicker": "Administration email",
     "headerIntro": "Pilotez vos messages de candidature, gardez un template par défaut clair et préparez des variantes par client ou contexte sans sortir du module d'administration.",
     "headerHint": "Les templates système restent verrouillés mais peuvent être dupliqués pour créer vos propres versions.",
     "noTemplates": "Aucun template créé. Créez votre premier template ou dupliquez le template système.",

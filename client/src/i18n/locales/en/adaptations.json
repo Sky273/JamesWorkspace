@@ -116,6 +116,29 @@
       "unassigned": "unassigned",
       "unassignedTitle": "Missions without deal",
       "noSearchResults": "No adaptation matches your search."
+    },
+    "matchAnalysis": {
+      "noAnalysis": "No match analysis is available for this adaptation.",
+      "matchScore": "Match score",
+      "subtitle": "Resume-mission match analysis",
+      "strengths": "Strengths",
+      "noStrengths": "No strength identified",
+      "gaps": "Identified gaps",
+      "noGaps": "No gap identified",
+      "keywordMatches": "Matched keywords",
+      "noKeywordMatches": "No keyword identified",
+      "missingKeywords": "Missing keywords",
+      "noMissingKeywords": "No missing keyword",
+      "recommendations": "Adaptation recommendations",
+      "generateAdaptedCv": "Generate adapted resume"
+    },
+    "comparison": {
+      "compare": "Comparison",
+      "adaptedCv": "Adapted resume",
+      "newBadge": "New",
+      "adaptedToMission": "Resume adapted to the mission",
+      "aboutTitle": "About this adaptation",
+      "aboutBody": "This resume has been optimized to match the mission requirements. Relevant skills have been highlighted, the executive summary has been rewritten, and important keywords have been integrated naturally."
     }
   }
 }

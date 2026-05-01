@@ -158,7 +158,7 @@ const ImprovedTextTab = ({
           
           {/* Original Score */}
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-500 dark:text-gray-400">Score :</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">{t('resume.analysis.score')} :</span>
             <span className="px-2 py-1 text-sm font-medium rounded-full text-blue-700 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/30">
               {originalRating}%
             </span>
@@ -167,7 +167,7 @@ const ImprovedTextTab = ({
           {/* Improved Score */}
           {improvedRating > 0 && (
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Amélioré :</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{t('resume.analysis.improved')} :</span>
               <span className="px-2 py-1 text-sm font-medium rounded-full text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/30">
                 {improvedRating}%
               </span>
@@ -227,7 +227,7 @@ const ImprovedTextTab = ({
           <div className="flex items-center gap-2 mb-3">
             <SparklesIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
             <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-              Modifier par IA
+              {t('resume.aiModify.title')}
             </h4>
           </div>
           
@@ -235,18 +235,18 @@ const ImprovedTextTab = ({
           <div className="mb-4 flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
             <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-yellow-800 dark:text-yellow-200">
-              Attention : Les modifications générées par l'IA peuvent parfois dégrader la qualité du CV. Vérifiez toujours le résultat avant de sauvegarder.
+              {t('resume.aiModify.warning')}
             </p>
           </div>
 
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-            Utilisez l'IA pour modifier ce CV selon vos instructions spécifiques
+            {t('resume.aiModify.improvedHelp')}
           </p>
           
           <textarea
             value={aiInstructions}
             onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setAiInstructions(e.target.value)}
-            placeholder="Exemple : Rendre le résumé plus concis, ajouter plus de détails techniques sur les projets Docker, mettre l'accent sur les compétences en leadership..."
+            placeholder={t('resume.aiModify.improvedPlaceholder')}
             rows={4}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
             disabled={isAIModifying}

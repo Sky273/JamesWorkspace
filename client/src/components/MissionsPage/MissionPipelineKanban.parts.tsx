@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   PlusIcon,
   UserIcon,
@@ -374,10 +375,12 @@ export function KanbanHeader({
   refreshLabel,
   title,
 }: KanbanHeaderProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="flex flex-col gap-4 border-b border-slate-200/70 px-5 py-5 dark:border-white/10 sm:flex-row sm:items-start sm:justify-between sm:px-6">
       <div className="min-w-0">
-        <div className="cv-kicker mb-2">Pipeline mission</div>
+        <div className="cv-kicker mb-2">{t('pipeline.missionKicker')}</div>
         <div className="flex items-start gap-3">
           <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.3rem] bg-blue-50 text-[var(--cv-primary)] ring-1 ring-blue-100 dark:bg-blue-500/10 dark:ring-blue-500/20">
             <DocumentTextIcon className="h-6 w-6" />
@@ -411,7 +414,7 @@ export function KanbanHeader({
           <button
             onClick={onClose}
             className="cv-ghost-button inline-flex h-12 w-12 items-center justify-center rounded-2xl text-slate-500 transition-colors hover:text-slate-900 dark:text-[var(--cv-muted)] dark:hover:text-[var(--cv-text)]"
-            aria-label="Fermer"
+            aria-label={t('common.close')}
           >
             <XMarkIcon className="h-5 w-5" />
           </button>

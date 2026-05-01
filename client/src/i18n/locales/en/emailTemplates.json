@@ -4,6 +4,7 @@
     "subtitle": "Manage your email templates for CV submissions",
     "createNew": "New template",
     "editTemplate": "Edit template",
+    "kicker": "Email administration",
     "noTemplates": "No templates created. Create your first template or duplicate the system template.",
     "systemTemplate": "System template (read-only)",
     "defaultTemplate": "Default template",

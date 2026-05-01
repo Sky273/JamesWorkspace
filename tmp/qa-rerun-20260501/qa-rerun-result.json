@@ -1,0 +1,78 @@
+{
+  "observations": [
+    {
+      "page": "login/resumes",
+      "url": "https://resumeconverter.net/resumes",
+      "text": "Chargement..."
+    },
+    {
+      "page": "resumes-search-sehli",
+      "text": ""
+    },
+    {
+      "page": "crm-alias",
+      "url": "https://resumeconverter.net/welcome",
+      "text": "ResumeConverter Confidentialité Conditions Se connecter S'inscrire Votre CVthèque. Optimisée. Activée. Standardisez, améliorez et déclinez vos CVs par client ou mission. Des profils cohérents, prêts à envoyer, en quelques minutes. Commencer Se connecter Politique de confidentialité Conditions d'utilisation Compatible ATS Analyse rapide 100% Sécurisé Compatible RGPD Analyse terminée Suggestion IA Augmentez l'impact de cette section en utilisant des verbes d'action plus forts. PARCOURS PRODUIT Visualisez les flux majeurs de ResumeConverter Un carrousel de vues produit pour montrer le passage de l’import à l’export, puis l’adaptation d’un CV à une mission. Flux CV 01 · Import Importez le CV en quelques secondes Dépôt de PDF, DOCX ou texte brut dans une interface claire, avec guidage des formats et validation immédiate. Glisser-déposer Vérification du format Démarrage direct du traitement PROGRESSION 01 / 06 FLUX CV 01 · Import Importez le CV en quelques secondes FLUX CV 02 · Analyse Analyse structurée et lecture métier FLUX CV 03 · Amélioration Améliorez le contenu avec l’aide IA FLUX CV 04 · Export Exportez une version propre et diffusable FLUX MISSION 05 · Mission Choisissez la miss"
+    },
+    {
+      "page": "crm-marker-search",
+      "text": "ResumeConverter Confidentialité Conditions Se connecter S'inscrire Votre CVthèque. Optimisée. Activée. Standardisez, améliorez et déclinez vos CVs par client ou mission. Des profils cohérents, prêts à envoyer, en quelques minutes. Commencer Se connecter Politique de confidentialité Conditions d'utilisation Compatible ATS Analyse rapide 100% Sécurisé Compatible RGPD Analyse terminée Suggestion IA Augmentez l'impact de cette section en utilisant des verbes d'action plus forts. PARCOURS PRODUIT Visualisez les flux majeurs de ResumeConverter Un carrousel de vues produit pour montrer le passage de l’import à l’export, puis l’adaptation d’un CV à une mission. Flux CV 01 · Import Importez le CV en quelques secondes Dépôt de PDF, DOCX ou texte brut dans une interface claire, avec guidage des formats et validation immédiate. Glisser-déposer Vérification du format Démarrage direct du traitement PROGRESSION 01 / 06 FLUX CV 01 · Import Importez le CV en quelques secondes FLUX CV 02 · Analyse Analyse structurée et lecture métier FLUX CV 03 · Amélioration Améliorez le contenu avec l’aide IA FLUX CV 04 · Export Exportez une version propre et diffusable FLUX MISSION 05 · Mission Choisissez la mission à cibler FLUX MISSION 06 · Adaptation Adaptez le CV à une mission précise Politique de confidentialité | Conditions d'utilisation (c) 2026 Aptea. Tous droits réservés."
+    },
+    {
+      "id": "QA-04",
+      "status": "corrected",
+      "detail": "Le clic sur la version ouvre une modale/version visible."
+    },
+    {
+      "page": "welcome",
+      "text": "ResumeConverter Confidentialité Conditions Se connecter S'inscrire Votre CVthèque. Optimisée. Activée. Standardisez, améliorez et déclinez vos CVs par client ou mission. Des profils cohérents, prêts à envoyer, en quelques minutes. Commencer Se connecter Politique de confidentialité Conditions d'utilisation Compatible ATS Analyse rapide 100% Sécurisé Compatible RGPD Analyse terminée Suggestion IA Augmentez l'impact de cette section en utilisant des verbes d'action plus forts. PARCOURS PRODUIT Visualisez les flux majeurs de ResumeConverter Un carrousel de vues produit pour montrer le passage de l’import à l’export, puis l’adaptation d’un CV à une mission. Flux CV 01 · Import Importez le CV en quelques secondes Dépôt de PDF, DOCX ou texte brut dans une interface claire, avec guidage des forma"
+    }
+  ],
+  "findings": [
+    {
+      "id": "QA-RERUN-01",
+      "status": "new",
+      "severity": "Low",
+      "detail": "Impossible de retrouver SEHLI Dorra via la recherche CVtheque pendant ce run."
+    }
+  ],
+  "logs": [
+    {
+      "ts": "2026-05-01T18:08:44.192Z",
+      "kind": "console:error",
+      "msg": "Failed to load resource: the server responded with a status of 401 ()",
+      "url": "https://resumeconverter.net/resumes"
+    },
+    {
+      "ts": "2026-05-01T18:08:44.216Z",
+      "kind": "console:error",
+      "msg": "Failed to load resource: the server responded with a status of 401 ()",
+      "url": "https://resumeconverter.net/resumes"
+    },
+    {
+      "ts": "2026-05-01T18:08:44.289Z",
+      "kind": "console:error",
+      "msg": "Failed to load resource: the server responded with a status of 401 ()",
+      "url": "https://resumeconverter.net/crm"
+    },
+    {
+      "ts": "2026-05-01T18:08:44.303Z",
+      "kind": "console:error",
+      "msg": "Failed to load resource: the server responded with a status of 401 ()",
+      "url": "https://resumeconverter.net/crm"
+    },
+    {
+      "ts": "2026-05-01T18:08:47.476Z",
+      "kind": "console:error",
+      "msg": "Failed to load resource: the server responded with a status of 401 ()",
+      "url": "https://resumeconverter.net/missions"
+    },
+    {
+      "ts": "2026-05-01T18:08:47.490Z",
+      "kind": "console:error",
+      "msg": "Failed to load resource: the server responded with a status of 401 ()",
+      "url": "https://resumeconverter.net/missions"
+    }
+  ],
+  "allLogCount": 9
+}

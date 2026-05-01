@@ -74,7 +74,16 @@
       "high": "Élevé",
       "clickToFilter": "Cliquez sur une bulle pour filtrer par type",
       "bubbleSizeInfo": "Taille des bulles proportionnelle à la valeur",
-      "refresh": "Actualiser"
+      "refresh": "Actualiser",
+      "selectedMetier": "Métier sélectionné",
+      "loadingDetails": "Chargement des détails...",
+      "loadInteractive": "Charger la carte interactive",
+      "lazyLoadingTitle": "Chargement différé",
+      "lazyLoadingBody": "La carte interactive n'est chargée qu'à la demande.",
+      "defaultMapTitle": "Carte par défaut",
+      "defaultMapBody": "Le radar s'ouvre directement sur la carte de France pour donner la vue d'ensemble immédiatement.",
+      "fullInteractionTitle": "Interaction complète",
+      "fullInteractionBody": "Le rendu interactif reste disponible quand vous en avez réellement besoin."
     },
     "trends": {
       "title": "Tendances du Marché",
@@ -145,6 +154,7 @@
       "noDataSearch": "Aucun résultat pour cette recherche.",
       "noDataEmpty": "Lancez une collecte pour récupérer les métiers IS/IT.",
       "searchPlaceholder": "Rechercher un métier...",
+      "searchPlaceholderExtended": "Rechercher un métier (code ROME ou libellé)...",
       "stats": {
         "totalMetiers": "Métiers IS/IT",
         "totalCompetences": "Compétences totales",
@@ -170,6 +180,11 @@
         "errors": "erreurs"
       },
       "refresh": "Actualiser"
+    },
+    "collection": {
+      "launched": "Collecte lancée !",
+      "redirecting": "Redirection vers les jobs...",
+      "starting": "Lancement de la collecte..."
     },
     "errors": {
       "loadFailed": "Échec du chargement des données"

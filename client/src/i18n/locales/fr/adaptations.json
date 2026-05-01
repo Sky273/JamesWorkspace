@@ -117,6 +117,29 @@
       "unassigned": "sans affaire",
       "unassignedTitle": "Missions sans affaire",
       "noSearchResults": "Aucune adaptation ne correspond à votre recherche."
+    },
+    "matchAnalysis": {
+      "noAnalysis": "Aucune analyse d'adéquation disponible pour cette adaptation.",
+      "matchScore": "Score de correspondance",
+      "subtitle": "Analyse de l'adéquation CV-Mission",
+      "strengths": "Points forts",
+      "noStrengths": "Aucun point fort identifié",
+      "gaps": "Lacunes identifiées",
+      "noGaps": "Aucune lacune identifiée",
+      "keywordMatches": "Mots-clés présents",
+      "noKeywordMatches": "Aucun mot-clé identifié",
+      "missingKeywords": "Mots-clés manquants",
+      "noMissingKeywords": "Aucun mot-clé manquant",
+      "recommendations": "Recommandations d'adaptation",
+      "generateAdaptedCv": "Générer CV adapté"
+    },
+    "comparison": {
+      "compare": "Comparaison",
+      "adaptedCv": "CV adapté",
+      "newBadge": "Nouveau",
+      "adaptedToMission": "CV adapté à la mission",
+      "aboutTitle": "À propos de cette adaptation",
+      "aboutBody": "Ce CV a été optimisé pour correspondre aux exigences de la mission. Les compétences pertinentes ont été mises en avant, le résumé exécutif a été reformulé, et les mots-clés importants ont été intégrés naturellement."
     }
   }
 }

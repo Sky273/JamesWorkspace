@@ -366,6 +366,8 @@ const EmailTemplatesPage = ({ embedded = false }: { embedded?: boolean } = {}): 
             totalTemplates={templates.length}
             introLabel={t('emailTemplates.headerIntro')}
             hintLabel={t('emailTemplates.headerHint')}
+            kickerLabel={t('emailTemplates.kicker')}
+            refreshLabel={t('common.refresh')}
             totalLabel={t('emailTemplates.stats.total')}
             defaultLabel={t('emailTemplates.stats.default')}
             systemLabel={t('emailTemplates.stats.system')}
@@ -465,6 +467,7 @@ const EmailTemplatesPage = ({ embedded = false }: { embedded?: boolean } = {}): 
           previewSubject={previewSubject}
           previewLoading={previewLoading}
           onClose={closeModal}
+          t={t}
         />
       )}
     </motion.div>

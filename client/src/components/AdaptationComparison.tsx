@@ -149,10 +149,10 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
     <div className="space-y-4">
       {!simplified && (
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Résultat de l'Adaptation</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('adaptation.result')}</h3>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Template:</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('resume.analysis.exportOptions.template')}:</label>
               <select value={selectedTemplate} onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedTemplate(e.target.value)} disabled={loadingTemplates} className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500">
                 {templates.map(template => (<option key={template.id} value={template.id}>{template.Name}</option>))}
               </select>
@@ -162,10 +162,10 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
             </div>
             <div className="flex items-center gap-2">
               <button onClick={() => setViewMode('side-by-side')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === 'side-by-side' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>
-                <ArrowsRightLeftIcon className="w-4 h-4 inline mr-1" />Comparaison
+                <ArrowsRightLeftIcon className="w-4 h-4 inline mr-1" />{t('adaptations.comparison.compare')}
               </button>
               <button onClick={() => setViewMode('adapted-only')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${viewMode === 'adapted-only' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>
-                <SparklesIcon className="w-4 h-4 inline mr-1" />CV Adapté
+                <SparklesIcon className="w-4 h-4 inline mr-1" />{t('adaptations.comparison.adaptedCv')}
               </button>
             </div>
           </div>
@@ -174,7 +174,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
 
       {matchScore && (
         <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Score de correspondance:</span>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('adaptations.matchAnalysis.matchScore')}:</span>
           <span className="text-lg font-bold text-green-600 dark:text-green-400">{matchScore}</span>
         </div>
       )}
@@ -183,13 +183,13 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="bg-gray-100 dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600">
-              <div className="flex items-center gap-2"><DocumentTextIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" /><h4 className="font-semibold text-gray-900 dark:text-gray-100">CV Original</h4></div>
+              <div className="flex items-center gap-2"><DocumentTextIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" /><h4 className="font-semibold text-gray-900 dark:text-gray-100">{t('resume.analysis.originalResume')}</h4></div>
             </div>
             <div className="p-6 max-h-[600px] overflow-y-auto"><div className="prose dark:prose-invert max-w-none text-sm" dangerouslySetInnerHTML={renderHTML(originalText)} /></div>
           </motion.div>
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="bg-white dark:bg-gray-800 rounded-lg border-2 border-blue-500 overflow-hidden">
             <div className="bg-blue-50 dark:bg-blue-900/20 px-4 py-3 border-b border-blue-200 dark:border-blue-800">
-              <div className="flex items-center gap-2"><SparklesIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" /><h4 className="font-semibold text-gray-900 dark:text-gray-100">CV Adapté</h4><span className="ml-auto px-2 py-1 bg-blue-500 text-white text-xs font-medium rounded">Nouveau</span></div>
+              <div className="flex items-center gap-2"><SparklesIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" /><h4 className="font-semibold text-gray-900 dark:text-gray-100">{t('adaptations.comparison.adaptedCv')}</h4><span className="ml-auto px-2 py-1 bg-blue-500 text-white text-xs font-medium rounded">{t('adaptations.comparison.newBadge')}</span></div>
             </div>
             <div className="p-6 max-h-[600px] overflow-y-auto"><div className="prose dark:prose-invert max-w-none text-sm" dangerouslySetInnerHTML={renderHTML(adaptedText)} /></div>
           </motion.div>
@@ -197,7 +197,7 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
       ) : (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-gray-800 rounded-lg border-2 border-blue-500 overflow-hidden">
           <div className="bg-blue-50 dark:bg-blue-900/20 px-4 py-3 border-b border-blue-200 dark:border-blue-800">
-            <div className="flex items-center gap-2"><SparklesIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" /><h4 className="font-semibold text-gray-900 dark:text-gray-100">CV Adapté à la Mission</h4></div>
+            <div className="flex items-center gap-2"><SparklesIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" /><h4 className="font-semibold text-gray-900 dark:text-gray-100">{t('adaptations.comparison.adaptedToMission')}</h4></div>
           </div>
           <div className="p-8 max-h-[800px] overflow-y-auto"><div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={renderHTML(adaptedText)} /></div>
         </motion.div>
@@ -220,8 +220,8 @@ const AdaptationComparison = ({ originalText, adaptedText, matchScore, candidate
           <div className="flex items-start gap-3">
             <SparklesIcon className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
             <div className="text-sm text-gray-700 dark:text-gray-300">
-              <p className="font-medium mb-1">À propos de cette adaptation</p>
-              <p>Ce CV a été optimisé pour correspondre aux exigences de la mission. Les compétences pertinentes ont été mises en avant, le résumé exécutif a été reformulé, et les mots-clés importants ont été intégrés naturellement.</p>
+              <p className="font-medium mb-1">{t('adaptations.comparison.aboutTitle')}</p>
+              <p>{t('adaptations.comparison.aboutBody')}</p>
             </div>
           </div>
         </div>

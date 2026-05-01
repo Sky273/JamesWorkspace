@@ -31,6 +31,8 @@ export const EmailTemplatesHeader = ({
   totalTemplates,
   introLabel,
   hintLabel,
+  kickerLabel,
+  refreshLabel,
   totalLabel,
   defaultLabel,
   systemLabel,
@@ -43,6 +45,8 @@ export const EmailTemplatesHeader = ({
   totalTemplates: number;
   introLabel: string;
   hintLabel: string;
+  kickerLabel: string;
+  refreshLabel: string;
   totalLabel: string;
   defaultLabel: string;
   systemLabel: string;
@@ -50,7 +54,7 @@ export const EmailTemplatesHeader = ({
   <div className="space-y-6">
     <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
       <div className="max-w-3xl space-y-3">
-        <p className="cv-kicker">Administration email</p>
+        <p className="cv-kicker">{kickerLabel}</p>
         <p className="text-sm leading-6 text-slate-600 dark:text-[var(--cv-muted)]">{introLabel}</p>
         <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300">
           <PaintBrushIcon className="h-4 w-4 text-primary-500" />
@@ -62,8 +66,8 @@ export const EmailTemplatesHeader = ({
           type="button"
           onClick={onRefresh}
           className="cv-ghost-button inline-flex min-h-11 min-w-11 items-center justify-center rounded-[1rem] p-3"
-          title="Actualiser"
-          aria-label="Actualiser"
+          title={refreshLabel}
+          aria-label={refreshLabel}
         >
           <ArrowPathIcon className="h-5 w-5" />
         </button>
@@ -297,7 +301,7 @@ export const EmailTemplatesDuplicateModal = ({
   return (
     <div className="fixed inset-0 z-[10000] isolate overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4 sm:p-6">
-        <div className="fixed inset-0 bg-slate-500/45 backdrop-blur-[1px] transition-opacity dark:bg-slate-700/55" onClick={onClose} />
+        <button type="button" className="fixed inset-0 bg-slate-500/45 backdrop-blur-[1px] transition-opacity dark:bg-slate-700/55" onClick={onClose} aria-label={t('common.close')} />
         <div className="relative w-full max-w-lg rounded-[2rem] border border-slate-200/80 bg-white p-6 shadow-[0_30px_80px_rgba(15,23,42,0.18)] dark:border-slate-700/80 dark:bg-slate-900">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -368,7 +372,7 @@ export const EmailTemplatesEditModal = ({
 }: EmailTemplatesEditModalProps) => (
   <div className="fixed inset-0 z-[10000] isolate overflow-y-auto">
     <div className="flex min-h-screen items-start justify-center p-4 pt-8 sm:p-6 sm:pt-10">
-      <div className="fixed inset-0 bg-slate-500/45 backdrop-blur-[1px] transition-opacity dark:bg-slate-700/55" onClick={onClose} />
+      <button type="button" className="fixed inset-0 bg-slate-500/45 backdrop-blur-[1px] transition-opacity dark:bg-slate-700/55" onClick={onClose} aria-label={t('common.close')} />
       <div className="relative flex max-h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.18)] dark:border-slate-700/80 dark:bg-slate-900">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200/80 px-5 py-4 dark:border-slate-700/80 sm:px-6">
           <div>
@@ -494,10 +498,11 @@ export const EmailTemplatesPreviewModal = ({
   previewSubject,
   previewLoading,
   onClose,
+  t,
 }: EmailTemplatesPreviewModalProps) => (
   <div className="fixed inset-0 z-[10000] isolate overflow-y-auto">
     <div className="flex min-h-screen items-center justify-center p-4 sm:p-6">
-      <div className="fixed inset-0 bg-slate-500/45 backdrop-blur-[1px] transition-opacity dark:bg-slate-700/55" onClick={onClose} />
+      <button type="button" className="fixed inset-0 bg-slate-500/45 backdrop-blur-[1px] transition-opacity dark:bg-slate-700/55" onClick={onClose} aria-label={t('common.close')} />
       <div className="relative flex max-h-[88vh] w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-[0_30px_80px_rgba(15,23,42,0.18)] dark:border-slate-700/80 dark:bg-slate-900">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200/80 px-5 py-4 dark:border-slate-700/80 sm:px-6">
           <div>

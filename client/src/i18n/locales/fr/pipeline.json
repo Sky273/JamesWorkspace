@@ -97,6 +97,15 @@
     "editNotes": "Modifier les notes",
     "viewResume": "Voir le CV",
     "notesUpdated": "Notes mises à jour",
-    "manageInterviews": "Gérer les entretiens"
+    "manageInterviews": "Gérer les entretiens",
+    "missionKicker": "Pipeline mission",
+    "selectionKicker": "Sélection",
+    "notesHelp": "Ajoutez quelques repères utiles pour la suite du pipeline : contexte, points d'attention, prochaine action.",
+    "notesTitle": "Notes pipeline",
+    "noInterviewsHelp": "Planifiez un entretien pour suivre les prochaines étapes de ce candidat.",
+    "scheduleInterviewHelp": "Cadrez le rendez-vous et centralisez les informations utiles dans le pipeline.",
+    "status": {
+      "cancelled": "Annulé"
+    }
   }
 }

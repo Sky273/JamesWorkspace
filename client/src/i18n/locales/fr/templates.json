@@ -23,6 +23,9 @@
       "noDescription": "Aucune description",
       "global": "Global (tous les cabinets)"
     },
+    "preview": {
+      "loading": "Chargement de l'aperçu..."
+    },
     "status": {
       "error": "Échec du chargement des modèles",
       "empty": "Aucun modèle disponible",

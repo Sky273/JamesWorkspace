@@ -18,7 +18,6 @@ root.render(
   <div className="min-h-screen flex items-center justify-center bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
     <div className="flex flex-col items-center gap-4">
       <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-slate-200 border-t-primary-600 dark:border-slate-800" />
-      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Chargement...</p>
     </div>
   </div>
 );

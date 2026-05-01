@@ -1,0 +1,82 @@
+{
+  "observations": [
+    {
+      "page": "home-auth",
+      "url": "https://resumeconverter.net/",
+      "text": "Aller au contenu principal RC ResumeConverter Aptea Accueil CVthèque Missions Matching Profils Adaptations CRM Radar du Marché Administration Métriques Paramètres Jobs Sauvegarde Logs de Sécurité Journal RGPD Guide Utilisateur LM Luc MOREAU Super administrateur Accueil Changer de langue LM Luc MOREAU Aptea · Super administrateur Se déconnecter Accueil Tableau de bord Comment ça marche Fonctionnalités clés Votre CVthèque. Optimisée. Activée. Standardisez, améliorez et déclinez vos CVs par client ou mission. Des profils cohérents, prêts à envoyer, en quelques minutes. Importer un CV Compatible ATS Analyse rapide 100% Sécurisé Compatible RGPD Analyse terminée Suggestion IA Augmentez l'impact de cette section en utilisant des verbes d'action plus forts. Tableau de bord Aptea CV dans la CVthèque 5 5 ce mois CV analysés 5 100% Score moyen 80% +10 pts après amélioration Missions actives 2 2 au total Activité récente Aujourd'hui 1 CV Cette semaine 5 CV Ce mois 5 CV Améliorations CV améliorés 5"
+    },
+    {
+      "page": "resumes-sehli",
+      "text": "Aller au contenu principal RC ResumeConverter Aptea Accueil CVthèque Missions Matching Profils Adaptations CRM Radar du Marché Administration Métriques Paramètres Jobs Sauvegarde Logs de Sécurité Journal RGPD Guide Utilisateur LM Luc MOREAU Super administrateur CVthèque Changer de langue LM Luc MOREAU Aptea · Super administrateur Se déconnecter CVthèque Gérez et analysez les profils de vos consultants AFFICHAGE Par affaire Liste TOTAL CVS 5 Gérez et analysez les profils de vos consultants AMÉLIORÉS 5 Amélioré EN COURS 0 En cours SCORE MOYEN 80% Score Télécharger un nouveau CV Réinitialiser Filtrer Import par lot RÉSULTATS 1 résultat(s) Filtres appliqués Affinez ou réinitialisez vos filtres pour élargir la sélection. SEHLI Dorra AMÉLIORÉ Ingénieur Fullstack Java/JEE Angular 1 mai 2026 Aptea En attente Développement fullstack Développement back-end IT & Digital Télécommunications SCORE 81% Aperçu du CV Telecharger Gérer les affaires Supprimer Affichage 1-1 sur 1 résultats PAGE 1 / 1 Politique de confidentialité | Conditions d'utilisation (c) 2026 Aptea. Tous droits réservés."
+    },
+    {
+      "id": "FRONT-04",
+      "status": "corrected",
+      "detail": "La carte CV affiche un ?tat/score am?lior? ou coh?rent avec la version am?lior?e."
+    },
+    {
+      "id": "FRONT-03",
+      "status": "corrected",
+      "detail": "Aucun JSON brut d?tect? dans l?aper?u rapide du CV test?."
+    },
+    {
+      "page": "crm-alias",
+      "url": "https://resumeconverter.net/clients",
+      "text": "Aller au contenu principal RC ResumeConverter Aptea Accueil CVthèque Missions Matching Profils Adaptations CRM Radar du Marché Administration Métriques Paramètres Jobs Sauvegarde Logs de Sécurité Journal RGPD Guide Utilisateur LM Luc MOREAU Super administrateur CRM Changer de langue LM Luc MOREAU Aptea · Super administrateur Se déconnecter CRM Gérez vos clients, prospects et affaires SECTIONS Clients & Prospects Affaires Entretiens CLIENTS 0 PROSPECTS 2 CONTACTS 1 ENVOIS 0 TYPE Tous Clients Prospects Ajouter Affichage 1-2 sur 2 résultats PAGE 1 / 1 QA-FRONT-20260501172935 Client modifi? IT & Digital Prospect https://example.test 143 rue de la QA, Paris 0 contacts 0 envois Aptea Voir Modifier aa Prospect 1 contacts 0 envois Aptea Voir Modifier Affichage 1-2 sur 2 résultats PAGE 1 / 1 Politique de confidentialité | Conditions d'utilisation (c) 2026 Aptea. Tous droits réservés."
+    },
+    {
+      "id": "QA-02",
+      "status": "corrected",
+      "detail": "/crm ouvre correctement l?espace CRM."
+    },
+    {
+      "page": "crm-marker-search",
+      "text": "Aller au contenu principal RC ResumeConverter Aptea Accueil CVthèque Missions Matching Profils Adaptations CRM Radar du Marché Administration Métriques Paramètres Jobs Sauvegarde Logs de Sécurité Journal RGPD Guide Utilisateur LM Luc MOREAU Super administrateur CRM Changer de langue LM Luc MOREAU Aptea · Super administrateur Se déconnecter CRM Gérez vos clients, prospects et affaires SECTIONS Clients & Prospects Affaires Entretiens CLIENTS 0 PROSPECTS 1 CONTACTS 0 ENVOIS 0 TYPE Tous Clients Prospects Ajouter Affichage 1-1 sur 1 résultats PAGE 1 / 1 QA-FRONT-20260501172935 Client modifi? IT & Digital Prospect https://example.test 143 rue de la QA, Paris 0 contacts 0 envois Aptea Voir Modifier Affichage 1-1 sur 1 résultats PAGE 1 / 1 Politique de confidentialité | Conditions d'utilisation (c) 2026 Aptea. Tous droits réservés."
+    },
+    {
+      "id": "FRONT-01",
+      "status": "legacy-data-not-auto-fixed",
+      "detail": "Les anciennes donn?es corrompues restent visibles, ce qui est attendu sans nettoyage de donn?es."
+    },
+    {
+      "page": "missions-list",
+      "text": "Aller au contenu principal RC ResumeConverter Aptea Accueil CVthèque Missions Matching Profils Adaptations CRM Radar du Marché Administration Métriques Paramètres Jobs Sauvegarde Logs de Sécurité Journal RGPD Guide Utilisateur LM Luc MOREAU Super administrateur Missions Changer de langue LM Luc MOREAU Aptea · Super administrateur Se déconnecter Offres de Mission Gérez vos offres de mission pour l'adaptation des CV AFFICHAGE Par affaire Liste TOTAL MISSIONS 2 Gérez vos offres de mission pour l'adaptation des CV MISSIONS ACTIVES 2 2 missions CABINETS 1 CRM AFFAIRE 2 0 Brouillon - 0 Clôturée 2 mission(s) au total / 0 affaires Rafraîchir Ajouter une mission testLuc ACTIVE Mis à jour 01 mai 2026 test Luc aa aa 0 adaptation(s) Voir Modifier Supprimer Product Manager ACTIVE Mis à jour 30 avr. 2026 Product Manager Métiers Fonctions Pilotage de projet ou de programme Product Manager Spécialités technologiques Gestion de projet Planification et gestion de projet Type de facturation Assistance Technique (Facturation avec un taux journalier) Compétences Technologies et Outils JIRA (10 ans) Gantt (10 ans) Méthodes / Normes KPI (10 ans) Description et livrables de la prestation Vous agirez en tant que Product Manager, garant de la structuration, de la gouvernance et du delivery. Les attendus sur ce projet sont les suivants : a. Discovery & Ateliers Métiers : Organiser et animer les ateliers "
+    },
+    {
+      "page": "mission-modal-after-empty-submit",
+      "text": "Aller au contenu principal RC ResumeConverter Aptea Accueil CVthèque Missions Matching Profils Adaptations CRM Radar du Marché Administration Métriques Paramètres Jobs Sauvegarde Logs de Sécurité Journal RGPD Guide Utilisateur LM Luc MOREAU Super administrateur Missions Changer de langue LM Luc MOREAU Aptea · Super administrateur Se déconnecter Offres de Mission Gérez vos offres de mission pour l'adaptation des CV AFFICHAGE Par affaire Liste TOTAL MISSIONS 2 Gérez vos offres de mission pour l'adaptation des CV MISSIONS ACTIVES 2 2 missions CABINETS 1 CRM AFFAIRE 2 0 Brouillon - 0 Clôturée 2 mission(s) au total / 0 affaires Rafraîchir Ajouter une mission testLuc ACTIVE Mis à jour 01 mai 2026 test Luc aa aa 0 adaptation(s) Voir Modifier Supprimer Product Manager ACTIVE Mis à jour 30 avr. 2026 Product Manager Métiers Fonctions Pilotage de projet ou de programme Product Manager Spécialités technologiques Gestion de projet Planification et gestion de projet Type de facturation Assistance Technique (Facturation avec un taux journalier) Compétences Technologies et Outils JIRA (10 ans) Gantt (10 ans) Méthodes / Normes KPI (10 ans) Description et livrables de la prestation Vous agirez en tant que Product Manager, garant de la structuration, de la gouvernance et du delivery. Les attendus sur ce projet sont les suivants : a. Discovery & Ateliers Métiers : Organiser et animer les ateliers pour clarifier les nouveaux besoins 2026. b. Structuration du Delivery : Définition de l’organisation du projet, de sa gouvernance (comitologie, ...), du suivi opérationnel (KPI de suivi d’avancement, ...), mise en place du JIRA de suivi du projet. c. Pilotage du Delivery : Poursuivre la démarche post-cadrage initiée fin 2025 et suivre l’avancement des chantiers. d. Suivi & Adoption : Coordonner les équipes techniques et métiers pour transformer les analyses en fonctionnalités concrètes. Pour mener à bien ce projet, nous recherchons un profil senior capable de naviguer entre la vision stratégi"
+    },
+    {
+      "id": "FRONT-02",
+      "status": "partly-corrected",
+      "detail": "Soumission vide bloqu?e c?t? formulaire; pas de silent close ni donn?e cr??e."
+    },
+    {
+      "page": "jobs",
+      "text": ""
+    }
+  ],
+  "findings": [
+    {
+      "id": "QA-04",
+      "status": "still-open",
+      "severity": "Low",
+      "detail": "Version v1.9.3 non visible dans le header authentifi?."
+    },
+    {
+      "id": "QA-02",
+      "status": "still-open",
+      "severity": "Medium",
+      "detail": "No routes matched encore vu en console."
+    }
+  ],
+  "logs": [
+    {
+      "ts": "2026-05-01T18:11:04.927Z",
+      "kind": "console:warning",
+      "msg": "No routes matched location \"/jobs\" ",
+      "url": "https://resumeconverter.net/jobs"
+    }
+  ],
+  "allLogCount": 1
+}

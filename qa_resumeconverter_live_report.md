@@ -4,6 +4,69 @@ Date: 2026-05-01
 Environnement: https://resumeconverter.net
 Mode de test: parcours navigateur Playwright authentifie, puis parcours CRUD controle sur donnees de test.
 
+## Addendum front visible PC - 2026-05-01 20:12-20:20
+
+Mode de test: navigateur Chrome visible sur le PC, interactions front uniquement, sans appels directs aux API metier.  
+Donnees: aucune nouvelle donnee metier creee pendant ce run; tests de formulaire mission limites a une soumission vide bloquee cote front.
+
+### Correctifs confirmes
+
+- Connexion authentifiee OK avec affichage du tableau de bord.
+- `FRONT-04` corrige: dans la CVtheque, la recherche `SEHLI` affiche `SEHLI Dorra` avec badge `AMELIORE` et score `81%`; les statistiques indiquent aussi `AMELIORES 5`.
+- `FRONT-03` corrige: l'aperçu rapide du CV s'ouvre via le bouton `Apercu rapide` et aucun JSON brut (`executiveSummary`, `atsOptimization`, structure `{...}`) n'est detecte.
+- `QA-02` corrige: l'acces direct `/crm` affiche bien l'espace CRM.
+- `QA-04` corrige: le bouton header `Afficher la version et le changelog` ouvre la modale `A propos de ResumeConverter` avec `Version v1.9.3` et le journal des modifications.
+- Jobs et Journal RGPD chargent correctement via les liens de navigation laterale (`/batch-jobs` et `/dashboard/gdpr-audit`).
+- Les Logs de securite chargent correctement sur `/dashboard/security-logs`.
+- Aucun message CSP n'a ete observe dans les logs console du passage visible authentifie.
+
+### Anomalies restantes / points a traiter
+
+#### QA-RERUN-01 - Alias historiques manquants pour certaines pages operationnelles
+
+Severite: Low / Medium
+
+Constat:
+Les liens lateraux actuels fonctionnent, mais des acces directs historiques restent non reconnus:
+
+- `/jobs` emet `No routes matched location "/jobs"`; le lien actuel pointe vers `/batch-jobs`.
+- `/dashboard/gdpr-journal` emet `No routes matched location "/dashboard/gdpr-journal"`; le lien actuel pointe vers `/dashboard/gdpr-audit`.
+
+Impact:
+Risque de liens casses pour les favoris, anciennes documentations ou liens partages.
+
+Recommandation:
+Ajouter des redirections/alias SPA:
+
+- `/jobs` -> `/batch-jobs`
+- `/dashboard/gdpr-journal` -> `/dashboard/gdpr-audit`
+
+#### FRONT-02A - Validation mission vide peu explicite
+
+Severite: Low
+
+Constat:
+La soumission vide de la modale `Ajouter une mission` reste bloquee dans la modale et ne cree pas de donnee, ce qui est fonctionnel. En revanche, le blocage repose surtout sur la validation native du champ requis et aucun message textuel additionnel n'est visible dans la modale.
+
+Impact:
+En cas d'echec ou de champ requis non rempli, l'utilisateur peut ne pas comprendre immediatement quoi corriger selon le navigateur.
+
+Recommandation:
+Afficher une aide inline ou un message de validation visible pour les champs obligatoires (`Titre`, `Contenu`) en plus de la validation native.
+
+#### FRONT-01 - Anciennes donnees QA corrompues toujours visibles
+
+Severite: Low apres correction applicative
+
+Constat:
+Les anciennes donnees QA creees avant correction peuvent encore afficher `?` a la place de certains accents. Ce run n'a pas cree de nouvelles donnees accentuees, donc il ne reproduit pas une corruption sur un nouveau flux.
+
+Impact:
+Ces valeurs deja persistées resteront incorrectes tant qu'elles ne sont pas ressaisies ou nettoyees.
+
+Recommandation:
+Nettoyage cible des donnees QA restantes apres confirmation utilisateur, ou ressaisie manuelle si ces donnees doivent etre conservees.
+
 ## Addendum front-only - 2026-05-01 19:29-19:45
 
 Mode de test: interactions exclusivement via le front navigateur, sans appel direct aux API.  

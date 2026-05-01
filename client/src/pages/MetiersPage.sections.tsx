@@ -9,6 +9,7 @@ import {
   MagnifyingGlassIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
+import { useTranslation } from 'react-i18next';
 import type { Competence, Metier, Savoir } from '../services/romeService';
 import { formatDateTime } from '../utils/dateFormatter';
 import type {
@@ -25,6 +26,8 @@ export const MetiersCollectionOverlay = ({
   collecting: boolean;
   collectingSuccess: boolean;
 }) => {
+  const { t } = useTranslation();
+
   if (!collecting) return null;
 
   return (
@@ -34,15 +37,15 @@ export const MetiersCollectionOverlay = ({
           <>
             <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto mb-4 animate-bounce" />
             <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-              Collecte lancée !
+              {t('marketRadar.collection.launched')}
             </h3>
-            <p className="text-gray-600 dark:text-gray-400">Redirection vers les jobs...</p>
+            <p className="text-gray-600 dark:text-gray-400">{t('marketRadar.collection.redirecting')}</p>
           </>
         ) : (
           <>
             <ArrowPathIcon className="h-16 w-16 text-indigo-600 dark:text-indigo-400 animate-spin mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-              Lancement de la collecte...
+              {t('marketRadar.collection.starting')}
             </h3>
           </>
         )}
@@ -55,17 +58,20 @@ export const MetiersPageHeader = ({
   isAdmin,
   collecting,
   onCollect,
-}: MetiersPageHeaderProps) => (
+}: MetiersPageHeaderProps) => {
+  const { t } = useTranslation();
+
+  return (
   <div className="mb-[22px]">
     <div className="flex items-center justify-between">
       <div>
         <>
           <h1 className="cv-display text-[25px] font-bold leading-tight text-[var(--cv-text)]">
-            Métiers et Compétences
+            {t('marketRadar.metiers.title')}
           </h1>
         </>
         <p className="mt-0.5 max-w-2xl text-[13px] leading-5 text-[var(--cv-muted)]">
-          Référentiel ROME 4.0 - Informatique et Télécommunications
+          {t('marketRadar.metiers.subtitle')}
         </p>
       </div>
 
@@ -76,12 +82,13 @@ export const MetiersPageHeader = ({
           className="app-primary-action inline-flex items-center gap-2 rounded-lg px-4 py-2 disabled:opacity-50"
         >
           <ArrowPathIcon className={`h-5 w-5 ${collecting ? 'animate-spin' : ''}`} />
-          Collecter les métiers IT
+          {t('marketRadar.metiers.collection.button')}
         </button>
       )}
     </div>
   </div>
-);
+  );
+};
 
 export const MetiersErrorAlert = ({
   error,
@@ -90,6 +97,8 @@ export const MetiersErrorAlert = ({
   error: string | null;
   onClose: () => void;
 }) => {
+  const { t } = useTranslation();
+
   if (!error) return null;
 
   return (
@@ -97,7 +106,7 @@ export const MetiersErrorAlert = ({
       <div className="flex items-start gap-3">
         <ExclamationTriangleIcon className="h-6 w-6 text-red-600 dark:text-red-400 flex-shrink-0" />
         <div>
-          <h3 className="font-semibold text-red-800 dark:text-red-200">Erreur</h3>
+          <h3 className="font-semibold text-red-800 dark:text-red-200">{t('common.error')}</h3>
           <p className="text-sm text-red-700 dark:text-red-300 mt-1">{error}</p>
         </div>
         <button
@@ -116,7 +125,10 @@ export const MetiersSearchBar = ({
   onSearchQueryChange,
   onSearch,
   onClear,
-}: MetiersSearchProps) => (
+}: MetiersSearchProps) => {
+  const { t } = useTranslation();
+
+  return (
   <div className="mb-6">
     <form onSubmit={onSearch} className="flex gap-3">
       <div className="relative flex-1">
@@ -125,7 +137,7 @@ export const MetiersSearchBar = ({
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchQueryChange(e.target.value)}
-          placeholder="Rechercher un metier (code ROME ou libelle)..."
+          placeholder={t('marketRadar.metiers.searchPlaceholderExtended')}
           className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-3 pl-10 pr-10 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
         />
         {searchQuery && (
@@ -142,11 +154,12 @@ export const MetiersSearchBar = ({
         type="submit"
         className="app-primary-action rounded-lg px-6 py-3"
       >
-        Rechercher
+        {t('common.search')}
       </button>
     </form>
   </div>
-);
+  );
+};
 
 export const MetiersStatsCards = ({ stats }: { stats: MetiersStats }) => (
   <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -400,9 +413,13 @@ export const MetiersEmptyState = ({
   </div>
 );
 
-export const MetiersLoadingState = () => (
+export const MetiersLoadingState = () => {
+  const { t } = useTranslation();
+
+  return (
   <div className="flex items-center justify-center py-12">
     <ArrowPathIcon className="h-8 w-8 text-indigo-600 dark:text-indigo-400 animate-spin" />
-    <span className="ml-3 text-gray-600 dark:text-gray-400">Chargement des métiers...</span>
+    <span className="ml-3 text-gray-600 dark:text-gray-400">{t('marketRadar.metiers.loading')}</span>
   </div>
-);
+  );
+};

@@ -6,6 +6,7 @@
 
 import type { Editor } from '@tiptap/react';
 import { useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 type TableAttributeCommands = {
   setTableAttribute: (attr: string, value: unknown) => boolean;
 };
@@ -98,6 +99,7 @@ const TB = ({ onClick, isActive, title, children, className = '' }: {
 // ============================================
 
 export const TableToolbar = ({ editor }: TableToolbarProps) => {
+  const { t } = useTranslation();
   const [isInTable, setIsInTable] = useState(false);
   const [panel, setPanel] = useState<TablePanel>('quick');
 
@@ -153,7 +155,7 @@ export const TableToolbar = ({ editor }: TableToolbarProps) => {
 
         {/* Delete table always visible on the right */}
         <div style={{ marginLeft: 'auto' }}>
-          <TB onClick={() => editor.chain().focus().deleteTable().run()} title="Supprimer le tableau" className="tiptap-image-toolbar-danger">
+          <TB onClick={() => editor.chain().focus().deleteTable().run()} title={t('tiptap.table.deleteTable')} className="tiptap-image-toolbar-danger">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           </TB>
         </div>
@@ -166,13 +168,13 @@ export const TableToolbar = ({ editor }: TableToolbarProps) => {
         <div className="tiptap-table-toolbar-row">
           {/* Rows */}
           <span className="tiptap-image-toolbar-label">Lignes</span>
-          <TB onClick={() => editor.chain().focus().addRowBefore().run()} title="Ajouter ligne au-dessus">
+          <TB onClick={() => editor.chain().focus().addRowBefore().run()} title={t('tiptap.table.addRowBefore')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="3" x2="12" y2="12"/><line x1="12" y1="6" x2="12" y2="9"/><line x1="10.5" y1="7.5" x2="13.5" y2="7.5"/></svg>
           </TB>
-          <TB onClick={() => editor.chain().focus().addRowAfter().run()} title="Ajouter ligne en-dessous">
+          <TB onClick={() => editor.chain().focus().addRowAfter().run()} title={t('tiptap.table.addRowAfter')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="12" y1="12" x2="12" y2="21"/><line x1="12" y1="15" x2="12" y2="18"/><line x1="10.5" y1="16.5" x2="13.5" y2="16.5"/></svg>
           </TB>
-          <TB onClick={() => editor.chain().focus().deleteRow().run()} title="Supprimer la ligne" className="tiptap-image-toolbar-danger">
+          <TB onClick={() => editor.chain().focus().deleteRow().run()} title={t('tiptap.table.deleteRow')} className="tiptap-image-toolbar-danger">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="9" y1="7.5" x2="15" y2="7.5"/></svg>
           </TB>
 
@@ -180,13 +182,13 @@ export const TableToolbar = ({ editor }: TableToolbarProps) => {
 
           {/* Columns */}
           <span className="tiptap-image-toolbar-label">Colonnes</span>
-          <TB onClick={() => editor.chain().focus().addColumnBefore().run()} title="Ajouter colonne à gauche">
+          <TB onClick={() => editor.chain().focus().addColumnBefore().run()} title={t('tiptap.table.addColumnBefore')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="3" y1="12" x2="12" y2="12"/><line x1="6" y1="12" x2="9" y2="12"/><line x1="7.5" y1="10.5" x2="7.5" y2="13.5"/></svg>
           </TB>
-          <TB onClick={() => editor.chain().focus().addColumnAfter().run()} title="Ajouter colonne à droite">
+          <TB onClick={() => editor.chain().focus().addColumnAfter().run()} title={t('tiptap.table.addColumnAfter')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="12" y1="12" x2="21" y2="12"/><line x1="15" y1="12" x2="18" y2="12"/><line x1="16.5" y1="10.5" x2="16.5" y2="13.5"/></svg>
           </TB>
-          <TB onClick={() => editor.chain().focus().deleteColumn().run()} title="Supprimer la colonne" className="tiptap-image-toolbar-danger">
+          <TB onClick={() => editor.chain().focus().deleteColumn().run()} title={t('tiptap.table.deleteColumn')} className="tiptap-image-toolbar-danger">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="16.5" y1="9" x2="16.5" y2="15"/></svg>
           </TB>
 
@@ -231,7 +233,7 @@ export const TableToolbar = ({ editor }: TableToolbarProps) => {
               <button
                 type="button"
                 className="tiptap-table-toolbar-swatch tiptap-table-toolbar-swatch-reset"
-                title="Supprimer"
+                title={t('common.delete')}
                 onClick={() => setCellAttr('backgroundColor', null)}
               />
             </div>

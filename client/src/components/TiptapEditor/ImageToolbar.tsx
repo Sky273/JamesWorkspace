@@ -6,6 +6,7 @@
 import type { Editor } from '@tiptap/react';
 import { useState, useCallback, useEffect } from 'react';
 import { isNodeSelection } from '@tiptap/core';
+import { useTranslation } from 'react-i18next';
 
 interface ImageToolbarProps {
   editor: Editor;
@@ -63,6 +64,7 @@ const TB = ({ onClick, isActive, title, children, className = '' }: {
 );
 
 export const ImageToolbar = ({ editor }: ImageToolbarProps) => {
+  const { t } = useTranslation();
   const [isImageSelected, setIsImageSelected] = useState(false);
   const [panel, setPanel] = useState<ImagePanel>('quick');
 
@@ -198,7 +200,7 @@ export const ImageToolbar = ({ editor }: ImageToolbarProps) => {
 
           <div className="tiptap-toolbar-divider" />
 
-          <TB onClick={() => editor.chain().focus().deleteSelection().run()} title="Supprimer l'image" className="tiptap-image-toolbar-danger">
+          <TB onClick={() => editor.chain().focus().deleteSelection().run()} title={t('tiptap.image.delete')} className="tiptap-image-toolbar-danger">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           </TB>
         </div>
@@ -208,32 +210,32 @@ export const ImageToolbar = ({ editor }: ImageToolbarProps) => {
       {panel === 'dimensions' && (
         <div className="tiptap-image-toolbar-panel">
           <div className="tiptap-image-toolbar-panel-header">
-            <button type="button" className="tiptap-toolbar-btn" onClick={() => setPanel('quick')} title="Retour">←</button>
-            <span>Dimensions & texte</span>
+            <button type="button" className="tiptap-toolbar-btn" onClick={() => setPanel('quick')} title={t('common.back')}>←</button>
+            <span>{t('tiptap.image.dimensionsText')}</span>
           </div>
           <div className="tiptap-image-toolbar-fields">
             <label>
-              <span>Largeur</span>
+              <span>{t('tiptap.image.width')}</span>
               <input type="text" value={width} onChange={(e) => setWidth(e.target.value)} placeholder="ex: 300px, 50%" />
             </label>
             <label>
-              <span>Hauteur</span>
+              <span>{t('tiptap.image.height')}</span>
               <input type="text" value={height} onChange={(e) => setHeight(e.target.value)} placeholder="auto" />
             </label>
             <label>
               <span>Alt</span>
-              <input type="text" value={alt} onChange={(e) => setAlt(e.target.value)} placeholder="Description de l'image" />
+              <input type="text" value={alt} onChange={(e) => setAlt(e.target.value)} placeholder={t('tiptap.image.altPlaceholder')} />
             </label>
             <label>
-              <span>Titre</span>
-              <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Titre au survol" />
+              <span>{t('tiptap.image.title')}</span>
+              <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('tiptap.image.titlePlaceholder')} />
             </label>
             <div className="tiptap-image-toolbar-actions">
               <button type="button" className="tiptap-image-toolbar-apply" onClick={() => {
                 updateMultipleAttrs({ width, height, alt, title });
                 setPanel('quick');
-              }}>Appliquer</button>
-              <button type="button" className="tiptap-image-toolbar-cancel" onClick={() => setPanel('quick')}>Annuler</button>
+              }}>{t('common.apply')}</button>
+              <button type="button" className="tiptap-image-toolbar-cancel" onClick={() => setPanel('quick')}>{t('common.cancel')}</button>
             </div>
           </div>
         </div>
@@ -243,8 +245,8 @@ export const ImageToolbar = ({ editor }: ImageToolbarProps) => {
       {panel === 'style' && (
         <div className="tiptap-image-toolbar-panel">
           <div className="tiptap-image-toolbar-panel-header">
-            <button type="button" className="tiptap-toolbar-btn" onClick={() => setPanel('quick')} title="Retour">←</button>
-            <span>Bordure & ombre</span>
+            <button type="button" className="tiptap-toolbar-btn" onClick={() => setPanel('quick')} title={t('common.back')}>←</button>
+            <span>{t('tiptap.image.borderShadow')}</span>
           </div>
           <div className="tiptap-image-toolbar-fields">
             <label>
@@ -291,8 +293,8 @@ export const ImageToolbar = ({ editor }: ImageToolbarProps) => {
               <button type="button" className="tiptap-image-toolbar-apply" onClick={() => {
                 updateMultipleAttrs({ borderWidth, borderStyle, borderColor, borderRadius });
                 setPanel('quick');
-              }}>Appliquer</button>
-              <button type="button" className="tiptap-image-toolbar-cancel" onClick={() => setPanel('quick')}>Annuler</button>
+              }}>{t('common.apply')}</button>
+              <button type="button" className="tiptap-image-toolbar-cancel" onClick={() => setPanel('quick')}>{t('common.cancel')}</button>
             </div>
           </div>
         </div>
@@ -302,8 +304,8 @@ export const ImageToolbar = ({ editor }: ImageToolbarProps) => {
       {panel === 'advanced' && (
         <div className="tiptap-image-toolbar-panel">
           <div className="tiptap-image-toolbar-panel-header">
-            <button type="button" className="tiptap-toolbar-btn" onClick={() => setPanel('quick')} title="Retour">←</button>
-            <span>Marges & espacement</span>
+            <button type="button" className="tiptap-toolbar-btn" onClick={() => setPanel('quick')} title={t('common.back')}>←</button>
+            <span>{t('tiptap.image.spacing')}</span>
           </div>
           <div className="tiptap-image-toolbar-fields">
             <label>
@@ -313,7 +315,7 @@ export const ImageToolbar = ({ editor }: ImageToolbarProps) => {
             <div className="tiptap-image-toolbar-btn-row">
               {[['0', '0'], ['8px', '8px'], ['16px', '16px'], ['0 auto', 'Centré']].map(([v, l]) => (
                 <button key={v} type="button" className="tiptap-props-btn" onClick={() => { setMargin(v); updateAttr('margin', v); }}>
-                  {l}
+                  {l === 'Centré' ? t('tiptap.image.centered') : l}
                 </button>
               ))}
             </div>
@@ -332,8 +334,8 @@ export const ImageToolbar = ({ editor }: ImageToolbarProps) => {
               <button type="button" className="tiptap-image-toolbar-apply" onClick={() => {
                 updateMultipleAttrs({ margin, padding });
                 setPanel('quick');
-              }}>Appliquer</button>
-              <button type="button" className="tiptap-image-toolbar-cancel" onClick={() => setPanel('quick')}>Annuler</button>
+              }}>{t('common.apply')}</button>
+              <button type="button" className="tiptap-image-toolbar-cancel" onClick={() => setPanel('quick')}>{t('common.cancel')}</button>
             </div>
           </div>
         </div>

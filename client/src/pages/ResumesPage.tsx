@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 import {
   ResumesDeleteModal,
@@ -14,6 +15,7 @@ const ResumesByDealView = lazy(() =>
 );
 
 const ResumesPage = (): JSX.Element => {
+  const { t } = useTranslation();
   const {
     allTags,
     authUser,
@@ -60,7 +62,7 @@ const ResumesPage = (): JSX.Element => {
       <ResumesViewModeToggle value={viewMode} onChange={setViewMode} />
 
       {viewMode === 'byDeal' ? (
-        <Suspense fallback={<div className="cv-panel mt-6 rounded-[1rem] p-8 text-sm text-slate-500 dark:text-[#a3aac4]">Chargement de la vue par affaire...</div>}>
+        <Suspense fallback={<div className="cv-panel mt-6 rounded-[1rem] p-8 text-sm text-slate-500 dark:text-[#a3aac4]">{t('resumes.loadingByDealView')}</div>}>
           <ResumesByDealView allTags={allTags} refreshToken={groupedRefreshToken} stats={stats} />
         </Suspense>
       ) : (

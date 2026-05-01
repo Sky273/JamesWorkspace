@@ -357,6 +357,7 @@ const ChatBot = (): JSX.Element | null => {
         subtitle={t('chatbot.subtitle')}
         placeholder={t('chatbot.placeholder')}
         clearLabel={t('chatbot.clear')}
+        sendLabel={t('chatbot.sendMessage')}
         closeLabel={t('chatbot.closeChat')}
         resetSizeTitle={t('chatbot.resetSize') || 'Reset size'}
         onClose={() => setIsOpen(false)}

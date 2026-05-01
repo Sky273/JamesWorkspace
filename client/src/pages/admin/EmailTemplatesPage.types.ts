@@ -31,6 +31,7 @@ export interface EmailTemplatesPreviewModalProps {
   previewSubject: string;
   previewLoading: boolean;
   onClose: () => void;
+  t: (key: string, options?: Record<string, unknown>) => string;
 }
 
 export interface DuplicateFirmOption {

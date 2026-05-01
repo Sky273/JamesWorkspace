@@ -23,6 +23,7 @@ interface ChatbotWindowProps {
   subtitle: string;
   placeholder: string;
   clearLabel: string;
+  sendLabel: string;
   closeLabel: string;
   resetSizeTitle: string;
   onClose: () => void;
@@ -68,6 +69,7 @@ export default function ChatbotWindow({
   subtitle,
   placeholder,
   clearLabel,
+  sendLabel,
   closeLabel,
   resetSizeTitle,
   onClose,
@@ -170,7 +172,7 @@ export default function ChatbotWindow({
                 onClick={onSend}
                 disabled={!inputValue.trim() || isLoading}
                 className="flex min-h-12 w-14 items-center justify-center rounded-xl border border-primary-500/20 bg-primary-500 text-white shadow-[0_14px_28px_-16px_rgba(99,102,241,0.9)] transition-all hover:-translate-y-0.5 hover:bg-primary-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-white disabled:text-slate-400 disabled:shadow-none disabled:hover:translate-y-0 dark:disabled:border-slate-700 dark:disabled:bg-[#252b36] dark:disabled:text-slate-500"
-                aria-label="Envoyer le message"
+                aria-label={sendLabel}
               >
                 <PaperAirplaneIcon className="h-5 w-5" aria-hidden="true" />
               </button>

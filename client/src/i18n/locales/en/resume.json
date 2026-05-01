@@ -67,7 +67,8 @@
         "exporting": "Exporting...",
         "sendEmail": "Send by email"
       },
-      "resumeMissing": "Resume not loaded. Please refresh the page."
+      "resumeMissing": "Resume not loaded. Please refresh the page.",
+      "score": "Score"
     },
     "actions": {
       "improveWithAI": "Improve with AI",
@@ -93,6 +94,14 @@
       "title": "Resume Improvement",
       "notYetImproved": "Resume not yet improved",
       "description": "Use AI to automatically improve this resume by optimizing its structure, content and ATS score."
+    },
+    "aiModify": {
+      "title": "Modify with AI",
+      "warning": "Warning: AI-generated changes can sometimes reduce the resume quality. Always review the result before saving.",
+      "improvedHelp": "Use AI to modify this resume with your specific instructions",
+      "originalHelp": "Use AI to modify the original text with your specific instructions",
+      "improvedPlaceholder": "Example: Make the summary more concise, add more technical details about Docker projects, emphasize leadership skills...",
+      "originalPlaceholder": "Example: Rewrite the summary, fix spelling mistakes, restructure professional experience..."
     },
     "export": {
       "title": "Resume Export",

@@ -1,5 +1,6 @@
 import type { Editor } from '@tiptap/react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   BORDER_STYLE_OPTIONS,
   BORDER_WIDTH_PRESETS,
@@ -40,6 +41,7 @@ const runTableAttributeCommand = (editor: Editor, attr: string, value: unknown) 
 };
 
 const TableGridPicker = ({ onSelect }: { onSelect: (rows: number, cols: number) => void }) => {
+  const { t } = useTranslation();
   const [hovered, setHovered] = useState({ r: 0, c: 0 });
 
   return (
@@ -50,31 +52,42 @@ const TableGridPicker = ({ onSelect }: { onSelect: (rows: number, cols: number) 
             {Array.from({ length: TABLE_GRID_SIZE }, (_, col) => (
               <div
                 key={col}
+                role="button"
+                tabIndex={0}
                 className={`tiptap-grid-cell ${row < hovered.r && col < hovered.c ? 'is-selected' : ''}`}
                 onMouseEnter={() => setHovered({ r: row + 1, c: col + 1 })}
                 onClick={() => onSelect(hovered.r, hovered.c)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onSelect(row + 1, col + 1);
+                  }
+                }}
               />
             ))}
           </div>
         ))}
       </div>
       <div style={{ textAlign: 'center', fontSize: 11, color: '#9ca3af', marginTop: 4 }}>
-        {hovered.r > 0 ? `${hovered.r} x ${hovered.c}` : 'Survolez pour choisir'}
+        {hovered.r > 0 ? `${hovered.r} x ${hovered.c}` : t('tiptap.table.hoverToChoose')}
       </div>
     </div>
   );
 };
 
-const TableInsertPanel = ({ editor, close }: TableTabProps) => (
+const TableInsertPanel = ({ editor, close }: TableTabProps) => {
+  const { t } = useTranslation();
+
+  return (
   <>
-    <div className="tiptap-dropdown-section">Insérer un tableau</div>
+    <div className="tiptap-dropdown-section">{t('tiptap.table.insertTable')}</div>
     <TableGridPicker
       onSelect={(rows, cols) => {
         editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run();
         close();
       }}
     />
-    <div className="tiptap-dropdown-section">Tailles prédéfinies</div>
+    <div className="tiptap-dropdown-section">{t('tiptap.table.presets')}</div>
     {TABLE_SIZE_PRESETS.map(([rows, cols]) => (
       <button
         key={`${rows}x${cols}`}
@@ -85,66 +98,74 @@ const TableInsertPanel = ({ editor, close }: TableTabProps) => (
           close();
         }}
       >
-        Tableau {rows}x{cols}
+        {t('tiptap.table.tableSize', { rows, cols })}
       </button>
     ))}
   </>
-);
+  );
+};
 
-const TableStructureTab = ({ editor, close }: TableTabProps) => (
+const TableStructureTab = ({ editor, close }: TableTabProps) => {
+  const { t } = useTranslation();
+
+  return (
   <>
-    <div className="tiptap-dropdown-section">Lignes</div>
+    <div className="tiptap-dropdown-section">{t('tiptap.table.rows')}</div>
     <button type="button" className="tiptap-dropdown-item" onClick={() => { editor.chain().focus().addRowBefore().run(); close(); }}>
-      Ajouter ligne au-dessus
+      {t('tiptap.table.addRowBefore')}
     </button>
     <button type="button" className="tiptap-dropdown-item" onClick={() => { editor.chain().focus().addRowAfter().run(); close(); }}>
-      Ajouter ligne en-dessous
+      {t('tiptap.table.addRowAfter')}
     </button>
     <button type="button" className="tiptap-dropdown-item tiptap-dropdown-danger" onClick={() => { editor.chain().focus().deleteRow().run(); close(); }}>
-      Supprimer la ligne
+      {t('tiptap.table.deleteRow')}
     </button>
 
-    <div className="tiptap-dropdown-section">Colonnes</div>
+    <div className="tiptap-dropdown-section">{t('tiptap.table.columns')}</div>
     <button type="button" className="tiptap-dropdown-item" onClick={() => { editor.chain().focus().addColumnBefore().run(); close(); }}>
-      Ajouter colonne à gauche
+      {t('tiptap.table.addColumnBefore')}
     </button>
     <button type="button" className="tiptap-dropdown-item" onClick={() => { editor.chain().focus().addColumnAfter().run(); close(); }}>
-      Ajouter colonne à droite
+      {t('tiptap.table.addColumnAfter')}
     </button>
     <button type="button" className="tiptap-dropdown-item tiptap-dropdown-danger" onClick={() => { editor.chain().focus().deleteColumn().run(); close(); }}>
-      Supprimer la colonne
+      {t('tiptap.table.deleteColumn')}
     </button>
 
-    <div className="tiptap-dropdown-section">Cellules</div>
+    <div className="tiptap-dropdown-section">{t('tiptap.table.cells')}</div>
     <button type="button" className="tiptap-dropdown-item" onClick={() => { editor.chain().focus().mergeCells().run(); close(); }}>
-      Fusionner les cellules
+      {t('tiptap.table.mergeCells')}
     </button>
     <button type="button" className="tiptap-dropdown-item" onClick={() => { editor.chain().focus().splitCell().run(); close(); }}>
-      Diviser la cellule
+      {t('tiptap.table.splitCell')}
     </button>
     <button type="button" className="tiptap-dropdown-item" onClick={() => { editor.chain().focus().toggleHeaderRow().run(); close(); }}>
-      Basculer ligne d'en-tête
+      {t('tiptap.table.toggleHeaderRow')}
     </button>
     <button type="button" className="tiptap-dropdown-item" onClick={() => { editor.chain().focus().toggleHeaderColumn().run(); close(); }}>
-      Basculer colonne d'en-tête
+      {t('tiptap.table.toggleHeaderColumn')}
     </button>
   </>
-);
+  );
+};
 
-const TableCellTab = ({ editor }: Omit<TableTabProps, 'close'>) => (
+const TableCellTab = ({ editor }: Omit<TableTabProps, 'close'>) => {
+  const { t } = useTranslation();
+
+  return (
   <div className="tiptap-props-panel">
     <div className="tiptap-props-section">
-      <div className="tiptap-props-label">Couleur de fond</div>
+      <div className="tiptap-props-label">{t('tiptap.table.backgroundColor')}</div>
       <div className="tiptap-dropdown-colors">
         {CELL_BG_COLORS.map((color) => (
           <button key={color} type="button" className="tiptap-color-swatch" style={{ background: color, width: 18, height: 18 }} title={color} onClick={() => editor.chain().focus().setCellAttribute('backgroundColor', color).run()} />
         ))}
-        <button type="button" className="tiptap-color-swatch" style={RESET_SWATCH_STYLE} title="Supprimer" onClick={() => editor.chain().focus().setCellAttribute('backgroundColor', null).run()} />
+        <button type="button" className="tiptap-color-swatch" style={RESET_SWATCH_STYLE} title={t('common.delete')} onClick={() => editor.chain().focus().setCellAttribute('backgroundColor', null).run()} />
       </div>
     </div>
 
     <div className="tiptap-props-section">
-      <div className="tiptap-props-label">Alignement vertical</div>
+      <div className="tiptap-props-label">{t('tiptap.table.verticalAlign')}</div>
       <div className="tiptap-props-btn-group">
         {VALIGN_OPTIONS.map((option) => (
           <button key={option.value} type="button" className="tiptap-props-btn" title={option.label} onClick={() => editor.chain().focus().setCellAttribute('verticalAlign', option.value).run()}>
@@ -155,7 +176,7 @@ const TableCellTab = ({ editor }: Omit<TableTabProps, 'close'>) => (
     </div>
 
     <div className="tiptap-props-section">
-      <div className="tiptap-props-label">Alignement texte</div>
+      <div className="tiptap-props-label">{t('tiptap.table.textAlign')}</div>
       <div className="tiptap-props-btn-group">
         {TEXTALIGN_OPTIONS.map((option) => (
           <button key={option.value} type="button" className="tiptap-props-btn" title={option.label} onClick={() => editor.chain().focus().setCellAttribute('textAlign', option.value).run()}>
@@ -199,7 +220,8 @@ const TableCellTab = ({ editor }: Omit<TableTabProps, 'close'>) => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 const TablePropertiesTab = ({ editor }: Omit<TableTabProps, 'close'>) => {
   const tableNode = getTableNode(editor);

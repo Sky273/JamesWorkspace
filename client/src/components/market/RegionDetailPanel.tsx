@@ -243,7 +243,7 @@ export default function RegionDetailPanel({
               {/* Métier name header */}
               <div className="mb-3 pb-2 border-b border-indigo-200 dark:border-indigo-600">
                 <div className="text-xs text-indigo-600 dark:text-indigo-400 uppercase tracking-wide mb-1">
-                  Métier sélectionné
+                  {t('marketRadar.map.selectedMetier')}
                 </div>
                 <div className="text-sm font-semibold text-indigo-800 dark:text-indigo-200">
                   {selectedTrendMetadata?.RomeLabel || romeLabelsMap[selectedMetier] || selectedMetier}
@@ -258,7 +258,7 @@ export default function RegionDetailPanel({
               {metadataLoading ? (
                 <div className="flex items-center justify-center py-2">
                   <ArrowPathIcon className="h-4 w-4 animate-spin text-indigo-500" />
-                  <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">Chargement des détails...</span>
+                  <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{t('marketRadar.map.loadingDetails')}</span>
                 </div>
               ) : (
                 <TrendMetadataDisplay

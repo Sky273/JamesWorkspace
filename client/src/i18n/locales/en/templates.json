@@ -23,6 +23,9 @@
       "noDescription": "No description",
       "global": "Global (all firms)"
     },
+    "preview": {
+      "loading": "Loading preview..."
+    },
     "status": {
       "error": "Failed to load templates",
       "empty": "No templates available",

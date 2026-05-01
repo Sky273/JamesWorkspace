@@ -14,7 +14,7 @@ export default function SendEmailPreviewModal({ isOpen, sanitizedPreviewHtml, on
   return (
     <div className="fixed inset-0 z-[60] overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="fixed inset-0 bg-black/50" onClick={onClose} />
+        <button type="button" className="fixed inset-0 bg-black/50" onClick={onClose} aria-label={t('common.close')} />
         <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] overflow-hidden">
           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('mail.modal.templatePreview')}</h3>
@@ -26,7 +26,7 @@ export default function SendEmailPreviewModal({ isOpen, sanitizedPreviewHtml, on
             {sanitizedPreviewHtml ? (
               <iframe
                 srcDoc={sanitizedPreviewHtml}
-                title="Email Preview"
+                title={t('mail.modal.templatePreview')}
                 className="w-full h-[500px] border-0"
                 sandbox="allow-same-origin allow-popups"
               />

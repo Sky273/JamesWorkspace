@@ -67,7 +67,8 @@
         "exporting": "Exportation...",
         "sendEmail": "Envoyer par email"
       },
-      "resumeMissing": "CV non charge. Veuillez rafraichir la page."
+      "resumeMissing": "CV non chargé. Veuillez rafraîchir la page.",
+      "score": "Score"
     },
     "actions": {
       "improveWithAI": "Améliorer avec l'IA",
@@ -93,6 +94,14 @@
       "title": "Amélioration du CV",
       "notYetImproved": "CV non encore amélioré",
       "description": "Utilisez l'IA pour améliorer automatiquement ce CV en optimisant sa structure, son contenu et son score ATS."
+    },
+    "aiModify": {
+      "title": "Modifier par IA",
+      "warning": "Attention : les modifications générées par l'IA peuvent parfois dégrader la qualité du CV. Vérifiez toujours le résultat avant de sauvegarder.",
+      "improvedHelp": "Utilisez l'IA pour modifier ce CV selon vos instructions spécifiques",
+      "originalHelp": "Utilisez l'IA pour modifier le texte original selon vos instructions spécifiques",
+      "improvedPlaceholder": "Exemple : Rendre le résumé plus concis, ajouter plus de détails techniques sur les projets Docker, mettre l'accent sur les compétences en leadership...",
+      "originalPlaceholder": "Exemple : Reformuler le résumé, corriger les fautes d'orthographe, restructurer les expériences professionnelles..."
     },
     "export": {
       "title": "Export du CV",

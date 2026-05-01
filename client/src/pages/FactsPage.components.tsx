@@ -129,16 +129,16 @@ export const FactsMapPlaceholder = ({ onEnable }: FactsMapPlaceholderProps): JSX
         </p>
         <div className="mt-6 grid w-full gap-3 text-left text-sm text-gray-600 dark:text-gray-400 md:grid-cols-3">
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/40">
-            <div className="font-medium text-gray-900 dark:text-gray-100">Chargement différé</div>
-            <div className="mt-1">La carte interactive n'est chargée qu'à la demande.</div>
+            <div className="font-medium text-gray-900 dark:text-gray-100">{t('marketRadar.map.lazyLoadingTitle')}</div>
+            <div className="mt-1">{t('marketRadar.map.lazyLoadingBody')}</div>
           </div>
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/40">
-            <div className="font-medium text-gray-900 dark:text-gray-100">Carte par défaut</div>
-            <div className="mt-1">Le radar s'ouvre directement sur la carte de France pour donner la vue d'ensemble immédiatement.</div>
+            <div className="font-medium text-gray-900 dark:text-gray-100">{t('marketRadar.map.defaultMapTitle')}</div>
+            <div className="mt-1">{t('marketRadar.map.defaultMapBody')}</div>
           </div>
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/40">
-            <div className="font-medium text-gray-900 dark:text-gray-100">Interaction complète</div>
-            <div className="mt-1">Le rendu interactif reste disponible quand vous en avez réellement besoin.</div>
+            <div className="font-medium text-gray-900 dark:text-gray-100">{t('marketRadar.map.fullInteractionTitle')}</div>
+            <div className="mt-1">{t('marketRadar.map.fullInteractionBody')}</div>
           </div>
         </div>
         <button

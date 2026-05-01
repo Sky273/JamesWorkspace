@@ -42,7 +42,7 @@ const PrivacyPolicyPage = (): JSX.Element => {
           </p>
 
           <nav className="mb-10 rounded-2xl bg-slate-50 p-5 dark:bg-slate-900/40">
-            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Sommaire</p>
+            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">{t('legal.summary')}</p>
             <div className="flex flex-wrap gap-3">
               {sections.map((section) => (
                 <a key={section.id} href={`#${section.id}`} className="rounded-full bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:text-blue-600 dark:bg-white/5 dark:text-slate-200">
@@ -134,7 +134,7 @@ const PrivacyPolicyPage = (): JSX.Element => {
                 {t('legal.privacy.sections.contact.content')}
               </p>
               <p className="text-gray-600 dark:text-gray-300 mt-2">
-                <strong>Email:</strong> privacy@aptea.net
+                <strong>{t('legal.emailLabel')}:</strong> privacy@aptea.net
               </p>
             </section>
           </div>

@@ -1,0 +1,94 @@
+{
+  "startedAt": "2026-05-01T18:12:50.082Z",
+  "environment": "https://resumeconverter.net",
+  "mode": "visible Chrome on PC via Playwright front interactions only",
+  "observations": [
+    {
+      "id": "AUTH",
+      "status": "ok",
+      "url": "https://resumeconverter.net/",
+      "excerpt": "Aller au contenu principal RC ResumeConverter Aptea Accueil CVthèque Missions Matching Profils Adaptations CRM Radar du Marché Administration Métriques Paramètres Jobs Sauvegarde Logs de Sécurité Journal RGPD Guide Utilisateur LM Luc MOREAU Super administrateur Accueil Changer de langue LM Luc MOREAU Aptea · Super administrateur Se déconnecter Accueil Tableau de bord Comment ça marche Fonctionnalités clés Votre CVthèque. Optimisée. Activée. Standardisez, améliorez et déclinez vos CVs par client ou mission. Des profils cohérents, prêts à envoyer, en quelques minutes. Importer un CV Compatible ATS Analyse rapide 100% Sécurisé Compatible RGPD Analyse terminée Suggestion IA Augmentez l'impact de cette section en utilisant des verbes d'action plus forts. Tableau de bord Aptea CV dans la CVthèque 5 5 ce mois CV analysés 5 100% Score moyen 80% +10 pts après amélioration Missions actives 2 2 au total Activité récente Aujourd'hui 1 CV Cette semaine 5 CV Ce mois 5 CV Améliorations CV améliorés 5"
+    },
+    {
+      "id": "CV_SEARCH_SEHLI",
+      "status": "found",
+      "excerpt": "Aller au contenu principal RC ResumeConverter Aptea Accueil CVthèque Missions Matching Profils Adaptations CRM Radar du Marché Administration Métriques Paramètres Jobs Sauvegarde Logs de Sécurité Journal RGPD Guide Utilisateur LM Luc MOREAU Super administrateur CVthèque Changer de langue LM Luc MOREAU Aptea · Super administrateur Se déconnecter CVthèque Gérez et analysez les profils de vos consultants AFFICHAGE Par affaire Liste TOTAL CVS 5 Gérez et analysez les profils de vos consultants AMÉLIORÉS 5 Amélioré EN COURS 0 En cours SCORE MOYEN 80% Score Télécharger un nouveau CV Réinitialiser Filtrer Import par lot RÉSULTATS 1 résultat(s) Filtres appliqués Affinez ou réinitialisez vos filtres pour élargir la sélection. SEHLI Dorra AMÉLIORÉ Ingénieur Fullstack Java/JEE Angular 1 mai 2026 Aptea En attente Développement fullstack Développement back-end IT & Digital Télécommunications SCORE 81% Aperçu du CV Telecharger Gérer les affaires Supprimer Affichage 1-1 sur 1 résultats PAGE 1 / 1 Politique de confidentialité | Conditions d'utilisation (c) 2026 Aptea. Tous droits réservés."
+    },
+    {
+      "id": "FRONT-04",
+      "status": "corrected",
+      "detail": "La carte CV affiche maintenant un statut/score am?lior? coh?rent."
+    },
+    {
+      "id": "QA-02",
+      "status": "corrected",
+      "detail": "/crm affiche correctement l?espace CRM."
+    },
+    {
+      "id": "FRONT-01",
+      "status": "legacy-data-open",
+      "detail": "Les anciennes donn?es QA restent corrompues; cela rel?ve d?un nettoyage de donn?es, pas d?un nouveau flux test?."
+    },
+    {
+      "id": "FRONT-02",
+      "status": "partly-corrected",
+      "detail": "La soumission vide reste bloqu?e dans la modale sans cr?er de donn?e."
+    },
+    {
+      "id": "JOBS",
+      "status": "unexpected",
+      "excerpt": ""
+    },
+    {
+      "id": "SECURITY_LOGS",
+      "status": "loaded",
+      "excerpt": "Aller au contenu principal RC ResumeConverter Aptea Accueil CVthèque Missions Matching Profils Adaptations CRM Radar du Marché Administration Métriques Paramètres Jobs Sauvegarde Logs de Sécurité Journal RGPD Guide Utilisateur LM Luc MOREAU Super administrateur Logs de Sécurité Changer de langue LM Luc MOREAU Aptea · Super administrateur Se déconnecter Logs de sécurité Surveillance en temps réel des événements de sécurité SECTIONS Logs Observabilité Total des logs 1006 Dernière heure 1005 Dernières 24 h 1005 Erreurs 0 Niveau Tous DEBUG INFO SECURITY WARN Événement Tous AUTH_SUCCESS Source Toutes proxy security Actualisation automatique (30 s) Actualiser Affichage 1-50 sur 996 journaux de sécurité PAGE 1 / 20 Premier 1 2 3 4 5 Dernier DATE/HEURE SOURCE NIVEAU ÉVÉNEMENT UTILISATEUR CLIENT IP ACTION STATUT MESSAGE 1 mai 2026, 20:14:13 Proxy DEBUG - admin - Token verified successfully 1 mai "
+    },
+    {
+      "id": "RGPD",
+      "status": "unexpected",
+      "excerpt": ""
+    }
+  ],
+  "findings": [
+    {
+      "id": "QA-04",
+      "severity": "Low",
+      "status": "open",
+      "detail": "La version v1.9.3 n?est pas visible dans le header."
+    },
+    {
+      "id": "FRONT-03",
+      "severity": "Low",
+      "status": "not-tested",
+      "detail": "Bouton Aper?u du CV non trouv? sur la carte SEHLI."
+    },
+    {
+      "id": "FRONT-02A",
+      "severity": "Low",
+      "status": "open",
+      "detail": "La validation native bloque bien, mais aucun message textuel additionnel n?est visible pour expliquer le champ requis."
+    },
+    {
+      "id": "QA-02-CONSOLE",
+      "severity": "Medium",
+      "status": "open",
+      "detail": "No routes matched encore observ? en console."
+    }
+  ],
+  "relevantLogs": [
+    {
+      "ts": "2026-05-01T18:13:09.404Z",
+      "kind": "console:warning",
+      "message": "No routes matched location \"/jobs\" ",
+      "url": "https://resumeconverter.net/jobs"
+    },
+    {
+      "ts": "2026-05-01T18:13:13.023Z",
+      "kind": "console:warning",
+      "message": "No routes matched location \"/dashboard/gdpr-journal\" ",
+      "url": "https://resumeconverter.net/dashboard/gdpr-journal"
+    }
+  ],
+  "screenshotDir": "C:\\Users\\mail\\CascadeProjects\\ResumeConverter\\tmp\\qa-visible-browser-20260501"
+}

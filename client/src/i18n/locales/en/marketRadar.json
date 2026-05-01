@@ -74,7 +74,16 @@
       "high": "High",
       "clickToFilter": "Click on a bubble to filter by type",
       "bubbleSizeInfo": "Bubble size proportional to value",
-      "refresh": "Refresh"
+      "refresh": "Refresh",
+      "selectedMetier": "Selected job",
+      "loadingDetails": "Loading details...",
+      "loadInteractive": "Load interactive map",
+      "lazyLoadingTitle": "Deferred loading",
+      "lazyLoadingBody": "The interactive map loads only on demand.",
+      "defaultMapTitle": "Default map",
+      "defaultMapBody": "The radar opens directly on the France map to provide the overview immediately.",
+      "fullInteractionTitle": "Full interaction",
+      "fullInteractionBody": "The interactive rendering remains available when you actually need it."
     },
     "trends": {
       "title": "Market Trends",
@@ -145,6 +154,7 @@
       "noDataSearch": "No results for this search.",
       "noDataEmpty": "Run a collection to retrieve IS/IT jobs.",
       "searchPlaceholder": "Search for a job...",
+      "searchPlaceholderExtended": "Search for a job (ROME code or label)...",
       "stats": {
         "totalMetiers": "IS/IT Jobs",
         "totalCompetences": "Total skills",
@@ -170,6 +180,11 @@
         "errors": "errors"
       },
       "refresh": "Refresh"
+    },
+    "collection": {
+      "launched": "Collection started!",
+      "redirecting": "Redirecting to jobs...",
+      "starting": "Starting collection..."
     },
     "errors": {
       "loadFailed": "Failed to load data"

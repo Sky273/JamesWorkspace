@@ -35,7 +35,7 @@ interface LLMProviderModelSectionProps {
   onOllamaUrlChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onTestConnection: () => void | Promise<void>;
   testingConnection?: boolean;
-  t: (key: string) => string;
+  t: (key: string, options?: Record<string, unknown>) => string;
 }
 
 export default function LLMProviderModelSection({
@@ -137,7 +137,7 @@ export default function LLMProviderModelSection({
             ))}
           </datalist>
           <p className="mt-2 text-sm text-[var(--cv-muted)]">
-            Renseignez un modèle Hugging Face compatible OpenAI router. La valeur par défaut est <span className="font-semibold">MiniMaxAI/MiniMax-M2.7</span>.
+            {t('settings.llm.huggingFaceHelp')} <span className="font-semibold">MiniMaxAI/MiniMax-M2.7</span>.
           </p>
           <p className="mt-2 text-sm text-[var(--cv-muted)]">
             {t('settings.currentModel')} : <span className="font-semibold">{currentModelLabel}</span>
@@ -172,26 +172,26 @@ export default function LLMProviderModelSection({
               onChange={onModelChange}
               className="w-full rounded-[9px] border border-[#dedbe8] bg-white px-4 py-2 text-sm text-[var(--cv-text)] focus:border-[#6246ea] focus:ring-2 focus:ring-[#6246ea]/20 dark:border-white/10 dark:bg-[#111827] dark:text-gray-100"
             >
-              <option value="">Sélectionner un modèle distant</option>
+              <option value="">{t('settings.llm.selectRemoteModel')}</option>
               {modelOptions.map((model) => (
                 <option key={model.value} value={model.value}>{model.label}</option>
               ))}
             </select>
             <p className="mt-2 text-sm text-[var(--cv-muted)]">
               {ollamaDiscoveryLoading
-                ? 'Interrogation de l’instance Ollama distante...'
+                ? t('settings.llm.queryingOllama')
                 : modelOptions.length > 0
-                  ? `Modèles détectés : ${modelOptions.length}`
-                  : 'Aucun modèle détecté sur cette instance.'}
+                  ? t('settings.llm.detectedModels', { count: modelOptions.length })
+                  : t('settings.llm.noDetectedModel')}
             </p>
           </div>
 
           {selectedOllamaCapabilities && (
             <div className="grid gap-2 rounded-[9px] border border-[#dedbe8] bg-white p-3 text-sm text-[var(--cv-muted)] dark:border-white/10 dark:bg-[#182235] md:grid-cols-2">
-              <div>Famille: <span className="font-medium">{selectedOllamaCapabilities.family || '-'}</span></div>
-              <div>Architecture: <span className="font-medium">{selectedOllamaCapabilities.architecture || '-'}</span></div>
-              <div>Contexte: <span className="font-medium">{selectedOllamaCapabilities.contextLength || '-'}</span></div>
-              <div>Quantization: <span className="font-medium">{selectedOllamaCapabilities.quantizationLevel || '-'}</span></div>
+              <div>{t('settings.llm.capabilities.family')}: <span className="font-medium">{selectedOllamaCapabilities.family || '-'}</span></div>
+              <div>{t('settings.llm.capabilities.architecture')}: <span className="font-medium">{selectedOllamaCapabilities.architecture || '-'}</span></div>
+              <div>{t('settings.llm.capabilities.context')}: <span className="font-medium">{selectedOllamaCapabilities.contextLength || '-'}</span></div>
+              <div>{t('settings.llm.capabilities.quantization')}: <span className="font-medium">{selectedOllamaCapabilities.quantizationLevel || '-'}</span></div>
             </div>
           )}
         </div>
@@ -204,7 +204,7 @@ export default function LLMProviderModelSection({
           disabled={!canTestConnection || testingConnection}
           className="settings-test-model-button inline-flex min-h-10 items-center justify-center rounded-[9px] border px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {testingConnection ? 'Test en cours...' : 'Tester le modèle'}
+          {testingConnection ? t('settings.llm.testingModel') : t('settings.llm.testModel')}
         </button>
       </div>
     </>

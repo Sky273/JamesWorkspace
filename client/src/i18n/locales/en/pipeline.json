@@ -97,6 +97,15 @@
     "editNotes": "Edit notes",
     "viewResume": "View resume",
     "notesUpdated": "Notes updated",
-    "manageInterviews": "Manage interviews"
+    "manageInterviews": "Manage interviews",
+    "missionKicker": "Mission pipeline",
+    "selectionKicker": "Selection",
+    "notesHelp": "Add useful markers for the next pipeline steps: context, attention points, next action.",
+    "notesTitle": "Pipeline notes",
+    "noInterviewsHelp": "Schedule an interview to track this candidate's next steps.",
+    "scheduleInterviewHelp": "Frame the meeting and centralize useful information in the pipeline.",
+    "status": {
+      "cancelled": "Cancelled"
+    }
   }
 }

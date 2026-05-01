@@ -1,0 +1,264 @@
+{
+  "observations": [
+    {
+      "id": "HEADER_BUTTONS",
+      "buttons": [
+        {
+          "i": 0,
+          "text": "",
+          "aria": "Fermer",
+          "title": null,
+          "cls": "rounded-[9px] p-1.5 text-[#8f98a8] transition-colors hover:bg-white/8 hover:text-white lg:hidden"
+        },
+        {
+          "i": 1,
+          "text": "Ouvrir le menu",
+          "aria": "Ouvrir le menu",
+          "title": null,
+          "cls": "absolute left-4 top-1/2 z-10 -translate-y-1/2 shrink-0 lg:hidden group flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#E4E4E7] bg-white shadow-none transition-[transform,background-color,border-color] duration-200 hover:-translate-y-px hover:border-[#6B4EFF]/30 hover:bg-[#F3F2EF] dark:border-[#343a46] dark:bg-[#22262e] dark:hover:border-[#7c5cff]/45 dark:hover:bg-[#2a2f38]"
+        },
+        {
+          "i": 2,
+          "text": "",
+          "aria": "Mode sombre",
+          "title": "Mode sombre",
+          "cls": "app-header-actions__text-control inline-flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#E4E4E7] bg-white text-[#3F3F46] shadow-none dark:border-[#536071] dark:bg-[#151b2a] dark:text-white"
+        },
+        {
+          "i": 3,
+          "text": "Changer de langue",
+          "aria": null,
+          "title": null,
+          "cls": "app-header-actions__language inline-flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#E4E4E7] bg-white text-[#3F3F46] shadow-none dark:border-[#536071] dark:bg-[#151b2a] dark:text-white"
+        },
+        {
+          "i": 4,
+          "text": "",
+          "aria": "Afficher la version et le changelog",
+          "title": "v1.9.3",
+          "cls": "app-header-actions__version inline-flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#E4E4E7] bg-white text-[#18181B] shadow-none dark:border-[#64748b] dark:bg-[#0f172a] dark:text-white"
+        },
+        {
+          "i": 5,
+          "text": "Se déconnecter",
+          "aria": "Se déconnecter",
+          "title": "Se déconnecter",
+          "cls": "group flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#E4E4E7] bg-white shadow-none transition-[transform,background-color,border-color] duration-200 hover:-translate-y-px hover:border-[#6B4EFF]/30 hover:bg-[#F3F2EF] dark:border-[#343a46] dark:bg-[#22262e] dark:hover:border-[#7c5cff]/45 dark:hover:bg-[#2a2f38]"
+        },
+        {
+          "i": 6,
+          "text": "Accueil",
+          "aria": null,
+          "title": "Accueil",
+          "cls": "segmented-control__item inline-flex min-h-10 w-full min-w-0 items-center gap-1.5 rounded-[9px] px-2 py-2 text-left text-sm font-semibold sm:px-2.5 segmented-control__item--active"
+        },
+        {
+          "i": 7,
+          "text": "Tableau de bord",
+          "aria": null,
+          "title": "Tableau de bord",
+          "cls": "segmented-control__item inline-flex min-h-10 w-full min-w-0 items-center gap-1.5 rounded-[9px] px-2 py-2 text-left text-sm font-semibold sm:px-2.5 "
+        },
+        {
+          "i": 8,
+          "text": "Comment ça marche",
+          "aria": null,
+          "title": "Comment ça marche",
+          "cls": "segmented-control__item inline-flex min-h-10 w-full min-w-0 items-center gap-1.5 rounded-[9px] px-2 py-2 text-left text-sm font-semibold sm:px-2.5 "
+        },
+        {
+          "i": 9,
+          "text": "Fonctionnalités clés",
+          "aria": null,
+          "title": "Fonctionnalités clés",
+          "cls": "segmented-control__item inline-flex min-h-10 w-full min-w-0 items-center gap-1.5 rounded-[9px] px-2 py-2 text-left text-sm font-semibold sm:px-2.5 "
+        },
+        {
+          "i": 10,
+          "text": "Importer un CV",
+          "aria": null,
+          "title": null,
+          "cls": "app-primary-action rounded-lg px-8 py-3 text-lg font-semibold"
+        },
+        {
+          "i": 11,
+          "text": "Importer un CV\nAjouter un nouveau profil à la CVthèque",
+          "aria": null,
+          "title": null,
+          "cls": "app-primary-action home-dashboard-primary-action flex w-full items-center justify-between gap-4 rounded-2xl px-5 py-4 text-left"
+        },
+        {
+          "i": 12,
+          "text": "Voir la CVthèque\n\nConsulter et gérer les profils",
+          "aria": null,
+          "title": null,
+          "cls": "flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all text-left w-full"
+        },
+        {
+          "i": 13,
+          "text": "Voir les missions\n\nConsulter les offres de mission",
+          "aria": null,
+          "title": null,
+          "cls": "flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all text-left w-full"
+        },
+        {
+          "i": 14,
+          "text": "Voir les adaptations\n\nGérer les CV adaptés",
+          "aria": null,
+          "title": null,
+          "cls": "flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-lg transition-all text-left w-full"
+        },
+        {
+          "i": 15,
+          "text": "",
+          "aria": null,
+          "title": null,
+          "cls": "fixed bottom-8 right-8 p-4 bg-primary-500 text-white rounded-full shadow-lg hover:bg-primary-600 transition-colors z-40"
+        }
+      ]
+    },
+    {
+      "id": "HEADER_VERSION_TEXT",
+      "containsVersion": false,
+      "headerExcerpt": "Aller au contenu principal RC ResumeConverter Aptea Accueil CVthèque Missions Matching Profils Adaptations CRM Radar du Marché Administration Métriques Paramètres Jobs Sauvegarde Logs de Sécurité Journal RGPD Guide Utilisateur LM Luc MOREAU Super administrateur Accueil Changer de langue LM Luc MOREAU Aptea · Super administrateur Se déconnecter Accueil Tableau de bord Comment ça marche Fonctionnalités clés Votre CVthèque. Optimisée. Activée. Standardisez, améliorez et déclinez vos CVs par client "
+    },
+    {
+      "id": "RESUME_BUTTONS",
+      "buttons": [
+        {
+          "i": 0,
+          "text": "",
+          "aria": "Fermer",
+          "title": null
+        },
+        {
+          "i": 1,
+          "text": "Ouvrir le menu",
+          "aria": "Ouvrir le menu",
+          "title": null
+        },
+        {
+          "i": 2,
+          "text": "",
+          "aria": "Mode sombre",
+          "title": "Mode sombre"
+        },
+        {
+          "i": 3,
+          "text": "Changer de langue",
+          "aria": null,
+          "title": null
+        },
+        {
+          "i": 4,
+          "text": "",
+          "aria": "Afficher la version et le changelog",
+          "title": "v1.9.3"
+        },
+        {
+          "i": 5,
+          "text": "Se déconnecter",
+          "aria": "Se déconnecter",
+          "title": "Se déconnecter"
+        },
+        {
+          "i": 6,
+          "text": "Par affaire",
+          "aria": null,
+          "title": null
+        },
+        {
+          "i": 7,
+          "text": "Liste",
+          "aria": null,
+          "title": null
+        },
+        {
+          "i": 8,
+          "text": "Télécharger un nouveau CV",
+          "aria": null,
+          "title": null
+        },
+        {
+          "i": 9,
+          "text": "Réinitialiser",
+          "aria": null,
+          "title": "Réinitialiser"
+        },
+        {
+          "i": 10,
+          "text": "Filtrer",
+          "aria": null,
+          "title": null
+        },
+        {
+          "i": 11,
+          "text": "Import par lot",
+          "aria": null,
+          "title": "Import par lot"
+        },
+        {
+          "i": 12,
+          "text": "",
+          "aria": "Actualiser",
+          "title": "Actualiser"
+        },
+        {
+          "i": 13,
+          "text": "Aperçu du CV",
+          "aria": null,
+          "title": "Apercu rapide"
+        },
+        {
+          "i": 14,
+          "text": "Telecharger",
+          "aria": null,
+          "title": "Télécharger le CV\nSEHLI Dorra"
+        },
+        {
+          "i": 15,
+          "text": "Gérer les affaires",
+          "aria": null,
+          "title": "Gérer les affaires"
+        },
+        {
+          "i": 16,
+          "text": "Supprimer",
+          "aria": null,
+          "title": "Supprimer le CV"
+        }
+      ]
+    },
+    {
+      "id": "FRONT-03-PREVIEW-TEXT",
+      "excerpt": "Aller au contenu principal RC ResumeConverter Aptea Accueil CVthèque Missions Matching Profils Adaptations CRM Radar du Marché Administration Métriques Paramètres Jobs Sauvegarde Logs de Sécurité Journal RGPD Guide Utilisateur LM Luc MOREAU Super administrateur CVthèque Changer de langue Système OK Mémoire: 58 MB sur 66 MB LM Luc MOREAU Aptea · Super administrateur Se déconnecter CVthèque Gérez et analysez les profils de vos consultants AFFICHAGE Par affaire Liste TOTAL CVS 5 Gérez et analysez les profils de vos consultants AMÉLIORÉS 5 Amélioré EN COURS 0 En cours SCORE MOYEN 80% Score Télécharger un nouveau CV Réinitialiser Filtrer Import par lot RÉSULTATS 1 résultat(s) Filtres appliqués Affinez ou réinitialisez vos filtres pour élargir la sélection. SEHLI Dorra AMÉLIORÉ Ingénieur Fullstack Java/JEE Angular 1 mai 2026 Aptea En attente Développement fullstack Développement back-end IT & Digital Télécommunications SCORE 81% Aperçu du CV Telecharger Gérer les affaires Supprimer Affichage 1-1 sur 1 résultats PAGE 1 / 1 Politique de confidentialité | Conditions d'utilisation (c) 2026 Aptea. Tous droits réservés."
+    },
+    {
+      "id": "JOBS_ROUTE",
+      "url": "https://resumeconverter.net/batch-jobs",
+      "status": "loaded",
+      "excerpt": "Aller au contenu principal RC ResumeConverter Aptea Accueil CVthèque Missions Matching Profils Adaptations CRM Radar du Marché Administration Métriques Paramètres Jobs Sauvegarde Logs de Sécurité Journal RGPD Guide Utilisateur LM Luc MOREAU Super administrateur Jobs Changer de langue LM Luc MOREAU Aptea · Super administrateur Se déconnecter Jobs de traitement Suivez les imports, améliorations et exports lancés en arrière-plan. Jobs de traitement Actualiser Traitement en arrière-plan Les jobs sont traités sur le serveur. Vous pouvez naviguer librement dans l'application sans interrompre le traitement. Amélioration Terminé 01/05/2026 19:42 • Luc MOREAU 1 / 1 1 succès 100% Import Terminé 01/05/2026 19:35 • Luc MOREAU 1 / 1 1 succès 100% Adaptation Terminé 01/05/2026 08:12 • Luc MOREAU 1 / 1 1 succès 100% Analyse de match Terminé 01/05/2026 08:10 • Luc MOREAU 1 / 1 1 succès 100% Analyse détaillée de profil Terminé 30/04/2026 13:25 • Luc MOREAU 1 / 1 1 succès 100% Recherche de profils Termi"
+    },
+    {
+      "id": "RGPD_ROUTE",
+      "url": "https://resumeconverter.net/dashboard/gdpr-audit",
+      "status": "loaded",
+      "excerpt": "Aller au contenu principal RC ResumeConverter Aptea Accueil CVthèque Missions Matching Profils Adaptations CRM Radar du Marché Administration Métriques Paramètres Jobs Sauvegarde Logs de Sécurité Journal RGPD Guide Utilisateur LM Luc MOREAU Super administrateur Journal RGPD Changer de langue LM Luc MOREAU Aptea · Super administrateur Se déconnecter Journal d'audit RGPD Historique des actions de conformité RGPD Filtres Actualiser Actions sur 30 jours 3 Consentements 1 Automatisées 2 Manuelles 1 DATE ET HEURE ACTION CABINET CIBLE TYPE DÉTAILS 1 mai 2026, 19:35 Consent Request Sent consent Aptea QA-FRONT-20260501172935 Dorra Sehli qa.qa-front-20260501172935@example.test Manuel Voir 7 avr. 2026, 15:20 Auto Purge Executed automated - - Auto Voir 7 avr. 2026, 15:20 Cv Purged cv Aptea - Auto Voir 8 mars 2026, 02:04 Consent Granted consent Aptea Luc Moreau luc.moreau.1@gmail.com Manuel Voir 8 mars 2026, 01:35 Consent Request Sent consent Aptea Luc Moreau luc.moreau.1@gmail.com Manuel Voir 8 ma"
+    },
+    {
+      "id": "SECURITY_ROUTE",
+      "url": "https://resumeconverter.net/dashboard/gdpr-audit",
+      "status": "unexpected",
+      "excerpt": "Aller au contenu principal RC ResumeConverter Aptea Accueil CVthèque Missions Matching Profils Adaptations CRM Radar du Marché Administration Métriques Paramètres Jobs Sauvegarde Logs de Sécurité Journal RGPD Guide Utilisateur LM Luc MOREAU Super administrateur Journal RGPD Changer de langue Système OK Mémoire: 61 MB sur 66 MB LM Luc MOREAU Aptea · Super administrateur Se déconnecter Journal d'audit RGPD Historique des actions de conformité RGPD Filtres Actualiser Actions sur 30 jours 3 Consentements 1 Automatisées 2 Manuelles 1 DATE ET HEURE ACTION CABINET CIBLE TYPE DÉTAILS 1 mai 2026, 19:35 Consent Request Sent consent Aptea QA-FRONT-20260501172935 Dorra Sehli qa.qa-front-20260501172935@example.test Manuel Voir 7 avr. 2026, 15:20 Auto Purge Executed automated - - Auto Voir 7 avr. 2026, 15:20 Cv Purged cv Aptea - Auto Voir 8 mars 2026, 02:04 Consent Granted consent Aptea Luc Moreau luc.moreau.1@gmail.com Manuel Voir 8 mars 2026, 01:35 Consent Request Sent consent Aptea Luc Moreau luc"
+    }
+  ],
+  "findings": [
+    {
+      "id": "SECURITY_ROUTE",
+      "severity": "Medium",
+      "status": "open",
+      "detail": "La navigation sidebar SECURITY_ROUTE n?affiche pas la page attendue. URL=https://resumeconverter.net/dashboard/gdpr-audit"
+    }
+  ],
+  "relevantLogs": []
+}

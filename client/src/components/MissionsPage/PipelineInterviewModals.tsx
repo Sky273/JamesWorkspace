@@ -102,7 +102,7 @@ export function PipelineInterviewsListModal({
       <div className="cv-surface flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] border border-white/10 shadow-2xl">
         <div className="flex flex-col gap-4 border-b border-slate-200/70 px-5 py-5 dark:border-white/10 sm:flex-row sm:items-start sm:justify-between sm:px-6">
           <div>
-            <div className="cv-kicker mb-2">Pipeline mission</div>
+            <div className="cv-kicker mb-2">{t('pipeline.missionKicker')}</div>
             <h3 className="text-2xl font-bold text-slate-950 dark:text-[var(--cv-text)]">{t('pipeline.manageInterviews')}</h3>
             <p className="mt-2 text-sm text-slate-600 dark:text-[var(--cv-muted)]">{entry.resume_name}</p>
           </div>
@@ -125,7 +125,7 @@ export function PipelineInterviewsListModal({
               <ClipboardDocumentListIcon className="mb-3 h-9 w-9 text-slate-300 dark:text-slate-600" />
               <p className="text-sm font-medium text-slate-600 dark:text-[var(--cv-muted)]">{t('pipeline.noInterviews')}</p>
               <p className="mt-2 text-xs text-slate-500 dark:text-[var(--cv-muted)]">
-                Planifiez un entretien pour suivre les prochaines étapes de ce candidat.
+                {t('pipeline.noInterviewsHelp')}
               </p>
             </div>
           ) : (
@@ -159,7 +159,7 @@ export function PipelineInterviewsListModal({
                           ) : null}
                           {isCancelled ? (
                             <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500 ring-1 ring-slate-200 dark:bg-white/5 dark:text-[var(--cv-muted)] dark:ring-white/10">
-                              {isEnglish ? 'Cancelled' : 'Annulé'}
+                              {t('pipeline.status.cancelled')}
                             </span>
                           ) : null}
                         </div>
@@ -266,10 +266,10 @@ export function PipelineScheduleInterviewModal({
       <div className="cv-surface flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[2rem] border border-white/10 shadow-2xl">
         <div className="flex flex-col gap-4 border-b border-slate-200/70 px-5 py-5 dark:border-white/10 sm:flex-row sm:items-start sm:justify-between sm:px-6">
           <div>
-            <div className="cv-kicker mb-2">Pipeline mission</div>
+            <div className="cv-kicker mb-2">{t('pipeline.missionKicker')}</div>
             <h3 className="text-2xl font-bold text-slate-950 dark:text-[var(--cv-text)]">{t('pipeline.scheduleInterviewTitle')}</h3>
             <p className="mt-2 text-sm text-slate-600 dark:text-[var(--cv-muted)]">
-              Cadrez le rendez-vous et centralisez les informations utiles dans le pipeline.
+              {t('pipeline.scheduleInterviewHelp')}
             </p>
           </div>
           <button

@@ -75,7 +75,7 @@ export default function PipelineAddCandidateModal({
       <div className="cv-surface flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[2rem] border border-white/10 shadow-2xl">
         <div className="flex flex-col gap-4 border-b border-slate-200/70 px-5 py-5 dark:border-white/10 sm:flex-row sm:items-start sm:justify-between sm:px-6">
           <div>
-            <div className="cv-kicker mb-2">Pipeline mission</div>
+            <div className="cv-kicker mb-2">{t('pipeline.missionKicker')}</div>
             <h3 className="text-2xl font-bold text-slate-950 dark:text-[var(--cv-text)]">{t('pipeline.addCandidate')}</h3>
             <p className="mt-2 text-sm text-slate-600 dark:text-[var(--cv-muted)]">
               {t('pipeline.searchCandidates')}
@@ -174,7 +174,7 @@ export default function PipelineAddCandidateModal({
 
           <aside className="space-y-4 bg-slate-50/60 px-5 py-5 dark:bg-white/[0.03] sm:px-6">
             <div>
-              <div className="cv-kicker mb-2">Sélection</div>
+              <div className="cv-kicker mb-2">{t('pipeline.selectionKicker')}</div>
               <h4 className="text-base font-semibold text-slate-900 dark:text-[var(--cv-text)]">
                 {selectedCandidate ? selectedCandidate.name : t('pipeline.selectCandidate')}
               </h4>
@@ -195,7 +195,7 @@ export default function PipelineAddCandidateModal({
                 placeholder={t('pipeline.notesPlaceholder')}
               />
               <p className="mt-2 text-xs text-slate-500 dark:text-[var(--cv-muted)]">
-                Ajoutez quelques repères utiles pour la suite du pipeline : contexte, points d'attention, prochaine action.
+                {t('pipeline.notesHelp')}
               </p>
             </div>
           </aside>

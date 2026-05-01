@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { ExclamationTriangleIcon, ChevronDownIcon, ChevronUpIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 interface ErrorToastProps {
@@ -14,6 +15,7 @@ interface ErrorToastProps {
 }
 
 const ErrorToast = ({ message, details, toastId }: ErrorToastProps): JSX.Element => {
+  const { t } = useTranslation();
   const [showDetails, setShowDetails] = useState(false);
 
   return (
@@ -24,7 +26,7 @@ const ErrorToast = ({ message, details, toastId }: ErrorToastProps): JSX.Element
             <ExclamationTriangleIcon className="h-6 w-6 text-red-500" />
           </div>
           <div className="ml-3 flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Erreur</p>
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('common.error')}</p>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 break-words">{message}</p>
 
             {details ? (
@@ -36,12 +38,12 @@ const ErrorToast = ({ message, details, toastId }: ErrorToastProps): JSX.Element
                   {showDetails ? (
                     <>
                       <ChevronUpIcon className="h-3 w-3" />
-                      Masquer les détails
+                      {t('common.hideDetails')}
                     </>
                   ) : (
                     <>
                       <ChevronDownIcon className="h-3 w-3" />
-                      Voir les détails
+                      {t('common.showDetails')}
                     </>
                   )}
                 </button>
@@ -59,7 +61,7 @@ const ErrorToast = ({ message, details, toastId }: ErrorToastProps): JSX.Element
               onClick={() => toast.dismiss(toastId)}
               className="rounded-md inline-flex text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none"
             >
-              <span className="sr-only">Fermer</span>
+              <span className="sr-only">{t('common.close')}</span>
               <XMarkIcon className="h-5 w-5" />
             </button>
           </div>

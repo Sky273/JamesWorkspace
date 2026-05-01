@@ -1,5 +1,7 @@
 {
   "legal": {
+    "summary": "Sommaire",
+    "emailLabel": "Email",
     "privacy": {
       "title": "Politique de confidentialité",
       "lastUpdated": "Dernière mise à jour",
