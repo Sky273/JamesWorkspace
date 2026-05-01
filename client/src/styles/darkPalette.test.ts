@@ -372,11 +372,17 @@ describe('soft dark palette styles', () => {
 
   it('keeps off switches visible in light mode', () => {
     const base = readStyle('_base.css');
+    const editorial = readStyle('editorialPages.css');
 
     expect(base).toContain('button.settings-switch[type="button"]');
-    expect(base).toContain('border: 1px solid #94a3b8');
-    expect(base).toContain('background: #e2e8f0');
+    expect(base).toContain('border: 1px solid #64748b');
+    expect(base).toContain('background: #cbd5e1');
+    expect(base).toContain('background: #94a3b8');
     expect(base).toContain('border-color: #64748b');
     expect(base).not.toContain('button.settings-switch[type="button"] {\n  position: relative;\n  display: inline-flex;\n  width: 2.75rem;\n  height: 1.5rem;\n  flex-shrink: 0;\n  align-items: center;\n  padding: 0;\n  border: 2px solid transparent;');
+    expect(editorial).toContain(".editorial-migrated-shell button[type='button']");
+    expect(editorial).toContain(".editorial-migrated-shell button.settings-switch[type='button']");
+    expect(editorial).toContain('background: #cbd5e1');
+    expect(editorial).toContain('background: #94a3b8');
   });
 });

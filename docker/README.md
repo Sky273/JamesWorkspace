@@ -36,6 +36,7 @@ Important:
 - the application image now uses a multi-stage Docker build:
   - builder stage: `npm ci`, frontend build, `npm prune --omit=dev`
   - runtime stage: system runtime packages + pruned `node_modules` + built `client/dist`
+- the expensive PaddleOCR Python layer is installed from `docker/ocr-python-requirements.txt` before application sources are copied, so normal frontend/backend edits reuse Docker cache instead of reinstalling PaddleOCR
 
 ## Required File
 

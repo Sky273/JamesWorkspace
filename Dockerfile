@@ -123,6 +123,13 @@ RUN wget -q -O /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 
+# Install advanced OCR fallback before copying application sources so Docker can
+# reuse this expensive Python layer when only frontend/backend code changes.
+COPY docker/ocr-python-requirements.txt /tmp/ocr-python-requirements.txt
+RUN python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    python3 -m pip install --no-cache-dir -r /tmp/ocr-python-requirements.txt && \
+    rm -f /tmp/ocr-python-requirements.txt
+
 WORKDIR /app
 
 COPY package*.json ./
@@ -135,10 +142,6 @@ COPY USER_GUIDE.md ./
 COPY USER_GUIDE_EN.md ./
 COPY CHANGELOG.md ./
 COPY --from=builder /app/client/dist ./client/dist
-
-# Install advanced OCR fallback (CPU-only)
-RUN python3 -m pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    python3 -m pip install --no-cache-dir paddlepaddle==3.3.1 paddleocr==3.4.0
 
 RUN ls -la /app/client/dist/ && echo "Frontend build successful!"
 
