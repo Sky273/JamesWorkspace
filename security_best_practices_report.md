@@ -1,95 +1,164 @@
 # Security Best Practices Report
 
+Date: 2026-05-01
+
+Scope: static review of the ResumeConverter application codebase, with targeted checks on authentication, session handling, CSP/CORS/CSRF, file preview and sharing, OAuth, backup/network boundaries, and dependency advisories.
+
 ## Executive Summary
 
-The application has a solid baseline on several important controls: cookie-based auth instead of browser token storage, CSRF protection for most API mutations, CSP via Helmet, route-level firm access checks, and restricted MIME types on user-facing resume uploads.  
+The application already has several solid controls: `HttpOnly` auth cookies, CSRF protection on API mutations, a strict CSP without `unsafe-inline` scripts, CORS allowlisting, admin guards on sensitive routes, SSRF checks for backup/internal PDF services, parameterized SQL patterns, and bounded public share tokens.
 
-The most important issues found are:
+The main issues to fix are configuration and trust-boundary problems:
 
-1. A high-impact shell/path injection risk in the backup restore flow.
-2. Sensitive request bodies being written to logs on validation failures.
-3. An OAuth popup callback that uses `postMessage(..., '*')`, which unnecessarily exposes cross-window messages to any opener origin.
+1. **High**: default admin bootstrap can still create an active admin with `admin123`.
+2. **Medium**: refresh tokens fall back to the access-token JWT secret.
+3. **Medium**: OAuth state is process-local and capped at 100 entries.
+4. **Medium**: DOCX preview serves uploaded-derived HTML on the application origin.
+5. **Medium**: `nodemailer` has a production dependency advisory.
+6. **Low**: authentication rate limits are permissive for password attacks.
+7. **Low**: rich HTML sanitizer permits data SVG images and broad URL schemes.
 
-## High Severity
+## Findings
 
-### Finding SBP-001
+### SEC-01 - Default admin bootstrap uses predictable fallback credentials
 
-- Rule ID: EXPRESS-INPUT-001 / EXPRESS-INJECTION-001
-- Severity: High
-- Location: `server/utils/validation.js:601-603`, `server/services/backup/core.service.js:279-326`
-- Evidence:
+Severity: High
 
-```js
-// server/utils/validation.js
-export const restoreBackupSchema = z.object({
-  filename: z.string().min(1).max(500)
-}).strip();
-```
+Evidence:
+- `server/scripts/ensure-default-admin.js:23-24` sets fallback credentials to `admin@resumeconverter.local` / `admin123`.
+- `server/scripts/ensure-default-admin.js:94-99` hashes that password and inserts an active admin user.
+- `server/config/envValidation.js:8-14` does not require `DEFAULT_ADMIN_PASSWORD`.
+- `server/config/envValidation.js:79-83` only warns when `DEFAULT_ADMIN_EMAIL` is missing in production.
 
-```js
-// server/services/backup/core.service.js
-const remotePath = path.posix.join(settings.remote_path || '/backups', filename);
-const localCompressedPath = path.join(TEMP_DIR, filename);
-const localPath = path.join(TEMP_DIR, filename.replace('.gz', ''));
+Impact:
+If the bootstrap script runs in production without an explicit `DEFAULT_ADMIN_PASSWORD`, the app can expose a known admin login. This is especially risky because the auth limiter allows many attempts and the fallback email is also predictable.
 
-const command = `"${psqlBin}" -h ${POSTGRES_HOST} -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f "${localPath}"`;
-await execAsync(command, { env });
-```
+Recommended fix:
+- In production, fail startup or fail the bootstrap script unless `DEFAULT_ADMIN_PASSWORD` is explicitly set and strong.
+- Prefer a gated bootstrap flag such as `DEFAULT_ADMIN_BOOTSTRAP_ENABLED=true`.
+- Reject known defaults (`admin123`, placeholders, short values) in environment validation.
+- Mark any seeded admin as `must_change_password` when created.
 
-- Impact: An authenticated admin can supply a crafted `filename` that reaches filesystem paths and a shell command without an allowlist or escaping. This creates a realistic path traversal and command injection primitive in the restore workflow, which can lead to arbitrary file overwrite and potentially remote code execution in the server context.
-- Fix: Restrict restore input to a strict backup filename allowlist such as `^backup-(daily|weekly|monthly|manual)-[a-zA-Z0-9_-]+-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.sql\.gz$`, reject path separators and quotes, resolve and verify the local target stays under `TEMP_DIR`, and replace `exec` string commands with `execFile`/spawn argument arrays.
-- Mitigation: Disable backup restore from the web UI/API until input validation and process execution are hardened. Treat backup administration as highly privileged.
-- False positive notes: This requires admin access, but that is still a meaningful security boundary. Admin-to-RCE paths should be eliminated.
+### SEC-02 - Refresh tokens reuse `JWT_SECRET` when `REFRESH_TOKEN_SECRET` is missing
 
-## Medium Severity
+Severity: Medium
 
-### Finding SBP-002
+Evidence:
+- `server/config/constants.js:25-28` sets `REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || JWT_SECRET`.
+- `server/config/envValidation.js:17-28` lists `REFRESH_TOKEN_SECRET` as recommended, not required.
 
-- Rule ID: EXPRESS-INPUT-001 / EXPRESS-LOGGING-001
-- Severity: Medium
-- Location: `server/utils/validation.js:1172-1177`, with affected routes including `server/routes/auth/signin.routes.js:57`, `server/routes/auth/passwordReset.routes.js:21`, `server/routes/auth/passwordReset.routes.js:54`, `server/routes/auth/google.routes.js:243`
-- Evidence:
+Impact:
+If the access-token signing key is exposed or overused, refresh-token verification is also compromised. Key separation is especially important because refresh tokens have a longer lifetime.
 
-```js
-safeLog('error', 'Request validation failed', {
-  path: req.path,
-  errors: JSON.stringify(errors),
-  receivedFields: Object.keys(req.body || {}),
-  bodyPreview: JSON.stringify(req.body).substring(0, 500)
-});
-```
+Recommended fix:
+- Require `REFRESH_TOKEN_SECRET` in production with a minimum length of 32 bytes/characters.
+- Keep backward compatibility only in development/test.
+- Log a hard startup error in production when the fallback is active.
 
-- Impact: Any malformed auth or reset request can cause passwords, reset tokens, TOTP codes, or Google ID tokens to be written to application logs. That expands the blast radius of log access and can turn low-signal operational logs into a credential source.
-- Fix: Stop logging request bodies in validation failures, or centrally redact sensitive keys such as `password`, `token`, `refreshToken`, `accessToken`, `totpCode`, `idToken`, `authorization`, and similar variants before logging.
-- Mitigation: Rotate and protect log access immediately if these logs are currently centralized or retained for long periods.
-- False positive notes: This issue only appears on validation failures, not every successful request, but that is still enough to leak real secrets during routine misuse or probing.
+### SEC-03 - OAuth state is stored only in process memory
 
-### Finding SBP-003
+Severity: Medium
 
-- Rule ID: JS-POSTMESSAGE-001
-- Severity: Medium
-- Location: `server/public/oauth-callback.js:18-19`
-- Evidence:
+Evidence:
+- `server/services/authOauthState.service.js:4-7` uses an ephemeral in-memory state store with `maxEntries: 100`.
+- `server/routes/auth/google.routes.js:61-74` generates state and stores action/user/return URL in that store.
+- `server/routes/auth/google.routes.js:103-112` validates and consumes state from that same process-local store.
 
-```js
-if (window.opener) {
-    window.opener.postMessage(message, '*');
-}
-```
+Impact:
+This is not a direct OAuth bypass because the state value is random and one-time-use. The weakness is operational and abuse-related: callbacks can fail across multiple server instances, rolling restarts invalidate pending logins, and a noisy actor can evict legitimate states by starting many OAuth flows.
 
-- Impact: The OAuth callback popup sends its result to any opener origin. If the popup is opened from an unexpected or attacker-controlled origin, that origin can receive callback status/error messages. The current payload is small, but wildcard target origins are an unsafe default for auth-related cross-window messaging and make future regressions easier.
-- Fix: Send messages only to an explicit trusted frontend origin and require the receiving window to validate `event.origin` and message shape.
-- Mitigation: If the callback page is only ever opened by the first-party frontend today, keep that invariant documented and monitored until the code is tightened.
-- False positive notes: I did not find token material being posted here today, which keeps impact below critical; the issue is the unsafe messaging pattern on an auth flow.
+Recommended fix:
+- Store OAuth states in Redis or PostgreSQL with TTL and single-use deletion.
+- Bind the state to expected action and, for link flows, the authenticated user.
+- Increase observability for state eviction/expiry rates.
 
-## Positive Notes
+### SEC-04 - DOCX preview serves uploaded-derived HTML on the app origin
 
-- `server/config/security.js` applies Helmet, CSP, CORS restrictions, and CSRF protections.
-- `client/src/services/authService.ts` explicitly avoids `localStorage` for auth state.
-- Resume extraction upload helpers restrict document MIME types and file counts for the public extraction endpoints.
+Severity: Medium
 
-## Recommended Remediation Order
+Evidence:
+- `server/routes/resumes/crud/handlers.js:159-166` converts uploaded DOCX content with Mammoth and injects `result.value` into an HTML response.
+- `server/routes/resumes/crud/handlers.js:345-350` serves that HTML from the application origin with a restrictive CSP, but allows `img-src data: blob: https:`.
 
-1. Fix backup restore input handling and replace shell-string execution.
-2. Remove or redact request body logging in validation errors.
-3. Lock down OAuth popup messaging to a trusted origin.
+Impact:
+The current CSP prevents script execution, so this is mitigated. Still, serving uploaded-derived HTML from the same origin is a fragile boundary: if CSP is weakened by a proxy/header regression, this becomes a stored XSS risk. The `https:` image allowance can also leak viewer metadata to remote image URLs embedded in documents.
+
+Recommended fix:
+- Sanitize Mammoth output server-side before returning it.
+- Prefer rendering previews in a sandboxed iframe or from an isolated preview origin.
+- Tighten preview CSP to avoid remote images unless explicitly required, for example `img-src data: blob:`.
+- Add regression tests that malicious DOCX-derived HTML cannot execute scripts or load external beacons.
+
+### SEC-05 - Production dependency advisory: `nodemailer`
+
+Severity: Medium
+
+Evidence:
+- `npm audit --omit=dev --audit-level=moderate --json` reports one production vulnerability for `nodemailer <= 8.0.4`.
+- Advisories include SMTP command injection vectors via `envelope.size` and CRLF in transport `name`.
+- Audit suggests upgrade to `nodemailer@8.0.7`, marked as a semver-major update.
+
+Impact:
+Exploitability depends on whether attacker-controlled values can reach the affected Nodemailer transport/envelope fields. Even if current usage is safe, keeping a known vulnerable mail library in production creates unnecessary exposure.
+
+Recommended fix:
+- Upgrade Nodemailer to a patched version after checking API compatibility.
+- Review all mail transport configuration fields that can originate from admin settings or environment variables.
+- Add validation rejecting CR/LF in transport names and mail envelope fields.
+
+### SEC-06 - Authentication rate limit is permissive
+
+Severity: Low
+
+Evidence:
+- `server/config/constants.js` defines `RATE_LIMIT.AUTH.max` as `200` per 15 minutes.
+- `server/middleware/rateLimit.middleware.js:49-64` applies that limit to authentication routes and skips successful requests.
+
+Impact:
+The limiter exists, but 200 failed attempts per 15 minutes per IP is generous for password guessing. Combined with predictable bootstrap credentials, this increases brute-force risk.
+
+Recommended fix:
+- Lower the IP-based auth limit.
+- Add account/email-based throttling for failed login attempts.
+- Add progressive delays or short lockouts after repeated failures.
+- Keep security logging for failed attempts and lockout events.
+
+### SEC-07 - Frontend HTML sanitizer allows data SVG images and broad URI schemes
+
+Severity: Low
+
+Evidence:
+- `client/src/utils/sanitizer.frontend.ts:60-72` allows `img` tags and `data:image/svg+xml;base64` URLs.
+- The same regex allows broad schemes including `ftp`, `cid`, `xmpp`, `callto`, and `sms`.
+
+Impact:
+DOMPurify is a strong mitigation, and images loaded through `<img>` generally do not execute script in modern browsers. Still, SVG data URLs and broad URI schemes are rarely needed for CV content and increase attack surface for rendering inconsistencies, tracking, or future browser/library regressions.
+
+Recommended fix:
+- Remove `svg+xml` from allowed data image types unless a product requirement depends on it.
+- Restrict schemes to the minimal set needed, typically `https`, `mailto`, `tel`, and relative URLs.
+- Add sanitizer tests for blocked SVG data images and blocked unexpected schemes.
+
+## Positive Controls Observed
+
+- Auth tokens are read from cookies and cookies are configured `HttpOnly`, `SameSite=Lax`, and `Secure` in production paths (`server/routes/auth/config.js:38-45`, `server/middleware/auth.middleware.js:95-98`).
+- Auth middleware re-reads current user state and rejects inactive accounts (`server/middleware/auth.middleware.js:162-186`).
+- CSRF protection applies to API mutations except explicit first-step auth/public callback paths (`server/config/security.js:223-333`).
+- Helmet CSP avoids `unsafe-inline` scripts and uses nonces (`server/config/security.js:52-59`, `server/config/security.js:108-167`).
+- CORS is scoped to `/api` and uses an allowlist (`server/config/security.js:174-216`).
+- Backup routes require admin auth (`server/routes/backup.routes.js:33-35`).
+- Backup/internal URL handling has private/loopback host checks (`server/utils/networkHostSecurity.js:119-161`, `server/utils/networkHostSecurity.js:181-208`).
+- File responses set `nosniff` and controlled disposition via a helper (`server/utils/fileResponseSecurity.js:52-55`).
+- Public health response is intentionally minimal (`server/routes/healthRouteHelpers.js:328-333`).
+
+## Validation Performed
+
+- Static code inspection of server routes, middleware, auth services, security configuration, file preview, OAuth, backup/network helpers, sharing helpers, and frontend sanitization.
+- Searched for common XSS sinks (`dangerouslySetInnerHTML`, `innerHTML`), client-side storage, postMessage, SQL interpolation, command execution, and rate limiting.
+- Ran `npm audit --omit=dev --audit-level=moderate --json`.
+
+Not performed:
+- No dynamic penetration test.
+- No authenticated manual abuse testing.
+- No full SAST/DAST tool run.
+- No source review of every query builder call beyond targeted inspection.
