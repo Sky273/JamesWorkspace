@@ -9,6 +9,7 @@ import fs from 'fs';
 import { safeLog } from '../utils/logger.backend.js';
 
 const ROOT_UUID_PATH_PATTERN = /^\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const HTML_CACHE_CONTROL = 'no-cache, max-age=0, must-revalidate, no-transform';
 
 // MIME types for pre-compressed files
 const mimeTypes = {
@@ -52,7 +53,7 @@ function applyStaticCacheHeaders(res, filePath, requestPath = filePath) {
     }
 
     if (normalizedFilePath.endsWith('.html')) {
-        res.setHeader('Cache-Control', 'no-cache, max-age=0, must-revalidate');
+        res.setHeader('Cache-Control', HTML_CACHE_CONTROL);
         return;
     }
 
@@ -188,7 +189,7 @@ export function configureStaticFiles(app, serverDir) {
         }
         // Serve index.html for all other routes (SPA client-side routing)
         res.setHeader('X-Content-Type-Options', 'nosniff');
-        res.setHeader('Cache-Control', 'no-cache, max-age=0, must-revalidate');
+        res.setHeader('Cache-Control', HTML_CACHE_CONTROL);
         res.sendFile(path.join(distPath, 'index.html'), (err) => {
             if (err) {
                 safeLog('error', 'Error serving index.html', { error: err.message, path: req.path });

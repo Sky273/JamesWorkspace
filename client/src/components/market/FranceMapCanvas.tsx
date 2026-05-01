@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { Marker, Popup, type NavigationControl, type Map as MaplibreMap } from 'maplibre-gl';
+import type { NavigationControl, Map as MaplibreMap } from 'maplibre-gl';
 
 import {
   MAP_STYLES,
@@ -33,6 +33,9 @@ interface FranceMapCanvasProps {
 }
 
 const MAPLIBRE_STYLE_ID = 'maplibre-gl-runtime-styles';
+type MaplibreRuntime = typeof import('maplibre-gl');
+type MaplibreMarker = InstanceType<MaplibreRuntime['Marker']>;
+type MaplibrePopup = InstanceType<MaplibreRuntime['Popup']>;
 
 function createMarkerElement({
   size,
@@ -96,10 +99,11 @@ export default function FranceMapCanvas({
   getValueLabel,
 }: FranceMapCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const markersRef = useRef<Marker[]>([]);
+  const maplibreRuntimeRef = useRef<Pick<MaplibreRuntime, 'Marker' | 'Popup'> | null>(null);
+  const markersRef = useRef<MaplibreMarker[]>([]);
   const regionButtonsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
   const selectedRegionCodeRef = useRef<string | null>(null);
-  const popupRef = useRef<Popup | null>(null);
+  const popupRef = useRef<MaplibrePopup | null>(null);
   const navControlRef = useRef<NavigationControl | null>(null);
   const appliedStyleRef = useRef<string | null>(null);
   const initialStyleRef = useRef(isDarkMode ? MAP_STYLES.dark : MAP_STYLES.light);
@@ -144,12 +148,20 @@ export default function FranceMapCanvas({
     let mountedMap: MaplibreMap | null = null;
     const regionButtons = regionButtonsRef.current;
     const initializeMap = async () => {
-      const { default: maplibregl, NavigationControl } = await import('maplibre-gl');
+      const [
+        { default: maplibregl, Marker, NavigationControl, Popup },
+        { default: maplibreWorkerUrl },
+      ] = await Promise.all([
+        import('maplibre-gl/dist/maplibre-gl-csp'),
+        import('maplibre-gl/dist/maplibre-gl-csp-worker.js?url'),
+      ]);
+      maplibregl.setWorkerUrl(maplibreWorkerUrl);
 
       if (cancelled || !containerRef.current || mapRef.current) {
         return;
       }
 
+      maplibreRuntimeRef.current = { Marker, Popup };
       const initialStyle = initialStyleRef.current;
       const map = new maplibregl.Map({
         container: containerRef.current,
@@ -178,6 +190,7 @@ export default function FranceMapCanvas({
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = [];
       regionButtons.clear();
+      maplibreRuntimeRef.current = null;
       navControlRef.current = null;
       appliedStyleRef.current = null;
       mountedMap?.off('load', onMapLoad);
@@ -207,9 +220,11 @@ export default function FranceMapCanvas({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) {
+    const maplibreRuntime = maplibreRuntimeRef.current;
+    if (!map || !mapReady || !maplibreRuntime) {
       return;
     }
+    const { Marker } = maplibreRuntime;
 
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
@@ -309,9 +324,11 @@ export default function FranceMapCanvas({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !mapReady) {
+    const maplibreRuntime = maplibreRuntimeRef.current;
+    if (!map || !mapReady || !maplibreRuntime) {
       return;
     }
+    const { Popup } = maplibreRuntime;
 
     popupRef.current?.remove();
     popupRef.current = null;

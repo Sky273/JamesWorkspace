@@ -129,7 +129,7 @@ describe('configureStaticFiles', () => {
         expect(existsSpy).not.toHaveBeenCalled();
     });
 
-    it('sets nosniff and revalidation headers on spa fallback responses', async () => {
+    it('sets nosniff and no-transform revalidation headers on spa fallback responses', async () => {
         const { root, serverDir } = createFixtureDir();
         fixtures.push(root);
 
@@ -140,8 +140,21 @@ describe('configureStaticFiles', () => {
 
         expect(res.status).toBe(200);
         expect(res.headers['x-content-type-options']).toBe('nosniff');
-        expect(res.headers['cache-control']).toBe('no-cache, max-age=0, must-revalidate');
+        expect(res.headers['cache-control']).toBe('no-cache, max-age=0, must-revalidate, no-transform');
         expect(res.text).toContain('<!doctype html>');
+    });
+
+    it('sets no-transform on direct HTML responses so edge proxies do not inject scripts', async () => {
+        const { root, serverDir } = createFixtureDir();
+        fixtures.push(root);
+
+        const app = express();
+        configureStaticFiles(app, serverDir);
+
+        const res = await request(app).get('/index.html');
+
+        expect(res.status).toBe(200);
+        expect(res.headers['cache-control']).toBe('no-cache, max-age=0, must-revalidate, no-transform');
     });
 
     it('does not serve the SPA fallback for root UUID-like resource requests', async () => {

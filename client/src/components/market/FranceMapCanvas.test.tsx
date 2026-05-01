@@ -5,17 +5,19 @@ import type { Map as MaplibreMap } from 'maplibre-gl';
 import FranceMapCanvas from './FranceMapCanvas';
 import { MAP_STYLES } from './franceMap.types';
 
-const { mapConstructorMock, navigationControlConstructorMock, mockMaps } = vi.hoisted(() => ({
+const { mapConstructorMock, navigationControlConstructorMock, setWorkerUrlMock, mockMaps } = vi.hoisted(() => ({
   mapConstructorMock: vi.fn(),
   navigationControlConstructorMock: vi.fn(),
+  setWorkerUrlMock: vi.fn(),
   mockMaps: [] as Array<{
     setStyle: ReturnType<typeof vi.fn>;
     remove: ReturnType<typeof vi.fn>;
   }>,
 }));
 
-vi.mock('maplibre-gl', () => ({
+vi.mock('maplibre-gl/dist/maplibre-gl-csp', () => ({
   default: {
+    setWorkerUrl: setWorkerUrlMock,
     Map: class MockMap {
       handlers: Record<string, (() => void) | undefined> = {};
       oneTimeHandlers: Record<string, (() => void) | undefined> = {};
@@ -49,6 +51,7 @@ vi.mock('maplibre-gl', () => ({
       }
     },
   },
+  setWorkerUrl: setWorkerUrlMock,
   Marker: class MockMarker {
     setLngLat = vi.fn(() => this);
     addTo = vi.fn(() => this);
@@ -65,6 +68,10 @@ vi.mock('maplibre-gl', () => ({
       navigationControlConstructorMock(options);
     }
   },
+}));
+
+vi.mock('maplibre-gl/dist/maplibre-gl-csp-worker.js?url', () => ({
+  default: '/assets/maplibre-gl-csp-worker-test.js',
 }));
 
 vi.mock('maplibre-gl/dist/maplibre-gl.css?inline', () => ({
@@ -110,6 +117,8 @@ describe('FranceMapCanvas', () => {
       expect(mapConstructorMock).toHaveBeenCalledTimes(1);
       expect(onMapLoad).toHaveBeenCalledTimes(1);
     });
+
+    expect(setWorkerUrlMock).toHaveBeenCalledWith('/assets/maplibre-gl-csp-worker-test.js');
 
     rerender(<FranceMapCanvas {...props} isDarkMode />);
 

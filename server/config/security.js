@@ -6,6 +6,7 @@
 import helmet from 'helmet';
 import cors from 'cors';
 import { doubleCsrf } from 'csrf-csrf';
+import crypto from 'crypto';
 import { ALLOWED_ORIGINS } from './constants.js';
 import { safeLog } from '../utils/logger.backend.js';
 import { normalizeOrigin } from '../utils/originUtils.js';
@@ -50,6 +51,7 @@ const cspCloudflareScriptHashes = [
 
 const cspScriptSources = unique([
     "'self'",
+    (_req, res) => `'nonce-${res.locals.cspNonce}'`,
     "blob:",            // Required: PDF.js worker scripts
     ...cspMapSources,
     ...cspTurnstileSources,
@@ -104,6 +106,14 @@ const cspConnectSources = unique([
 // ============================================
 
 export function configureHelmet(app) {
+    app.use((_req, res, next) => {
+        // Cloudflare JavaScript Detections injects a per-request inline bootstrap
+        // into HTML pages. A per-response nonce keeps script-src strict without
+        // relying on brittle hashes for Cloudflare-generated code.
+        res.locals.cspNonce = crypto.randomBytes(16).toString('base64');
+        next();
+    });
+
     app.use(helmet({
         // HSTS - Force HTTPS for 1 year, include subdomains
         hsts: {
