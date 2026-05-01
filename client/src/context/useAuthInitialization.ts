@@ -10,7 +10,20 @@ interface AuthInitializationArgs {
 }
 
 function shouldSkipSessionRestore(): boolean {
-  return window.location.pathname === '/signin' && window.location.search.includes('expired=true');
+  if (window.location.pathname === '/signin' && window.location.search.includes('expired=true')) {
+    return true;
+  }
+
+  // Public entry pages should not probe /api/auth/me for anonymous visitors.
+  return [
+    '/welcome',
+    '/signin',
+    '/register',
+    '/forgot-password',
+    '/reset-password',
+    '/privacy',
+    '/terms',
+  ].includes(window.location.pathname);
 }
 
 export function useAuthInitialization({

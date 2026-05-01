@@ -157,4 +157,16 @@ describe('App routing', () => {
 
     expect(await screen.findByText('resume-entry-page')).toBeInTheDocument();
   });
+
+  it('keeps the legacy /crm route as an alias to clients', async () => {
+    authState = {
+      isAuthenticated: true,
+      user: { role: 'user' },
+    };
+    window.history.replaceState({}, '', '/crm');
+
+    render(<App />);
+
+    expect(await screen.findByText('clients-page')).toBeInTheDocument();
+  });
 });

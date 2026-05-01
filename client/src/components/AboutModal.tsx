@@ -3,11 +3,12 @@
  * TypeScript version with Markdown changelog rendering
  */
 
-import { useState, useEffect, Fragment, Suspense, lazy } from 'react';
+import { Fragment, Suspense, lazy } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon, SparklesIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
-import packageJson from '@root/package.json';
+import packageJson from '../../../package.json';
+import changelogRaw from '../../../CHANGELOG.md?raw';
 
 interface AboutModalProps {
   isOpen: boolean;
@@ -27,24 +28,7 @@ function LoadingState({ label }: { label: string }): JSX.Element {
 
 const AboutModal = ({ isOpen, onClose }: AboutModalProps): JSX.Element => {
   const { t } = useTranslation();
-  const [changelogText, setChangelogText] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
   const loadingLabel = t('common.loading') || 'Loading...';
-
-  useEffect(() => {
-    if (isOpen && !changelogText) {
-      setIsLoading(true);
-      import('@root/CHANGELOG.md?raw')
-        .then((module) => {
-          setChangelogText(module.default);
-          setIsLoading(false);
-        })
-        .catch(() => {
-          setChangelogText(t('about.errorLoadingChangelog'));
-          setIsLoading(false);
-        });
-    }
-  }, [isOpen, changelogText, t]);
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -112,13 +96,9 @@ const AboutModal = ({ isOpen, onClose }: AboutModalProps): JSX.Element => {
                   </div>
                   <div className="max-h-80 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50">
                     <div className="changelog-markdown text-sm">
-                      {isLoading ? (
-                        <LoadingState label={loadingLabel} />
-                      ) : (
-                        <Suspense fallback={<LoadingState label={loadingLabel} />}>
-                          <AboutModalMarkdown changelogText={changelogText} />
-                        </Suspense>
-                      )}
+                      <Suspense fallback={<LoadingState label={loadingLabel} />}>
+                        <AboutModalMarkdown changelogText={changelogRaw} />
+                      </Suspense>
                     </div>
                   </div>
                 </div>

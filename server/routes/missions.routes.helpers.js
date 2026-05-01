@@ -1,3 +1,5 @@
+import { normalizeRequestTextFields } from '../utils/requestTextNormalization.js';
+
 export function getFirstDefinedValue(source, keys) {
     for (const key of keys) {
         if (source[key] !== undefined) {
@@ -8,7 +10,7 @@ export function getFirstDefinedValue(source, keys) {
 }
 
 export function normalizeMissionPayload(payload = {}) {
-    return {
+    return normalizeRequestTextFields({
         title: getFirstDefinedValue(payload, ['title', 'Title']),
         content: getFirstDefinedValue(payload, ['content', 'Content']),
         status: getFirstDefinedValue(payload, ['status', 'Status']),
@@ -20,7 +22,7 @@ export function normalizeMissionPayload(payload = {}) {
         keywords: getFirstDefinedValue(payload, ['keywords', 'Keywords']),
         requiredSkills: getFirstDefinedValue(payload, ['requiredSkills', 'required_skills', 'Required Skills']),
         preferredSkills: getFirstDefinedValue(payload, ['preferredSkills', 'preferred_skills', 'Preferred Skills'])
-    };
+    }, ['title', 'content', 'firm', 'keywords', 'requiredSkills', 'preferredSkills']);
 }
 
 export function parsePaginationParams(pageValue, limitValue, { defaultPage = 1, defaultLimit = 20, maxLimit = 100 } = {}) {

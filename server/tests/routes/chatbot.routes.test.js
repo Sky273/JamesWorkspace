@@ -168,7 +168,7 @@ describe('Chatbot Routes', () => {
             const [messages] = mockCallLLM.mock.calls[0];
             expect(messages[0].content).toContain('amélioration');
             expect(messages[0].content).toContain('Réponds toujours en français');
-            expect(messages[0].content).not.toMatch(/[ÃÂ�]/u);
+            expect(messages[0].content).not.toMatch(/[\u00c3\u00c2\ufffd]/u);
         });
 
         it('should filter invalid conversation history roles', async () => {

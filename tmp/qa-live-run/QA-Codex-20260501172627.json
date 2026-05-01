@@ -1,0 +1,418 @@
+{
+  "marker": "QA-Codex-20260501172627",
+  "startedAt": "2026-05-01T17:26:27.438Z",
+  "base": "https://resumeconverter.net",
+  "created": {
+    "clientId": null,
+    "contactId": null,
+    "dealId": null,
+    "missionId": null
+  },
+  "checks": [
+    {
+      "name": "Connexion utilisateur",
+      "ok": true,
+      "details": {
+        "url": "https://resumeconverter.net/"
+      },
+      "at": "2026-05-01T17:26:28.784Z"
+    },
+    {
+      "name": "Session API auth",
+      "ok": true,
+      "details": {
+        "status": 200,
+        "user": "luc.moreau.1@gmail.com"
+      },
+      "at": "2026-05-01T17:26:28.919Z"
+    },
+    {
+      "name": "Alias /crm charge une page CRM",
+      "ok": true,
+      "details": {
+        "url": "https://resumeconverter.net/clients",
+        "title": "Resume Converter"
+      },
+      "at": "2026-05-01T17:26:29.656Z"
+    },
+    {
+      "name": "CVth?que charge",
+      "ok": true,
+      "details": {
+        "url": "https://resumeconverter.net/resumes"
+      },
+      "at": "2026-05-01T17:26:30.979Z"
+    },
+    {
+      "name": "Cr?ation client/prospect",
+      "ok": false,
+      "details": {
+        "status": 403,
+        "id": null,
+        "body": {
+          "error": "Invalid CSRF token",
+          "message": "Please refresh the page and try again"
+        }
+      },
+      "at": "2026-05-01T17:26:31.025Z"
+    },
+    {
+      "name": "Modification client/prospect",
+      "ok": false,
+      "details": {
+        "status": 403
+      },
+      "at": "2026-05-01T17:26:31.042Z"
+    },
+    {
+      "name": "Cr?ation contact",
+      "ok": false,
+      "details": {
+        "status": 403,
+        "id": null
+      },
+      "at": "2026-05-01T17:26:31.059Z"
+    },
+    {
+      "name": "Modification contact",
+      "ok": false,
+      "details": {
+        "status": 403
+      },
+      "at": "2026-05-01T17:26:31.077Z"
+    },
+    {
+      "name": "Cr?ation affaire avec client/contact",
+      "ok": false,
+      "details": {
+        "status": 403,
+        "id": null,
+        "body": {
+          "error": "Invalid CSRF token",
+          "message": "Please refresh the page and try again"
+        }
+      },
+      "at": "2026-05-01T17:26:31.093Z"
+    },
+    {
+      "name": "Modification affaire",
+      "ok": false,
+      "details": {
+        "status": 403
+      },
+      "at": "2026-05-01T17:26:31.110Z"
+    },
+    {
+      "name": "Cr?ation mission avec associations compl?tes",
+      "ok": false,
+      "details": {
+        "status": 403,
+        "id": null,
+        "body": {
+          "error": "Invalid CSRF token",
+          "message": "Please refresh the page and try again"
+        }
+      },
+      "at": "2026-05-01T17:26:31.145Z"
+    },
+    {
+      "name": "Modification mission",
+      "ok": false,
+      "details": {
+        "status": 403
+      },
+      "at": "2026-05-01T17:26:31.165Z"
+    },
+    {
+      "name": "Encodage client",
+      "ok": true,
+      "details": {
+        "status": 400,
+        "bad": []
+      },
+      "at": "2026-05-01T17:26:31.250Z"
+    },
+    {
+      "name": "Encodage deal",
+      "ok": true,
+      "details": {
+        "status": 400,
+        "bad": []
+      },
+      "at": "2026-05-01T17:26:31.250Z"
+    },
+    {
+      "name": "Encodage mission",
+      "ok": true,
+      "details": {
+        "status": 400,
+        "bad": []
+      },
+      "at": "2026-05-01T17:26:31.250Z"
+    },
+    {
+      "name": "Upload CV cr?e un batch job",
+      "ok": false,
+      "details": {
+        "status": 403,
+        "body": {
+          "error": "Invalid CSRF token",
+          "message": "Please refresh the page and try again"
+        }
+      },
+      "at": "2026-05-01T17:26:31.297Z"
+    },
+    {
+      "name": "UI /clients charge",
+      "ok": true,
+      "details": {
+        "containsMarker": false,
+        "expectedText": "Client modifi?",
+        "url": "https://resumeconverter.net/clients"
+      },
+      "at": "2026-05-01T17:26:32.234Z"
+    },
+    {
+      "name": "UI /deals/null charge",
+      "ok": true,
+      "details": {
+        "containsMarker": false,
+        "expectedText": "Affaire modifi?e",
+        "url": "https://resumeconverter.net/deals/null"
+      },
+      "at": "2026-05-01T17:26:33.742Z"
+    },
+    {
+      "name": "UI /missions charge",
+      "ok": true,
+      "details": {
+        "containsMarker": false,
+        "expectedText": "Mission modifi?e",
+        "url": "https://resumeconverter.net/missions"
+      },
+      "at": "2026-05-01T17:26:34.701Z"
+    },
+    {
+      "name": "UI /batch-jobs charge",
+      "ok": true,
+      "details": {
+        "containsMarker": false,
+        "expectedText": "Jobs de traitement",
+        "url": "https://resumeconverter.net/batch-jobs"
+      },
+      "at": "2026-05-01T17:26:35.630Z"
+    }
+  ],
+  "api": [
+    {
+      "method": "GET",
+      "url": "/api/auth/me",
+      "status": 200,
+      "body": {
+        "user": {
+          "id": "f3aef290-f27f-4276-a269-87cdd05630ff",
+          "email": "luc.moreau.1@gmail.com",
+          "name": "Luc MOREAU",
+          "jobTitle": "Chef de projet",
+          "phone": "+33661763432",
+          "status": "active",
+          "role": "admin",
+          "firmId": "d555c4a1-1e76-4084-aef4-9569d0271e58",
+          "firmName": "Aptea",
+          "firmLogo": "/api/firms/d555c4a1-1e76-4084-aef4-9569d0271e58/logo/image",
+          "firm_id": "d555c4a1-1e76-4084-aef4-9569d0271e58",
+          "firm": "Aptea",
+          "customerId": "d555c4a1-1e76-4084-aef4-9569d0271e58",
+          "customerName": "Aptea",
+          "customer": "Aptea",
+          "google_id": "100577328053637095486",
+          "google_email": "luc.moreau.1@gmail.com"
+        }
+      },
+      "at": "2026-05-01T17:26:28.919Z"
+    },
+    {
+      "method": "POST",
+      "url": "/api/clients",
+      "status": 403,
+      "body": {
+        "error": "Invalid CSRF token",
+        "message": "Please refresh the page and try again"
+      },
+      "at": "2026-05-01T17:26:31.025Z"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/clients/null",
+      "status": 403,
+      "body": {
+        "error": "Invalid CSRF token",
+        "message": "Please refresh the page and try again"
+      },
+      "at": "2026-05-01T17:26:31.042Z"
+    },
+    {
+      "method": "POST",
+      "url": "/api/clients/null/contacts",
+      "status": 403,
+      "body": {
+        "error": "Invalid CSRF token",
+        "message": "Please refresh the page and try again"
+      },
+      "at": "2026-05-01T17:26:31.059Z"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/clients/null/contacts/null",
+      "status": 403,
+      "body": {
+        "error": "Invalid CSRF token",
+        "message": "Please refresh the page and try again"
+      },
+      "at": "2026-05-01T17:26:31.077Z"
+    },
+    {
+      "method": "POST",
+      "url": "/api/deals",
+      "status": 403,
+      "body": {
+        "error": "Invalid CSRF token",
+        "message": "Please refresh the page and try again"
+      },
+      "at": "2026-05-01T17:26:31.093Z"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/deals/null",
+      "status": 403,
+      "body": {
+        "error": "Invalid CSRF token",
+        "message": "Please refresh the page and try again"
+      },
+      "at": "2026-05-01T17:26:31.109Z"
+    },
+    {
+      "method": "POST",
+      "url": "/api/missions",
+      "status": 403,
+      "body": {
+        "error": "Invalid CSRF token",
+        "message": "Please refresh the page and try again"
+      },
+      "at": "2026-05-01T17:26:31.145Z"
+    },
+    {
+      "method": "PUT",
+      "url": "/api/missions/null",
+      "status": 403,
+      "body": {
+        "error": "Invalid CSRF token",
+        "message": "Please refresh the page and try again"
+      },
+      "at": "2026-05-01T17:26:31.165Z"
+    },
+    {
+      "method": "GET",
+      "url": "/api/clients/null?_=1777656391165",
+      "status": 400,
+      "body": {
+        "error": "Validation failed",
+        "details": [
+          {
+            "field": "id",
+            "message": "Invalid record ID format"
+          }
+        ]
+      },
+      "at": "2026-05-01T17:26:31.188Z"
+    },
+    {
+      "method": "GET",
+      "url": "/api/missions/null?_=1777656391165",
+      "status": 400,
+      "body": {
+        "error": "Validation failed",
+        "details": [
+          {
+            "field": "id",
+            "message": "Invalid record ID format"
+          }
+        ]
+      },
+      "at": "2026-05-01T17:26:31.222Z"
+    },
+    {
+      "method": "GET",
+      "url": "/api/deals/null?_=1777656391165",
+      "status": 400,
+      "body": {
+        "error": "Validation failed",
+        "details": [
+          {
+            "field": "id",
+            "message": "Invalid record ID format"
+          }
+        ]
+      },
+      "at": "2026-05-01T17:26:31.250Z"
+    },
+    {
+      "method": "POST",
+      "url": "/api/batch-jobs",
+      "status": 403,
+      "body": {
+        "error": "Invalid CSRF token",
+        "message": "Please refresh the page and try again"
+      },
+      "at": "2026-05-01T17:26:31.297Z"
+    }
+  ],
+  "console": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 400 ()",
+      "url": "https://resumeconverter.net/api/deals/null",
+      "line": 0
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 400 ()",
+      "url": "https://resumeconverter.net/api/deals/null/resumes",
+      "line": 0
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 400 ()",
+      "url": "https://resumeconverter.net/api/deals/null/missions",
+      "line": 0
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 400 ()",
+      "url": "https://resumeconverter.net/api/deals/null",
+      "line": 0
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 400 ()",
+      "url": "https://resumeconverter.net/api/deals/null/missions",
+      "line": 0
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 400 ()",
+      "url": "https://resumeconverter.net/api/deals/null/resumes",
+      "line": 0
+    },
+    {
+      "type": "error",
+      "text": "17:26:33 [ERROR]  [DealDetailView] Error loading deal: {}",
+      "url": "https://resumeconverter.net/assets/js/logger.frontend-CdBBEH_F.js",
+      "line": 0
+    }
+  ],
+  "pageErrors": [],
+  "networkErrors": [],
+  "anomalies": [],
+  "finishedAt": "2026-05-01T17:26:35.630Z"
+}

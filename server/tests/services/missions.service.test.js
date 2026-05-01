@@ -414,6 +414,25 @@ describe('Missions Service', () => {
             expect(result.title).toBe('New');
             expect(mockInvalidateGroupedDealViews).toHaveBeenCalledWith('f1');
         });
+
+        it('should serialize mission JSONB fields before insert', async () => {
+            createWithTimeout.mockResolvedValueOnce({ id: 'm1' });
+            query.mockResolvedValueOnce({ rows: [{ id: 'm1', title: 'New', firm_id: 'f1' }] });
+
+            await createMission({
+                title: 'New',
+                firm_id: 'f1',
+                keywords: ['qa', 'codex'],
+                required_skills: ['Tests API'],
+                preferred_skills: ['Playwright']
+            });
+
+            expect(createWithTimeout).toHaveBeenCalledWith('missions', expect.objectContaining({
+                keywords: '["qa","codex"]',
+                required_skills: '["Tests API"]',
+                preferred_skills: '["Playwright"]'
+            }));
+        });
     });
 
     describe('findMission', () => {
@@ -440,6 +459,24 @@ describe('Missions Service', () => {
             expect(result.title).toBe('Updated');
             expect(mockInvalidateGroupedDealViews).toHaveBeenNthCalledWith(1, 'f1');
             expect(mockInvalidateGroupedDealViews).toHaveBeenNthCalledWith(2, 'f1');
+        });
+
+        it('should serialize mission JSONB fields before update', async () => {
+            findWithTimeout.mockResolvedValueOnce({ id: 'm1', firm_id: 'f1' });
+            updateWithTimeout.mockResolvedValueOnce({ id: 'm1' });
+            query.mockResolvedValueOnce({ rows: [{ id: 'm1', title: 'Updated', firm_id: 'f1' }] });
+
+            await updateMission('m1', {
+                keywords: ['qa'],
+                required_skills: ['Tests API'],
+                preferred_skills: ['Playwright']
+            });
+
+            expect(updateWithTimeout).toHaveBeenCalledWith('missions', 'm1', expect.objectContaining({
+                keywords: '["qa"]',
+                required_skills: '["Tests API"]',
+                preferred_skills: '["Playwright"]'
+            }));
         });
     });
 

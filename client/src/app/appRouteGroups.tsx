@@ -1,5 +1,5 @@
 import type { JSX } from 'react';
-import { Route } from 'react-router-dom';
+import { Navigate, Route } from 'react-router-dom';
 import { AdminRoute, ManagerRoute } from './routeGuards';
 import {
   HomePage,
@@ -66,6 +66,7 @@ const publicRoutes: RouteDefinition[] = [
 
 const workspaceRoutes: RouteDefinition[] = [
   { path: '', element: <HomePage /> },
+  { path: 'crm', element: <Navigate to="/clients" replace /> },
   { path: 'resumes', element: <ResumesPage /> },
   { path: 'resumes/:id', element: <ResumeEntryPage /> },
   { path: 'resumes/:id/analysis', element: <ResumeAnalysisPage /> },

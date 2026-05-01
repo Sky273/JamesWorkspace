@@ -1,0 +1,266 @@
+{
+  "modalText": "Aller au contenu principal\nRC\nResumeConverter\nAptea\nAccueil\nCVthèque\nMissions\nMatching Profils\nAdaptations\nCRM\nRadar du Marché\nAdministration\nMétriques\nParamètres\nJobs\nSauvegarde\nLogs de Sécurité\nJournal RGPD\nGuide Utilisateur\nLM\nLuc MOREAU\nSuper administrateur\nCRM\nChanger de langue\nLM\nLuc MOREAU\nAptea · Super administrateur\nSe déconnecter\nCRM\n\nGérez vos clients, prospects et affaires\n\nSECTIONS\nClients & Prospects\nAffaires\nEntretiens\nCLIENTS\n0\nPROSPECTS\n1\nCONTACTS\n1\nENVOIS\n0\nTYPE\nTous\nClients\nProspects\nAjouter\n\nAffichage 1-1 sur 1 résultats\n\nPAGE 1 / 1\n\naa\nProspect\n1 contacts\n0 envois\nAptea\nVoir\nModifier\n\nAffichage 1-1 sur 1 résultats\n\nPAGE 1 / 1\n\nAjouter un client/prospect\nCabinet\n(Super administrateur)\nAptea\nCabinet test 3\nDefault\nExabel\nPublic Registration\n\nEn tant que super administrateur, vous pouvez créer cet élément pour un autre cabinet\n\nNom *\nType *\nProspect\nClient\nStatut\nActif\nInactif\nSecteur d'activité\nSélectionner un secteur\nAgroalimentaire\nAssurance\nAutomobile\nAéronautique & Spatial\nBTP & Construction\nBanque & Finance\nChimie & Matériaux\nCommerce & Distribution\nConseil & Audit\nDéfense & Sécurité\nEnvironnement\nHôtellerie & Restauration\nIT & Digital\nImmobilier\nIndustrie & Manufacturing\nJuridique\nLogistique & Transport\nLuxe & Mode\nMédia & Communication\nPharmacie & Biotechnologies\nRessources Humaines\nSanté\nSecteur Public\nServices aux entreprises\nSport & Loisirs\nTourisme\nTélécommunications\nÉducation & Formation\nÉnergie\nSite web\nAdresse\nNotes\nAnnuler\nEnregistrer\nPolitique de confidentialité\n|\nConditions d'utilisation\n\n(c) 2026 Aptea. Tous droits réservés.",
+  "controls": [
+    {
+      "i": 0,
+      "tag": "BUTTON",
+      "text": "Fermer",
+      "type": "button",
+      "name": "",
+      "id": "",
+      "cls": "rounded-[9px] p-1.5 text-[#8f98a8] transition-colors hover:bg-white/8 hover:text-white lg:hidden"
+    },
+    {
+      "i": 1,
+      "tag": "BUTTON",
+      "text": "Ouvrir le menu",
+      "type": "button",
+      "name": "",
+      "id": "",
+      "cls": "absolute left-4 top-1/2 z-10 -translate-y-1/2 shrink-0 lg:hidden group flex h-9 w-9 items-center jus"
+    },
+    {
+      "i": 2,
+      "tag": "BUTTON",
+      "text": "Mode sombre",
+      "type": "button",
+      "name": "",
+      "id": "",
+      "cls": "app-header-actions__text-control inline-flex h-9 w-9 items-center justify-center rounded-[9px] borde"
+    },
+    {
+      "i": 3,
+      "tag": "BUTTON",
+      "text": "Changer de langue",
+      "type": "button",
+      "name": "",
+      "id": "",
+      "cls": "app-header-actions__language inline-flex h-9 w-9 items-center justify-center rounded-[9px] border bo"
+    },
+    {
+      "i": 4,
+      "tag": "BUTTON",
+      "text": "Afficher la version et le changelog",
+      "type": "button",
+      "name": "",
+      "id": "",
+      "cls": "app-header-actions__version inline-flex h-9 w-9 items-center justify-center rounded-[9px] border bor"
+    },
+    {
+      "i": 5,
+      "tag": "BUTTON",
+      "text": "Se déconnecter",
+      "type": "button",
+      "name": "",
+      "id": "",
+      "cls": "group flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#E4E4E7] bg-white shadow"
+    },
+    {
+      "i": 6,
+      "tag": "BUTTON",
+      "text": "Clients & Prospects",
+      "type": "button",
+      "name": "",
+      "id": "",
+      "cls": "segmented-control__item inline-flex min-h-10 w-full min-w-0 items-center gap-1.5 rounded-[9px] px-2 "
+    },
+    {
+      "i": 7,
+      "tag": "BUTTON",
+      "text": "Affaires",
+      "type": "button",
+      "name": "",
+      "id": "",
+      "cls": "segmented-control__item inline-flex min-h-10 w-full min-w-0 items-center gap-1.5 rounded-[9px] px-2 "
+    },
+    {
+      "i": 8,
+      "tag": "BUTTON",
+      "text": "Entretiens",
+      "type": "button",
+      "name": "",
+      "id": "",
+      "cls": "segmented-control__item inline-flex min-h-10 w-full min-w-0 items-center gap-1.5 rounded-[9px] px-2 "
+    },
+    {
+      "i": 9,
+      "tag": "BUTTON",
+      "text": "Tous",
+      "type": "submit",
+      "name": "",
+      "id": "",
+      "cls": "segmented-control__item inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl px-3 p"
+    },
+    {
+      "i": 10,
+      "tag": "BUTTON",
+      "text": "Clients",
+      "type": "submit",
+      "name": "",
+      "id": "",
+      "cls": "segmented-control__item inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl px-3 p"
+    },
+    {
+      "i": 11,
+      "tag": "BUTTON",
+      "text": "Prospects",
+      "type": "submit",
+      "name": "",
+      "id": "",
+      "cls": "segmented-control__item inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-2xl px-3 p"
+    },
+    {
+      "i": 12,
+      "tag": "BUTTON",
+      "text": "Actualiser",
+      "type": "submit",
+      "name": "",
+      "id": "",
+      "cls": "app-button-secondary rounded-[9px] p-2.5"
+    },
+    {
+      "i": 13,
+      "tag": "BUTTON",
+      "text": "Ajouter",
+      "type": "submit",
+      "name": "",
+      "id": "",
+      "cls": "app-button-primary flex items-center gap-2 rounded-[9px] px-4 py-2.5 text-sm"
+    },
+    {
+      "i": 14,
+      "tag": "INPUT",
+      "text": "Rechercher un client ou prospect...",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "cls": "cv-search-input mb-0 w-full rounded-[9px] py-2.5 pr-3 text-sm font-medium text-[var(--cv-text)] plac"
+    },
+    {
+      "i": 15,
+      "tag": "BUTTON",
+      "text": "Voir",
+      "type": "submit",
+      "name": "",
+      "id": "",
+      "cls": "app-button-primary flex flex-1 items-center justify-center gap-1 rounded-[9px] px-3 py-2 text-sm"
+    },
+    {
+      "i": 16,
+      "tag": "BUTTON",
+      "text": "Modifier",
+      "type": "submit",
+      "name": "",
+      "id": "",
+      "cls": "app-button-secondary flex flex-1 items-center justify-center gap-1 rounded-[9px] px-3 py-2 text-sm"
+    },
+    {
+      "i": 17,
+      "tag": "BUTTON",
+      "text": "",
+      "type": "submit",
+      "name": "",
+      "id": "",
+      "cls": "p-2 rounded-lg transition-colors text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30"
+    },
+    {
+      "i": 18,
+      "tag": "BUTTON",
+      "text": "",
+      "type": "button",
+      "name": "",
+      "id": "",
+      "cls": "rounded-[9px] p-1 text-gray-400 transition-colors hover:bg-[#f8f8f7] hover:text-gray-600 dark:hover:"
+    },
+    {
+      "i": 19,
+      "tag": "SELECT",
+      "text": "Aptea\nCabinet test 3\nDefault\nExabel\nPublic Registration",
+      "type": "select-one",
+      "name": "",
+      "id": "",
+      "cls": "w-full px-3 py-2 border border-purple-300 dark:border-purple-600 rounded-lg bg-purple-50 dark:bg-pur"
+    },
+    {
+      "i": 20,
+      "tag": "INPUT",
+      "text": "",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "cls": "w-full rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-gray-900 focus:border-["
+    },
+    {
+      "i": 21,
+      "tag": "SELECT",
+      "text": "Prospect\nClient",
+      "type": "select-one",
+      "name": "",
+      "id": "",
+      "cls": "w-full rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-gray-900 focus:border-["
+    },
+    {
+      "i": 22,
+      "tag": "SELECT",
+      "text": "Actif\nInactif",
+      "type": "select-one",
+      "name": "",
+      "id": "",
+      "cls": "w-full rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-gray-900 focus:border-["
+    },
+    {
+      "i": 23,
+      "tag": "SELECT",
+      "text": "Sélectionner un secteur\nAgroalimentaire\nAssurance\nAutomobile\nAéronautique & Spatial\nBTP & Construction\nBanque & Finance\nChimie & Matériaux\nCommerce & Distribution\nConseil & Audit\nDéfense & Sécurité\nEnvironnement\nHôtellerie & Restauration\nIT & Digital\nImmobilier\nIndustrie & Manufacturing\nJuridique\nLogistique & Transport\nLuxe & Mode\nMédia & Communication\nPharmacie & Biotechnologies\nRessources Humaines\nSanté\nSecteur Public\nServices aux entreprises\nSport & Loisirs\nTourisme\nTélécommunications\nÉducation & Formation\nÉnergie",
+      "type": "select-one",
+      "name": "",
+      "id": "",
+      "cls": "w-full rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-gray-900 focus:border-["
+    },
+    {
+      "i": 24,
+      "tag": "INPUT",
+      "text": "https://",
+      "type": "url",
+      "name": "",
+      "id": "",
+      "cls": "w-full rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-gray-900 focus:border-["
+    },
+    {
+      "i": 25,
+      "tag": "INPUT",
+      "text": "Adresse postale complète",
+      "type": "text",
+      "name": "",
+      "id": "",
+      "cls": "w-full rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-gray-900 focus:border-["
+    },
+    {
+      "i": 26,
+      "tag": "TEXTAREA",
+      "text": "Notes internes sur ce client...",
+      "type": "textarea",
+      "name": "",
+      "id": "",
+      "cls": "w-full rounded-[9px] border border-[#dedbe8] bg-white px-3 py-2 text-sm text-gray-900 focus:border-["
+    },
+    {
+      "i": 27,
+      "tag": "BUTTON",
+      "text": "Annuler",
+      "type": "button",
+      "name": "",
+      "id": "",
+      "cls": "app-button-secondary rounded-[9px] px-4 py-2 text-sm"
+    },
+    {
+      "i": 28,
+      "tag": "BUTTON",
+      "text": "Enregistrer",
+      "type": "submit",
+      "name": "",
+      "id": "",
+      "cls": "app-primary-action rounded-[9px] px-4 py-2 text-sm"
+    }
+  ]
+}

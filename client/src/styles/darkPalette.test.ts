@@ -14,6 +14,8 @@ describe('soft dark palette styles', () => {
     expect(variables).toContain('--surface-muted: #2a2f38');
     expect(variables).toContain('--border-subtle: #343a46');
     expect(variables).toContain('--text-primary: #f4f5f7');
+    expect(variables).toContain('--text-secondary: #d6dbe5');
+    expect(variables).toContain('--text-muted: #b4bdcc');
   });
 
   it('keeps migrated shells on the same soft dark surfaces', () => {

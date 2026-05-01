@@ -66,7 +66,7 @@ export default function BatchUploadOptions({
         <Switch
           checked={improveOption}
           onChange={setImproveOption}
-          label={t('batchUpload.improveOption', 'AmÃ©liorer les CVs automatiquement')}
+          label={t('batchUpload.improveOption', 'Améliorer les CVs automatiquement')}
           disabled={isProcessing}
         />
         <div className="flex items-center gap-2">
@@ -88,7 +88,7 @@ export default function BatchUploadOptions({
         <Switch
           checked={exportOption}
           onChange={setExportOption}
-          label={t('batchUpload.exportOption', 'Exporter les CVs aprÃ¨s traitement (ZIP)')}
+          label={t('batchUpload.exportOption', 'Exporter les CVs après traitement (ZIP)')}
           disabled={isProcessing}
         />
         <div className="flex items-center gap-2">
@@ -175,7 +175,7 @@ export default function BatchUploadOptions({
         <Switch
           checked={deleteAfterExport}
           onChange={setDeleteAfterExport}
-          label={t('batchUpload.deleteAfterOption', 'Supprimer les CVs aprÃ¨s traitement')}
+          label={t('batchUpload.deleteAfterOption', 'Supprimer les CVs après traitement')}
           disabled={isProcessing}
         />
         <div className="flex items-center gap-2">

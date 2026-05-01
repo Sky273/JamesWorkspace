@@ -54,7 +54,62 @@ const HTML_ENTITIES = {
     '&permil;': '\u2030'
 };
 
-const MOJIBAKE_SEQUENCES = ['\\u00c3', '\\u00c2', '\\u00e2\\u20ac', '\\u00e2\\u20ac\\u201c', '\\u00e2\\u20ac\\u201d', '\\u00e2\\u20ac\\u00a6', '\\u00e2\\u20ac\\u00a2', '\\u00ef\\u00bf\\u00bd'];
+const MOJIBAKE_SEQUENCES = [
+    '\u00c3',
+    '\u00c2',
+    '\u00e2\u20ac',
+    '\u00e2\u20ac\u0153',
+    '\u00e2\u20ac\ufffd',
+    '\u00e2\u20ac\u00a6',
+    '\u00e2\u20ac\u00a2',
+    '\u00ef\u00bf\u00bd'
+];
+const WINDOWS_1252_BYTE_OVERRIDES = new Map([
+    ['€', 0x80],
+    ['‚', 0x82],
+    ['ƒ', 0x83],
+    ['„', 0x84],
+    ['…', 0x85],
+    ['†', 0x86],
+    ['‡', 0x87],
+    ['ˆ', 0x88],
+    ['‰', 0x89],
+    ['Š', 0x8a],
+    ['‹', 0x8b],
+    ['Œ', 0x8c],
+    ['Ž', 0x8e],
+    ['‘', 0x91],
+    ['’', 0x92],
+    ['“', 0x93],
+    ['”', 0x94],
+    ['•', 0x95],
+    ['–', 0x96],
+    ['—', 0x97],
+    ['˜', 0x98],
+    ['™', 0x99],
+    ['š', 0x9a],
+    ['›', 0x9b],
+    ['œ', 0x9c],
+    ['ž', 0x9e],
+    ['Ÿ', 0x9f]
+]);
+
+function decodeWindows1252Mojibake(text) {
+    const bytes = [];
+    for (const char of text) {
+        const override = WINDOWS_1252_BYTE_OVERRIDES.get(char);
+        if (override !== undefined) {
+            bytes.push(override);
+            continue;
+        }
+        const code = char.codePointAt(0);
+        if (code > 0xff) {
+            return text;
+        }
+        bytes.push(code);
+    }
+    return Buffer.from(bytes).toString('utf8');
+}
 
 function sanitizeJsonLikePayload(text) {
     if (!text || typeof text !== 'string') {
@@ -76,7 +131,7 @@ export function normalizeUtf8Text(text) {
         return text;
     }
 
-    const repaired = Buffer.from(text, 'latin1').toString('utf8');
+    const repaired = decodeWindows1252Mojibake(text);
     const originalHits = MOJIBAKE_SEQUENCES.reduce((count, sequence) => count + (text.split(sequence).length - 1), 0);
     const repairedHits = MOJIBAKE_SEQUENCES.reduce((count, sequence) => count + (repaired.split(sequence).length - 1), 0);
 

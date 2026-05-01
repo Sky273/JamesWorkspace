@@ -1,0 +1,363 @@
+{
+  "text": "Aller au contenu principal\nRC\nResumeConverter\nAptea\nAccueil\nCVthèque\nMissions\nMatching Profils\nAdaptations\nCRM\nRadar du Marché\nAdministration\nMétriques\nParamètres\nJobs\nSauvegarde\nLogs de Sécurité\nJournal RGPD\nGuide Utilisateur\nLM\nLuc MOREAU\nSuper administrateur\nCVthèque\nChanger de langue\nLM\nLuc MOREAU\nAptea · Super administrateur\nSe déconnecter\nCVthèque\n\nGérez et analysez les profils de vos consultants\n\nAFFICHAGE\nPar affaire\nListe\nTOTAL CVS\n4\n\nGérez et analysez les profils de vos consultants\n\nAMÉLIORÉS\n4\n\nAmélioré\n\nEN COURS\n0\n\nEn cours\n\nSCORE MOYEN\n80%\n\nScore\n\nTélécharger un nouveau CV\nFiltrer\nImport par lot\nRÉSULTATS\n4 résultat(s)\nCliquez sur un CV pour ouvrir son analyse complète.\nHJE\nAMÉLIORÉ\n\nChef de Projet Technico-Fonctionnel\n\n27 avr. 2026\nAptea\nNon requis\nGestion de projet IT\nMOA\nIT & Digital\nLogistique & Transport\nSCORE\n83%\nAperçu du CV\nTelecharger\nGérer les affaires\nSupprimer\nLOU\nAMÉLIORÉ\n\nIngénieur d’études et de développement Java/JEE Angular\n\n27 avr. 2026\nAptea\nNon requis\nDéveloppement full stack\nDéveloppement backend Java\nIT & Digital\nSecteur Public\nSCORE\n81%\nAperçu du CV\nTelecharger\nGérer les affaires\nSupprimer\nMBE\nAMÉLIORÉ\n\nIngénieur automatisation QA\n\n29 avr. 2026\nAptea\nNon requis\nTest manuel\nAutomatisation QA\nIT & Digital\nConseil & Audit\nSCORE\n81%\nAperçu du CV\nTelecharger\nGérer les affaires\nSupprimer\nTCO\nAMÉLIORÉ\n\nProfil commerce international, marketing et développement commercial\n\n27 avr. 2026\nAptea\nNon requis\nProspection commerciale\nVente\nAutomobile\nCommerce & Distribution\nSCORE\n73%\nAperçu du CV\nTelecharger\nGérer les affaires\nSupprimer\n\nAffichage 1-4 sur 4 résultats\n\nPAGE 1 / 1\n\nPolitique de confidentialité\n|\nConditions d'utilisation\n\n(c) 2026 Aptea. Tous droits réservés.",
+  "controls": [
+    {
+      "i": 0,
+      "tag": "A",
+      "text": "Aller au contenu principal",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 1,
+      "tag": "BUTTON",
+      "text": "Fermer",
+      "type": "button",
+      "visible": false
+    },
+    {
+      "i": 2,
+      "tag": "A",
+      "text": "Accueil",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 3,
+      "tag": "A",
+      "text": "CVthèque",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 4,
+      "tag": "A",
+      "text": "Missions",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 5,
+      "tag": "A",
+      "text": "Matching Profils",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 6,
+      "tag": "A",
+      "text": "Adaptations",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 7,
+      "tag": "A",
+      "text": "CRM",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 8,
+      "tag": "A",
+      "text": "Radar du Marché",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 9,
+      "tag": "A",
+      "text": "Administration",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 10,
+      "tag": "A",
+      "text": "Métriques",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 11,
+      "tag": "A",
+      "text": "Paramètres",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 12,
+      "tag": "A",
+      "text": "Jobs",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 13,
+      "tag": "A",
+      "text": "Sauvegarde",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 14,
+      "tag": "A",
+      "text": "Logs de Sécurité",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 15,
+      "tag": "A",
+      "text": "Journal RGPD",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 16,
+      "tag": "A",
+      "text": "Guide Utilisateur",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 17,
+      "tag": "A",
+      "text": "LM\nLuc MOREAU\nSuper administrateur",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 18,
+      "tag": "BUTTON",
+      "text": "Ouvrir le menu",
+      "type": "button",
+      "visible": false
+    },
+    {
+      "i": 19,
+      "tag": "A",
+      "text": "Accueil",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 20,
+      "tag": "BUTTON",
+      "text": "Mode sombre",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 21,
+      "tag": "BUTTON",
+      "text": "Changer de langue",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 22,
+      "tag": "BUTTON",
+      "text": "Afficher la version et le changelog",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 23,
+      "tag": "A",
+      "text": "LM\nLuc MOREAU\nAptea · Super administrateur",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 24,
+      "tag": "BUTTON",
+      "text": "Se déconnecter",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 25,
+      "tag": "BUTTON",
+      "text": "Par affaire",
+      "type": "submit",
+      "visible": true
+    },
+    {
+      "i": 26,
+      "tag": "BUTTON",
+      "text": "Liste",
+      "type": "submit",
+      "visible": true
+    },
+    {
+      "i": 27,
+      "tag": "INPUT",
+      "text": "Rechercher des CV...",
+      "type": "text",
+      "visible": true
+    },
+    {
+      "i": 28,
+      "tag": "BUTTON",
+      "text": "Télécharger un nouveau CV",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 29,
+      "tag": "BUTTON",
+      "text": "Filtrer",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 30,
+      "tag": "BUTTON",
+      "text": "Import par lot",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 31,
+      "tag": "BUTTON",
+      "text": "Actualiser",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 32,
+      "tag": "BUTTON",
+      "text": "Aperçu du CV",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 33,
+      "tag": "BUTTON",
+      "text": "Telecharger",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 34,
+      "tag": "BUTTON",
+      "text": "Gérer les affaires",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 35,
+      "tag": "BUTTON",
+      "text": "Supprimer",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 36,
+      "tag": "BUTTON",
+      "text": "Aperçu du CV",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 37,
+      "tag": "BUTTON",
+      "text": "Telecharger",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 38,
+      "tag": "BUTTON",
+      "text": "Gérer les affaires",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 39,
+      "tag": "BUTTON",
+      "text": "Supprimer",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 40,
+      "tag": "BUTTON",
+      "text": "Aperçu du CV",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 41,
+      "tag": "BUTTON",
+      "text": "Telecharger",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 42,
+      "tag": "BUTTON",
+      "text": "Gérer les affaires",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 43,
+      "tag": "BUTTON",
+      "text": "Supprimer",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 44,
+      "tag": "BUTTON",
+      "text": "Aperçu du CV",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 45,
+      "tag": "BUTTON",
+      "text": "Telecharger",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 46,
+      "tag": "BUTTON",
+      "text": "Gérer les affaires",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 47,
+      "tag": "BUTTON",
+      "text": "Supprimer",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 48,
+      "tag": "A",
+      "text": "",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 49,
+      "tag": "A",
+      "text": "Politique de confidentialité",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 50,
+      "tag": "A",
+      "text": "Conditions d'utilisation",
+      "type": "",
+      "visible": true
+    }
+  ],
+  "logs": []
+}

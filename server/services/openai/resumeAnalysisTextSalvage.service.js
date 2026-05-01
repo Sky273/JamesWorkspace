@@ -2,7 +2,7 @@ import { normalizeUtf8Text, stripLlmThinkingContent } from './textUtils.js';
 
 function sanitizeLooseAnalysisLine(line) {
     return normalizeUtf8Text(String(line || ''))
-        .replace(/^\s*[-*â€¢]\s+/, '')
+        .replace(/^\s*[-*\u00e2\u20ac\u00a2]\s+/, '')
         .replace(/^\s*\d+[.)]\s+/, '')
         .trim();
 }
@@ -50,7 +50,7 @@ function mapLooseAnalysisSectionKey(rawKey) {
     if (/^(hobbies languages|hobbies & languages|languages & hobbies|languages and hobbies|languages|hobbies)$/.test(normalized)) return { kind: 'field', key: 'hobbiesLanguagesRating', score: true };
     if (/^(ats|ats compatibility|ats optimization|ats optimization rating)$/.test(normalized)) return { kind: 'field', key: 'atsOptimizationRating', score: true };
 
-    if (/^(top skills|skills keywords|skills|competences|comp[eÃ©]tences)$/.test(normalized)) return { kind: 'section', key: 'skills' };
+    if (/^(top skills|skills keywords|skills|competences|comp[e\u00c3\u00a9]tences)$/.test(normalized)) return { kind: 'section', key: 'skills' };
     if (/^(top industries|industries|industry|secteurs)$/.test(normalized)) return { kind: 'section', key: 'industries' };
     if (/^(top tools|tools|technologies|stack|outils)$/.test(normalized)) return { kind: 'section', key: 'tools' };
     if (/^(top soft skills|soft skills|soft-skills|qualities|qualites)$/.test(normalized)) return { kind: 'section', key: 'softSkills' };
@@ -124,7 +124,7 @@ function dedupeLooseAnalysisPayload(payload) {
 
 function inferLooseAnalysisStructureKind(cleanedText) {
     const normalized = normalizeUtf8Text(String(cleanedText || ''));
-    const hasBullets = /(^|\n)\s*[-*â€¢]\s+/m.test(normalized);
+    const hasBullets = /(^|\n)\s*[-*\u00e2\u20ac\u00a2]\s+/m.test(normalized);
     const hasKeyValue = /(^|\n)\s*[^:\n]{2,60}\s*:\s*.+/m.test(normalized);
     const hasMarkdownHeadings = /(^|\n)\s*#{1,6}\s+\S+/m.test(normalized);
 

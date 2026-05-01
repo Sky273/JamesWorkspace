@@ -79,7 +79,7 @@ async function executeImprovementWithRetries({
         if (isNonRetryableImprovementError(lastImproveError)) {
             throw lastImproveError;
         }
-        throw new Error(`Ã‰chec de l'amÃ©lioration du CV aprÃ¨s ${maxImproveRetries} tentatives: ${lastImproveError.message}`);
+        throw new Error(`Échec de l'amélioration du CV après ${maxImproveRetries} tentatives: ${lastImproveError.message}`);
     }
 
     return improvedResult;
@@ -98,7 +98,7 @@ function assertImprovementText(improvedResult, item, resumeId, logSuffix = '') {
         textLength: improvedResult?.text?.length || 0
     });
 
-    throw new Error("L'amÃ©lioration a retournÃ© un texte vide. Le CV n'a pas pu Ãªtre amÃ©liorÃ©.");
+    throw new Error("L'amélioration a retourné un texte vide. Le CV n'a pas pu être amélioré.");
 }
 
 async function persistImprovementResult(item, resumeId, improvedResult, job, logSuffix = '') {
@@ -162,7 +162,7 @@ export async function processImproveItem(item, job) {
     `, [item.resume_id]);
 
     if (resumeResult.rows.length === 0) {
-        throw new Error('CV non trouvÃ©');
+        throw new Error('CV non trouvé');
     }
 
     const resume = resumeResult.rows[0];

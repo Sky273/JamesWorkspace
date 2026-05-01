@@ -1,0 +1,311 @@
+{
+  "marker": "QA-Codex-20260501162546",
+  "startedAt": "2026-05-01T16:25:46.475Z",
+  "created": {
+    "client": {
+      "id": "8593c8bd-7944-4613-be48-58564fa9dc93",
+      "name": "QA-Codex-20260501162546 Client"
+    },
+    "deal": {
+      "id": "2e9cefd7-d9a2-4a68-b8ae-dc8b39bce38c",
+      "title": "QA-Codex-20260501162546 Affaire"
+    },
+    "mission": {
+      "id": "03d250eb-4819-4c98-9433-cac0baf29117",
+      "title": "QA-Codex-20260501162546 Mission"
+    },
+    "contact": {
+      "id": "8584be85-bf61-4520-8b3c-1e55819f57bc",
+      "name": "QA-Codex-20260501162546 Contact"
+    }
+  },
+  "modified": {
+    "client": {
+      "id": "8593c8bd-7944-4613-be48-58564fa9dc93",
+      "name": "QA-Codex-20260501162546 Client MOD"
+    },
+    "deal": {
+      "id": "2e9cefd7-d9a2-4a68-b8ae-dc8b39bce38c",
+      "title": "QA-Codex-20260501162546 Affaire MOD"
+    },
+    "mission": {
+      "id": "03d250eb-4819-4c98-9433-cac0baf29117",
+      "title": "QA-Codex-20260501162546 Mission MOD"
+    },
+    "contact": {
+      "id": "8584be85-bf61-4520-8b3c-1e55819f57bc",
+      "name": "QA-Codex-20260501162546 Contact MOD"
+    }
+  },
+  "checks": [
+    {
+      "name": "login",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "create client/prospect",
+      "ok": true,
+      "status": 201,
+      "id": "8593c8bd-7944-4613-be48-58564fa9dc93"
+    },
+    {
+      "name": "QA-Codex-20260501162546 Client MOD",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "create deal",
+      "ok": true,
+      "status": 201,
+      "id": "2e9cefd7-d9a2-4a68-b8ae-dc8b39bce38c"
+    },
+    {
+      "name": "update deal",
+      "ok": true,
+      "status": 200,
+      "title": "QA-Codex-20260501162546 Affaire MOD"
+    },
+    {
+      "name": "create mission",
+      "ok": false,
+      "status": 500
+    },
+    {
+      "name": "relogin for mission/upload continuation",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "mission minimal lower",
+      "ok": true,
+      "status": 200,
+      "id": "03d250eb-4819-4c98-9433-cac0baf29117"
+    },
+    {
+      "name": "update mission and associate deal/client",
+      "ok": false,
+      "status": 500,
+      "id": "03d250eb-4819-4c98-9433-cac0baf29117",
+      "response": {
+        "error": "Failed to update mission"
+      }
+    },
+    {
+      "name": "upload cv batch job",
+      "ok": false,
+      "status": 402,
+      "response": {
+        "code": "INSUFFICIENT_CREDITS",
+        "error": "Insufficient credits for this AI action",
+        "details": {
+          "firmId": "d555c4a1-1e76-4084-aef4-9569d0271e58",
+          "available": 10,
+          "required": 25,
+          "actionType": "resume.upload"
+        }
+      }
+    },
+    {
+      "name": "relogin for contact/mission association tests",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "update mission title/content only",
+      "ok": true,
+      "status": 200,
+      "id": "03d250eb-4819-4c98-9433-cac0baf29117"
+    },
+    {
+      "name": "associate mission to client only",
+      "ok": true,
+      "status": 200,
+      "id": "03d250eb-4819-4c98-9433-cac0baf29117"
+    },
+    {
+      "name": "associate mission to deal only",
+      "ok": true,
+      "status": 200,
+      "id": "03d250eb-4819-4c98-9433-cac0baf29117"
+    },
+    {
+      "name": "create client contact",
+      "ok": true,
+      "status": 201,
+      "id": "8584be85-bf61-4520-8b3c-1e55819f57bc"
+    },
+    {
+      "name": "update client contact",
+      "ok": true,
+      "status": 200,
+      "id": "8584be85-bf61-4520-8b3c-1e55819f57bc"
+    },
+    {
+      "name": "get modified client",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "get modified deal",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "get modified mission",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "get deal missions",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "get deal resumes",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "ui auth via shared browser context",
+      "ok": true,
+      "detail": "200"
+    },
+    {
+      "name": "UI marker visible - CRM clients tab",
+      "ok": true,
+      "detail": "count=1"
+    },
+    {
+      "name": "UI marker visible - CRM deals tab",
+      "ok": true,
+      "detail": "count=4"
+    },
+    {
+      "name": "UI marker visible - Deal detail view",
+      "ok": true,
+      "detail": "count=6"
+    },
+    {
+      "name": "UI marker visible - Missions list",
+      "ok": true,
+      "detail": "count=3"
+    },
+    {
+      "name": "UI marker visible - CV upload page",
+      "ok": true,
+      "detail": "count=0"
+    },
+    {
+      "name": "relogin for cleanup",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "delete test contact",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "name": "delete test mission",
+      "ok": true,
+      "status": 200,
+      "detail": "{\"message\":\"Mission deleted successfully\"}"
+    },
+    {
+      "name": "delete test deal",
+      "ok": true,
+      "status": 200,
+      "detail": "{\"success\":true,\"message\":\"Deal deleted\"}"
+    },
+    {
+      "name": "delete test client",
+      "ok": true,
+      "status": 200,
+      "detail": "{\"message\":\"Client deleted successfully\"}"
+    },
+    {
+      "name": "verify client gone",
+      "ok": true,
+      "status": 404,
+      "detail": ""
+    },
+    {
+      "name": "verify deal gone",
+      "ok": true,
+      "status": 404,
+      "detail": ""
+    },
+    {
+      "name": "verify mission gone",
+      "ok": true,
+      "status": 404,
+      "detail": ""
+    },
+    {
+      "name": "verify clients search marker empty",
+      "ok": true,
+      "status": 200,
+      "detail": ""
+    },
+    {
+      "name": "verify deals search marker empty",
+      "ok": true,
+      "status": 200,
+      "detail": ""
+    },
+    {
+      "name": "verify missions search marker empty",
+      "ok": true,
+      "status": 200,
+      "detail": ""
+    },
+    {
+      "name": "ui auth for cleanup verification",
+      "ok": true,
+      "detail": "200"
+    },
+    {
+      "name": "UI marker absent - CRM clients after cleanup",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "UI marker absent - CRM deals after cleanup",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "UI marker absent - Missions after cleanup",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "findings": [],
+  "console": [],
+  "requests": [],
+  "fatal": "Create mission failed 500: {\"error\":\"Failed to create mission\"}",
+  "deleted": {
+    "contact": {
+      "id": "8584be85-bf61-4520-8b3c-1e55819f57bc",
+      "ok": true,
+      "status": 200
+    },
+    "mission": {
+      "id": "03d250eb-4819-4c98-9433-cac0baf29117",
+      "ok": true,
+      "status": 200
+    },
+    "deal": {
+      "id": "2e9cefd7-d9a2-4a68-b8ae-dc8b39bce38c",
+      "ok": true,
+      "status": 200
+    },
+    "client": {
+      "id": "8593c8bd-7944-4613-be48-58564fa9dc93",
+      "ok": true,
+      "status": 200
+    }
+  },
+  "cleanupCompletedAt": "2026-05-01T16:34:56.772Z"
+}

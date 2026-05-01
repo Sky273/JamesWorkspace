@@ -1,0 +1,288 @@
+Aller au contenu principal
+RC
+ResumeConverter
+Aptea
+Accueil
+CVthèque
+Missions
+Matching Profils
+Adaptations
+CRM
+Radar du Marché
+Administration
+Métriques
+Paramètres
+Jobs
+Sauvegarde
+Logs de Sécurité
+Journal RGPD
+Guide Utilisateur
+LM
+Luc MOREAU
+Super administrateur
+CVthèque
+SEHLI Dorra
+Amélioration
+Changer de langue
+Vérification...
+LM
+Luc MOREAU
+Aptea · Super administrateur
+Se déconnecter
+Amélioration du CV
+
+Utilisez l'IA pour améliorer automatiquement ce CV en optimisant sa structure, son contenu et son score ATS.
+
+SEHLI Dorra
+CV Amélioré
+SEHLI Dorra
+En attente
+
+Amélioration du CV
+
+Supprimer le CV
+Adapter à une mission
+Enregistrer les modifications
+Analyse
+Amélioration
+Export
+AMÉLIORATION DU CV
+Amélioré
+Original
+Comparer
+Aperçu
+Sélection
+Contenu Amélioré
+
+Voici la version améliorée par l'IA de votre CV
+
+Score :
+72%
+Amélioré :
+81%
++9%
+Nom du candidat
+Titre professionnel
+💡
+Preuves
+P
+B
+I
+U
+S
+1
+2
+3
+A
+HTML
+!
+Suggestions d'amélioration
+4
+OPTIMISATION ATS
+4
+Ajouter un titre de CV explicite en tête
+cohérent avec le sommaire : Ingénieur Fullstack Java/JEE Angular.
+Uniformiser les intitulés de dates et missions pour faciliter l’analyse automatique par les ATS.
+Limiter les longues listes de technologies et renforcer les mots-clés dans les expériences où l’usage est réellement prouvé.
+Sommaire
+! 8
+
+
+
+Ingénieur Fullstack Java/JEE Angular orienté développement d’applications web, avec une dominante Java, Spring Boot et Angular. Expérience sur des projets applicatifs intégrant API REST, SOAP et GraphQL, authentification, tests unitaires et intégration continue. Interventions en environnement Agile Scrum, avec documentation technique et fonctionnelle, correction d’anomalies et contribution aux mises en production.
+
+Compétences
+! 7
+
+
+
+Systèmes d’exploitation
+Windows, Unix, Linux, Ubuntu 16.04, CentOS 7.0
+
+Backend
+Java 8, Java 11, J2EE, Kotlin, Spring 4, Spring Boot 2, Spring MVC, Spring Security, Spring Data, Spring Core, Spring ORM, Spring AOP, Spring Batch, Microservices, Node.js, Express.js, EJB, JPA, Hibernate
+
+Frontend
+Angular 6, Angular 10, Angular 13, Angular Material, TypeScript, JavaScript, HTML5, XML, JSON, CSS3, Bootstrap 3.0, AJAX, D3.js
+
+APIs et web services
+REST, RESTful, SOAP, GraphQL, JAX-WS, JAX-RS, Swagger API, WebSocket, Socket.IO
+
+Tests et qualité
+JUnit, Mockito, Jasmine, Karma, TDD, BDD, SOLID, SonarLint, SonarQube
+
+Conception et normes
+UML, POO, POA, Design Patterns
+
+Bases de données
+MySQL 5, SQL Server 2014, Oracle 12c, NoSQL, MongoDB 3.0, PostgreSQL, SQL
+
+Environnements de développement et outils
+Eclipse, Spring Tool Suite, Visual Studio, Visual Studio Code, IntelliJ IDEA, SoapUI, Postman, Insomnia, WampServer, Jira, Confluence, Trello, Azure DevOps
+
+Serveurs web et applicatifs
+Apache Tomcat, WildFly, JBoss
+
+DevOps
+Maven, Jenkins, Git, Docker, Docker Compose, CI/CD, Kubernetes
+
+Méthodologies
+Agile Scrum
+
+Gestion de projet
+Développement, conception, documentation fonctionnelle et technique
+
+Expérience
+! 9
+
+
+Capgemini France — 09/2023 à 01/2024 — Formation Cegedim Active Infinite
+
+Contexte : formation interne en intercontrat.
+
+Formation au paramétrage dans le domaine de la santé et de la prévoyance pour le client Cegedim Active Infinite.
+
+Sofrecom — 02/2023 à 07/2023 — Projet Orange reprise France
+
+Client : Orange France — Taille du projet : moyenne.
+
+Application web permettant de gérer l’estimation de la valeur de rachat d’un téléphone en ligne.
+
+Mettre en œuvre le module d’authentification et d’autorisation avec Spring Security et JWT.
+
+Développer et maintenir les composants Angular, les services Spring Boot et les API REST.
+
+Développer des tests unitaires et des tests d’intégration.
+
+Corriger les anomalies présentes en environnement de production et participer aux tâches de production.
+
+Préparer la documentation technique et fonctionnelle.
+
+Gérer la base de données et développer de nouvelles fonctionnalités selon les besoins.
+
+Environnement technique : Java 8/11, Spring Boot, Spring Security, Maven, SQL, Hibernate, REST, SOAP, JSON, Angular 13, Git, Jira, Apache Tomcat, IntelliJ IDEA, HTML, CSS, JavaScript, Visual Studio Code, tests unitaires, tests d’intégration, Swagger, Spring Data, SQL Server, Kotlin, Jasmine, Karma, Kubernetes, Docker, TDD, BDD, SOLID, CI/CD, Scrum.
+
+Think Tank Business Solutions — 05/2022 à 02/2023 — Projet ABB
+
+Client : ABB Suisse — Taille du projet : grand.
+
+Application web utilisée par les employés d’ABB pour gérer leurs comptes, leurs rôles et les scénarios de test associés aux différents types d’équipements.
+
+Développer de nouvelles fonctionnalités en fonction des besoins.
+
+Configurer l’authentification basée sur MSAL côté front-end.
+
+Développer et maintenir des services GraphQL et REST.
+
+Mettre en place des tests unitaires avec JUnit et Mockito suivant une approche TDD.
+
+Réaliser les code reviews et les merge requests.
+
+Documenter les services ajoutés dans Azure DevOps et préparer la documentation technique et fonctionnelle.
+
+Superviser les nouveaux développeurs du projet pour l’installation de l’environnement et la description des fonctionnalités.
+
+Environnement technique : Java 8/11, Spring Boot, Spring Security, Maven, SQL, Azure DevOps, Angular Material, Hibernate, REST, GraphQL, JSON, Angular 13, Git, MSAL, Apache Tomcat, IntelliJ IDEA, HTML, CSS, JavaScript, Visual Studio Code, tests unitaires, tests d’intégration, Swagger, Spring Data, PostgreSQL, Jasmine, Karma, Kubernetes, Docker, TDD, BDD, SOLID, CI/CD, Scrum.
+
+Think Tank Business Solutions — 11/2021 à 05/2022 — Projet BMW ARI
+
+Client : BMW Allemagne — Taille du projet : moyen.
+
+Application web utilisée pour le suivi transparent des projets de développement d’équipements du groupe BMW.
+
+Refactoriser le code selon les bonnes pratiques de clean code et les principes SOLID.
+
+Migrer l’application d’Angular 6 vers Angular 13.
+
+Développer des tableaux et diagrammes de rapports statistiques en JavaScript avec D3.js.
+
+Développer des composants front-end avec Angular 13.
+
+Documenter les sections développées et corriger les anomalies existantes.
+
+Effectuer la validation technique et fonctionnelle par revue de code, validation des merge requests et tests unitaires.
+
+Environnement technique : Java 8, Spring Boot, Maven, SQL, D3.js, Hibernate, Angular Material, WildFly, REST, JSON, Angular 6/13, Git, IntelliJ IDEA, HTML, CSS, JavaScript, Visual Studio Code, tests unitaires, tests d’intégration, Spring Data, PostgreSQL, Jasmine, Karma, Kubernetes, Docker, TDD, BDD, SOLID, CI/CD, Scrum.
+
+E-Skills — 01/2021 à 06/2021 — Projet E-Learning skills
+
+Client : interne — Taille du projet : moyen.
+
+Développement d’une application web pour une plateforme d’apprentissage en ligne utilisée par les mentors, les superviseurs et les étudiants.
+
+Développer de nouvelles fonctionnalités selon les besoins, avec gestion des différents rôles.
+
+Réaliser la conception et la modélisation UML, notamment les diagrammes de classes et de séquences.
+
+Gérer les cours aux formats PDF et MP4.
+
+Développer les composants front-end avec Angular 10 et les API REST back-end avec Java et Node.js.
+
+Développer un forum de chat en ligne en temps réel avec Socket.IO.
+
+Intégrer Zoom dans l’application avec Zoom SDK et suivre l’utilisation en temps réel avec Google Analytics.
+
+Documenter les sections développées.
+
+Environnement technique : Java 8, Spring Boot, Maven, Hibernate, Node.js, Express.js, Zoom SDK, Socket.IO, Google Analytics, Docker, Angular 10, Trello, Bootstrap, HTML, CSS, JavaScript, Angular Material, MongoDB, Scrum.
+
+Kam Company GMBH — 02/2016 à 08/2016 — Projet site web d’une pharmacie
+
+Client : interne — Taille du projet : moyen.
+
+Développement d’une application pour la gestion d’une pharmacie.
+
+Réaliser la conception et la modélisation UML, notamment les diagrammes de classes et de séquences.
+
+Rédiger la documentation technique des modules développés.
+
+Mettre en œuvre le module d’authentification et d’autorisation avec Spring Security et JWT.
+
+Développer la gestion du panier, des produits et des utilisateurs.
+
+Développer la fonctionnalité de téléchargement de certificat aux formats image et PDF.
+
+Environnement technique : J2EE, Spring MVC, Spring Security, MySQL, JSON, Bootstrap, UML, HTML, CSS, Angular Material, Docker, Trello, Scrum.
+
+Formation
+! 3
+
+
+
+Diplôme National d’Ingénieur Informatique — ESPRIT / 2021
+
+Institut préparatoire aux études d’ingénierie — IPEIEM / 2018
+
+Langues
+! 8
+
+
+
+Français : avancé
+
+Anglais : avancé
+
+Allemand : débutant
+
+
+
+
+1000 mots
+6984 caractères
+Modifier par IA
+
+Attention : Les modifications générées par l'IA peuvent parfois dégrader la qualité du CV. Vérifiez toujours le résultat avant de sauvegarder.
+
+Utilisez l'IA pour modifier ce CV selon vos instructions spécifiques
+
+Appliquer
+Commentaires
+0 commentaires
+Privé (visible uniquement par moi)
+Publier
+Aucun commentaire. Soyez le premier à en ajouter !
+Politique de confidentialité
+|
+Conditions d'utilisation
+
+(c) 2026 Aptea. Tous droits réservés.

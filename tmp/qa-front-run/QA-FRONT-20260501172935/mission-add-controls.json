@@ -1,0 +1,369 @@
+{
+  "text": "Aller au contenu principal\nRC\nResumeConverter\nAptea\nAccueil\nCVthèque\nMissions\nMatching Profils\nAdaptations\nCRM\nRadar du Marché\nAdministration\nMétriques\nParamètres\nJobs\nSauvegarde\nLogs de Sécurité\nJournal RGPD\nGuide Utilisateur\nLM\nLuc MOREAU\nSuper administrateur\nMissions\nChanger de langue\nLM\nLuc MOREAU\nAptea · Super administrateur\nSe déconnecter\nOffres de Mission\n\nGérez vos offres de mission pour l'adaptation des CV\n\nAFFICHAGE\nPar affaire\nListe\nTOTAL MISSIONS\n2\n\nGérez vos offres de mission pour l'adaptation des CV\n\nMISSIONS ACTIVES\n2\n\n2 missions\n\nCABINETS\n1\n\nCRM\n\nAFFAIRE\n2\n\n0 Brouillon - 0 Clôturée\n\n2 mission(s) au total / 0 affaires\nRafraîchir\nAjouter une mission\ntestLuc\nACTIVE\nMis à jour 01 mai 2026\n\ntest Luc\n\naa\naa\n0 adaptation(s)\nVoir\nModifier\nSupprimer\nProduct Manager\nACTIVE\nMis à jour 30 avr. 2026\n\nProduct Manager\n\n \n\nMétiers\n\nFonctions\n\nPilotage de projet ou de programme\n\nProduct Manager\n\n \n\nSpécialités technologiques\n\nGestion de projet\nPlanification et gestion de projet\n\n \n\nType de facturation\n\nAssistance Technique (Facturation avec un taux journalier)\n\nCompétences\n\nTechnologies et Outils\n\nJIRA (10 ans) Gantt (10 ans)\n\nMéthodes / Normes\n\nKPI (10 ans)\n\nDescription et livrables de la prestation\n\nVous agirez en tant que Product Manager, garant de la structuration, de la gouvernance et du delivery.\n\nLes attendus sur ce projet sont les suivants :\n\na. Discovery & Ateliers Métiers :\nOrganiser et animer les ateliers pour clarifier les nouveaux besoins 2026.\n\nb. Structuration du Delivery :\nDéfinition de l’organisation du projet, de sa gouvernance (comitologie, ...), du suivi opérationnel (KPI de suivi d’avancement, ...), mise en place du JIRA de suivi du projet.\n\nc. Pilotage du Delivery :\nPoursuivre la démarche post-cadrage initiée fin 2025 et suivre l’avancement des chantiers.\n\nd. Suivi & Adoption :\nCoordonner les équipes techniques et métiers pour transformer les analyses en fonctionnalités concrètes.\nPour mener à bien ce projet, nous recherchons un profil senior capable de naviguer entre la vision stratégique et l’exécution opérationnelle.\n\ne. Organisation, préparation et animation de certains comités (à minima comités de pilotage).\n\nCompétences Clés :\n\na. Capacité à structurer un planning (Gantt / Jalons) tout en gérant un backlog produit (User Stories / Priorisation).\n\nb. Compréhension des enjeux comptables et des indicateurs de performance (KPIs financiers, processus P2P / O2C).\n\nc. Ancrer la vision produit au cœur du projet : analyse et priorisation des besoins utilisateurs, viabilité des développements.\n\nd. Capacité à intégrer l’expérience utilisateur au cœur du projet.\n\nExpertise souhaitée\n\nProduct Manager et gestion de projet.\n\n \n\n1 adaptation(s)\nJIRA\nGantt\nGestion de projet\nVoir\nModifier\nSupprimer\n\nAffichage 1-2 sur 2 missions\n\nPAGE 1 / 1\n\nOFFRES DE MISSION\nAjouter une mission\n\nUtilisez l'éditeur pour formater votre texte\n\nINFORMATIONS\nTitre\nCabinet\n(Super administrateur)\nAptea\nCabinet test 3\nDefault\nExabel\nPublic Registration\n\nEn tant que super administrateur, vous pouvez créer cet élément pour un autre cabinet\n\nTitre *\nStatut\nActive\nBrouillon\nClôturée\nAFFAIRE\nClient / Prospect\nAffaire\nAucune affaire (optionnel)\nPartenariat groupe BK / Harington / BTI / Aptea (open)\nQA-FRONT-20260501172935 Affaire cr??e — QA-FRONT-20260501172935 Client modifi? (open)\nClient / Prospect\nGérer\nSélectionner un client\nQA-FRONT-20260501172935 Client modifi? (Prospect)\naa (Prospect)\nInterlocuteur\nSélectionner d'abord un client\nDESCRIPTION\nDescription *\n\nUtilisez l'éditeur pour formater votre texte\n\nP\nB\nI\nU\nS\n1\n2\n3\nA\nHTML\n\n\n\n\n0 mots\n0 caractères\nAnnuler\nCréer\nPolitique de confidentialité\n|\nConditions d'utilisation\n\n(c) 2026 Aptea. Tous droits réservés.",
+  "controls": [
+    {
+      "i": 0,
+      "tag": "BUTTON",
+      "text": "Fermer",
+      "type": "button",
+      "visible": false
+    },
+    {
+      "i": 1,
+      "tag": "BUTTON",
+      "text": "Ouvrir le menu",
+      "type": "button",
+      "visible": false
+    },
+    {
+      "i": 2,
+      "tag": "BUTTON",
+      "text": "Mode sombre",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 3,
+      "tag": "BUTTON",
+      "text": "Changer de langue",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 4,
+      "tag": "BUTTON",
+      "text": "Afficher la version et le changelog",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 5,
+      "tag": "BUTTON",
+      "text": "Se déconnecter",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 6,
+      "tag": "BUTTON",
+      "text": "Par affaire",
+      "type": "submit",
+      "visible": true
+    },
+    {
+      "i": 7,
+      "tag": "BUTTON",
+      "text": "Liste",
+      "type": "submit",
+      "visible": true
+    },
+    {
+      "i": 8,
+      "tag": "INPUT",
+      "text": "Rechercher une mission...",
+      "type": "text",
+      "visible": true
+    },
+    {
+      "i": 9,
+      "tag": "BUTTON",
+      "text": "Rafraîchir",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 10,
+      "tag": "BUTTON",
+      "text": "Ajouter une mission",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 11,
+      "tag": "BUTTON",
+      "text": "Voir",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 12,
+      "tag": "BUTTON",
+      "text": "Modifier",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 13,
+      "tag": "BUTTON",
+      "text": "Supprimer",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 14,
+      "tag": "BUTTON",
+      "text": "Voir",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 15,
+      "tag": "BUTTON",
+      "text": "Modifier",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 16,
+      "tag": "BUTTON",
+      "text": "Supprimer",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 17,
+      "tag": "BUTTON",
+      "text": "Fermer",
+      "type": "submit",
+      "visible": true
+    },
+    {
+      "i": 18,
+      "tag": "SELECT",
+      "text": "Aptea\nCabinet test 3\nDefault\nExabel\nPublic Registration",
+      "type": "select-one",
+      "visible": true
+    },
+    {
+      "i": 19,
+      "tag": "INPUT",
+      "text": "Ex: Développeur Full Stack",
+      "type": "text",
+      "visible": true
+    },
+    {
+      "i": 20,
+      "tag": "SELECT",
+      "text": "Active\nBrouillon\nClôturée",
+      "type": "select-one",
+      "visible": true
+    },
+    {
+      "i": 21,
+      "tag": "SELECT",
+      "text": "Aucune affaire (optionnel)\nPartenariat groupe BK / Harington / BTI / Aptea (open)\nQA-FRONT-20260501172935 Affaire cr??e — QA-FRONT-20260501172935 Client modifi? (open)",
+      "type": "select-one",
+      "visible": true
+    },
+    {
+      "i": 22,
+      "tag": "SELECT",
+      "text": "Sélectionner un client\nQA-FRONT-20260501172935 Client modifi? (Prospect)\naa (Prospect)",
+      "type": "select-one",
+      "visible": true
+    },
+    {
+      "i": 23,
+      "tag": "SELECT",
+      "text": "Sélectionner d'abord un client",
+      "type": "select-one",
+      "visible": true
+    },
+    {
+      "i": 24,
+      "tag": "INPUT",
+      "text": "",
+      "type": "file",
+      "visible": false
+    },
+    {
+      "i": 25,
+      "tag": "BUTTON",
+      "text": "",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 26,
+      "tag": "BUTTON",
+      "text": "",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 27,
+      "tag": "BUTTON",
+      "text": "P",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 28,
+      "tag": "BUTTON",
+      "text": "B",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 29,
+      "tag": "BUTTON",
+      "text": "I",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 30,
+      "tag": "BUTTON",
+      "text": "U",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 31,
+      "tag": "BUTTON",
+      "text": "S",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 32,
+      "tag": "BUTTON",
+      "text": "",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 33,
+      "tag": "BUTTON",
+      "text": "",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 34,
+      "tag": "BUTTON",
+      "text": "",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 35,
+      "tag": "BUTTON",
+      "text": "",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 36,
+      "tag": "BUTTON",
+      "text": "",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 37,
+      "tag": "BUTTON",
+      "text": "1\n2\n3",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 38,
+      "tag": "BUTTON",
+      "text": "",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 39,
+      "tag": "BUTTON",
+      "text": "",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 40,
+      "tag": "BUTTON",
+      "text": "",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 41,
+      "tag": "BUTTON",
+      "text": "",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 42,
+      "tag": "BUTTON",
+      "text": "",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 43,
+      "tag": "BUTTON",
+      "text": "",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 44,
+      "tag": "BUTTON",
+      "text": "A",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 45,
+      "tag": "BUTTON",
+      "text": "",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 46,
+      "tag": "BUTTON",
+      "text": "",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 47,
+      "tag": "BUTTON",
+      "text": "",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 48,
+      "tag": "BUTTON",
+      "text": "HTML",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 49,
+      "tag": "DIV",
+      "text": "\n",
+      "type": "",
+      "visible": true
+    },
+    {
+      "i": 50,
+      "tag": "BUTTON",
+      "text": "Annuler",
+      "type": "button",
+      "visible": true
+    },
+    {
+      "i": 51,
+      "tag": "BUTTON",
+      "text": "Créer",
+      "type": "submit",
+      "visible": true
+    }
+  ]
+}

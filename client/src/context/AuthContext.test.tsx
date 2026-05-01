@@ -114,4 +114,21 @@ describe('AuthContext', () => {
       expect(signOutMock).toHaveBeenCalled();
     });
   });
+
+  it('does not restore the session on public entry pages', async () => {
+    window.history.replaceState({}, '', '/signin');
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('loading:false')).toBeInTheDocument();
+    });
+
+    expect(restoreSessionMock).not.toHaveBeenCalled();
+    expect(screen.getByText('authenticated:false')).toBeInTheDocument();
+  });
 });

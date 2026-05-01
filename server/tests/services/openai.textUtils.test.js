@@ -4,9 +4,16 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { decodeHtmlEntities, cleanupText, cleanupHtml, stripLlmThinkingContent, extractJsonPayload, parseJsonFromLlmResponse, salvageResumeAnalysisFromText, salvageResumeAnalysisFromTextDetailed } from '../../services/openai/textUtils.js';
+import { decodeHtmlEntities, cleanupText, cleanupHtml, stripLlmThinkingContent, extractJsonPayload, parseJsonFromLlmResponse, salvageResumeAnalysisFromText, salvageResumeAnalysisFromTextDetailed, normalizeUtf8Text } from '../../services/openai/textUtils.js';
 
 describe('OpenAI Text Utilities', () => {
+    describe('normalizeUtf8Text', () => {
+        it('should repair common UTF-8 decoded as latin1 mojibake', () => {
+            expect(normalizeUtf8Text('Cr\u00c3\u00a9\u00c3\u00a9e et modifi\u00c3\u00a9e')).toBe('Créée et modifiée');
+            expect(normalizeUtf8Text('l\u00e2\u20ac\u2122export apr\u00c3\u00a8s traitement')).toBe('l’export après traitement');
+        });
+    });
+
     describe('decodeHtmlEntities', () => {
         it('should return falsy input as-is', () => {
             expect(decodeHtmlEntities(null)).toBeNull();

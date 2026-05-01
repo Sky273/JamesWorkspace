@@ -1,0 +1,68 @@
+[
+  {
+    "i": 0,
+    "tag": "BUTTON",
+    "text": "",
+    "type": "button"
+  },
+  {
+    "i": 1,
+    "tag": "SELECT",
+    "text": "Aptea\nCabinet test 3\nDefault\nExabel\nPublic Registration",
+    "type": "select-one"
+  },
+  {
+    "i": 2,
+    "tag": "INPUT",
+    "text": "QA-FRONT-20260501172935 Client cr??",
+    "type": "text"
+  },
+  {
+    "i": 3,
+    "tag": "SELECT",
+    "text": "Prospect\nClient",
+    "type": "select-one"
+  },
+  {
+    "i": 4,
+    "tag": "SELECT",
+    "text": "Actif\nInactif",
+    "type": "select-one"
+  },
+  {
+    "i": 5,
+    "tag": "SELECT",
+    "text": "Sélectionner un secteur\nAgroalimentaire\nAssurance\nAutomobile\nAéronautique & Spatial\nBTP & Construction\nBanque & Finance\nChimie & Matériaux\nCommerce & Distribution\nConseil & Audit\nDéfense & Sécurité\nEnvironnement\nHôtellerie & Restauration\nIT & Digital\nImmobilier\nIndustrie & Manufacturing\nJuridique\nLogistique & Transport\nLuxe & Mode\nMédia & Communication\nPharmacie & Biotechnologies\nRessources Humaines\nSanté\nSecteur Public\nServices aux entreprises\nSport & Loisirs\nTourisme\nTélécommunications\nÉducation & Formation\nÉnergie",
+    "type": "select-one"
+  },
+  {
+    "i": 6,
+    "tag": "INPUT",
+    "text": "https://example.test",
+    "type": "url"
+  },
+  {
+    "i": 7,
+    "tag": "INPUT",
+    "text": "143 rue de la QA, Paris",
+    "type": "text"
+  },
+  {
+    "i": 8,
+    "tag": "TEXTAREA",
+    "text": "Notes cr??es ????? QA-FRONT-20260501172935",
+    "type": "textarea"
+  },
+  {
+    "i": 9,
+    "tag": "BUTTON",
+    "text": "Annuler",
+    "type": "button"
+  },
+  {
+    "i": 10,
+    "tag": "BUTTON",
+    "text": "Enregistrer",
+    "type": "submit"
+  }
+]

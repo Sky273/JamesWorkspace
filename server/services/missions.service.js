@@ -76,6 +76,40 @@ const MISSION_WITH_JOINS_SELECT = `
     LEFT JOIN deals d ON m.deal_id = d.id
 `;
 
+const MISSION_JSONB_FIELDS = ['keywords', 'required_skills', 'preferred_skills'];
+
+function serializeJsonbValue(value) {
+    if (value === undefined) {
+        return undefined;
+    }
+    if (value === null) {
+        return null;
+    }
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) {
+            return null;
+        }
+        try {
+            JSON.parse(trimmed);
+            return trimmed;
+        } catch {
+            return JSON.stringify(trimmed);
+        }
+    }
+    return JSON.stringify(value);
+}
+
+function serializeMissionJsonbFields(fields = {}) {
+    const serialized = { ...fields };
+    for (const field of MISSION_JSONB_FIELDS) {
+        if (Object.prototype.hasOwnProperty.call(serialized, field)) {
+            serialized[field] = serializeJsonbValue(serialized[field]);
+        }
+    }
+    return serialized;
+}
+
 /**
  * Fetch a single mission with all joins by ID
  * @param {string} id
@@ -343,7 +377,7 @@ function buildMissionDeleteBlockedError(counts) {
  * @returns {Promise<Object>} mapped mission record
  */
 export async function createMission(data) {
-    const newMission = await createWithTimeout('missions', data);
+    const newMission = await createWithTimeout('missions', serializeMissionJsonbFields(data));
     const record = await getMissionWithJoins(newMission.id, { bypassCache: true });
     await Promise.all([
         invalidateMissionsCaches(),
@@ -370,7 +404,7 @@ export async function findMission(id) {
  */
 export async function updateMission(id, updates) {
     const previousMission = await findMission(id);
-    const updated = await updateWithTimeout('missions', id, updates);
+    const updated = await updateWithTimeout('missions', id, serializeMissionJsonbFields(updates));
     const record = await getMissionWithJoins(updated.id, { bypassCache: true });
     await Promise.all([
         invalidateMissionsCaches(),

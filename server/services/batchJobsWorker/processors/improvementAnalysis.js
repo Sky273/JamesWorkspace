@@ -7,9 +7,9 @@ import { metrics } from '../../metrics.service.js';
 const IMPROVEMENT_PROVIDER_CONFIGURATION_MESSAGE = "L'amélioration du CV est indisponible car le fournisseur IA est mal configuré ou son jeton a expiré.";
 const INVALID_RESPONSE_MARKERS = [
     'réponse invalide',
-    'rÃ©ponse invalide',
-    'rÃƒÂ©ponse invalide',
-    'rÃƒÆ’Ã‚Â©ponse invalide',
+    'r\u00c3\u00a9ponse invalide',
+    'r\u00c3\u0192\u00c2\u00a9ponse invalide',
+    'r\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a9ponse invalide',
     'reponse invalide',
     'invalid response',
     'returned an invalid response'

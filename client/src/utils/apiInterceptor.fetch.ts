@@ -6,6 +6,9 @@ interface MergedAbortSignalResult {
   cleanup: () => void;
 }
 
+const isAbortError = (error: unknown): error is Error =>
+  error instanceof Error && error.name === 'AbortError';
+
 function mergeAbortSignals(...signals: Array<AbortSignal | null | undefined>): MergedAbortSignalResult {
   const activeSignals = signals.filter((signal): signal is AbortSignal => Boolean(signal));
   if (activeSignals.length === 0) {
@@ -83,9 +86,12 @@ export async function fetchWithTimeout(
   } catch (error) {
     clearTimeout(timeoutId);
     mergedSignal.cleanup();
-    if (error instanceof Error && error.name === 'AbortError') {
+    if (isAbortError(error) && timeoutController.signal.aborted && !options.signal?.aborted) {
       deps.logger.error(`[API Interceptor] Request timeout after ${timeout}ms:`, url);
       throw deps.toTimeoutError();
+    }
+    if (isAbortError(error)) {
+      throw error;
     }
     deps.logger.error('[API Interceptor] Fetch error', { message: (error as Error).message, url });
     throw error;

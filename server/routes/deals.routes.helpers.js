@@ -1,7 +1,11 @@
 import { normalizeRequestBodyAliases } from '../utils/validation.js';
+import { normalizeRequestTextFields } from '../utils/requestTextNormalization.js';
 
 export function normalizeDealPayload(payload = {}) {
-    const normalized = normalizeRequestBodyAliases(payload);
+    const normalized = normalizeRequestTextFields(
+        normalizeRequestBodyAliases(payload),
+        ['title', 'description', 'notes', 'tags']
+    );
     const result = {
         ...normalized
     };

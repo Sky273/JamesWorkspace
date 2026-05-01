@@ -1,0 +1,327 @@
+{
+  "url": "https://resumeconverter.net/clients",
+  "body": "Aller au contenu principal\nRC\nResumeConverter\nAptea\nAccueil\nCVthèque\nMissions\nMatching Profils\nAdaptations\nCRM\nRadar du Marché\nAdministration\nMétriques\nParamètres\nJobs\nSauvegarde\nLogs de Sécurité\nJournal RGPD\nGuide Utilisateur\nLM\nLuc MOREAU\nSuper administrateur\nCRM\nChanger de langue\nLM\nLuc MOREAU\nAptea · Super administrateur\nSe déconnecter\nCRM\n\nGérez vos clients, prospects et affaires\n\nSECTIONS\nClients & Prospects\nAffaires\nEntretiens\nCLIENTS\n0\nPROSPECTS\n1\nCONTACTS\n1\nENVOIS\n0\nTYPE\nTous\nClients\nProspects\nAjouter\n\nAffichage 1-1 sur 1 résultats\n\nPAGE 1 / 1\n\naa\nProspect\n1 contacts\n0 envois\nAptea\nVoir\nModifier\n\nAffichage 1-1 sur 1 résultats\n\nPAGE 1 / 1\n\nPolitique de confidentialité\n|\nConditions d'utilisation\n\n(c) 2026 Aptea. Tous droits réservés.",
+  "controls": [
+    {
+      "i": 0,
+      "tag": "A",
+      "text": "Aller au contenu principal",
+      "type": "",
+      "name": "",
+      "cls": "skip-link"
+    },
+    {
+      "i": 1,
+      "tag": "BUTTON",
+      "text": "Fermer",
+      "type": "button",
+      "name": "",
+      "cls": "rounded-[9px] p-1.5 text-[#8f98a8] transition-colors hover:bg-white/8 hover:text"
+    },
+    {
+      "i": 2,
+      "tag": "A",
+      "text": "Accueil",
+      "type": "",
+      "name": "",
+      "cls": "group relative flex min-h-8 items-center gap-2.5 rounded-[8px] border px-2.5 py-"
+    },
+    {
+      "i": 3,
+      "tag": "A",
+      "text": "CVthèque",
+      "type": "",
+      "name": "",
+      "cls": "group relative flex min-h-8 items-center gap-2.5 rounded-[8px] border px-2.5 py-"
+    },
+    {
+      "i": 4,
+      "tag": "A",
+      "text": "Missions",
+      "type": "",
+      "name": "",
+      "cls": "group relative flex min-h-8 items-center gap-2.5 rounded-[8px] border px-2.5 py-"
+    },
+    {
+      "i": 5,
+      "tag": "A",
+      "text": "Matching Profils",
+      "type": "",
+      "name": "",
+      "cls": "group relative flex min-h-8 items-center gap-2.5 rounded-[8px] border px-2.5 py-"
+    },
+    {
+      "i": 6,
+      "tag": "A",
+      "text": "Adaptations",
+      "type": "",
+      "name": "",
+      "cls": "group relative flex min-h-8 items-center gap-2.5 rounded-[8px] border px-2.5 py-"
+    },
+    {
+      "i": 7,
+      "tag": "A",
+      "text": "CRM",
+      "type": "",
+      "name": "",
+      "cls": "group relative flex min-h-8 items-center gap-2.5 rounded-[8px] border px-2.5 py-"
+    },
+    {
+      "i": 8,
+      "tag": "A",
+      "text": "Radar du Marché",
+      "type": "",
+      "name": "",
+      "cls": "group relative flex min-h-8 items-center gap-2.5 rounded-[8px] border px-2.5 py-"
+    },
+    {
+      "i": 9,
+      "tag": "A",
+      "text": "Administration",
+      "type": "",
+      "name": "",
+      "cls": "group relative flex min-h-8 items-center gap-2.5 rounded-[8px] border px-2.5 py-"
+    },
+    {
+      "i": 10,
+      "tag": "A",
+      "text": "Métriques",
+      "type": "",
+      "name": "",
+      "cls": "group relative flex min-h-8 items-center gap-2.5 rounded-[8px] border px-2.5 py-"
+    },
+    {
+      "i": 11,
+      "tag": "A",
+      "text": "Paramètres",
+      "type": "",
+      "name": "",
+      "cls": "group relative flex min-h-8 items-center gap-2.5 rounded-[8px] border px-2.5 py-"
+    },
+    {
+      "i": 12,
+      "tag": "A",
+      "text": "Jobs",
+      "type": "",
+      "name": "",
+      "cls": "group relative flex min-h-8 items-center gap-2.5 rounded-[8px] border px-2.5 py-"
+    },
+    {
+      "i": 13,
+      "tag": "A",
+      "text": "Sauvegarde",
+      "type": "",
+      "name": "",
+      "cls": "group relative flex min-h-8 items-center gap-2.5 rounded-[8px] border px-2.5 py-"
+    },
+    {
+      "i": 14,
+      "tag": "A",
+      "text": "Logs de Sécurité",
+      "type": "",
+      "name": "",
+      "cls": "group relative flex min-h-8 items-center gap-2.5 rounded-[8px] border px-2.5 py-"
+    },
+    {
+      "i": 15,
+      "tag": "A",
+      "text": "Journal RGPD",
+      "type": "",
+      "name": "",
+      "cls": "group relative flex min-h-8 items-center gap-2.5 rounded-[8px] border px-2.5 py-"
+    },
+    {
+      "i": 16,
+      "tag": "A",
+      "text": "Guide Utilisateur",
+      "type": "",
+      "name": "",
+      "cls": "group relative flex min-h-8 items-center gap-2.5 rounded-[8px] border px-2.5 py-"
+    },
+    {
+      "i": 17,
+      "tag": "A",
+      "text": "LM\nLuc MOREAU\nSuper administrateur",
+      "type": "",
+      "name": "",
+      "cls": "flex items-center gap-2.5 border-t border-[#252b34] px-3.5 py-2.5 transition-col"
+    },
+    {
+      "i": 18,
+      "tag": "BUTTON",
+      "text": "Ouvrir le menu",
+      "type": "button",
+      "name": "",
+      "cls": "absolute left-4 top-1/2 z-10 -translate-y-1/2 shrink-0 lg:hidden group flex h-9 "
+    },
+    {
+      "i": 19,
+      "tag": "A",
+      "text": "Accueil",
+      "type": "",
+      "name": "",
+      "cls": "app-breadcrumbs__link text-slate-500 transition-colors hover:text-slate-900 dark"
+    },
+    {
+      "i": 20,
+      "tag": "BUTTON",
+      "text": "Mode sombre",
+      "type": "button",
+      "name": "",
+      "cls": "app-header-actions__text-control inline-flex h-9 w-9 items-center justify-center"
+    },
+    {
+      "i": 21,
+      "tag": "BUTTON",
+      "text": "Changer de langue",
+      "type": "button",
+      "name": "",
+      "cls": "app-header-actions__language inline-flex h-9 w-9 items-center justify-center rou"
+    },
+    {
+      "i": 22,
+      "tag": "BUTTON",
+      "text": "Afficher la version et le changelog",
+      "type": "button",
+      "name": "",
+      "cls": "app-header-actions__version inline-flex h-9 w-9 items-center justify-center roun"
+    },
+    {
+      "i": 23,
+      "tag": "A",
+      "text": "LM\nLuc MOREAU\nAptea · Super administrateur",
+      "type": "",
+      "name": "",
+      "cls": "flex min-w-0 items-center gap-2 rounded-[13px] border border-[#E4E4E7] bg-white "
+    },
+    {
+      "i": 24,
+      "tag": "BUTTON",
+      "text": "Se déconnecter",
+      "type": "button",
+      "name": "",
+      "cls": "group flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#E4E"
+    },
+    {
+      "i": 25,
+      "tag": "BUTTON",
+      "text": "Clients & Prospects",
+      "type": "button",
+      "name": "",
+      "cls": "segmented-control__item inline-flex min-h-10 w-full min-w-0 items-center gap-1.5"
+    },
+    {
+      "i": 26,
+      "tag": "BUTTON",
+      "text": "Affaires",
+      "type": "button",
+      "name": "",
+      "cls": "segmented-control__item inline-flex min-h-10 w-full min-w-0 items-center gap-1.5"
+    },
+    {
+      "i": 27,
+      "tag": "BUTTON",
+      "text": "Entretiens",
+      "type": "button",
+      "name": "",
+      "cls": "segmented-control__item inline-flex min-h-10 w-full min-w-0 items-center gap-1.5"
+    },
+    {
+      "i": 28,
+      "tag": "BUTTON",
+      "text": "Tous",
+      "type": "submit",
+      "name": "",
+      "cls": "segmented-control__item inline-flex shrink-0 items-center gap-2 whitespace-nowra"
+    },
+    {
+      "i": 29,
+      "tag": "BUTTON",
+      "text": "Clients",
+      "type": "submit",
+      "name": "",
+      "cls": "segmented-control__item inline-flex shrink-0 items-center gap-2 whitespace-nowra"
+    },
+    {
+      "i": 30,
+      "tag": "BUTTON",
+      "text": "Prospects",
+      "type": "submit",
+      "name": "",
+      "cls": "segmented-control__item inline-flex shrink-0 items-center gap-2 whitespace-nowra"
+    },
+    {
+      "i": 31,
+      "tag": "BUTTON",
+      "text": "Actualiser",
+      "type": "submit",
+      "name": "",
+      "cls": "app-button-secondary rounded-[9px] p-2.5"
+    },
+    {
+      "i": 32,
+      "tag": "BUTTON",
+      "text": "Ajouter",
+      "type": "submit",
+      "name": "",
+      "cls": "app-button-primary flex items-center gap-2 rounded-[9px] px-4 py-2.5 text-sm"
+    },
+    {
+      "i": 33,
+      "tag": "INPUT",
+      "text": "Rechercher un client ou prospect...",
+      "type": "text",
+      "name": "",
+      "cls": "cv-search-input mb-0 w-full rounded-[9px] py-2.5 pr-3 text-sm font-medium text-["
+    },
+    {
+      "i": 34,
+      "tag": "BUTTON",
+      "text": "Voir",
+      "type": "submit",
+      "name": "",
+      "cls": "app-button-primary flex flex-1 items-center justify-center gap-1 rounded-[9px] p"
+    },
+    {
+      "i": 35,
+      "tag": "BUTTON",
+      "text": "Modifier",
+      "type": "submit",
+      "name": "",
+      "cls": "app-button-secondary flex flex-1 items-center justify-center gap-1 rounded-[9px]"
+    },
+    {
+      "i": 36,
+      "tag": "BUTTON",
+      "text": "",
+      "type": "submit",
+      "name": "",
+      "cls": "p-2 rounded-lg transition-colors text-red-600 hover:bg-red-100 dark:hover:bg-red"
+    },
+    {
+      "i": 37,
+      "tag": "A",
+      "text": "",
+      "type": "",
+      "name": "",
+      "cls": "opacity-80 hover:opacity-100"
+    },
+    {
+      "i": 38,
+      "tag": "A",
+      "text": "Politique de confidentialité",
+      "type": "",
+      "name": "",
+      "cls": "text-[#52525B] hover:text-[#18181B] dark:text-[#c4cad4] dark:hover:text-[#f4f5f7"
+    },
+    {
+      "i": 39,
+      "tag": "A",
+      "text": "Conditions d'utilisation",
+      "type": "",
+      "name": "",
+      "cls": "text-[#52525B] hover:text-[#18181B] dark:text-[#c4cad4] dark:hover:text-[#f4f5f7"
+    }
+  ],
+  "events": []
+}
