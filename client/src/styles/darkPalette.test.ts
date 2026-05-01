@@ -356,9 +356,10 @@ describe('soft dark palette styles', () => {
     expect(base).toContain('.dark .app-header-actions .app-header-actions__language');
     expect(base).toContain('.dark .app-header-actions .app-header-actions__version');
     expect(base).toContain('-webkit-text-fill-color: #ffffff !important');
+    expect(readStyle('../components/HeaderActions.tsx')).toContain('InformationCircleIcon');
+    expect(readStyle('../components/HeaderActions.tsx')).toContain('MoonIcon');
+    expect(readStyle('../components/HeaderActions.tsx')).toContain('SunIcon');
     expect(readStyle('../components/HeaderActions.tsx')).not.toContain('ComputerDesktopIcon');
-    expect(readStyle('../components/HeaderActions.tsx')).not.toContain('InformationCircleIcon');
-    expect(readStyle('../components/HeaderActions.tsx')).not.toContain('MoonIcon');
     expect(readStyle('../components/HeaderActions.tsx')).not.toContain('Cog6ToothIcon');
     expect(readStyle('../components/HeaderActions.tsx')).not.toContain('navigation.settings');
     expect(readStyle('../components/HeaderActions.tsx')).not.toContain('common.about');
@@ -367,5 +368,15 @@ describe('soft dark palette styles', () => {
     expect(readStyle('../components/Layout.tsx')).toContain('dark:border-[#343a46]');
     expect(readStyle('../components/Footer.tsx')).toContain('dark:bg-[#22262e]');
     expect(readStyle('../components/Footer.tsx')).toContain('dark:text-[#f4f5f7]');
+  });
+
+  it('keeps off switches visible in light mode', () => {
+    const base = readStyle('_base.css');
+
+    expect(base).toContain('button.settings-switch[type="button"]');
+    expect(base).toContain('border: 1px solid #94a3b8');
+    expect(base).toContain('background: #e2e8f0');
+    expect(base).toContain('border-color: #64748b');
+    expect(base).not.toContain('button.settings-switch[type="button"] {\n  position: relative;\n  display: inline-flex;\n  width: 2.75rem;\n  height: 1.5rem;\n  flex-shrink: 0;\n  align-items: center;\n  padding: 0;\n  border: 2px solid transparent;');
   });
 });

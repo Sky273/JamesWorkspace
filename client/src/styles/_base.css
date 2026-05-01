@@ -559,26 +559,33 @@ button.settings-switch[type="button"] {
   flex-shrink: 0;
   align-items: center;
   padding: 0;
-  border: 2px solid transparent;
+  border: 1px solid #94a3b8;
   border-radius: 9999px;
-  background: #cbd5e1;
+  background: #e2e8f0;
   color: inherit;
-  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.12);
+  box-shadow:
+    inset 0 1px 2px rgba(15, 23, 42, 0.14),
+    0 1px 2px rgba(15, 23, 42, 0.08);
   cursor: pointer;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 button.settings-switch[type="button"]:hover {
-  background: #94a3b8;
-  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.12);
+  border-color: #64748b;
+  background: #cbd5e1;
+  box-shadow:
+    inset 0 1px 2px rgba(15, 23, 42, 0.16),
+    0 1px 3px rgba(15, 23, 42, 0.1);
   transform: none;
 }
 
 button.settings-switch.settings-switch--checked[type="button"] {
+  border-color: var(--color-primary-600, #4f46e5);
   background: var(--color-primary-600, #4f46e5);
 }
 
 button.settings-switch.settings-switch--checked[type="button"]:hover {
+  border-color: var(--color-primary-700, #4338ca);
   background: var(--color-primary-700, #4338ca);
 }
 
@@ -588,7 +595,9 @@ button.settings-switch.settings-switch--checked[type="button"]:hover {
   height: 1.25rem;
   border-radius: 9999px;
   background: #ffffff;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.3);
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.32),
+    0 0 0 1px rgba(15, 23, 42, 0.08);
   transform: translateX(0);
   transition: transform 0.2s ease;
 }
@@ -610,19 +619,23 @@ button.settings-switch[type="button"]:disabled {
 }
 
 .dark button.settings-switch[type="button"] {
+  border-color: #64748b;
   background: #475569;
   box-shadow: inset 0 1px 2px rgba(2, 6, 23, 0.4);
 }
 
 .dark button.settings-switch[type="button"]:hover {
+  border-color: #94a3b8;
   background: #64748b;
 }
 
 .dark button.settings-switch.settings-switch--checked[type="button"] {
+  border-color: var(--color-primary-500, #6366f1);
   background: var(--color-primary-500, #6366f1);
 }
 
 .dark button.settings-switch.settings-switch--checked[type="button"]:hover {
+  border-color: var(--color-primary-400, #818cf8);
   background: var(--color-primary-400, #818cf8);
 }
 

@@ -43,8 +43,8 @@ describe('LanguageSelector', () => {
     expect(button).toHaveClass('inline-flex', 'h-9', 'w-9');
     expect(button).toHaveClass('app-header-actions__language');
     expect(button).toHaveClass('dark:text-white');
-    expect(button).toHaveTextContent('fr');
-    expect(button.querySelector('svg')).toBeNull();
+    expect(button).not.toHaveTextContent('fr');
+    expect(button.querySelector('svg')).not.toBeNull();
   });
 
   it('opens the menu and changes language', async () => {

@@ -177,13 +177,7 @@ const LanguageSelector = ({ variant = 'default' }: LanguageSelectorProps): JSX.E
         aria-expanded={isOpen}
       >
         <span className="sr-only">{t('header.changeLanguage')}</span>
-        {isHeader ? (
-          <span aria-hidden="true" className="text-[12px] font-semibold uppercase">
-            {currentLanguage.code}
-          </span>
-        ) : (
-          <HeaderLanguageIcon />
-        )}
+        <HeaderLanguageIcon />
       </button>
       {menu}
     </>

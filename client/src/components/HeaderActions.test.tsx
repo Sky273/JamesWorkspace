@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import packageJson from '../../../package.json';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -10,7 +9,11 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('./LanguageSelector', () => ({
-  default: ({ variant }: { variant: string }) => <div>language-selector:{variant}</div>,
+  default: ({ variant }: { variant: string }) => (
+    <button type="button" aria-label="header.changeLanguage" data-variant={variant}>
+      <svg aria-hidden="true" />
+    </button>
+  ),
 }));
 
 import HeaderActions from './HeaderActions';
@@ -31,14 +34,16 @@ describe('HeaderActions', () => {
     );
 
     expect(screen.getByTestId('header-actions')).toBeInTheDocument();
-    expect(screen.getByText('language-selector:header')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'header.changeLanguage' })).toHaveAttribute('data-variant', 'header');
     expect(screen.queryByRole('link', { name: 'navigation.settings' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'common.about' })).toBeNull();
-    expect(screen.getByText(`v${packageJson.version}`)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'header.theme.dark' })).toHaveClass('app-header-actions__text-control');
     expect(screen.getByRole('button', { name: 'header.theme.dark' })).toHaveClass('dark:text-white');
-    expect(screen.getByText(`v${packageJson.version}`)).toHaveClass('app-header-actions__version');
-    expect(screen.getByText(`v${packageJson.version}`)).toHaveClass('dark:text-white');
+    expect(screen.getByRole('button', { name: 'about.openChangelog' })).toHaveClass('app-header-actions__version');
+    expect(screen.getByRole('button', { name: 'about.openChangelog' })).toHaveClass('dark:text-white');
+    expect(screen.getByTestId('header-actions').querySelectorAll('svg')).toHaveLength(3);
+    expect(screen.queryByText('header.theme.light')).toBeNull();
+    expect(screen.queryByText('header.theme.dark')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'header.theme.dark' }));
     fireEvent.click(screen.getByRole('button', { name: 'about.openChangelog' }));
@@ -47,7 +52,7 @@ describe('HeaderActions', () => {
     expect(onOpenAbout).toHaveBeenCalledTimes(1);
   });
 
-  it('does not render SVG icons in the rewritten header actions', () => {
+  it('renders SVG icons without leaking a backslash character', () => {
     render(
       <MemoryRouter>
         <HeaderActions
@@ -59,6 +64,6 @@ describe('HeaderActions', () => {
     );
 
     expect(document.body.textContent).not.toContain('\\');
-    expect(screen.getByTestId('header-actions').querySelector('svg')).toBeNull();
+    expect(screen.getByTestId('header-actions').querySelectorAll('svg')).toHaveLength(3);
   });
 });
