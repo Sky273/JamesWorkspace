@@ -52,6 +52,8 @@ interface MissionFormModalProps {
   loadingClients: boolean;
   loadingContacts: boolean;
   loadingDeals: boolean;
+  submitError?: string | null;
+  isSubmitting?: boolean;
   onSubmit: (e: FormEvent<HTMLFormElement>) => void;
   onClose: () => void;
   editorSlot?: ReactNode;
@@ -70,6 +72,8 @@ export default function MissionFormModal({
   loadingClients,
   loadingContacts,
   loadingDeals,
+  submitError,
+  isSubmitting = false,
   onSubmit,
   onClose,
   editorSlot,
@@ -298,18 +302,25 @@ export default function MissionFormModal({
           </div>
 
           <div className="flex flex-col-reverse gap-3 border-t border-slate-200/70 px-5 py-4 dark:border-white/10 sm:flex-row sm:items-center sm:justify-end sm:px-6">
+            {submitError ? (
+              <div role="alert" className="mr-auto rounded-xl border border-[var(--cv-danger)]/30 bg-[var(--cv-danger-soft)] px-4 py-3 text-sm font-medium text-[var(--cv-danger)]">
+                {submitError}
+              </div>
+            ) : null}
             <button
               type="button"
               onClick={onClose}
+              disabled={isSubmitting}
               className="cv-ghost-button inline-flex min-h-12 items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold"
             >
               {t('common.cancel')}
             </button>
             <button
               type="submit"
+              disabled={isSubmitting}
               className="cv-gradient-button inline-flex min-h-12 items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold"
             >
-              {isEditing ? t('missions.update') : t('missions.create')}
+              {isSubmitting ? t('common.saving', 'Enregistrement...') : (isEditing ? t('missions.update') : t('missions.create'))}
             </button>
           </div>
         </form>

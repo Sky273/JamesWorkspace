@@ -105,4 +105,14 @@ describe('MissionFormModal', () => {
       'Contact ID': '',
     }));
   });
+
+  it('shows a submit error inside the modal', () => {
+    render(
+      <MemoryRouter>
+        <MissionFormModal {...defaultProps} submitError="Impossible d'enregistrer la mission" />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('alert')).toHaveTextContent("Impossible d'enregistrer la mission");
+  });
 });

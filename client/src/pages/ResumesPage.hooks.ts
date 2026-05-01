@@ -8,6 +8,7 @@ import { useAuthFetch } from '../hooks/useAuthFetch';
 import type { Resume } from '../types/entities';
 import { formatDate } from '../utils/dateFormatter';
 import logger from '../utils/logger.frontend';
+import { normalizeResumeList } from '../utils/resumeNormalization';
 import { consumeDirtyViewScopesForConsumer } from '../utils/viewRefresh';
 import {
   buildResumesSearchParams,
@@ -104,11 +105,11 @@ export function useResumesDashboard() {
         return;
       }
       if (data.data && data.pagination) {
-        setResumes(data.data);
+        setResumes(normalizeResumeList(data.data));
         setTotalCount(data.pagination.totalCount || data.data.length);
         setHasMore(data.pagination.hasMore || false);
       } else {
-        setResumes(Array.isArray(data) ? data : []);
+        setResumes(normalizeResumeList(Array.isArray(data) ? data : []));
         setTotalCount(Array.isArray(data) ? data.length : 0);
         setHasMore(false);
       }

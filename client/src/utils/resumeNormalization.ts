@@ -14,6 +14,12 @@ const getFirstNumber = (...values: Array<unknown>): number | undefined => {
     if (typeof value === 'number' && !Number.isNaN(value)) {
       return value;
     }
+    if (typeof value === 'string' && value.trim().length > 0) {
+      const parsed = Number(value);
+      if (!Number.isNaN(parsed)) {
+        return parsed;
+      }
+    }
   }
   return undefined;
 };
@@ -32,6 +38,18 @@ export const normalizeResume = (resume: Resume): Resume => {
   const normalizedOriginalText = getFirstString(resume.originalText, resume['Original Text'], resume.original_text);
   const normalizedImprovedText = getFirstString(resume.improvedText, resume['Improved Text'], resume.improved_text);
   const normalizedCurrentVersion = getFirstNumber(resume.currentVersion, resume['Current Version']);
+  const normalizedGlobalRating = getFirstNumber(resume['Global Rating'], resume.global_rating);
+  const normalizedImprovedGlobalRating = getFirstNumber(
+    resume['Improved Global Rating'],
+    resume.improved_global_rating,
+    resume.improvedGlobalRating
+  );
+  const rawStatus = getFirstString(resume.Status, resume.status);
+  const normalizedStatus = rawStatus?.toLowerCase();
+  const hasImprovedVersion = Boolean(normalizedImprovedText) || (normalizedImprovedGlobalRating ?? 0) > 0;
+  const status = hasImprovedVersion && (!normalizedStatus || normalizedStatus === 'analyzed')
+    ? 'improved'
+    : rawStatus;
 
   return {
     ...resume,
@@ -51,6 +69,12 @@ export const normalizeResume = (resume: Resume): Resume => {
     improvedText: normalizedImprovedText,
     'Current Version': normalizedCurrentVersion,
     currentVersion: normalizedCurrentVersion,
+    'Global Rating': normalizedGlobalRating ?? resume['Global Rating'],
+    global_rating: normalizedGlobalRating ?? resume.global_rating,
+    'Improved Global Rating': normalizedImprovedGlobalRating ?? resume['Improved Global Rating'],
+    improved_global_rating: normalizedImprovedGlobalRating ?? resume.improved_global_rating,
+    Status: status as Resume['Status'],
+    status,
     candidate_name: getFirstString(resume.candidate_name, normalizedName),
   };
 };

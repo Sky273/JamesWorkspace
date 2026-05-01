@@ -59,6 +59,8 @@ export function useMissionsDashboard() {
   const [editingMission, setEditingMission] = useState<Mission | null>(null);
   const [missionPendingDelete, setMissionPendingDelete] = useState<Mission | null>(null);
   const [isDeletingMission, setIsDeletingMission] = useState(false);
+  const [isSubmittingMission, setIsSubmittingMission] = useState(false);
+  const [missionSubmitError, setMissionSubmitError] = useState<string | null>(null);
   const [formData, setFormData] = useState<MissionFormData>(EMPTY_MISSION_FORM);
   const [clients, setClients] = useState<Client[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -249,6 +251,7 @@ export function useMissionsDashboard() {
   const resetForm = useCallback(() => {
     setEditingMission(null);
     setFormData(EMPTY_MISSION_FORM);
+    setMissionSubmitError(null);
     setContacts([]);
     editorReadyRef.current = false;
   }, []);
@@ -296,6 +299,8 @@ export function useMissionsDashboard() {
     event.preventDefault();
 
     try {
+      setIsSubmittingMission(true);
+      setMissionSubmitError(null);
       const dataToSend = buildMissionSubmitPayload(formData);
 
       const response = editingMission
@@ -337,7 +342,10 @@ export function useMissionsDashboard() {
     } catch (error) {
       logger.error('Error saving mission:', error);
       const errorMessage = error instanceof Error ? error.message : t('missions.messages.saveError', 'Erreur lors de la sauvegarde');
+      setMissionSubmitError(errorMessage);
       toast.error(errorMessage);
+    } finally {
+      setIsSubmittingMission(false);
     }
   }, [authPost, authPut, currentPage, editingMission, fetchMissions, formData, resetForm, t]);
 
@@ -438,6 +446,8 @@ export function useMissionsDashboard() {
     loadingClients,
     loadingContacts,
     loadingDeals,
+    isSubmittingMission,
+    missionSubmitError,
     isDeletingMission,
     missionPendingDelete,
     missions,

@@ -37,6 +37,8 @@ const MissionsPage = (): JSX.Element => {
     loadingClients,
     loadingContacts,
     loadingDeals,
+    isSubmittingMission,
+    missionSubmitError,
     isDeletingMission,
     missionPendingDelete,
     missions,
@@ -152,6 +154,8 @@ const MissionsPage = (): JSX.Element => {
           loadingClients={loadingClients}
           loadingContacts={loadingContacts}
           loadingDeals={loadingDeals}
+          isSubmitting={isSubmittingMission}
+          submitError={missionSubmitError}
           onSubmit={handleSubmit}
           onClose={closeModal}
           editorSlot={

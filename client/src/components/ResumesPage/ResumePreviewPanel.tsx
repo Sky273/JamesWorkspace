@@ -11,6 +11,7 @@ import {
 import { useAuthFetch } from '../../hooks/useAuthFetch';
 import { sanitizeHtml } from '../../utils/sanitizer.frontend';
 import logger from '../../utils/logger.frontend';
+import { parsePreviewImprovements } from './resumePreview.helpers';
 
 interface ResumePreviewData {
   id: string;
@@ -33,20 +34,6 @@ interface ResumePreviewPanelProps {
   resumeId: string;
   onClose: () => void;
   onOpenFull: (resumeId: string) => void;
-}
-
-function parseJsonArray(value: unknown): string[] {
-  if (!value) return [];
-  if (Array.isArray(value)) return value.map(String);
-  if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value);
-      return Array.isArray(parsed) ? parsed.map(String) : [value];
-    } catch {
-      return [value];
-    }
-  }
-  return [];
 }
 
 export default function ResumePreviewPanel({ resumeId, onClose, onOpenFull }: ResumePreviewPanelProps) {
@@ -86,13 +73,13 @@ export default function ResumePreviewPanel({ resumeId, onClose, onOpenFull }: Re
   }, [resumeId, authGet]);
 
   const status = (data?.Status || '').toLowerCase();
-  const isImproved = status === 'improved';
+  const isImproved = status === 'improved' || Boolean(data?.['Improved Text']) || Boolean(data?.['Improved Global Rating']);
   const htmlContent = isImproved ? (data?.['Improved Text'] || data?.['Original Text'] || '') : (data?.['Original Text'] || '');
   const score = isImproved ? (data?.['Improved Global Rating'] || data?.['Global Rating']) : data?.['Global Rating'];
   const summary = data?.Summary;
   const improvements = isImproved
-    ? parseJsonArray(data?.['Improved Key Improvements'] || data?.['Key Improvements'])
-    : parseJsonArray(data?.['Key Improvements']);
+    ? parsePreviewImprovements(data?.['Improved Key Improvements'] || data?.['Key Improvements'])
+    : parsePreviewImprovements(data?.['Key Improvements']);
 
   const scoreColor = (s: number) =>
     s >= 80 ? 'bg-[var(--cv-tertiary-soft)] text-[var(--cv-tertiary)]' :

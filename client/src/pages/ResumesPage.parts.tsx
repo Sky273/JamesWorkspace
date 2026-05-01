@@ -499,7 +499,7 @@ export function ResumesResultsGrid({
         id: resume.id,
         name: resume.Name || resume.name || resume['Resume File']?.[0]?.filename || t('resumes.untitled'),
         title: resume.Title || resume.title || resume.adapted_title || undefined,
-        status: resume.Status || 'new',
+        status: String(resume.Status || resume.status || 'new').toLowerCase(),
         global_rating: Number(resume['Global Rating'] ?? 0) || 0,
         improved_global_rating: Number(resume['Improved Global Rating'] ?? 0) || undefined,
         created_at: String(resume['Created At'] || ''),

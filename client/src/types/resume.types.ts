@@ -65,14 +65,14 @@ export interface Resume {
   'Original Text'?: string;
   'Improved Text'?: string;
   'Resume File'?: ResumeFile[];
-  'Global Rating'?: string;
+  'Global Rating'?: string | number;
   'Executive Summary Score'?: string;
   'Skills Score'?: string;
   'Experience Score'?: string;
   'Education Score'?: string;
   'ATS Score'?: string;
   'Hobbies Languages Score'?: string;
-  'Improved Global Rating'?: string;
+  'Improved Global Rating'?: string | number;
   'Improved Executive Summary Score'?: string;
   'Improved Skills Score'?: string;
   'Improved Experience Score'?: string;
