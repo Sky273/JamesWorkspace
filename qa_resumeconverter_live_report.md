@@ -19,6 +19,7 @@ Donnees: aucune nouvelle donnee metier creee pendant ce run; tests de formulaire
 - Jobs et Journal RGPD chargent correctement via les liens de navigation laterale (`/batch-jobs` et `/dashboard/gdpr-audit`).
 - Les Logs de securite chargent correctement sur `/dashboard/security-logs`.
 - Aucun message CSP n'a ete observe dans les logs console du passage visible authentifie.
+- `FRONT-02A` corrige localement: la modale `Ajouter une mission` affiche maintenant des erreurs inline explicites pour le titre et la description obligatoires avant soumission.
 
 ### Anomalies restantes / points a traiter
 
@@ -40,19 +41,6 @@ Ajouter des redirections/alias SPA:
 
 - `/jobs` -> `/batch-jobs`
 - `/dashboard/gdpr-journal` -> `/dashboard/gdpr-audit`
-
-#### FRONT-02A - Validation mission vide peu explicite
-
-Severite: Low
-
-Constat:
-La soumission vide de la modale `Ajouter une mission` reste bloquee dans la modale et ne cree pas de donnee, ce qui est fonctionnel. En revanche, le blocage repose surtout sur la validation native du champ requis et aucun message textuel additionnel n'est visible dans la modale.
-
-Impact:
-En cas d'echec ou de champ requis non rempli, l'utilisateur peut ne pas comprendre immediatement quoi corriger selon le navigateur.
-
-Recommandation:
-Afficher une aide inline ou un message de validation visible pour les champs obligatoires (`Titre`, `Contenu`) en plus de la validation native.
 
 #### FRONT-01 - Anciennes donnees QA corrompues toujours visibles
 

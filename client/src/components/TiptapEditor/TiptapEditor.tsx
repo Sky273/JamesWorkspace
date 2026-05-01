@@ -22,6 +22,7 @@ import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { CharacterCount } from '@tiptap/extension-character-count';
 import { Placeholder } from '@tiptap/extension-placeholder';
 import { common, createLowlight } from 'lowlight';
+import { useTranslation } from 'react-i18next';
 import {
   useCallback,
   useEffect,
@@ -97,6 +98,7 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
     ref
   ) => {
     const [_ready, setReady] = useState(false);
+    const { t } = useTranslation();
     const lastSyncedContentRef = useRef('');
     const [suggestionsVisible, setSuggestionsVisible] = useState(true);
     const [skillProofsVisible, setSkillProofsVisible] = useState(false);
@@ -324,9 +326,13 @@ const TiptapEditor = forwardRef<TiptapEditorRef, TiptapEditorProps>(
                     type="button"
                     className={`tiptap-toolbar-btn proof-toggle-btn ${skillProofsVisible ? 'is-active' : ''}`}
                     onClick={handleToggleSkillProofs}
-                    title={skillProofsVisible ? 'Masquer les preuves de compétences' : 'Afficher les preuves de compétences'}
+                    title={
+                      skillProofsVisible
+                        ? t('tiptap.proofs.hide', 'Masquer les preuves de compétences')
+                        : t('tiptap.proofs.show', 'Afficher les preuves de compétences')
+                    }
                   >
-                    Preuves
+                    {t('tiptap.proofs.label', 'Preuves')}
                   </button>
                   <div className="tiptap-toolbar-divider" />
                 </>

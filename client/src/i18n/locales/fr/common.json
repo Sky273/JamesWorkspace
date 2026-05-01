@@ -64,6 +64,11 @@
     "visualMode": "Retour au rendu visuel",
     "editHtml": "Éditer le code HTML",
     "editLink": "Modifier le lien",
+    "proofs": {
+      "label": "Preuves",
+      "show": "Afficher les preuves de compétences",
+      "hide": "Masquer les preuves de compétences"
+    },
     "image": {
       "delete": "Supprimer l'image",
       "dimensionsText": "Dimensions & texte",

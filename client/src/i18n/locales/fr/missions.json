@@ -57,6 +57,10 @@
       "createSuccess": "Mission créée",
       "updateSuccess": "Mission mise à jour"
     },
+    "validation": {
+      "titleRequired": "Le titre est obligatoire.",
+      "contentRequired": "La description est obligatoire."
+    },
     "grouped": {
       "heroBadge": "Vue par affaire",
       "heroTitle": "Pilotez vos missions par contexte commercial",

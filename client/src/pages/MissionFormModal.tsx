@@ -3,7 +3,7 @@
  * Extracted from MissionsPage.tsx
  */
 
-import { ChangeEvent, FormEvent, type ReactNode } from 'react';
+import { ChangeEvent, FormEvent, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
@@ -62,6 +62,12 @@ interface MissionFormModalProps {
 const fieldClassName =
   'w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-[var(--cv-primary)] focus:ring-4 focus:ring-[color:color-mix(in_srgb,var(--cv-primary)_16%,transparent)] dark:border-white/10 dark:bg-slate-900/70 dark:text-[var(--cv-text)]';
 
+function getPlainTextFromHtml(value: string): string {
+  const container = document.createElement('div');
+  container.innerHTML = value;
+  return (container.textContent || container.innerText || '').replace(/\u00a0/g, ' ').trim();
+}
+
 export default function MissionFormModal({
   isEditing,
   formData,
@@ -80,6 +86,29 @@ export default function MissionFormModal({
 }: MissionFormModalProps) {
   const { t } = useTranslation();
   const selectedDeal = deals.find((deal) => deal.id === formData['Deal ID']);
+  const [validationErrors, setValidationErrors] = useState<{ title?: string; content?: string }>({});
+  const titleError = validationErrors.title;
+  const contentError = validationErrors.content;
+
+  const handleLocalSubmit = (event: FormEvent<HTMLFormElement>) => {
+    const nextErrors = {
+      title: formData.Title.trim()
+        ? undefined
+        : t('missions.validation.titleRequired', 'Le titre est obligatoire.'),
+      content: getPlainTextFromHtml(formData.Content).trim()
+        ? undefined
+        : t('missions.validation.contentRequired', 'La description est obligatoire.'),
+    };
+
+    if (nextErrors.title || nextErrors.content) {
+      event.preventDefault();
+      setValidationErrors(nextErrors);
+      return;
+    }
+
+    setValidationErrors({});
+    onSubmit(event);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm sm:p-6">
@@ -111,7 +140,7 @@ export default function MissionFormModal({
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+        <form onSubmit={handleLocalSubmit} noValidate className="flex min-h-0 flex-1 flex-col">
           <div className="grid min-h-0 flex-1 gap-0 overflow-y-auto lg:grid-cols-[320px_minmax(0,1fr)]">
             <aside className="space-y-5 border-b border-slate-200/70 bg-slate-50/60 p-5 dark:border-white/10 dark:bg-white/[0.03] lg:border-b-0 lg:border-r sm:p-6">
               <section className="space-y-3">
@@ -137,13 +166,25 @@ export default function MissionFormModal({
                     id="mission-title"
                     type="text"
                     required
+                    aria-invalid={Boolean(titleError)}
+                    aria-describedby={titleError ? 'mission-title-error' : undefined}
                     value={formData.Title}
                     onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                      setFormData({ ...formData, Title: e.target.value })
+                      {
+                        if (titleError) {
+                          setValidationErrors((currentErrors) => ({ ...currentErrors, title: undefined }));
+                        }
+                        setFormData({ ...formData, Title: e.target.value });
+                      }
                     }
                     placeholder={t('missions.titlePlaceholder')}
-                    className={fieldClassName}
+                    className={`${fieldClassName} ${titleError ? 'border-[var(--cv-danger)] ring-4 ring-[var(--cv-danger-soft)]' : ''}`}
                   />
+                  {titleError ? (
+                    <p id="mission-title-error" className="mt-2 text-sm font-medium text-[var(--cv-danger)]">
+                      {titleError}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div>
@@ -293,11 +334,29 @@ export default function MissionFormModal({
                   {t('missions.editorHelp')}
                 </p>
               </div>
-              <div className="min-h-[420px] rounded-[1.75rem] border border-slate-200 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-slate-950/60">
+              <div
+                aria-invalid={Boolean(contentError)}
+                aria-describedby={contentError ? 'mission-content-error' : undefined}
+                className={`min-h-[420px] rounded-[1.75rem] border bg-white p-3 shadow-sm dark:bg-slate-950/60 ${
+                  contentError
+                    ? 'border-[var(--cv-danger)] ring-4 ring-[var(--cv-danger-soft)]'
+                    : 'border-slate-200 dark:border-white/10'
+                }`}
+                onInput={() => {
+                  if (contentError) {
+                    setValidationErrors((currentErrors) => ({ ...currentErrors, content: undefined }));
+                  }
+                }}
+              >
                 {editorSlot || (
                   <div className="min-h-[400px] rounded-[1.25rem] border border-dashed border-slate-200 dark:border-white/10" />
                 )}
               </div>
+              {contentError ? (
+                <p id="mission-content-error" className="mt-2 text-sm font-medium text-[var(--cv-danger)]">
+                  {contentError}
+                </p>
+              ) : null}
             </section>
           </div>
 

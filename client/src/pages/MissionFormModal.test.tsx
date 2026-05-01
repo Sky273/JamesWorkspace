@@ -12,7 +12,11 @@ vi.mock('framer-motion', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback?: string) => fallback || key,
+    t: (key: string, fallback?: string) => ({
+      'missions.create': 'Créer',
+      'missions.validation.titleRequired': 'Le titre est obligatoire.',
+      'missions.validation.contentRequired': 'La description est obligatoire.',
+    }[key] || fallback || key),
   }),
 }));
 
@@ -114,5 +118,21 @@ describe('MissionFormModal', () => {
     );
 
     expect(screen.getByRole('alert')).toHaveTextContent("Impossible d'enregistrer la mission");
+  });
+
+  it('shows inline validation errors for required title and content before submitting', () => {
+    const onSubmit = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <MissionFormModal {...defaultProps} onSubmit={onSubmit} />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Créer' }));
+
+    expect(screen.getByText('Le titre est obligatoire.')).toBeInTheDocument();
+    expect(screen.getByText('La description est obligatoire.')).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 });

@@ -64,6 +64,11 @@
     "visualMode": "Back to visual view",
     "editHtml": "Edit HTML code",
     "editLink": "Edit link",
+    "proofs": {
+      "label": "Proofs",
+      "show": "Show skill proofs",
+      "hide": "Hide skill proofs"
+    },
     "image": {
       "delete": "Delete image",
       "dimensionsText": "Dimensions & text",
