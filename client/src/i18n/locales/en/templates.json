@@ -98,37 +98,6 @@
       "error": "Failed to duplicate template",
       "loadFirmsError": "Failed to load firms"
     },
-    "selectTemplate": "Select Template",
-    "extract": {
-      "title": "Extract from CV",
-      "subtitle": "Automatically create a template from an existing CV",
-      "buttonShort": "Extract",
-      "dragDrop": "Drag and drop a CV here or click to select",
-      "dropHere": "Drop the file here...",
-      "supportedFormats": "Supported formats: PDF, DOCX (max 10 MB)",
-      "clickToChange": "Click to change file",
-      "howItWorks": "How does it work?",
-      "step1": "Upload a CV in PDF or Word format",
-      "step2": "AI analyzes the document structure and style",
-      "step3": "A reusable template is automatically generated",
-      "step4": "Customize the template before saving",
-      "analyzing": "Analyzing CV...",
-      "pleaseWait": "AI is extracting the document structure and styles",
-      "longOperation": "This operation may take 1 to 3 minutes depending on document complexity.",
-      "extractButton": "Extract Template",
-      "extractionComplete": "Extraction complete!",
-      "usedModel": "AI model used",
-      "preview": "Template Preview",
-      "reviewNote": "Review and adjust the extracted template before saving. AI may require manual corrections.",
-      "createTemplate": "Create Template",
-      "templateLoaded": "Extracted template loaded in editor",
-      "success": "Template extracted successfully!",
-      "error": "Error extracting template",
-      "errorTitle": "Extraction Failed",
-      "tryAgain": "Try Again",
-      "extractedColors": "Extracted colors",
-      "extractedFonts": "Extracted fonts",
-      "extractionMethod": "Extraction method"
-    }
+    "selectTemplate": "Select Template"
   }
 }
