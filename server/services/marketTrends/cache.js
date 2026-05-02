@@ -8,6 +8,7 @@ import { query as dbQuery } from '../../config/database.js';
 import { fetchMetadataForIds } from './queries.js';
 import { clearTokenCache } from './apiClient.js';
 import { buildApplicationCacheMetrics } from '../cacheMetrics.service.js';
+import { toNumber } from './extractors.js';
 
 // PostgreSQL table name
 const MARKET_TRENDS_TABLE = 'market_trends';
@@ -28,8 +29,7 @@ let trendsCacheCleanupInterval = null;
  * Helper to parse PostgreSQL DECIMAL values to numbers
  */
 function parseValue(value) {
-    if (value === null || value === undefined) return 0;
-    return typeof value === 'string' ? parseFloat(value) : Number(value);
+    return toNumber(value) ?? 0;
 }
 
 // ============================================
@@ -295,7 +295,7 @@ async function computeSummary() {
             } else {
                 // Accumulate values for statistics (non-salary types)
                 // Convert to number explicitly (value may be string from database)
-                const numValue = t.Value !== null && t.Value !== undefined ? parseFloat(t.Value) : null;
+                const numValue = toNumber(t.Value);
                 if (numValue !== null && !isNaN(numValue)) {
                     byType[t.Type].totalValue += numValue;
                     byType[t.Type].valueCount++;
@@ -328,8 +328,8 @@ async function computeSummary() {
                             for (const sv of periode.salaireValeurMontant) {
                                 // SAL3 = salaire moyen tous niveaux d'expérience
                                 if (sv.codeNomenclature === 'SAL3' && sv.valeurPrincipaleMontant !== undefined) {
-                                    const montant = parseFloat(sv.valeurPrincipaleMontant);
-                                    if (!isNaN(montant)) {
+                                    const montant = toNumber(sv.valeurPrincipaleMontant);
+                                    if (montant !== null) {
                                         sal3Found = montant;
                                         break outerLoop;  // Take only first SAL3 per record
                                     }

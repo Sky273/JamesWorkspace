@@ -7,6 +7,7 @@ import {
     invalidateTrendsCache
 } from '../../services/marketTrends.service.js';
 import { safeLog } from '../../utils/logger.backend.js';
+import { extractRawValue } from '../../services/marketTrends/extractors.js';
 
 function createCollectionResponse(res, payload) {
     res.json({
@@ -187,12 +188,6 @@ export async function collectDynamicsOnly(req, res) {
 
                 safeLog('info', 'MarketTrends: Starting DYN_1 collection', { totalRegions, collectionDate });
 
-                const extractValue = (apiData) => {
-                    if (!apiData?.listeValeursParPeriode?.length) return null;
-                    const periode = apiData.listeValeursParPeriode[0];
-                    return periode.valeurPrincipaleNombre ?? periode.valeurPrincipaleMontant ?? periode.valeurPrincipaleTaux ?? null;
-                };
-
                 const extractLabel = (apiData) => {
                     if (apiData?.libIndicateur) return apiData.libIndicateur;
                     if (apiData?.listeValeursParPeriode?.[0]?.libPeriode) {
@@ -233,7 +228,7 @@ export async function collectDynamicsOnly(req, res) {
                             type: 'dynamique_emploi',
                             region: region.name,
                             regionCode: region.code,
-                            value: extractValue(data),
+                            value: extractRawValue(data),
                             valueLabel: extractLabel(data),
                             metadata: data
                         };

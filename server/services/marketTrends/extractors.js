@@ -1,11 +1,55 @@
 export function toNumber(value) {
     if (value === null || value === undefined) return null;
-    if (typeof value === 'number') return value;
+    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
     if (typeof value === 'string') {
-        const parsed = parseFloat(value);
-        return Number.isNaN(parsed) ? null : parsed;
+        const normalized = normalizeNumericString(value);
+        if (!normalized) return null;
+
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) ? parsed : null;
     }
     return null;
+}
+
+export function normalizeNumericString(value) {
+    let normalized = value
+        .trim()
+        .replace(/[\s\u00a0\u202f]/g, '')
+        .replace(/[^\d,.\-+]/g, '');
+
+    if (!normalized) return '';
+
+    const lastComma = normalized.lastIndexOf(',');
+    const lastDot = normalized.lastIndexOf('.');
+
+    if (lastComma !== -1 && lastDot !== -1) {
+        if (lastComma > lastDot) {
+            normalized = normalized.replace(/\./g, '').replace(',', '.');
+        } else {
+            normalized = normalized.replace(/,/g, '');
+        }
+    } else if (lastComma !== -1) {
+        normalized = normalized
+            .split('')
+            .map((char, index) => {
+                if (char !== ',') return char;
+                return index === lastComma ? '.' : '';
+            })
+            .join('');
+    } else if ((normalized.match(/\./g) || []).length > 1) {
+        const lastSeparator = normalized.lastIndexOf('.');
+        normalized = normalized
+            .split('')
+            .map((char, index) => {
+                if (char !== '.') return char;
+                return index === lastSeparator ? '.' : '';
+            })
+            .join('');
+    }
+
+    return /^[+-]?\d*(\.\d*)?$/.test(normalized) && /\d/.test(normalized)
+        ? normalized
+        : '';
 }
 
 export function extractRawValue(data) {

@@ -5,6 +5,7 @@
 
 import { safeLog } from '../../utils/logger.backend.js';
 import { query as dbQuery } from '../../config/database.js';
+import { toNumber } from './extractors.js';
 
 // PostgreSQL table name
 const MARKET_TRENDS_TABLE = 'market_trends';
@@ -13,8 +14,7 @@ const MARKET_TRENDS_TABLE = 'market_trends';
  * Helper to parse PostgreSQL DECIMAL values to numbers
  */
 function parseValue(value) {
-    if (value === null || value === undefined) return 0;
-    return typeof value === 'string' ? parseFloat(value) : Number(value);
+    return toNumber(value) ?? 0;
 }
 
 /**
