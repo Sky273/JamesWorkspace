@@ -295,7 +295,7 @@ export function registerInterviewRoutes(router, services) {
     router.get('/:id/interviews', authenticateToken, validateParams('id'), createPipelineRouteHandler('Failed to get interviews', 'Failed to get interviews', async (req, res) => {
         await withPipelineRequestAccess(req, res, getUserFirmId, async (access) => {
             await withPipelineEntryAccess(res, access, req.params.id, services.getPipelineAccessContext, async () => {
-                const interviews = await services.getInterviews(req.params.id);
+                const interviews = await services.getInterviews(req.params.id, { bypassCache: shouldBypassCache(req) });
                 res.json(interviews);
             });
         });

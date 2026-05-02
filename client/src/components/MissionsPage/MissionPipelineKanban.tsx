@@ -49,6 +49,11 @@ export default function MissionPipelineKanban({
 }: MissionPipelineKanbanProps) {
   const { t, i18n } = useTranslation();
   const isEnglish = i18n.language === 'en';
+  const tRef = useRef(t);
+
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
 
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [entries, setEntries] = useState<PipelineEntry[]>([]);
@@ -97,11 +102,11 @@ export default function MissionPipelineKanban({
       setEntries(decoratePipelineEntries(entriesData, missionAdaptedResumeIds));
     } catch (error) {
       logger.error('[MissionPipelineKanban] Error loading data:', error);
-      toast.error(t('pipeline.errors.loadFailed'));
+      toast.error(tRef.current('pipeline.errors.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [missionId, t]);
+  }, [missionId]);
 
   useEffect(() => {
     loadData();
@@ -288,7 +293,7 @@ export default function MissionPipelineKanban({
     setLoadingInterviews(true);
 
     try {
-      const interviews = await getInterviews(entry.id);
+      const interviews = await getInterviews(entry.id, { forceRefresh: true });
       setEntryInterviews(interviews);
     } catch (error) {
       logger.error('[MissionPipelineKanban] Error loading interviews:', error);
@@ -318,7 +323,7 @@ export default function MissionPipelineKanban({
     }
 
     try {
-      await scheduleInterview(selectedEntryForInterview.id, {
+      const scheduledInterview = await scheduleInterview(selectedEntryForInterview.id, {
         title: newInterview.title,
         description: newInterview.description || undefined,
         interviewType: newInterview.interviewType,
@@ -329,7 +334,14 @@ export default function MissionPipelineKanban({
       });
       toast.success(t('pipeline.interviewScheduled'));
       setShowInterviewModal(false);
-      const interviews = await getInterviews(selectedEntryForInterview.id);
+      setEntryInterviews((currentInterviews) => (
+        currentInterviews.some((interview) => interview.id === scheduledInterview.id)
+          ? currentInterviews
+          : [...currentInterviews, scheduledInterview].sort((left, right) => (
+            new Date(left.scheduled_at).getTime() - new Date(right.scheduled_at).getTime()
+          ))
+      ));
+      const interviews = await getInterviews(selectedEntryForInterview.id, { forceRefresh: true });
       setEntryInterviews(interviews);
       await loadData({ forceRefresh: true });
     } catch (error) {
@@ -344,7 +356,7 @@ export default function MissionPipelineKanban({
       toast.success(t('pipeline.interviewCompleted'));
 
       if (selectedEntryForInterview) {
-        const interviews = await getInterviews(selectedEntryForInterview.id);
+        const interviews = await getInterviews(selectedEntryForInterview.id, { forceRefresh: true });
         setEntryInterviews(interviews);
       }
 
@@ -365,11 +377,11 @@ export default function MissionPipelineKanban({
       toast.success(t('pipeline.interviewCancelled'));
 
       if (selectedEntryForInterview) {
-        const interviews = await getInterviews(selectedEntryForInterview.id);
+        const interviews = await getInterviews(selectedEntryForInterview.id, { forceRefresh: true });
         setEntryInterviews(interviews);
       }
 
-      await loadData();
+      await loadData({ forceRefresh: true });
     } catch (error) {
       logger.error('[MissionPipelineKanban] Error cancelling interview:', error);
       toast.error(t('pipeline.errors.cancelFailed'));

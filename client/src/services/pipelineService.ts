@@ -313,9 +313,13 @@ export async function scheduleInterview(
 /**
  * Get interviews for a pipeline entry
  */
-export async function getInterviews(pipelineId: string): Promise<Interview[]> {
+export async function getInterviews(
+  pipelineId: string,
+  options: { forceRefresh?: boolean } = {}
+): Promise<Interview[]> {
   try {
-    return await fetchPipelineApiJson<Interview[]>(`/${pipelineId}/interviews`, { fallbackMessage: 'Failed to fetch interviews' });
+    const suffix = options.forceRefresh ? '?refresh=1' : '';
+    return await fetchPipelineApiJson<Interview[]>(`/${pipelineId}/interviews${suffix}`, { fallbackMessage: 'Failed to fetch interviews' });
   } catch (error) {
     logger.error('[pipelineService] Error fetching interviews:', error);
     throw error;

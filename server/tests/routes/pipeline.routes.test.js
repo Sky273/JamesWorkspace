@@ -497,6 +497,19 @@ describe('Pipeline Routes', () => {
         });
     });
 
+    describe('GET /api/pipeline/:id/interviews', () => {
+        it('should bypass cache when refresh is requested', async () => {
+            mockGetInterviews.mockResolvedValue([{ id: 'int-1' }]);
+
+            const res = await request(app)
+                .get('/api/pipeline/pipe-1/interviews?refresh=1')
+                .set(authHeader);
+
+            expect(res.status).toBe(200);
+            expect(mockGetInterviews).toHaveBeenCalledWith('pipe-1', { bypassCache: true });
+        });
+    });
+
     describe('POST /api/pipeline/interviews/:id/complete', () => {
         it('should complete interview with outcome', async () => {
             mockCompleteInterview.mockResolvedValue({ id: 'int-1', outcome: 'passed' });

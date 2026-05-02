@@ -126,7 +126,7 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
 
   useEffect(() => {
     if (selectedPipeline) {
-      void getInterviews(selectedPipeline.id)
+      void getInterviews(selectedPipeline.id, { forceRefresh: true })
         .then(setInterviews)
         .catch(err => logger.error('[PipelineTab] Error loading interviews:', err));
     }
@@ -213,7 +213,7 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
         meetingLink: '',
         attendees: []
       });
-      const updatedInterviews = await getInterviews(selectedPipeline.id);
+      const updatedInterviews = await getInterviews(selectedPipeline.id, { forceRefresh: true });
       setInterviews(updatedInterviews);
       void loadData({ forceRefresh: true });
     } catch (error) {
@@ -235,7 +235,7 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
       setSelectedInterview(null);
       setInterviewOutcome({ outcome: '', outcomeNotes: '' });
       if (selectedPipeline) {
-        const updatedInterviews = await getInterviews(selectedPipeline.id);
+        const updatedInterviews = await getInterviews(selectedPipeline.id, { forceRefresh: true });
         setInterviews(updatedInterviews);
       }
       markMissionsViewDirty();
@@ -252,7 +252,7 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
       await cancelInterview(interviewId);
       toast.success(t('pipeline.interviewCancelled'));
       if (selectedPipeline) {
-        const updatedInterviews = await getInterviews(selectedPipeline.id);
+        const updatedInterviews = await getInterviews(selectedPipeline.id, { forceRefresh: true });
         setInterviews(updatedInterviews);
       }
       markMissionsViewDirty();
@@ -261,7 +261,7 @@ export default function PipelineTab({ resumeId, resumeName: _resumeName }: Pipel
       logger.error('[PipelineTab] Error cancelling interview:', error);
       toast.error(t('pipeline.errors.cancelFailed'));
     }
-  }, [selectedPipeline, t]);
+  }, [loadData, selectedPipeline, t]);
 
   const handleViewHistory = useCallback(async (pipeline: PipelineEntry) => {
     try {

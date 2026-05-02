@@ -82,19 +82,27 @@ async function scheduleInterview({
     }
 }
 
-async function getInterviews(pipelineId) {
+async function getInterviews(pipelineId, { bypassCache = false } = {}) {
     try {
-        return candidatePipelineCache.getOrLoad(`interviews:${pipelineId}`, async () => {
+        const loadInterviews = async () => {
             const result = await query(
-            `
-            SELECT * FROM pipeline_interviews
-            WHERE pipeline_id = $1
-            ORDER BY scheduled_at ASC
-        `,
+                `
+                SELECT * FROM pipeline_interviews
+                WHERE pipeline_id = $1
+                ORDER BY scheduled_at ASC
+            `,
                 [pipelineId]
             );
 
             return result.rows;
+        };
+
+        if (bypassCache) {
+            return loadInterviews();
+        }
+
+        return candidatePipelineCache.getOrLoad(`interviews:${pipelineId}`, async () => {
+            return loadInterviews();
         }, {
             scope: `detail:${pipelineId}`
         });

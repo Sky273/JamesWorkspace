@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -10,6 +10,8 @@ const fetchWithAuthMock = vi.fn();
 const getAdaptationsByMissionMock = vi.fn();
 const addToPipelineMock = vi.fn();
 const removeFromPipelineMock = vi.fn();
+const getInterviewsMock = vi.fn();
+const scheduleInterviewMock = vi.fn();
 const toastErrorMock = vi.fn();
 
 vi.mock('react-hot-toast', () => ({
@@ -30,8 +32,8 @@ vi.mock('../../services/pipelineService', () => ({
   moveToStage: vi.fn(),
   removeFromPipeline: (...args: unknown[]) => removeFromPipelineMock(...args),
   updatePipelineNotes: vi.fn(),
-  getInterviews: vi.fn(),
-  scheduleInterview: vi.fn(),
+  getInterviews: (...args: unknown[]) => getInterviewsMock(...args),
+  scheduleInterview: (...args: unknown[]) => scheduleInterviewMock(...args),
   completeInterview: vi.fn(),
   cancelInterview: vi.fn(),
 }));
@@ -105,6 +107,27 @@ describe('MissionPipelineKanban', () => {
     });
     addToPipelineMock.mockResolvedValue(undefined);
     removeFromPipelineMock.mockResolvedValue(undefined);
+    getInterviewsMock.mockResolvedValue([]);
+    scheduleInterviewMock.mockResolvedValue({
+      id: 'interview-1',
+      pipeline_id: 'entry-1',
+      title: 'Entretien client',
+      description: null,
+      interview_type: 'client',
+      scheduled_at: '2026-05-04T16:00:00Z',
+      duration_minutes: 60,
+      location: null,
+      meeting_link: null,
+      attendees: [],
+      calendar_event_id: null,
+      calendar_provider: null,
+      status: 'scheduled',
+      outcome: null,
+      outcome_notes: null,
+      created_by: 'user-1',
+      created_at: '2026-05-01T10:00:00Z',
+      updated_at: '2026-05-01T10:00:00Z',
+    });
   });
 
   it('loads available candidates with mission adaptations first when opening the add modal', async () => {
@@ -227,5 +250,70 @@ describe('MissionPipelineKanban', () => {
     );
 
     expect(await screen.findByRole('button', { name: 'pipeline.remove' })).toBeInTheDocument();
+  });
+
+  it('refreshes the interviews modal with a forced read after scheduling an interview', async () => {
+    getInterviewsMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: 'interview-1',
+          pipeline_id: 'entry-1',
+          title: 'Entretien client',
+          description: 'Brief',
+          interview_type: 'client',
+          scheduled_at: '2026-05-04T16:00:00Z',
+          duration_minutes: 60,
+          location: 'Google Meet',
+          meeting_link: null,
+          attendees: [],
+          calendar_event_id: null,
+          calendar_provider: null,
+          status: 'scheduled',
+          outcome: null,
+          outcome_notes: null,
+          created_by: 'user-1',
+          created_at: '2026-05-01T10:00:00Z',
+          updated_at: '2026-05-01T10:00:00Z',
+        },
+      ]);
+
+    render(
+      <MemoryRouter>
+        <MissionPipelineKanban missionId="mission-1" missionTitle="Product Manager" />
+      </MemoryRouter>
+    );
+
+    const manageButtons = await screen.findAllByRole('button', { name: 'pipeline.manageInterviews' });
+    fireEvent.click(manageButtons[0]);
+
+    await waitFor(() => {
+      expect(getInterviewsMock).toHaveBeenCalledWith('entry-1', { forceRefresh: true });
+    });
+
+    const interviewsModal = (await screen.findByRole('heading', { name: 'pipeline.manageInterviews' }))
+      .closest('.cv-surface');
+    expect(interviewsModal).toBeTruthy();
+    fireEvent.click(within(interviewsModal as HTMLElement).getByRole('button', { name: 'pipeline.scheduleInterview' }));
+
+    fireEvent.change(await screen.findByPlaceholderText('pipeline.interviewTitlePlaceholder'), {
+      target: { value: 'Entretien client' },
+    });
+    const inputs = Array.from(document.querySelectorAll('input'));
+    const scheduledAtInput = inputs.find((input) => input.type === 'datetime-local') ?? inputs[1];
+    expect(scheduledAtInput).toBeTruthy();
+    fireEvent.change(scheduledAtInput!, {
+      target: { value: '2026-05-04T16:00' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'pipeline.schedule' }));
+
+    await waitFor(() => {
+      expect(scheduleInterviewMock).toHaveBeenCalledWith('entry-1', expect.objectContaining({
+        title: 'Entretien client',
+        scheduledAt: '2026-05-04T16:00',
+      }));
+      expect(getInterviewsMock).toHaveBeenLastCalledWith('entry-1', { forceRefresh: true });
+      expect(screen.getAllByText('Entretien client').length).toBeGreaterThan(0);
+    });
   });
 });
