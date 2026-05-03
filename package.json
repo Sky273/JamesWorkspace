@@ -29,6 +29,7 @@
     "analyze:runtime-chunk": "node scripts/analyze-vite-runtime-chunk.mjs",
     "profile:memory": "node scripts/profile-memory.mjs --start-stack --duration 300 --interval 5",
     "backup:db": "node server/scripts/backup-db.js",
+    "backup:workspace": "node scripts/backup-workspace.mjs",
     "migrate": "node server/scripts/migrate.js",
     "knip": "knip",
     "unused-exports": "ts-unused-exports client/tsconfig.json --showLineNumber",
