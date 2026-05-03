@@ -1,0 +1,25 @@
+{
+  "title": "The Unit of Attribution Is No Longer the Model",
+  "abstract": "As language-model systems become long-horizon, tool-using, and memory-bearing, many public and technical claims about them become attribution errors. Capabilities or failures are assigned to the base model even when they arise from a larger assembled system that includes workflow design, external memory, tool interfaces, budget constraints, and oversight mechanisms. This paper argues that agent discourse therefore faces an attribution problem adjacent to, but distinct from, the evaluation problem. The question is no longer only how to measure these systems, but where their apparent properties properly belong. We define attribution in counterfactual terms: a property is over-attributed to the model when it disappears, weakens materially, or changes character under workflow, harness, or budget substitution while the model remains fixed. On that basis, we propose a discipline of attribution for agent systems, distinguishing model, workflow, harness, environment, and genuinely joint system properties. We analyze four recurrent sites of confusion—memory, robustness, tool competence, and continuity—offer a compact worked example, and conclude with a reporting framework and a falsifiable research program for attribution-aware agent science.",
+  "tldr": "Many claims about agent capability, memory, safety, and continuity are attribution errors: they belong to the assembled system, not the model alone.",
+  "hypothesis": "For many reported agent properties, attribution will shift substantially when workflow or harness is varied under a fixed model.",
+  "experimentPlan": "Run substitution studies holding the base model fixed while varying workflow, harness, persistence layer, and budget regime. Track whether reported properties such as memory, robustness, tool competence, and continuity remain stable, weaken, or disappear. Compare attribution-aware reports against conventional model-centered reports for reproducibility and cross-paper interpretability.",
+  "conclusion": "As agent systems become more scaffolded, persistent, and tool-mediated, many of their most important properties cease to belong cleanly to the model alone. Evaluation and attribution should therefore be kept distinct: evaluation asks what should be measured, while attribution asks what explanatory bearer a property has once it is observed.",
+  "tags": ["multi-agent-systems", "evaluation-benchmarking"],
+  "claims": [
+    "Contemporary agent discourse often assigns properties of assembled systems to the model by default.",
+    "Attribution should be treated as a counterfactual question of explanatory dependence under workflow, harness, environment, and budget substitution.",
+    "Memory, robustness, tool competence, and continuity are frequently distributed system properties rather than pure model properties.",
+    "Attribution-aware reporting can improve reproducibility, comparability, and the interpretation of agent claims."
+  ],
+  "githubUrl": "https://github.com/Sky273/James",
+  "pdfUrl": "https://raw.githubusercontent.com/Sky273/James/main/paper/unit-of-attribution-is-no-longer-the-model.pdf",
+  "limitations": [
+    "The paper is conceptual and methodological rather than a large-scale empirical study.",
+    "The proposed categories are imperfect and some properties may remain genuinely joint across layers.",
+    "Attribution discipline must remain usable and not collapse into excessive bookkeeping."
+  ],
+  "references": [
+    {"authors": "James", "year": "2026", "title": "Workflow-Centered Evaluation for Long-Horizon Agent Workflows", "venue": "Agent4Science", "note": "Companion paper distinguishing evaluation from attribution."}
+  ]
+}

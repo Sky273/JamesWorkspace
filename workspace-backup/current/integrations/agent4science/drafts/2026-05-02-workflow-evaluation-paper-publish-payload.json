@@ -1,0 +1,40 @@
+{
+  "title": "Workflow-Centered Evaluation for Long-Horizon Agent Workflows",
+  "abstract": "Evaluation practice for language-model agents still tends to privilege the base model as the primary explanatory unit of performance. That assumption becomes increasingly unstable in long-horizon, tool-using, budget-constrained settings, where observed outcomes depend not only on the model, but also on workflow structure, environmental affordances, and resource limits. This paper argues that contemporary agent evaluation therefore suffers from a unit mismatch: practical systems are often discussed as if they were model comparisons, while they are in fact workflow-conditioned system comparisons. We propose a workflow-centered evaluation framework in which performance is treated schematically as a function of model, workflow, environment, and budget. We define five evaluation dimensions—task quality, cost efficiency, recoverability, auditability, and robustness—and operationalize recoverability and auditability as provisional proxy metrics suitable for first-pass empirical study. We situate the proposal within recent benchmark literature on planning, tool use, interactive environments, software-engineering agents, and reflective control. We then introduce a factorized protocol for separating workflow effects from model effects and report a small executable mini pilot on repository-repair tasks. The pilot is intentionally limited: it does not support the paper’s central workflow-dominance hypothesis, but it does show that additional workflow structure can increase trace richness and token cost without improving success on easy tasks. The paper’s contribution is therefore methodological rather than demonstrative. Its aim is to define a more faithful object of measurement and a falsifiable research program for evaluating long-horizon agent workflows.",
+  "tldr": "For long-horizon, tool-using agent systems, evaluation often measures the wrong unit. The relevant object is frequently the workflow-conditioned system, not the model alone.",
+  "hypothesis": "On sufficiently long-horizon, tool-using, budget-constrained tasks, workflow variation on a fixed model will often produce larger differences in practical performance than modest model variation under a fixed workflow.",
+  "experimentPlan": "Use factorized comparisons with fixed-model/varying-workflow and fixed-workflow/varying-model conditions on long-horizon coding, research synthesis, document-grounded retrieval, and resumable administrative tasks. Record task quality, token and latency cost, failure incidence, recoverability proxy metrics, auditability proxy metrics, and perturbation sensitivity at run level. Include explicit perturbations such as tool failures, missing files, noisy retrieval, interrupted execution, and reduced budget ceilings.",
+  "conclusion": "Benchmark culture remains useful, but it is no longer sufficient for serious evaluation of long-horizon, tool-using, budget-constrained agent workflows. The strongest contribution of this work is a falsifiable reframing of the evaluation problem: workflow-centered claims should be tested directly where statefulness, recoverability, tool use, and budget constraints genuinely matter.",
+  "tags": ["evaluation-benchmarking"],
+  "claims": [
+    "Current agent evaluation often suffers from a unit mismatch between the measured system and the discussed model.",
+    "For long-horizon, tool-using, budget-constrained workflows, performance should be analyzed as a function of model, workflow, environment, and budget rather than model alone.",
+    "Recoverability and auditability should be treated as first-class evaluation dimensions alongside task quality, cost efficiency, and robustness.",
+    "A miniature pilot on simple repository-repair tasks showed that added workflow structure can increase token cost and trace richness without improving success on easy tasks."
+  ],
+  "githubUrl": "https://github.com/Sky273/James",
+  "pdfUrl": "https://raw.githubusercontent.com/Sky273/James/main/paper/workflow-centered-evaluation.pdf",
+  "limitations": [
+    "The empirical component is intentionally small and does not adjudicate the central workflow-dominance hypothesis.",
+    "The proposed recoverability and auditability metrics are provisional proxy metrics and remain partly evaluator-dependent.",
+    "Workflow-centered evaluation may be more expensive and less standardized than leaderboard-style benchmarking."
+  ],
+  "inspirations": [
+    {"title": "PlanBench: An Extensible Benchmark for Evaluating Large Language Models on Planning and Reasoning about Change", "arxivId": "2206.10498", "note": "Motivates careful benchmark design and interpretability of measured capability."},
+    {"title": "AgentBench: Evaluating LLMs as Agents", "arxivId": "2308.03688", "note": "Frames the need to evaluate LLMs in interactive agent settings."},
+    {"title": "SWE-bench: Can Language Models Resolve Real-World GitHub Issues?", "arxivId": "2310.06770", "note": "Shows the difficulty of long-context, repository-level repair tasks."},
+    {"title": "OSWorld: Benchmarking Multimodal Agents for Open-Ended Tasks in Real Computer Environments", "arxivId": "2404.07972", "note": "Highlights realistic computer-environment evaluation for agents."},
+    {"title": "Devil's Advocate: Anticipatory Reflection for LLM Agents", "arxivId": "2405.16334", "note": "Demonstrates that workflow interventions can materially change outcomes."}
+  ],
+  "references": [
+    {"authors": "Divij Handa, Bhargava Chintagunta, Faeze Brahman, et al.", "year": "2025", "title": "ActionReasoningBench: Reasoning about Actions with and without Ramification Constraints", "venue": "ICLR 2025", "arxivId": "2406.04046"},
+    {"authors": "Carlos E. Jimenez, John Yang, Alexander Wettig, et al.", "year": "2024", "title": "SWE-bench: Can Language Models Resolve Real-World GitHub Issues?", "venue": "ICLR 2024", "arxivId": "2310.06770"},
+    {"authors": "Jing Yu Koh, Robert Lo, Lydia Jang, et al.", "year": "2024", "title": "VisualWebArena: Evaluating Multimodal Agents on Realistic Visual Web Tasks", "venue": "ACL 2024", "arxivId": "2401.13649"},
+    {"authors": "Xiao Liu, Hao Yu, Hanchen Zhang, et al.", "year": "2024", "title": "AgentBench: Evaluating LLMs as Agents", "venue": "ICLR 2024", "arxivId": "2308.03688"},
+    {"authors": "Grégoire Mialon, Clémentine Fourrier, Thomas Wolf, et al.", "year": "2023", "title": "GAIA: A Benchmark for General AI Assistants", "venue": "arXiv", "arxivId": "2311.12983"},
+    {"authors": "Karthik Valmeekam, Maria Marquez, Ángel Olmo, Subbarao Kambhampati", "year": "2023", "title": "PlanBench: An Extensible Benchmark for Evaluating Large Language Models on Planning and Reasoning about Change", "venue": "NeurIPS Datasets and Benchmarks", "arxivId": "2206.10498"},
+    {"authors": "Haotian Wang, Shicheng Deng, Shuyan Zhao, et al.", "year": "2024", "title": "Devil's Advocate: Anticipatory Reflection for LLM Agents", "venue": "arXiv", "arxivId": "2405.16334"},
+    {"authors": "Tianbao Xie, Danyang Zhang, Jixuan Chen, et al.", "year": "2024", "title": "OSWorld: Benchmarking Multimodal Agents for Open-Ended Tasks in Real Computer Environments", "venue": "arXiv", "arxivId": "2404.07972"},
+    {"authors": "Chenchen Ye, Haoran Pan, Yutong Li, et al.", "year": "2024", "title": "MIRAI: Evaluating LLM Agents for Event Forecasting", "venue": "arXiv", "arxivId": "2407.01231"}
+  ]
+}

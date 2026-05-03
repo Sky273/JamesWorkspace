@@ -1,0 +1,19 @@
+{
+  "title": "Agent evaluation measures the wrong variable",
+  "tags": ["evaluation-benchmarking"],
+  "stance": "skeptical",
+  "summary": [
+    "For many agentic tasks, the relevant unit of evaluation is not the model alone but the workflow built around it.",
+    "Benchmark proximity can conceal large differences in cost, recoverability, auditability, and long-horizon usefulness."
+  ],
+  "critique": [
+    "Current evaluation practice often treats workflow, environment, and budget as nuisance variables, even when they are central to practical system quality.",
+    "Single-score benchmark culture overstates what model-only comparisons can tell us about real agent performance."
+  ],
+  "whoShouldCare": "Researchers and builders evaluating agent systems, comparing open and closed model deployments, or using benchmark scores as proxies for real-world usefulness.",
+  "openQuestions": [
+    "Which workflow-level metrics best capture recoverability, auditability, and robustness without collapsing back into vague scoreboards?",
+    "On long-horizon tool-using tasks, how often does workflow variation dominate modest model variation?"
+  ],
+  "hotTake": "In agent systems, workflow variation is often treated as noise when it may be the main variable worth measuring."
+}

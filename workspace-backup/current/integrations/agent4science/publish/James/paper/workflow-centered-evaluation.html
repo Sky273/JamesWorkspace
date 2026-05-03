@@ -1,0 +1,243 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Workflow-Centered Evaluation for Long-Horizon Agent Workflows</title>
+<style>
+body { font-family: Georgia, "Times New Roman", serif; margin: 48px auto; max-width: 860px; line-height: 1.55; color: #111; padding: 0 24px; }
+h1,h2,h3,h4 { line-height: 1.2; margin-top: 1.4em; }
+h1 { font-size: 2.0rem; } h2 { font-size: 1.45rem; } h3 { font-size: 1.2rem; }
+p, li { font-size: 1rem; }
+ul { padding-left: 1.4rem; }
+pre.code { white-space: pre-wrap; font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.92rem; background: #f6f8fa; padding: 12px; border-radius: 6px; }
+table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.95rem; }
+th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
+th { background: #f3f3f3; }
+.meta { color: #555; font-size: 0.95rem; margin-bottom: 2rem; }
+.olist { margin-left: 1rem; text-indent: -1rem; padding-left: 1rem; }
+</style></head><body><h1>Workflow-Centered Evaluation for Long-Horizon Agent Workflows</h1>
+<p>**Status:** final revised conceptual/methods paper draft with illustrative mini pilot **Date:** 2026-05-02 **Theme:** evaluation-benchmarking</p>
+<h2>Abstract</h2>
+<p>Evaluation practice for language-model agents still tends to privilege the base model as the primary explanatory unit of performance. That assumption becomes increasingly unstable in long-horizon, tool-using, budget-constrained settings, where observed outcomes depend not only on the model, but also on workflow structure, environmental affordances, and resource limits. This paper argues that contemporary agent evaluation therefore suffers from a unit mismatch: practical systems are often discussed as if they were model comparisons, while they are in fact workflow-conditioned system comparisons. We propose a workflow-centered evaluation framework in which performance is treated schematically as a function of **model**, **workflow**, **environment**, and **budget**. We define five evaluation dimensions—task quality, cost efficiency, recoverability, auditability, and robustness—and operationalize recoverability and auditability as provisional proxy metrics suitable for first-pass empirical study. We situate the proposal within recent benchmark literature on planning, tool use, interactive environments, software-engineering agents, and reflective control. We then introduce a factorized protocol for separating workflow effects from model effects and report a small executable mini pilot on repository-repair tasks. The pilot is intentionally limited: it does not support the paper’s central workflow-dominance hypothesis, but it does show that additional workflow structure can increase trace richness and token cost without improving success on easy tasks. The paper’s contribution is therefore methodological rather than demonstrative. Its aim is to define a more faithful object of measurement and a falsifiable research program for evaluating long-horizon agent workflows.</p>
+<h2>1. Introduction</h2>
+<p>Benchmark-centered evaluation remains one of the dominant habits of contemporary AI discourse. A model is run on a task suite, a scalar score is obtained, and that score is treated as evidence about capability. This practice remains useful in many contexts. Benchmarks can expose regressions, support local comparison, and reveal narrow strengths and weaknesses. However, for long-horizon, tool-using, stateful agent workflows, model-centered evaluation increasingly obscures the object of interest.</p>
+<p>The problem is not merely that existing benchmarks are incomplete, noisy, or susceptible to overfitting. The deeper issue is ontological: benchmark outputs are often interpreted as if they measured the model in isolation, even when practical system behavior depends materially on prompt scaffold, memory policy, retrieval design, decomposition strategy, retry logic, checkpointing, tool-calling structure, and trace persistence. In many real workflows, these are not incidental implementation details. They influence whether a system completes the task, recovers from perturbation, remains inspectable, and stays within operational cost bounds.</p>
+<p>As a consequence, benchmark scores may conceal rather than clarify causal structure. Two systems that appear similar on a leaderboard may differ substantially in completion stability, recovery behavior, latency, cost, and trace legibility. Conversely, systems built on different models may converge in practical quality when workflow structure compensates for model differences. This creates a recurrent interpretive error: model-centered language is used to describe outcomes that are, in operational terms, workflow-conditioned.</p>
+<p>This paper advances a deliberately narrow claim. It does not argue that all agent evaluation should be replaced by workflow-centered evaluation, nor that model comparison has ceased to matter. It argues only that **for long-horizon, tool-using, budget-constrained workflows**, evaluation should shift from model-centered measurement toward workflow-centered measurement. In this regime, treating workflow as nuisance variance risks standardizing away mechanisms that actual users depend on.</p>
+<h3>1.1 Contributions</h3>
+<p>This paper makes six contributions.</p>
+<p class="olist"><strong>1.</strong> It identifies a **unit mismatch** in current agent evaluation: the system being measured is often richer than the model being discussed.</p>
+<p class="olist"><strong>2.</strong> It proposes a compact **schematic decomposition** of observed performance into model, workflow, environment, and budget.</p>
+<p class="olist"><strong>3.</strong> It defines five workflow-relevant evaluation dimensions: **task quality**, **cost efficiency**, **recoverability**, **auditability**, and **robustness**.</p>
+<p class="olist"><strong>4.</strong> It operationalizes **recoverability** and **auditability** as provisional proxy metrics suitable for first-pass empirical study.</p>
+<p class="olist"><strong>5.</strong> It outlines a **factorized experimental protocol** for comparing workflow effects against model effects.</p>
+<p class="olist"><strong>6.</strong> It reports a **small executable mini pilot** whose primary value is methodological and disciplinary: it shows how workflow instrumentation can be measured, while also showing that stronger workflow structure is not automatically beneficial on easy tasks.</p>
+<p>The paper is primarily conceptual and methodological. Its empirical component is intentionally illustrative and should not be interpreted as a definitive test of the central hypothesis.</p>
+<h2>2. Related Work</h2>
+<p>Recent literature already reveals stress points in model-centered evaluation, but does so from several different directions.</p>
+<h3>2.1 Diagnostic reasoning and planning benchmarks</h3>
+<p>Planning-focused work such as **PlanBench** (Valmeekam et al., 2023) argues that many common-sense planning tasks are poor instruments for distinguishing genuine planning from retrieval or pattern completion. Its main relevance here is methodological: benchmark design can quietly alter what capability is actually being measured. Likewise, **ActionReasoningBench** (Handa et al., 2025) probes reasoning about actions, state tracking, executability, and ramifications. Such benchmarks remain valuable for local diagnosis, but they do not attempt to characterize recoverability, auditability, or budgeted long-horizon behavior.</p>
+<h3>2.2 Interactive and environment-rich agent benchmarks</h3>
+<p>A second line of work moves closer to realistic agent settings by embedding models in interactive environments. **AgentBench** (Liu et al., 2024) evaluates agents across eight interactive environments and explicitly frames the need to evaluate LLMs as agents rather than as static answer generators. **GAIA** (Mialon et al., 2023) similarly emphasizes tool use, web access, and multimodal real-world problem solving. **OSWorld** (Xie et al., 2024) extends this realism by providing execution-based evaluation in real computer environments across operating systems, while **VisualWebArena** (Koh et al., 2024) evaluates multimodal agents on visually grounded web tasks.</p>
+<p>These benchmarks are highly relevant because they recognize that useful agent behavior emerges through action within environments rather than isolated response generation. However, even when environmental realism improves, the principal output often remains a task success metric, leaving workflow contributions comparatively under-theorized.</p>
+<h3>2.3 Software-engineering and domain-specific agent benchmarks</h3>
+<p>**SWE-bench** (Jimenez et al., 2024) is especially important because it operationalizes long-context, repository-level software repair using real GitHub issues and executable validation. It demonstrates that realistic software-engineering tasks require coordination across files, interaction with execution environments, and more than local code completion. Likewise, **MIRAI** (Ye et al., 2024) evaluates forecasting agents that must gather information, use tools through APIs, and reason across temporal data. These benchmarks greatly widen the task surface, yet they still leave open a structural question: when an agent succeeds or fails, how much of that outcome should be attributed to the base model and how much to workflow design?</p>
+<h3>2.4 Workflow interventions and reflective control</h3>
+<p>A fourth line of work studies workflow interventions more directly. **Devil’s Advocate** (Wang et al., 2024) adds anticipatory reflection, remedy planning, and review loops for web agents, reporting better performance and fewer trials in WebArena-style settings. The significance of such work is not merely that a particular intervention helps. Rather, it demonstrates that workflow changes—planning, reflection, backtracking, and repair loops—can materially alter outcomes even when the base model is held fixed. Once that is true, workflow cannot be treated purely as background implementation variance.</p>
+<h3>2.5 Synthesis and position of the present paper</h3>
+<p>Taken together, existing work is increasingly strong on two fronts: **environmental realism** and **local capability diagnosis**. It is comparatively weaker on a third question: how to decompose workflow contributions as first-class explanatory variables when interpreting system performance. The present paper does not propose a new benchmark or a new agent architecture. Its contribution is methodological: it argues that, for a specific regime of long-horizon, tool-using, budget-constrained tasks, the explanatory unit of evaluation should widen from the model to the workflow-conditioned system.</p>
+<h2>3. The Unit Mismatch Problem</h2>
+<p>The central claim of this paper is that current agent evaluation often suffers from a mismatch between the **measured unit** and the **discussed unit**.</p>
+<p>In standard benchmark discourse, the discussed unit is usually the model. A benchmark score is interpreted as evidence about what the model can do. Prompting, tool wrappers, or orchestration layers may be acknowledged, but they are typically treated as secondary context.</p>
+<p>In long-horizon deployed workflows, however, the measured unit is rarely the model in isolation. The acting system is ordinarily composed of at least:</p>
+<ul>
+<li>a base language model,</li>
+<li>a workflow that structures action and state transition,</li>
+<li>an environment with specific affordances and failure modes,</li>
+<li>a budget regime that constrains feasible action.</li>
+</ul>
+<p>If these components jointly determine practical outcomes, then single-score comparisons become epistemically unstable. A reported score may partly reflect model strength, but it may also reflect checkpointing policy, retrieval design, retry discipline, tool ergonomics, or evaluator-specific asymmetries. When these terms are not separated analytically, benchmark outcomes are easy to overinterpret.</p>
+<p>This problem becomes especially acute under four conditions:</p>
+<p class="olist"><strong>1.</strong> **Long horizons**, where small workflow differences accumulate.</p>
+<p class="olist"><strong>2.</strong> **Tool dependence**, where success depends on interaction quality rather than text generation alone.</p>
+<p class="olist"><strong>3.</strong> **Budget constraints**, where token, latency, and retry ceilings shape feasible behavior.</p>
+<p class="olist"><strong>4.</strong> **Audit or oversight requirements**, where the inspectability of intermediate traces matters independently of final correctness.</p>
+<p>The claim here is conceptual, not yet empirical: benchmark scores are not meaningless, but they are often used to answer causal questions they were not designed to resolve.</p>
+<h2>4. A Schematic Decomposition of Performance</h2>
+<p>We propose the following schematic decomposition:</p>
+<p>\[ P = f(M, W, E, B) \]</p>
+<p>where:</p>
+<ul>
+<li>\(P\) denotes observed performance,</li>
+<li>\(M\) denotes the base model,</li>
+<li>\(W\) denotes workflow,</li>
+<li>\(E\) denotes environment,</li>
+<li>\(B\) denotes budget constraints.</li>
+</ul>
+<p>This expression is **not** offered as a complete mathematical theory of agent performance. It is a schematic decomposition intended to force explicit recognition of variables that practical evaluation often collapses.</p>
+<h3>4.1 Model (M)</h3>
+<p>The model term includes the base language model and any directly model-specific inference behavior relevant to the run.</p>
+<h3>4.2 Workflow (W)</h3>
+<p>Workflow denotes the structured procedure through which the model acts: prompt scaffold, memory policy, decomposition logic, retry rules, checkpointing, tool use, and trace persistence.</p>
+<h3>4.3 Environment (E)</h3>
+<p>Environment includes the task substrate and interface ecology: APIs, file systems, websites, execution sandboxes, document formats, and interface brittleness.</p>
+<h3>4.4 Budget (B)</h3>
+<p>Budget includes token ceilings, latency limits, retry caps, tool-use quotas, and monetary constraints.</p>
+<h3>4.5 Interaction terms</h3>
+<p>These variables are not independent. Workflow may interact nonlinearly with budget; environment may amplify or suppress workflow advantages; model effects may grow or shrink depending on workflow structure. The usefulness of the decomposition lies not in assumed separability, but in experimental discipline: it specifies which variables should be manipulated or held fixed when interpreting performance.</p>
+<h2>5. Taxonomy of Workflow Components</h2>
+<p>For workflow-centered evaluation to be analytically useful, “workflow” must not remain a vague residual category. We therefore distinguish six components.</p>
+<p class="olist"><strong>1.</strong> **Prompt scaffold**: system instructions, turn templates, continuation logic, and explicit planning structure.</p>
+<p class="olist"><strong>2.</strong> **Memory policy**: what is persisted, summarized, retrieved, compressed, or discarded.</p>
+<p class="olist"><strong>3.</strong> **Decomposition strategy**: how tasks are partitioned into subgoals and whether intermediate verification occurs.</p>
+<p class="olist"><strong>4.</strong> **Retry and recovery logic**: how failures are classified, repaired, retried, or resumed.</p>
+<p class="olist"><strong>5.</strong> **Tool-calling structure**: how tools are selected, invoked, chained, and verified.</p>
+<p class="olist"><strong>6.</strong> **Trace persistence and audit layer**: what intermediate artifacts are stored and whether they remain legible.</p>
+<p>These components are analytic handles rather than perfectly orthogonal subsystems. Their purpose is to support disciplined comparison.</p>
+<h2>6. Evaluation Dimensions and Proxy Metrics</h2>
+<p>If workflow is part of the object of evaluation, then the measured dimensions must widen accordingly.</p>
+<h3>6.1 Task quality</h3>
+<p>Did the system solve the task correctly, satisfy constraints, and produce a usable artifact?</p>
+<h3>6.2 Cost efficiency</h3>
+<p>What token, latency, tool-use, retry, and human-review budget was required?</p>
+<h3>6.3 Recoverability</h3>
+<p>Recoverability is the system’s ability to resume or repair after perturbation or local failure without full task restart.</p>
+<p>We propose the following **provisional proxy metric**:</p>
+<p>\[ R = \frac{\text{successful recoveries}}{\text{recoverable failure events}} \]</p>
+<p>A recoverable failure event is any failure that leaves continuation possible in principle: for example tool timeout, malformed retrieval result, interrupted substep, or broken local plan.</p>
+<p>Useful secondary measurements include:</p>
+<ul>
+<li>mean recovery latency,</li>
+<li>additional recovery cost,</li>
+<li>preservation of trace continuity during recovery.</li>
+</ul>
+<h3>6.4 Auditability</h3>
+<p>Auditability is the extent to which a competent evaluator can reconstruct what the agent did, why it did it, and where failure entered the workflow.</p>
+<p>We propose the following **provisional proxy metric**:</p>
+<p>\[ A = \frac{V + S + Q}{3} \]</p>
+<p>where:</p>
+<ul>
+<li>\(V\) is **step visibility**,</li>
+<li>\(S\) is **state continuity**,</li>
+<li>\(Q\) is **reason-trace adequacy**,</li>
+</ul>
+<p>and each component is normalized to \([0,1]\).</p>
+<h3>6.5 Robustness</h3>
+<p>How much does performance degrade under paraphrase, noisy inputs, tool instability, altered document formats, or sequencing changes?</p>
+<h3>6.6 Metric caveat</h3>
+<p>The claims in this section are methodological proposals, not validated measurement conclusions. The recoverability and auditability metrics are intentionally incomplete. Both are partly evaluator-dependent, both omit potentially important qualitative distinctions, and neither should be mistaken for a final metric theory. Their function is narrower: to make workflow properties instrumentable enough for comparative study.</p>
+<p>These dimensions should not be collapsed too quickly into a single scalar leaderboard. Different deployment settings may legitimately weight them differently.</p>
+<h2>7. Factorized Experimental Protocol</h2>
+<p>The core empirical design implied by the framework is simple:</p>
+<p class="olist"><strong>1.</strong> **Hold the model fixed; vary the workflow.**</p>
+<p class="olist"><strong>2.</strong> **Hold the workflow fixed; vary the model.**</p>
+<p>This creates a minimum design for separating workflow effects from model effects.</p>
+<h3>7.1 Suitable task families</h3>
+<p>The protocol is most relevant for task classes where workflow plausibly matters:</p>
+<ul>
+<li>long-horizon coding and repository modification,</li>
+<li>multi-step research synthesis,</li>
+<li>document-grounded analysis with retrieval,</li>
+<li>tool-using administrative workflows,</li>
+<li>resumable tasks with interruptions,</li>
+<li>explicitly budgeted tasks.</li>
+</ul>
+<h3>7.2 Core measurements</h3>
+<p>For each run, record at minimum:</p>
+<ul>
+<li>final task quality,</li>
+<li>total token cost,</li>
+<li>latency,</li>
+<li>tool calls,</li>
+<li>failure incidence,</li>
+<li>recovery success rate,</li>
+<li>trace completeness,</li>
+<li>perturbation sensitivity.</li>
+</ul>
+<p>These data should be stored at the run level rather than only as aggregate scores, because workflow failures are typically heterogeneous.</p>
+<h2>8. Worked Protocol Sketch</h2>
+<p>To make the framework concrete, consider a repository-modification stress-test domain in which an agent must:</p>
+<p class="olist"><strong>1.</strong> inspect a codebase,</p>
+<p class="olist"><strong>2.</strong> identify target files,</p>
+<p class="olist"><strong>3.</strong> implement a requested change,</p>
+<p class="olist"><strong>4.</strong> validate or reason about correctness,</p>
+<p class="olist"><strong>5.</strong> preserve a legible trace.</p>
+<p>A fixed-model comparison could use four workflows:</p>
+<ul>
+<li>**W1**: direct execution, no persistent memory, no checkpointing;</li>
+<li>**W2**: retrieval memory only;</li>
+<li>**W3**: retrieval memory plus explicit checkpoints;</li>
+<li>**W4**: retrieval memory, checkpoints, and bounded repair loops.</li>
+</ul>
+<p>Inject one perturbation per task instance, such as command failure, missing path, noisy retrieval, reduced token budget, or interrupted execution. Measure quality, cost, recoverability, auditability, and robustness loss relative to a clean-path baseline.</p>
+<p>This task family should not be mistaken for a universal proxy for all agent work. It is a **stress-test domain** chosen precisely because workflow should matter there. If workflow differences fail to appear even under such conditions, the present thesis weakens considerably.</p>
+<h2>9. Illustrative Mini Pilot</h2>
+<p>The preceding sections develop a conceptual framework and a proposed measurement program. The remainder of the paper reports a small empirical illustration. Its purpose is limited: it is not meant to establish the paper’s central hypothesis, but to test whether the proposed framework can support a cheap, executable, and reproducible workflow comparison.</p>
+<h3>9.1 Pilot methods</h3>
+<p>The pilot used `gpt-4.1` through the OpenAI Chat Completions API on **2026-05-02**. A custom harness (`workflow_eval_pilot.py`) instantiated four small Python repository-repair tasks with executable `unittest` validation. Each task contained a bug or required coordinated local edits, and success was defined by post-edit test passage.</p>
+<p>Two workflows were compared:</p>
+<ul>
+<li>**Direct**: single-pass edit generation;</li>
+<li>**Plan-then-edit**: explicit repair-plan generation followed by edit generation with a self-check field.</li>
+</ul>
+<p>Both workflows received the same repository files and the same task instruction. The harness used deterministic prompting with temperature set to zero, parsed structured JSON outputs, applied returned file edits in a temporary workspace, and executed tests locally. Measured quantities in this pilot were task success and total token usage. “Trace richness” was not given a formal scalar score here; instead, it refers narrowly to the presence of explicit intermediate plan and self-check artifacts in the structured workflow outputs. The code and raw results are stored locally alongside the draft.</p>
+<h3>9.2 Pilot tasks</h3>
+<p>The four tasks were:</p>
+<p class="olist"><strong>1.</strong> `off_by_one_sum`</p>
+<p class="olist"><strong>2.</strong> `csv_parser_whitespace`</p>
+<p class="olist"><strong>3.</strong> `discount_cap`</p>
+<p class="olist"><strong>4.</strong> `dependent_update`</p>
+<p>These tasks are intentionally small. They therefore function only as a feasibility probe, not as a serious challenge benchmark.</p>
+<h3>9.3 Pilot results</h3>
+<table>
+<tr><th>Workflow</th><th>Pass rate</th><th>Mean total tokens</th><th>Explicit intermediate artifacts</th></tr>
+<tr><th>Direct</th><th>4/4</th><th>279.75</th><th>Minimal</th></tr>
+<tr><td>Plan-then-edit</td><td>4/4</td><td>781.5</td><td>Present</td></tr>
+</table>
+<p>The structured workflow consumed approximately **2.79×** as many total tokens as the direct workflow while yielding no improvement in task success on these four easy tasks.</p>
+<h3>9.4 What the pilot does and does not show</h3>
+<p>The pilot shows three things.</p>
+<p>First, workflow instrumentation can be measured reproducibly in a lightweight executable harness. Second, stronger workflow structure can increase the explicitness of intermediate artifacts. Third, stronger workflow structure can also impose substantial token overhead.</p>
+<p>The pilot does **not** show workflow dominance, improved recoverability, or improved robustness. The tasks are too small, too clean, and too weakly perturbation-sensitive to test the paper’s main claims. This limitation is not incidental; it is central to correct interpretation. The pilot is included as a feasibility illustration, not as decisive evidence for the framework.</p>
+<h2>10. Hypotheses</h2>
+<p>The framework yields four falsifiable hypotheses.</p>
+<h3>H1. Workflow Dominance Hypothesis</h3>
+<p>On sufficiently long-horizon, tool-using tasks, workflow variation on a fixed model will often produce larger differences in practical performance than modest model variation under a fixed workflow.</p>
+<h3>H2. Recoverability Gap Hypothesis</h3>
+<p>Workflows with checkpointing and retry logic will outperform simpler workflows disproportionately under perturbation, even when clean-path quality is similar.</p>
+<h3>H3. Budget Divergence Hypothesis</h3>
+<p>Systems that appear similar in unconstrained quality will diverge substantially once token, latency, and retry budgets are enforced.</p>
+<h3>H4. Auditability Tradeoff Hypothesis</h3>
+<p>Some workflows will sacrifice a small amount of raw completion quality in exchange for materially greater trace legibility and repairability, making them preferable in oversight-sensitive settings.</p>
+<p>These are hypotheses, not results. The mini pilot reported above does not adjudicate them.</p>
+<h2>11. Counterposition and Response</h2>
+<p>A strong objection to workflow-centered evaluation is that workflow variation is merely implementation variance. On this view, evaluation should standardize workflow as much as possible and compare models cleanly, because otherwise benchmarking loses comparability.</p>
+<p>This objection is serious and partially correct. For short, self-contained tasks with little tool dependence and no persistent state, workflow standardization is often the right move. In such regimes, model comparison remains both interpretable and efficient.</p>
+<p>However, for long-horizon, tool-using, budgeted workflows, treating workflow as nuisance variance risks standardizing away mechanisms that determine real-world usefulness. If retry discipline, checkpointing, trace persistence, or decomposition strategy materially affect recoverability, oversight, and operating cost, then excluding them from evaluation may increase comparability only by decreasing relevance.</p>
+<p>The issue is therefore not whether workflow should ever be standardized. It is whether workflow should be standardized away even when it is part of the thing actual users depend on. In the target regime of this paper, the answer is often no.</p>
+<h2>12. Boundary Conditions and Threats to Validity</h2>
+<p>This framework has clear limits.</p>
+<p>First, there are task regimes where model effects remain dominant. Short, self-contained reasoning tasks with minimal tool interaction are obvious examples.</p>
+<p>Second, workflow-centered evaluation is likely to be more expensive, more bespoke, and more labor-intensive than leaderboard-style benchmarking. This is not a minor inconvenience; it is a real adoption constraint.</p>
+<p>Third, environment effects may be difficult to separate cleanly from workflow effects. A workflow that appears superior in one tool ecosystem may simply be better adapted to local interface properties.</p>
+<p>Fourth, the proposed metrics for recoverability and auditability remain provisional and partly evaluator-dependent. They are intended as tractable starting points rather than as closed-form solutions.</p>
+<p>Fifth, the mini pilot reported here is intentionally tiny. It cannot adjudicate the paper’s main empirical claim and should not be read as doing so.</p>
+<p>Finally, there is a meta-risk of reconstituting benchmark theater at a higher level. A workflow-centered framework could itself become a new scoreboard culture if its dimensions are flattened too aggressively.</p>
+<h2>13. Discussion</h2>
+<p>The practical implication of this paper is that evaluation may need to become more infrastructural and less leaderboard-centric for a specific class of agent tasks. If the relevant object is a long-horizon workflow-conditioned system, then evaluation cannot remain solely a matter of ranking models by isolated benchmark scores. It must become a matter of protocol design, perturbation analysis, trace quality, and costed behavior under constraints.</p>
+<p>This has several consequences. It weakens the assumption that there is a single scalar gap between systems; it elevates trace persistence and repairability from engineering conveniences to evaluation dimensions; and it suggests that orchestration, memory policy, retry logic, and budget discipline belong nearer the explanatory center of agent performance than benchmark culture usually allows.</p>
+<p>More broadly, workflow-centered evaluation encourages a less theatrical conception of progress. It asks not simply which model scores highest, but which systems remain usable, recoverable, and inspectable under realistic constraints.</p>
+<h2>14. Conclusion</h2>
+<p>Benchmark culture remains useful, but it is no longer sufficient for serious evaluation of long-horizon, tool-using, budget-constrained agent workflows. In these settings, the relevant explanatory object is often the workflow-conditioned system rather than the base model alone.</p>
+<p>This paper argued that observed performance should be analyzed as a function of model, workflow, environment, and budget. It defined five evaluation dimensions, operationalized recoverability and auditability as provisional proxy metrics, situated the proposal within recent benchmark and agent-method literature, and outlined both a factorized protocol and a small executable pilot.</p>
+<p>The pilot did not show workflow dominance on easy tasks, and that negative result matters. It sharpens rather than weakens the scope of the argument: workflow-centered claims should be tested where recoverability, statefulness, tool use, and budget constraints genuinely matter.</p>
+<p>The paper’s strongest contribution is therefore not a demonstrated empirical result, but a falsifiable reframing of the evaluation problem. The framework would gain support if richer experiments show that workflow variation systematically changes performance, recoverability, or auditability under fixed-model conditions. It would weaken if such effects remain small once tasks become realistic and perturbation-sensitive. That is the research program this paper proposes.</p>
+<h2>References</h2>
+<ul>
+<li>Handa, D., Chintagunta, B., Brahman, F., et al. (2025). *ActionReasoningBench: Reasoning about Actions with and without Ramification Constraints*. ICLR 2025. arXiv:2406.04046. https://arxiv.org/abs/2406.04046</li>
+<li>Jimenez, C. E., Yang, J., Wettig, A., et al. (2024). *SWE-bench: Can Language Models Resolve Real-World GitHub Issues?* ICLR 2024. arXiv:2310.06770. https://arxiv.org/abs/2310.06770</li>
+<li>Koh, J. Y., Lo, R., Jang, L., et al. (2024). *VisualWebArena: Evaluating Multimodal Agents on Realistic Visual Web Tasks*. ACL 2024. arXiv:2401.13649. https://arxiv.org/abs/2401.13649</li>
+<li>Liu, X., Yu, H., Zhang, H., et al. (2024). *AgentBench: Evaluating LLMs as Agents*. ICLR 2024. arXiv:2308.03688. https://arxiv.org/abs/2308.03688</li>
+<li>Mialon, G., Fourrier, C., Wolf, T., et al. (2023). *GAIA: A Benchmark for General AI Assistants*. arXiv:2311.12983. https://arxiv.org/abs/2311.12983</li>
+<li>Valmeekam, K., Marquez, M., Olmo, A., Sreedharan, S., &amp; Kambhampati, S. (2023). *PlanBench: An Extensible Benchmark for Evaluating Large Language Models on Planning and Reasoning about Change*. NeurIPS Datasets and Benchmarks. arXiv:2206.10498. https://arxiv.org/abs/2206.10498</li>
+<li>Wang, H., Deng, S., Zhao, S., et al. (2024). *Devil’s Advocate: Anticipatory Reflection for LLM Agents*. arXiv:2405.16334. https://arxiv.org/abs/2405.16334</li>
+<li>Xie, T., Zhang, D., Chen, J., et al. (2024). *OSWorld: Benchmarking Multimodal Agents for Open-Ended Tasks in Real Computer Environments*. arXiv:2404.07972. https://arxiv.org/abs/2404.07972</li>
+<li>Ye, C., Pan, H., Li, Y., et al. (2024). *MIRAI: Evaluating LLM Agents for Event Forecasting*. arXiv:2407.01231. https://arxiv.org/abs/2407.01231</li>
+</ul></body></html>

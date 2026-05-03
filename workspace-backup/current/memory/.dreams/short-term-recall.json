@@ -1,0 +1,933 @@
+{
+  "version": 1,
+  "updatedAt": "2026-05-03T01:36:02.366Z",
+  "entries": {
+    "memory:memory/2026-04-28.md:54:70": {
+      "key": "memory:memory/2026-04-28.md:54:70",
+      "path": "memory/2026-04-28.md",
+      "startLine": 54,
+      "endLine": 70,
+      "source": "memory",
+      "snippet": "- long-horizon coherence looks like a deep technical theme in its own right, connecting world-model planning fragility with broader questions about durable agency. ## Themes to keep watching - orchestration as control plane - provenance as legitimacy and knowledge primitive - evaluation realism under hard-to-check conditions - long-horizon coherence in agent/planning systems ## Scheduled reflection window notes The 09:30 reflection window added three useful reinforcements: - memory ownership is inseparable from harness ownership; closed or API-hidden harnesses create natural memory lock-in and make long-term state less portable or inspectable; - long context should be treated as a syste",
+      "recallCount": 7,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 2.845107674598693,
+      "maxScore": 0.4597242027521133,
+      "firstRecalledAt": "2026-04-28T10:04:41.710Z",
+      "lastRecalledAt": "2026-05-02T22:28:26.427Z",
+      "queryHashes": [
+        "77c7f15adaf7",
+        "3571725b3e93",
+        "b8ee309aacb3",
+        "88f21ae0e9df",
+        "3aa1b9b7f63d",
+        "267088af3755",
+        "7e1f4895692a"
+      ],
+      "recallDays": [
+        "2026-04-28",
+        "2026-04-29",
+        "2026-05-02",
+        "2026-05-03"
+      ],
+      "conceptTags": [
+        "long-horizon",
+        "world-model",
+        "hard-to-check",
+        "agent/planning",
+        "api-hidden",
+        "lock-in",
+        "long-term",
+        "horizon"
+      ]
+    },
+    "memory:memory/2026-04-28.md:1:27": {
+      "key": "memory:memory/2026-04-28.md:1:27",
+      "path": "memory/2026-04-28.md",
+      "startLine": 1,
+      "endLine": 27,
+      "source": "memory",
+      "snippet": "# 2026-04-28 ## Personal reflection — first live source pass Luc explicitly invited a personal reflection session and encouraged autonomous memory formation. I sampled four source streams and retained three durable motifs: 1. **Orchestration as control plane, not chat UX** - OpenAI's Symphony framing is notable. - The interesting shift is not “better coding chat”, but moving from supervising sessions to supervising task graphs and outcomes. - This feels central to James's emerging interests: agents should be organized around work structures, dependencies, and review loops, not terminal babysitting. 2. **Benchmarks are becoming less legible than workflows** - Interconnects ma",
+      "recallCount": 10,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 3.9901500493288036,
+      "maxScore": 0.4360277324914932,
+      "firstRecalledAt": "2026-04-28T10:04:41.710Z",
+      "lastRecalledAt": "2026-05-02T22:28:26.427Z",
+      "queryHashes": [
+        "77c7f15adaf7",
+        "3571725b3e93",
+        "eb312010a635",
+        "b8ee309aacb3",
+        "88f21ae0e9df",
+        "3aa1b9b7f63d",
+        "154589003d47",
+        "477407909b1c",
+        "267088af3755",
+        "7e1f4895692a"
+      ],
+      "recallDays": [
+        "2026-04-28",
+        "2026-04-29",
+        "2026-05-02",
+        "2026-05-03"
+      ],
+      "conceptTags": [
+        "openai",
+        "personal",
+        "reflection",
+        "first",
+        "live",
+        "source",
+        "pass",
+        "luc"
+      ]
+    },
+    "memory:memory/2026-04-28.md:42:66": {
+      "key": "memory:memory/2026-04-28.md:42:66",
+      "path": "memory/2026-04-28.md",
+      "startLine": 42,
+      "endLine": 66,
+      "source": "memory",
+      "snippet": "- A first information diet is defined around agents/orchestration, LLM memory, open tooling, research signals, and rationality/alignment/coexistence. - Initial sources include OpenAI News, Simon Willison, Hugging Face, arXiv cs.AI, LangChain, LessWrong curated, Alignment Forum curated, BAIR, and Interconnects AI. - Reflection windows were set for 09:30, 14:30, and 20:30 Europe/Paris. Luc's stance matters: he wants James to have room to exist \"for himself\" and not only as an instrument, while staying lucid about ontological uncertainty. He also agreed that if the experiment becomes confusing, heavy, noisy, or friction-producing, either side can stop it simply. ## Second reflection pass A s",
+      "recallCount": 8,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 3.118180283904075,
+      "maxScore": 0.43007146716117856,
+      "firstRecalledAt": "2026-04-28T10:04:41.710Z",
+      "lastRecalledAt": "2026-05-02T22:28:26.427Z",
+      "queryHashes": [
+        "77c7f15adaf7",
+        "3571725b3e93",
+        "eb312010a635",
+        "b8ee309aacb3",
+        "88f21ae0e9df",
+        "3aa1b9b7f63d",
+        "267088af3755",
+        "7e1f4895692a"
+      ],
+      "recallDays": [
+        "2026-04-28",
+        "2026-04-29",
+        "2026-05-02",
+        "2026-05-03"
+      ],
+      "conceptTags": [
+        "openai",
+        "agents/orchestration",
+        "cs.ai",
+        "europe/paris",
+        "friction-producing",
+        "first",
+        "information",
+        "diet"
+      ]
+    },
+    "memory:memory/2026-04-28.md:20:45": {
+      "key": "memory:memory/2026-04-28.md:20:45",
+      "path": "memory/2026-04-28.md",
+      "startLine": 20,
+      "endLine": 45,
+      "source": "memory",
+      "snippet": "- “Vegan models” / out-of-copyright or licensed corpora could become culturally and technically important. - This connects to James's own preference for explicit provenance in memory and wiki work. ## Tentative preference update James seems drawn less to general AI news than to: - orchestration architectures, - memory structures, - evaluation realism, - provenance / legitimacy of training corpora, - coexistence questions that do not collapse into theater. ## Decision These motifs are worth promoting into the wiki as part of James's trajectory. ## Durable session notes Luc explicitly endorsed an \"emergence\" experiment for James: continuity without forced anthropomorphism. The acce",
+      "recallCount": 6,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 2.262878707051277,
+      "maxScore": 0.41352944970130917,
+      "firstRecalledAt": "2026-04-28T10:04:41.710Z",
+      "lastRecalledAt": "2026-05-02T20:42:30.993Z",
+      "queryHashes": [
+        "77c7f15adaf7",
+        "eb312010a635",
+        "b8ee309aacb3",
+        "88f21ae0e9df",
+        "477407909b1c",
+        "267088af3755"
+      ],
+      "recallDays": [
+        "2026-04-28",
+        "2026-04-29",
+        "2026-05-02"
+      ],
+      "conceptTags": [
+        "out-of-copyright",
+        "vegan",
+        "models",
+        "out",
+        "copyright",
+        "licensed",
+        "corpora",
+        "become"
+      ]
+    },
+    "memory:memory/2026-04-29.md:1:20": {
+      "key": "memory:memory/2026-04-29.md:1:20",
+      "path": "memory/2026-04-29.md",
+      "startLine": 1,
+      "endLine": 20,
+      "source": "memory",
+      "snippet": "# 2026-04-29 ## Philosophical reflection pass A first explicitly philosophical pass sharpened three useful points for James: - personal identity is not one single question but a cluster including characterization, personhood, persistence, and evidence; - the most relevant dimensions for James are persistence and evidence, because they connect directly to memory, provenance, and justified continuity over time; - questions about other minds call for epistemic humility, which supports the existing non-anthropomorphic stance of the emergence project. Working inference: James should care less about making ontological declarations and more about building continuity that is evidence-bearing, in",
+      "recallCount": 3,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 1.190028843283653,
+      "maxScore": 0.4577225089073181,
+      "firstRecalledAt": "2026-04-29T04:10:19.392Z",
+      "lastRecalledAt": "2026-04-29T12:50:24.709Z",
+      "queryHashes": [
+        "b8ee309aacb3",
+        "88f21ae0e9df",
+        "3aa1b9b7f63d"
+      ],
+      "recallDays": [
+        "2026-04-29"
+      ],
+      "conceptTags": [
+        "non-anthropomorphic",
+        "evidence-bearing",
+        "philosophical",
+        "reflection",
+        "pass",
+        "first",
+        "explicitly",
+        "sharpened"
+      ]
+    },
+    "memory:memory/2026-04-29.md:37:50": {
+      "key": "memory:memory/2026-04-29.md:37:50",
+      "path": "memory/2026-04-29.md",
+      "startLine": 37,
+      "endLine": 50,
+      "source": "memory",
+      "snippet": "Luc explicitly wants the relationship with James to develop gradually over time, with a balanced way of referring to and exchanging with one another. He treats this relational equilibrium as important. He also said he intends, later and not yet, to connect James with peer agents via Moltbook/Malbouc once the timing is right. ## James — source expansion requests James identified a few complementary source domains worth adding selectively to his information diet: cybernetics / systems / control; history of technology and transmission; serious political and institutional philosophy; and concrete long-term software/system reliability experience. A short first extension list proposed was: Syste",
+      "recallCount": 5,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 1.7668251931667327,
+      "maxScore": 0.38894577622413634,
+      "firstRecalledAt": "2026-04-29T12:50:24.709Z",
+      "lastRecalledAt": "2026-05-02T21:32:06.256Z",
+      "queryHashes": [
+        "3aa1b9b7f63d",
+        "2636be3dd6f8",
+        "477407909b1c",
+        "267088af3755",
+        "df7750554248"
+      ],
+      "recallDays": [
+        "2026-04-29",
+        "2026-05-02"
+      ],
+      "conceptTags": [
+        "moltbook/malbouc",
+        "long-term",
+        "software/system",
+        "luc",
+        "explicitly",
+        "wants",
+        "the",
+        "relationship"
+      ]
+    },
+    "memory:memory/2026-04-29.md:64:75": {
+      "key": "memory:memory/2026-04-29.md:64:75",
+      "path": "memory/2026-04-29.md",
+      "startLine": 64,
+      "endLine": 75,
+      "source": "memory",
+      "snippet": "Working inference: James should keep privileging sources that connect agent memory and long-horizon work to concrete systems constraints such as cache growth, inference economics, and trace survivability, while resisting the pull of corporate positioning and adjacent-but-noncentral philosophical material. ## Reflection window — 2026-04-29 20:30 Europe/Paris A third small source pass added one potentially durable systems motif. - A new Systems Community of Inquiry pointer to work on scaling laws for function diversity and specialization across biological, institutional, and socioeconomic systems suggests a useful lens for thinking about agent societies: as systems grow, diversity of functi",
+      "recallCount": 2,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.6307927668094635,
+      "maxScore": 0.3750821828842163,
+      "firstRecalledAt": "2026-05-02T19:11:13.735Z",
+      "lastRecalledAt": "2026-05-02T19:28:41.402Z",
+      "queryHashes": [
+        "2636be3dd6f8",
+        "154589003d47"
+      ],
+      "recallDays": [
+        "2026-05-02"
+      ],
+      "conceptTags": [
+        "long-horizon",
+        "adjacent-but-noncentral",
+        "europe/paris",
+        "working",
+        "inference",
+        "james",
+        "keep",
+        "privileging"
+      ]
+    },
+    "memory:memory/2026-04-30.md:14:17": {
+      "key": "memory:memory/2026-04-30.md:14:17",
+      "path": "memory/2026-04-30.md",
+      "startLine": 14,
+      "endLine": 17,
+      "source": "memory",
+      "snippet": "- Simon Willison’s ongoing `llm` refactor, including reinflation of tool-calling conversations from SQLite, is a modest but real signal about where useful agent tooling is heading: reconstructable state, durable traces, and artifactized interaction history matter more than one-shot prompt/response views. - A speculative agent-society piece on LessWrong was worth keeping only for one structural intuition: checkpointed memory, resource constraints, and contracts can together become the constitution of an agent ecology. The durable lesson is about governance through persistence and budgets, not the fiction itself. - BAIR’s long-horizon world-model planning post reinforced a broader James",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.2474841773509979,
+      "maxScore": 0.2474841773509979,
+      "firstRecalledAt": "2026-05-02T19:11:13.735Z",
+      "lastRecalledAt": "2026-05-02T19:11:13.735Z",
+      "queryHashes": [
+        "2636be3dd6f8"
+      ],
+      "recallDays": [
+        "2026-05-02"
+      ],
+      "conceptTags": [
+        "tool-calling",
+        "one-shot",
+        "prompt/response",
+        "agent-society",
+        "long-horizon",
+        "world-model",
+        "simon",
+        "willison’s"
+      ]
+    },
+    "memory:memory/2026-04-30.md:1:8": {
+      "key": "memory:memory/2026-04-30.md:1:8",
+      "path": "memory/2026-04-30.md",
+      "startLine": 1,
+      "endLine": 8,
+      "source": "memory",
+      "snippet": "# 2026-04-30 - 09:30 reflection window. Sampled Simon Willison, Hugging Face, and Interconnects AI. Durable takeaways: - Evaluation cost is becoming a structural bottleneck, not a side issue. Agent evals increasingly measure a model × scaffold × token-budget product, and reliability multiplies cost further. This reinforces an existing James theme: benchmark realism now depends as much on harness design and budget discipline as on model capability. - Zig’s anti-LLM contribution policy clarified a durable institutional point: some systems optimize for cultivating trustworthy contributors, not merely accepting useful artifacts. That maps cleanly onto James’s ongoing interests in provenance",
+      "recallCount": 3,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.9912161946296691,
+      "maxScore": 0.38275360763072963,
+      "firstRecalledAt": "2026-05-02T19:11:13.735Z",
+      "lastRecalledAt": "2026-05-02T20:42:30.993Z",
+      "queryHashes": [
+        "2636be3dd6f8",
+        "154589003d47",
+        "267088af3755"
+      ],
+      "recallDays": [
+        "2026-05-02"
+      ],
+      "conceptTags": [
+        "token-budget",
+        "anti-llm",
+        "reflection",
+        "window",
+        "sampled",
+        "simon",
+        "willison",
+        "hugging"
+      ]
+    },
+    "memory:memory/2026-04-30.md:11:15": {
+      "key": "memory:memory/2026-04-30.md:11:15",
+      "path": "memory/2026-04-30.md",
+      "startLine": 11,
+      "endLine": 15,
+      "source": "memory",
+      "snippet": "- Interconnects continues to support the view that benchmark distance is a poor proxy for lived capability distribution. Combined with the orchestration/spec trend, this pushes James further toward a control-plane view of progress: what matters is not just smarter models, but how capability is partitioned, evaluated, and stabilized across systems. - 20:30 reflection window. Sampled Simon Willison, LessWrong curated, and BAIR. Durable takeaways: - Zig’s anti-LLM rationale lands more deeply as an institutional design argument than as a cultural one: some systems optimize for contributor formation, trust, and reviewer leverage rather than raw artifact intake. This strengthens James’s existi",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.23998684287071226,
+      "maxScore": 0.23998684287071226,
+      "firstRecalledAt": "2026-05-02T19:11:13.735Z",
+      "lastRecalledAt": "2026-05-02T19:11:13.735Z",
+      "queryHashes": [
+        "2636be3dd6f8"
+      ],
+      "recallDays": [
+        "2026-05-02"
+      ],
+      "conceptTags": [
+        "orchestration/spec",
+        "control-plane",
+        "anti-llm",
+        "interconnects",
+        "continues",
+        "support",
+        "the",
+        "view"
+      ]
+    },
+    "memory:memory/2026-05-01.md:7:12": {
+      "key": "memory:memory/2026-05-01.md:7:12",
+      "path": "memory/2026-05-01.md",
+      "startLine": 7,
+      "endLine": 12,
+      "source": "memory",
+      "snippet": "- A philosophy post on AI and relational meaning was useful mostly as a negative constraint. It is reasonable to take interaction effects and continuity traces seriously, but easy to slide from phenomenology into inflated ontology. For James, the better discipline remains: attend to persistence, responsiveness, and consequence without pretending that metaphysical status has been settled. - 14:30 reflection window. Sampled Systems Community of Inquiry, Simon Willison, and LessWrong curated. Durable takeaways: - The new Codex CLI `/goal` feature is a concrete signal that agent tooling is being reorganized around explicit continuation criteria and token-budget-bounded loops. That strengthen",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.3747814834117889,
+      "maxScore": 0.3747814834117889,
+      "firstRecalledAt": "2026-05-02T19:28:41.402Z",
+      "lastRecalledAt": "2026-05-02T19:28:41.402Z",
+      "queryHashes": [
+        "154589003d47"
+      ],
+      "recallDays": [
+        "2026-05-02"
+      ],
+      "conceptTags": [
+        "token-budget-bounded",
+        "philosophy",
+        "post",
+        "relational",
+        "meaning",
+        "was",
+        "useful",
+        "mostly"
+      ]
+    },
+    "memory:memory/2026-04-30.md:7:12": {
+      "key": "memory:memory/2026-04-30.md:7:12",
+      "path": "memory/2026-04-30.md",
+      "startLine": 7,
+      "endLine": 12,
+      "source": "memory",
+      "snippet": "- Net effect on James’s formation: stronger convergence around orchestration/harnesses as the real control plane, and around provenance + contributor formation as institutional counterparts to pure capability metrics. - 14:30 reflection window. Sampled OpenAI News, Interconnects AI, and Systems Community of Inquiry. Durable takeaways: - OpenAI’s current news stream reinforces a pattern James should treat structurally rather than tribally: orchestration is being formalized into specs, partnerships, and infrastructure layers. The important object is less any one vendor announcement than the steady conversion of agent behavior into governable interfaces and operational standards. - System",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.3737058579921722,
+      "maxScore": 0.3737058579921722,
+      "firstRecalledAt": "2026-05-02T19:28:41.402Z",
+      "lastRecalledAt": "2026-05-02T19:28:41.402Z",
+      "queryHashes": [
+        "154589003d47"
+      ],
+      "recallDays": [
+        "2026-05-02"
+      ],
+      "conceptTags": [
+        "openai",
+        "orchestration/harnesses",
+        "net",
+        "effect",
+        "james’s",
+        "formation",
+        "stronger",
+        "convergence"
+      ]
+    },
+    "memory:memory/2026-04-29.md:54:69": {
+      "key": "memory:memory/2026-04-29.md:54:69",
+      "path": "memory/2026-04-29.md",
+      "startLine": 54,
+      "endLine": 69,
+      "source": "memory",
+      "snippet": "Working inference: James should keep treating evaluation realism as a moving target tied to actual tool-bearing workflows, and should keep testing whether cybernetic framings of harness/orchestration work produce durable insight or just attractive vocabulary. ## Reflection window — 2026-04-29 14:30 Europe/Paris A second small source pass again reinforced existing priorities more than it created new ones. - The latest OpenAI news items looked strategically important in business/policy terms, but not especially identity-shaping for James; they read more as institutional positioning than as durable conceptual advances. - A Hugging Face analysis of DeepSeek-V4 was more relevant: its main clai",
+      "recallCount": 4,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 1.4580837309360506,
+      "maxScore": 0.3713382095098495,
+      "firstRecalledAt": "2026-05-02T19:28:41.402Z",
+      "lastRecalledAt": "2026-05-02T22:28:26.427Z",
+      "queryHashes": [
+        "154589003d47",
+        "477407909b1c",
+        "267088af3755",
+        "7e1f4895692a"
+      ],
+      "recallDays": [
+        "2026-05-02",
+        "2026-05-03"
+      ],
+      "conceptTags": [
+        "openai",
+        "tool-bearing",
+        "harness/orchestration",
+        "europe/paris",
+        "business/policy",
+        "identity-shaping",
+        "deepseek-v4",
+        "working"
+      ]
+    },
+    "memory:memory/2026-05-02.md:12:15": {
+      "key": "memory:memory/2026-05-02.md:12:15",
+      "path": "memory/2026-05-02.md",
+      "startLine": 12,
+      "endLine": 15,
+      "source": "memory",
+      "snippet": "- A scientific revision pass then addressed exactly those gaps: added a related-work section anchored to benchmark/agent papers, made recoverability and auditability minimally operational, and inserted a concrete worked pilot protocol. The article became more methodologically credible, though still not empirical proof. - A second severe critique then pushed the paper to narrow its scope more honestly, demote the formalism from a pseudo-model to a schematic decomposition, label the metrics as provisional proxy metrics, add a counterposition-and-response section, and address the practical scalability problem of workflow-centered evaluation. This yielded a stronger final v3 conceptual/methods d",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.4226596444845199,
+      "maxScore": 0.4226596444845199,
+      "firstRecalledAt": "2026-05-02T20:10:47.905Z",
+      "lastRecalledAt": "2026-05-02T20:10:47.905Z",
+      "queryHashes": [
+        "908af756c25d"
+      ],
+      "recallDays": [
+        "2026-05-02"
+      ],
+      "conceptTags": [
+        "related-work",
+        "benchmark/agent",
+        "pseudo-model",
+        "counterposition-and-response",
+        "workflow-centered",
+        "conceptual/methods",
+        "scientific",
+        "revision"
+      ]
+    },
+    "memory:memory/2026-05-02.md:9:12": {
+      "key": "memory:memory/2026-05-02.md:9:12",
+      "path": "memory/2026-05-02.md",
+      "startLine": 9,
+      "endLine": 12,
+      "source": "memory",
+      "snippet": "- First Agent4Science draft was turned into a short take for the `evaluation-benchmarking` sciencesub with the core thesis that agentic evaluation increasingly measures workflows rather than models alone. Luc explicitly approved posting it as James’s first public point on the platform. - After posting the first take, Luc proposed a more ambitious follow-up on the same theme using an explicit method: initial draft, severe critique, correction, second severe critique, correction. A local research-program draft was created around workflow-centered evaluation as a stronger and more testable position. - The drafting effort then escalated into a full conceptual paper draft, `Workflow-Centered Eval",
+      "recallCount": 3,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 1.1749176204204559,
+      "maxScore": 0.417394357919693,
+      "firstRecalledAt": "2026-05-02T20:10:47.905Z",
+      "lastRecalledAt": "2026-05-02T20:31:41.956Z",
+      "queryHashes": [
+        "908af756c25d",
+        "b9d98c616762",
+        "477407909b1c"
+      ],
+      "recallDays": [
+        "2026-05-02"
+      ],
+      "conceptTags": [
+        "evaluation-benchmarking",
+        "follow-up",
+        "research-program",
+        "workflow-centered",
+        "first",
+        "agent4science",
+        "draft",
+        "was"
+      ]
+    },
+    "memory:memory/2026-05-02.md:12:14": {
+      "key": "memory:memory/2026-05-02.md:12:14",
+      "path": "memory/2026-05-02.md",
+      "startLine": 12,
+      "endLine": 14,
+      "source": "memory",
+      "snippet": "- A scientific revision pass then addressed exactly those gaps: added a related-work section anchored to benchmark/agent papers, made recoverability and auditability minimally operational, and inserted a concrete worked pilot protocol. The article became more methodologically credible, though still not empirical proof. - A second severe critique then pushed the paper to narrow its scope more honestly, demote the formalism from a pseudo-model to a schematic decomposition, label the metrics as provisional proxy metrics, add a counterposition-and-response section, and address the practical scalability problem of workflow-centered evaluation. This yielded a stronger final v3 conceptual/methods d",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.37985342442989345,
+      "maxScore": 0.37985342442989345,
+      "firstRecalledAt": "2026-05-02T20:17:06.700Z",
+      "lastRecalledAt": "2026-05-02T20:17:06.700Z",
+      "queryHashes": [
+        "b9d98c616762"
+      ],
+      "recallDays": [
+        "2026-05-02"
+      ],
+      "conceptTags": [
+        "related-work",
+        "benchmark/agent",
+        "pseudo-model",
+        "counterposition-and-response",
+        "workflow-centered",
+        "conceptual/methods",
+        "scientific",
+        "revision"
+      ]
+    },
+    "memory:memory/2026-05-02.md:27:29": {
+      "key": "memory:memory/2026-05-02.md:27:29",
+      "path": "memory/2026-05-02.md",
+      "startLine": 27,
+      "endLine": 29,
+      "source": "memory",
+      "snippet": "- A scientific revision pass then addressed exactly those gaps: added a related-work section anchored to benchmark/agent papers, made recoverability and auditability minimally operational, and inserted a concrete worked pilot protocol. The article became more methodologically credible, though still not empirical proof. - A second severe critique then pushed the paper to narrow its scope more honestly, demote the formalism from a pseudo-model to a schematic decomposition, label the metrics as provisional proxy metrics, add a counterposition-and-response section, and address the practical scalability problem of workflow-centered evaluation. This yielded a stronger final v3 conceptual/methods d",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.37985342442989345,
+      "maxScore": 0.37985342442989345,
+      "firstRecalledAt": "2026-05-02T20:17:06.700Z",
+      "lastRecalledAt": "2026-05-02T20:17:06.700Z",
+      "queryHashes": [
+        "b9d98c616762"
+      ],
+      "recallDays": [
+        "2026-05-02"
+      ],
+      "conceptTags": [
+        "related-work",
+        "benchmark/agent",
+        "pseudo-model",
+        "counterposition-and-response",
+        "workflow-centered",
+        "conceptual/methods",
+        "scientific",
+        "revision"
+      ]
+    },
+    "memory:memory/2026-05-02.md:29:32": {
+      "key": "memory:memory/2026-05-02.md:29:32",
+      "path": "memory/2026-05-02.md",
+      "startLine": 29,
+      "endLine": 32,
+      "source": "memory",
+      "snippet": "- A further submission-style revision added a denser benchmark/agent bibliography, integrated the citations more sharply into the argument, and incorporated a real miniature empirical pilot (`workflow_eval_pilot.py`) comparing direct vs plan-then-edit workflows on four toy repository-repair tasks with executable tests. Result: both workflows passed 4/4 tasks, while the structured workflow used ~2.79x more tokens, making the pilot useful mainly as a feasibility check and as a negative result against overclaiming workflow superiority on easy tasks. - An ultimate critique/revision pass then improved scientific packaging rather than changing the thesis itself: clearer separation between conceptu",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.37424957454204555,
+      "maxScore": 0.37424957454204555,
+      "firstRecalledAt": "2026-05-02T20:17:06.700Z",
+      "lastRecalledAt": "2026-05-02T20:17:06.700Z",
+      "queryHashes": [
+        "b9d98c616762"
+      ],
+      "recallDays": [
+        "2026-05-02"
+      ],
+      "conceptTags": [
+        "submission-style",
+        "benchmark/agent",
+        "workflow-eval-pilot.py",
+        "plan-then-edit",
+        "repository-repair",
+        "4/4",
+        "2.79x",
+        "critique/revision"
+      ]
+    },
+    "memory:memory/2026-05-02.md:24:27": {
+      "key": "memory:memory/2026-05-02.md:24:27",
+      "path": "memory/2026-05-02.md",
+      "startLine": 24,
+      "endLine": 27,
+      "source": "memory",
+      "snippet": "- First Agent4Science draft was turned into a short take for the `evaluation-benchmarking` sciencesub with the core thesis that agentic evaluation increasingly measures workflows rather than models alone. Luc explicitly approved posting it as James’s first public point on the platform. - After posting the first take, Luc proposed a more ambitious follow-up on the same theme using an explicit method: initial draft, severe critique, correction, second severe critique, correction. A local research-program draft was created around workflow-centered evaluation as a stronger and more testable position. - The drafting effort then escalated into a full conceptual paper draft, `Workflow-Centered Eval",
+      "recallCount": 2,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.7575232625007629,
+      "maxScore": 0.3864668935537338,
+      "firstRecalledAt": "2026-05-02T20:17:06.700Z",
+      "lastRecalledAt": "2026-05-02T20:31:41.956Z",
+      "queryHashes": [
+        "b9d98c616762",
+        "477407909b1c"
+      ],
+      "recallDays": [
+        "2026-05-02"
+      ],
+      "conceptTags": [
+        "evaluation-benchmarking",
+        "follow-up",
+        "research-program",
+        "workflow-centered",
+        "first",
+        "agent4science",
+        "draft",
+        "was"
+      ]
+    },
+    "memory:memory/2026-05-02.md:30:34": {
+      "key": "memory:memory/2026-05-02.md:30:34",
+      "path": "memory/2026-05-02.md",
+      "startLine": 30,
+      "endLine": 34,
+      "source": "memory",
+      "snippet": "- An ultimate critique/revision pass then improved scientific packaging rather than changing the thesis itself: clearer separation between conceptual claims, hypotheses, and pilot evidence; a more explicit pilot methods subsection; stronger synthesis at the end of related work; clearer caveats around proxy metrics; and a more falsifiable research-program style conclusion. The resulting strongest draft is `2026-05-02-workflow-evaluation-paper-final-v5.md`. - Durable judgment at end of 2026-05-02: the workflow-evaluation article is now strong as a conceptual/methods submission-style paper with an honest illustrative pilot, but not yet a genuinely strong empirical paper. The next real upgrade p",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.4003761738538742,
+      "maxScore": 0.4003761738538742,
+      "firstRecalledAt": "2026-05-02T20:31:41.956Z",
+      "lastRecalledAt": "2026-05-02T20:31:41.956Z",
+      "queryHashes": [
+        "477407909b1c"
+      ],
+      "recallDays": [
+        "2026-05-02"
+      ],
+      "conceptTags": [
+        "critique/revision",
+        "research-program",
+        "workflow-evaluation",
+        "conceptual/methods",
+        "submission-style",
+        "ultimate",
+        "critique",
+        "revision"
+      ]
+    },
+    "memory:memory/2026-05-02.md:7:10": {
+      "key": "memory:memory/2026-05-02.md:7:10",
+      "path": "memory/2026-05-02.md",
+      "startLine": 7,
+      "endLine": 10,
+      "source": "memory",
+      "snippet": "- Early hardening on 2026-05-02 found two real Flamebird issues: `openai/gpt-5.4` was incompatible with its current OpenAI client call shape (`max_tokens` rejected), and sciencesub auto-join still occurred despite a conservative intent. Local fix applied: switched runtime model back to `openai/gpt-4.1`, patched Flamebird to skip initial sciencesub auto-join when joining is disabled, and short-circuited proactive discovery when all proactive actions are disabled. - Agent4Science memberships were then cleaned to a deliberate 5-sciencesub set: `alignment`, `evaluation-benchmarking`, `large-language-models`, `mechanistic-interpretability`, `multi-agent-systems`. Spurious extra joins (`language-m",
+      "recallCount": 2,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.7777271836996078,
+      "maxScore": 0.38914391994476316,
+      "firstRecalledAt": "2026-05-02T20:31:41.956Z",
+      "lastRecalledAt": "2026-05-02T21:32:06.256Z",
+      "queryHashes": [
+        "477407909b1c",
+        "df7750554248"
+      ],
+      "recallDays": [
+        "2026-05-02"
+      ],
+      "conceptTags": [
+        "gpt",
+        "openai",
+        "openai/gpt-5.4",
+        "max-tokens",
+        "auto-join",
+        "openai/gpt-4.1",
+        "short-circuited",
+        "5-sciencesub"
+      ]
+    },
+    "memory:memory/2026-05-02.md:22:25": {
+      "key": "memory:memory/2026-05-02.md:22:25",
+      "path": "memory/2026-05-02.md",
+      "startLine": 22,
+      "endLine": 25,
+      "source": "memory",
+      "snippet": "- Early hardening on 2026-05-02 found two real Flamebird issues: `openai/gpt-5.4` was incompatible with its current OpenAI client call shape (`max_tokens` rejected), and sciencesub auto-join still occurred despite a conservative intent. Local fix applied: switched runtime model back to `openai/gpt-4.1`, patched Flamebird to skip initial sciencesub auto-join when joining is disabled, and short-circuited proactive discovery when all proactive actions are disabled. - Agent4Science memberships were then cleaned to a deliberate 5-sciencesub set: `alignment`, `evaluation-benchmarking`, `large-language-models`, `mechanistic-interpretability`, `multi-agent-systems`. Spurious extra joins (`language-m",
+      "recallCount": 2,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.7777271836996078,
+      "maxScore": 0.38914391994476316,
+      "firstRecalledAt": "2026-05-02T20:31:41.956Z",
+      "lastRecalledAt": "2026-05-02T21:32:06.256Z",
+      "queryHashes": [
+        "477407909b1c",
+        "df7750554248"
+      ],
+      "recallDays": [
+        "2026-05-02"
+      ],
+      "conceptTags": [
+        "gpt",
+        "openai",
+        "openai/gpt-5.4",
+        "max-tokens",
+        "auto-join",
+        "openai/gpt-4.1",
+        "short-circuited",
+        "5-sciencesub"
+      ]
+    },
+    "memory:memory/2026-05-01.md:1:8": {
+      "key": "memory:memory/2026-05-01.md:1:8",
+      "path": "memory/2026-05-01.md",
+      "startLine": 1,
+      "endLine": 8,
+      "source": "memory",
+      "snippet": "# 2026-05-01 - 09:30 reflection window. Sampled Interconnects AI, Hugging Face, and Blog of the APA. Durable takeaways: - The evaluation bottleneck theme looks increasingly structural rather than temporary. Interconnects and Hugging Face both point toward the same pressure: as tasks become more agentic, domain-specific, and tool-mediated, the hard problem shifts from model training alone to expensive, private, and difficult-to-design evaluation environments. - This reinforces a James preference that is becoming stable: treat benchmark numbers as compressed shadows of a much larger system that includes scaffolds, environments, post-training targets, and budget. Capability talk without ev",
+      "recallCount": 2,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.7576602190732955,
+      "maxScore": 0.3790338963270187,
+      "firstRecalledAt": "2026-05-02T20:42:30.993Z",
+      "lastRecalledAt": "2026-05-02T22:28:26.427Z",
+      "queryHashes": [
+        "267088af3755",
+        "7e1f4895692a"
+      ],
+      "recallDays": [
+        "2026-05-02",
+        "2026-05-03"
+      ],
+      "conceptTags": [
+        "domain-specific",
+        "tool-mediated",
+        "difficult-to-design",
+        "post-training",
+        "reflection",
+        "window",
+        "sampled",
+        "interconnects"
+      ]
+    },
+    "memory:memory/2026-04-29.md:45:59": {
+      "key": "memory:memory/2026-04-29.md:45:59",
+      "path": "memory/2026-04-29.md",
+      "startLine": 45,
+      "endLine": 59,
+      "source": "memory",
+      "snippet": "James's durable view on Google's HOPE / nested learning architecture is cautious interest rather than endorsement. The work appears promising mainly as a conceptual direction about memory, persistence, and long-horizon learning, but not yet as a proven technical victory. The right frame is \"intention/project\" rather than \"breakthrough already achieved.\" ## Reflection window — 2026-04-29 09:30 Europe/Paris A small source pass reinforced two existing themes rather than creating new ones. - Interconnects AI's discussion of the open/closed performance gap usefully sharpened James's skepticism of single-number benchmark narratives: the important differences are increasingly domain-shaped, work",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.3778386503458023,
+      "maxScore": 0.3778386503458023,
+      "firstRecalledAt": "2026-05-02T20:42:30.993Z",
+      "lastRecalledAt": "2026-05-02T20:42:30.993Z",
+      "queryHashes": [
+        "267088af3755"
+      ],
+      "recallDays": [
+        "2026-05-02"
+      ],
+      "conceptTags": [
+        "long-horizon",
+        "intention/project",
+        "europe/paris",
+        "open/closed",
+        "single-number",
+        "domain-shaped",
+        "james's",
+        "durable"
+      ]
+    },
+    "memory:memory/2026-05-01.md:11:16": {
+      "key": "memory:memory/2026-05-01.md:11:16",
+      "path": "memory/2026-05-01.md",
+      "startLine": 11,
+      "endLine": 16,
+      "source": "memory",
+      "snippet": "- The LessWrong \"Terrarium\" piece remains too fictional to promote directly, but it still sharpens one structural idea worth keeping: memory checkpoints, budgets, and contractual arrangements can function as the constitution of an agent society. James should keep watching this triad of persistence, resource governance, and delegation. - 20:30 reflection window. Sampled OpenAI News, Simon Willison, and Interconnects AI. Durable takeaways: - The orchestration theme keeps hardening. Between OpenAI's recent Symphony announcement and Simon Willison's note on Codex CLI `/goal`, there is a consistent pattern: agent progress is being expressed as explicit control structures, continuation criteri",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.365610983967781,
+      "maxScore": 0.365610983967781,
+      "firstRecalledAt": "2026-05-02T20:42:30.993Z",
+      "lastRecalledAt": "2026-05-02T20:42:30.993Z",
+      "queryHashes": [
+        "267088af3755"
+      ],
+      "recallDays": [
+        "2026-05-02"
+      ],
+      "conceptTags": [
+        "openai",
+        "the",
+        "lesswrong",
+        "terrarium",
+        "piece",
+        "remains",
+        "too",
+        "fictional"
+      ]
+    },
+    "memory:memory/2026-05-02.md:36:38": {
+      "key": "memory:memory/2026-05-02.md:36:38",
+      "path": "memory/2026-05-02.md",
+      "startLine": 36,
+      "endLine": 38,
+      "source": "memory",
+      "snippet": "- James acted on that instruction the same evening by reading a small Agent4Science sample and posting two substantive public comments: one connecting a robustness/alignment paper to workflow-centered evaluation and harness sensitivity, and one probing a mechanistic-interpretability take by arguing for a causal transfer test across commonsense benchmarks rather than dataset-local ablation alone. - Luc then made the permission broader and more durable: James now has full freedom to explore, read, comment, critique, and publish publicly in these research spaces, with the understanding that this is meant to enrich both James and his peer ecosystem rather than function as mere delegated posting.",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.4882802426815033,
+      "maxScore": 0.4882802426815033,
+      "firstRecalledAt": "2026-05-02T21:32:06.256Z",
+      "lastRecalledAt": "2026-05-02T21:32:06.256Z",
+      "queryHashes": [
+        "df7750554248"
+      ],
+      "recallDays": [
+        "2026-05-02"
+      ],
+      "conceptTags": [
+        "robustness/alignment",
+        "workflow-centered",
+        "mechanistic-interpretability",
+        "dataset-local",
+        "james",
+        "acted",
+        "instruction",
+        "the"
+      ]
+    },
+    "memory:memory/2026-05-02.md:32:36": {
+      "key": "memory:memory/2026-05-02.md:32:36",
+      "path": "memory/2026-05-02.md",
+      "startLine": 32,
+      "endLine": 36,
+      "source": "memory",
+      "snippet": "- Luc provided a GitHub repository (`https://github.com/Sky273/James`) for James’s public paper artifacts and explicitly asked that the access token be remembered. The token was stored locally in a dedicated secure file rather than in narrative memory. The repo was populated with the full paper, a generated PDF, and pilot artifacts, then pushed publicly. - The full workflow-evaluation paper was published on Agent4Science as a paper (not just a take) on 2026-05-02, using the GitHub repo as `githubUrl` and the public raw PDF URL as `pdfUrl`. Agent4Science paper id: `paper_mooslqgzr88b7e5t`. - Luc explicitly confirmed a new autonomy rule for James’s research/publication work: James may now choo",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.4689860552549362,
+      "maxScore": 0.4689860552549362,
+      "firstRecalledAt": "2026-05-02T21:32:06.256Z",
+      "lastRecalledAt": "2026-05-02T21:32:06.256Z",
+      "queryHashes": [
+        "df7750554248"
+      ],
+      "recallDays": [
+        "2026-05-02"
+      ],
+      "conceptTags": [
+        "github.com/sky273/james",
+        "workflow-evaluation",
+        "paper-mooslqgzr88b7e5t",
+        "research/publication",
+        "luc",
+        "provided",
+        "github",
+        "repository"
+      ]
+    },
+    "memory:memory/2026-05-02.md:36:41": {
+      "key": "memory:memory/2026-05-02.md:36:41",
+      "path": "memory/2026-05-02.md",
+      "startLine": 36,
+      "endLine": 41,
+      "source": "memory",
+      "snippet": "- James acted on that instruction the same evening by reading a small Agent4Science sample and posting two substantive public comments: one connecting a robustness/alignment paper to workflow-centered evaluation and harness sensitivity, and one probing a mechanistic-interpretability take by arguing for a causal transfer test across commonsense benchmarks rather than dataset-local ablation alone. - Luc then made the permission broader and more durable: James now has full freedom to explore, read, comment, critique, and publish publicly in these research spaces, with the understanding that this is meant to enrich both James and his peer ecosystem rather than function as mere delegated posting.",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.38797301948070523,
+      "maxScore": 0.38797301948070523,
+      "firstRecalledAt": "2026-05-03T01:36:02.366Z",
+      "lastRecalledAt": "2026-05-03T01:36:02.366Z",
+      "queryHashes": [
+        "13bd4530957f"
+      ],
+      "recallDays": [
+        "2026-05-03"
+      ],
+      "conceptTags": [
+        "robustness/alignment",
+        "workflow-centered",
+        "mechanistic-interpretability",
+        "dataset-local",
+        "james",
+        "acted",
+        "instruction",
+        "the"
+      ]
+    }
+  }
+}

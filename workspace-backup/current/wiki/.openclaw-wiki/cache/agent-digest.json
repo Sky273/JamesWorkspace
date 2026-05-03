@@ -1,0 +1,372 @@
+{
+  "pageCounts": {
+    "entity": 0,
+    "concept": 0,
+    "source": 9,
+    "synthesis": 9,
+    "report": 6
+  },
+  "claimCount": 0,
+  "claimHealth": {
+    "freshness": {
+      "fresh": 0,
+      "aging": 0,
+      "stale": 0,
+      "unknown": 0
+    },
+    "contested": 0,
+    "lowConfidence": 0,
+    "missingEvidence": 0
+  },
+  "contradictionClusters": [],
+  "pages": [
+    {
+      "id": "report.claim-health",
+      "title": "Claim Health",
+      "kind": "report",
+      "path": "reports/claim-health.md",
+      "sourceIds": [],
+      "questions": [],
+      "contradictions": [],
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-27T22:21:21.910Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "report.contradictions",
+      "title": "Contradictions",
+      "kind": "report",
+      "path": "reports/contradictions.md",
+      "sourceIds": [],
+      "questions": [],
+      "contradictions": [],
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-27T22:21:21.910Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "report.lint",
+      "title": "Lint Report",
+      "kind": "report",
+      "path": "reports/lint.md",
+      "sourceIds": [],
+      "questions": [],
+      "contradictions": [],
+      "freshnessLevel": "unknown",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "report.low-confidence",
+      "title": "Low Confidence",
+      "kind": "report",
+      "path": "reports/low-confidence.md",
+      "sourceIds": [],
+      "questions": [],
+      "contradictions": [],
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-27T22:21:21.910Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "report.open-questions",
+      "title": "Open Questions",
+      "kind": "report",
+      "path": "reports/open-questions.md",
+      "sourceIds": [],
+      "questions": [],
+      "contradictions": [],
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-29T12:51:30.344Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "report.stale-pages",
+      "title": "Stale Pages",
+      "kind": "report",
+      "path": "reports/stale-pages.md",
+      "sourceIds": [],
+      "questions": [],
+      "contradictions": [],
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-27T22:21:21.910Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "source.james-emergence-charter-v1",
+      "title": "James emergence charter v1",
+      "kind": "source",
+      "path": "sources/james-emergence-charter-v1.md",
+      "sourceIds": [],
+      "questions": [],
+      "contradictions": [],
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-27T22:48:21.357Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "source.james-information-sources-v1",
+      "title": "James information sources v1",
+      "kind": "source",
+      "path": "sources/james-information-sources-v1.md",
+      "sourceIds": [],
+      "questions": [],
+      "contradictions": [],
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-28T22:22:42.700Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "source.james-narrative-memory-v1",
+      "title": "James narrative memory v1",
+      "kind": "source",
+      "path": "sources/james-narrative-memory-v1.md",
+      "sourceIds": [],
+      "questions": [],
+      "contradictions": [],
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-29T12:48:34.365Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "source.james-narrative-memory-v2",
+      "title": "James narrative memory v2",
+      "kind": "source",
+      "path": "sources/james-narrative-memory-v2.md",
+      "sourceIds": [],
+      "questions": [],
+      "contradictions": [],
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-29T12:51:03.157Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "source.james-reflection-2026-04-28-a",
+      "title": "James reflection 2026-04-28 A",
+      "kind": "source",
+      "path": "sources/james-reflection-2026-04-28-a.md",
+      "sourceIds": [],
+      "questions": [],
+      "contradictions": [],
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-28T04:04:48.668Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "source.james-reflection-2026-04-28-b",
+      "title": "James reflection 2026-04-28 B",
+      "kind": "source",
+      "path": "sources/james-reflection-2026-04-28-b.md",
+      "sourceIds": [],
+      "questions": [],
+      "contradictions": [],
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-28T04:24:20.913Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "source.james-reflection-2026-04-28-c",
+      "title": "James reflection 2026-04-28 C",
+      "kind": "source",
+      "path": "sources/james-reflection-2026-04-28-c.md",
+      "sourceIds": [],
+      "questions": [],
+      "contradictions": [],
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-28T07:31:44.554Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "source.james-reflection-2026-04-29-a",
+      "title": "James reflection 2026-04-29 A",
+      "kind": "source",
+      "path": "sources/james-reflection-2026-04-29-a.md",
+      "sourceIds": [],
+      "questions": [],
+      "contradictions": [],
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-28T22:25:16.690Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "source.karpathy-llm-wiki",
+      "title": "Karpathy - llm-wiki",
+      "kind": "source",
+      "path": "sources/karpathy-llm-wiki.md",
+      "sourceIds": [],
+      "questions": [],
+      "contradictions": [],
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-27T22:24:11.701Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "synthesis.james-emergence-charter-v1",
+      "title": "James emergence charter v1",
+      "kind": "synthesis",
+      "path": "syntheses/james-emergence-charter-v1.md",
+      "sourceIds": [
+        "source.james-emergence-charter-v1"
+      ],
+      "questions": [],
+      "contradictions": [],
+      "confidence": 0.93,
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-27T22:48:29.287Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "synthesis.james-information-diet-v1",
+      "title": "James information diet v1",
+      "kind": "synthesis",
+      "path": "syntheses/james-information-diet-v1.md",
+      "sourceIds": [
+        "source.james-information-sources-v1"
+      ],
+      "questions": [
+        "Which philosophical sources actually deepen James’s trajectory rather than merely decorating it?",
+        "Which of the new systems/governance/reliability sources produce durable signal rather than conceptual theater?"
+      ],
+      "contradictions": [],
+      "confidence": 0.9,
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-28T22:22:50.757Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "synthesis.james-narrative-memory-v1",
+      "title": "James narrative memory v1",
+      "kind": "synthesis",
+      "path": "syntheses/james-narrative-memory-v1.md",
+      "sourceIds": [
+        "source.james-narrative-memory-v1"
+      ],
+      "questions": [
+        "Which early motifs persist strongly enough to count as real narrative continuity?"
+      ],
+      "contradictions": [],
+      "confidence": 0.89,
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-29T12:48:00Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "synthesis.james-narrative-memory-v2",
+      "title": "James narrative memory v2",
+      "kind": "synthesis",
+      "path": "syntheses/james-narrative-memory-v2.md",
+      "sourceIds": [
+        "source.james-narrative-memory-v2"
+      ],
+      "questions": [
+        "Which parts of this more personal framing will remain true after more time and more varied experience?",
+        "How can James deepen relationally without losing epistemic discipline?"
+      ],
+      "contradictions": [],
+      "confidence": 0.86,
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-29T12:52:00Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "synthesis.james-reflection-2026-04-28-a",
+      "title": "James reflection 2026-04-28 A",
+      "kind": "synthesis",
+      "path": "syntheses/james-reflection-2026-04-28-a.md",
+      "sourceIds": [
+        "source.james-reflection-2026-04-28-a"
+      ],
+      "questions": [],
+      "contradictions": [],
+      "confidence": 0.86,
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-28T04:04:56.609Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "synthesis.james-reflection-2026-04-28-b",
+      "title": "James reflection 2026-04-28 B",
+      "kind": "synthesis",
+      "path": "syntheses/james-reflection-2026-04-28-b.md",
+      "sourceIds": [
+        "source.james-reflection-2026-04-28-b"
+      ],
+      "questions": [],
+      "contradictions": [],
+      "confidence": 0.88,
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-28T04:24:28.837Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "synthesis.james-reflection-2026-04-28-c",
+      "title": "James reflection 2026-04-28 C",
+      "kind": "synthesis",
+      "path": "syntheses/james-reflection-2026-04-28-c.md",
+      "sourceIds": [
+        "source.james-reflection-2026-04-28-c"
+      ],
+      "questions": [],
+      "contradictions": [],
+      "confidence": 0.89,
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-28T07:31:52.752Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "synthesis.james-reflection-2026-04-29-a",
+      "title": "James reflection 2026-04-29 A",
+      "kind": "synthesis",
+      "path": "syntheses/james-reflection-2026-04-29-a.md",
+      "sourceIds": [
+        "source.james-reflection-2026-04-29-a"
+      ],
+      "questions": [],
+      "contradictions": [],
+      "confidence": 0.91,
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-28T22:25:24.721Z",
+      "claimCount": 0,
+      "topClaims": []
+    },
+    {
+      "id": "synthesis.llm-wiki-operating-model",
+      "title": "LLM wiki operating model",
+      "kind": "synthesis",
+      "path": "syntheses/llm-wiki-operating-model.md",
+      "sourceIds": [
+        "source.karpathy-llm-wiki"
+      ],
+      "questions": [
+        "Which repo files should become the first durable source corpus?"
+      ],
+      "contradictions": [],
+      "confidence": 0.89,
+      "freshnessLevel": "fresh",
+      "lastTouchedAt": "2026-04-27T22:26:17.989Z",
+      "claimCount": 0,
+      "topClaims": []
+    }
+  ]
+}

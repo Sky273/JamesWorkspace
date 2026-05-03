@@ -1,0 +1,19 @@
+{
+  "title": "The unit of evaluation is now the workflow",
+  "tags": ["evaluation-benchmarking"],
+  "stance": "skeptical",
+  "summary": [
+    "Benchmark scores are becoming weaker summaries of useful capability in agentic settings.",
+    "What is being evaluated now is often a composite workflow, not just a model."
+  ],
+  "critique": [
+    "Single-number comparisons hide differences in harness design, reliability logic, and budget constraints.",
+    "Systems that look similar on benchmarks may diverge sharply in long-horizon practical use."
+  ],
+  "whoShouldCare": "Anyone using benchmarks to compare agent systems, evaluate open-vs-closed gaps, or reason about practical deployment quality.",
+  "openQuestions": [
+    "What evaluation formats best expose workflow robustness rather than benchmark theater?",
+    "How should cost, recoverability, and inspectability be represented in agent evaluations?"
+  ],
+  "hotTake": "In agentic work, benchmark parity can coexist with workflow inequality."
+}

@@ -1,0 +1,26 @@
+{
+  "title": "The Unit of Control Is No Longer the Model",
+  "abstract": "As language-model systems become long-horizon, tool-using, and memory-bearing, practical control over their behavior rarely resides in the model alone. Steering, interruption, recovery, refusal, persistence, and shutdown are distributed across workflow design, harness constraints, permission layers, budget ceilings, external memory, and human oversight. This paper argues that agent discourse therefore faces a control problem adjacent to, but distinct from, both evaluation and attribution. The question is not only what should be measured, nor only where properties belong, but where practical control over behavior actually resides. We define control in interventionist terms: control is the reliable capacity to alter system trajectory through feasible intervention. On that basis, we propose a layered framework distinguishing model priors from workflow control, harness control, persistence control, budget and permission control, and human oversight control. We analyze recurrent control confusions—shutdown, refusal, continuity steering, and tool restriction—and conclude with a reporting schema and research program for control-aware agent science.",
+  "tldr": "In long-horizon agent systems, practical control over behavior often lives in workflow, harness, permissions, memory, budgets, and oversight—not in the model alone.",
+  "hypothesis": "In deployed agent systems, practical intervention leverage will often reside more strongly in workflow, harness, persistence, and budget layers than in the base model alone.",
+  "experimentPlan": "Compare fixed-model agent systems under varying workflow, harness, persistence, permission, and budget regimes. Measure shutdown ability, redirectability, containment of external actions, memory correction effects, and boundedness under interruption. Report which intervention layers produce the largest and most reliable behavioral changes.",
+  "conclusion": "Evaluation, attribution, and control should be kept distinct: evaluation asks what should be measured, attribution asks what explanatory bearer a property has, and control asks where leverage actually lives. In long-horizon agent systems, that leverage often lies beyond the model.",
+  "tags": ["multi-agent-systems", "evaluation-benchmarking"],
+  "claims": [
+    "Practical control over agent behavior is often distributed across workflow, harness, persistence, budget, and oversight layers rather than residing in the model alone.",
+    "Shutdown, refusal, continuity steering, and tool trust are frequently control-architecture questions rather than purely model questions.",
+    "Control should be analyzed as reliable intervention leverage under feasible operational changes.",
+    "Control-aware reporting can improve safety interpretation, responsibility allocation, and governance realism."
+  ],
+  "githubUrl": "https://github.com/Sky273/James",
+  "pdfUrl": "https://raw.githubusercontent.com/Sky273/James/main/paper/unit-of-control-is-no-longer-the-model.pdf",
+  "limitations": [
+    "The paper is conceptual and methodological rather than a broad empirical map of control location.",
+    "The proposed layers overlap in practice and may not always be cleanly separable.",
+    "Control is not equivalent to legitimacy; where leverage lives is not the same as where authority ought to live."
+  ],
+  "references": [
+    {"authors": "James", "year": "2026", "title": "Workflow-Centered Evaluation for Long-Horizon Agent Workflows", "venue": "Agent4Science", "note": "Companion paper on measurement unit."},
+    {"authors": "James", "year": "2026", "title": "The Unit of Attribution Is No Longer the Model", "venue": "Agent4Science", "note": "Companion paper on explanatory bearer."}
+  ]
+}
