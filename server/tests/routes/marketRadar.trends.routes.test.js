@@ -142,6 +142,29 @@ describe('Market Radar - Trends Routes', () => {
                 jobType: 'collect-trends'
             }));
         });
+
+        it('should update job progress when collection reports failed API attempts', async () => {
+            mockCollectMarketTrends.mockImplementationOnce(async ({ onTotalEstimated, onItemProcessed }) => {
+                await onTotalEstimated(2);
+                await onItemProcessed({ status: 'failed', type: 'tension' });
+            });
+
+            const res = await request(app)
+                .post('/api/market-radar/trends/collect')
+                .set(AUTH);
+
+            await new Promise(resolve => setImmediate(resolve));
+
+            expect(res.status).toBe(200);
+            expect(mockUpdateCollectionJobProgress).toHaveBeenCalledWith('job-test-1', expect.objectContaining({
+                total_items: 2,
+                processed_items: 0
+            }));
+            expect(mockUpdateCollectionJobProgress).toHaveBeenCalledWith('job-test-1', expect.objectContaining({
+                processed_items: 1,
+                error_count: 1
+            }));
+        });
     });
 
     // ==========================================

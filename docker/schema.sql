@@ -711,7 +711,7 @@ CREATE TABLE public.market_trends (
     region_code character varying(10),
     secteur character varying(255),
     date date NOT NULL,
-    value numeric(15,2),
+    value numeric(18,6),
     value_label character varying(255),
     metadata jsonb,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
@@ -720,7 +720,7 @@ CREATE TABLE public.market_trends (
     api_endpoint character varying(255),
     quarter_period character varying(20),
     api_response_hash character varying(64),
-    previous_value numeric(15,2)
+    previous_value numeric(18,6)
 );
 
 

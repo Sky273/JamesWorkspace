@@ -295,12 +295,28 @@ export function getJobTypeText(job: Job, t: TranslateFn): string {
   return t('batchJobs.type.import');
 }
 
-export function getSummaryText(job: Job): string {
-  const successLabel = `${job.success_count} succès`;
-  if (job.error_count > 0) {
-    return `${successLabel} • ${job.error_count} erreur${job.error_count > 1 ? 's' : ''}`;
+export function getSkippedCount(job: Job): number {
+  return Math.max(
+    (job.processed_items || 0) - (job.success_count || 0) - (job.error_count || 0),
+    0,
+  );
+}
+
+export function getSummaryText(job: Job, t: TranslateFn): string {
+  const skippedCount = getSkippedCount(job);
+  const fragments = [
+    t('batchJobs.summary.success', { count: job.success_count }),
+  ];
+
+  if (skippedCount > 0) {
+    fragments.push(t('batchJobs.summary.skipped', { count: skippedCount }));
   }
-  return successLabel;
+
+  if (job.error_count > 0) {
+    fragments.push(t('batchJobs.summary.errors', { count: job.error_count }));
+  }
+
+  return fragments.join(' • ');
 }
 
 export function getItemRenameText(originalName: string, displayName: string): string {

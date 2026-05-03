@@ -92,6 +92,16 @@ describe('Market Trends - Collector', () => {
 
             expect(result.action).toBe('created');
         });
+
+        it('should pass decimal trend values to PostgreSQL without integer coercion', async () => {
+            query.mockResolvedValueOnce({ rows: [] });
+            query.mockResolvedValueOnce({ rows: [{ id: 't1', value: '0.574321' }] });
+
+            const result = await storeTrend({ ...baseTrend, value: 0.574321 });
+
+            expect(result.action).toBe('created');
+            expect(query.mock.calls[1][1][7]).toBe(0.574321);
+        });
     });
 
     describe('generateCollectionReport', () => {

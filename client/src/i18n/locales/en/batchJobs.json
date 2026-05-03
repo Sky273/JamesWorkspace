@@ -29,6 +29,11 @@
       "failed": "Failed",
       "cancelled": "Cancelled"
     },
+    "summary": {
+      "success": "{{count}} success",
+      "skipped": "{{count}} skipped",
+      "errors": "{{count}} error(s)"
+    },
     "type": {
       "import": "Import",
       "improve": "Improvement",
@@ -47,6 +52,7 @@
     "collection": {
       "processed": "Processed",
       "success": "Success",
+      "skipped": "Skipped",
       "errors": "Errors",
       "startedAt": "Started"
     }

@@ -41,7 +41,7 @@ export async function collectAllTrends(req, res) {
             let failedCount = 0;
             let processedCount = 0;
             let totalExpected = 0;
-            let lastProgressLog = Date.now();
+            let lastProgressLog = 0;
             const PROGRESS_INTERVAL_MS = 5000;
 
             try {
@@ -58,27 +58,32 @@ export async function collectAllTrends(req, res) {
                         });
                     },
                     onTrendCollected: async (trend) => {
-                        processedCount += 1;
-
                         try {
                             const result = await storeTrend(trend);
                             if (result.action === 'created') createdCount += 1;
                             else if (result.action === 'updated') updatedCount += 1;
                             else if (result.action === 'failed') {
-                                failedCount += 1;
                                 safeLog('warn', 'Market Radar: Failed to store trend', {
                                     error: result.error,
                                     trendType: result.trend?.type,
                                     regionCode: result.trend?.regionCode,
                                     codeRome: result.trend?.codeRome
                                 });
+                                throw new Error(result.error || 'Trend storage failed');
                             }
                         } catch (storeError) {
-                            failedCount += 1;
                             safeLog('error', 'Market Radar: Exception storing trend', {
                                 error: storeError.message,
                                 trendType: trend?.type
                             });
+                            throw storeError;
+                        }
+                    },
+                    onItemProcessed: async (event) => {
+                        processedCount += 1;
+
+                        if (event?.status === 'failed') {
+                            failedCount += 1;
                         }
 
                         const now = Date.now();
@@ -95,6 +100,8 @@ export async function collectAllTrends(req, res) {
                                 updated: updatedCount,
                                 failed: failedCount,
                                 elapsed: `${Math.round((now - startTime) / 1000)}s`,
+                                lastStatus: event?.status,
+                                lastType: event?.type,
                                 heapUsedMB: Math.round(memUsage.heapUsed / 1024 / 1024)
                             });
                             lastProgressLog = now;
@@ -223,12 +230,24 @@ export async function collectDynamicsOnly(req, res) {
                             continue;
                         }
 
+                        const value = extractRawValue(data);
+
+                        if (value === null) {
+                            skippedCount += 1;
+                            safeLog('debug', 'MarketTrends: DYN_1 no usable value for region', {
+                                region: region.name,
+                                regionCode: region.code,
+                                progress: `${processedCount}/${totalRegions}`
+                            });
+                            continue;
+                        }
+
                         const trend = {
                             date: collectionDate,
                             type: 'dynamique_emploi',
                             region: region.name,
                             regionCode: region.code,
-                            value: extractRawValue(data),
+                            value,
                             valueLabel: extractLabel(data),
                             metadata: data
                         };

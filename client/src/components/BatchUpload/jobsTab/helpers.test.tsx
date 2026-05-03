@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { getCompletedJobRefreshScopes, getDisplayProgress, syncJobProgressSnapshots } from './helpers';
+import {
+  getCompletedJobRefreshScopes,
+  getDisplayProgress,
+  getSkippedCount,
+  getSummaryText,
+  syncJobProgressSnapshots,
+} from './helpers';
 import type { Job, JobProgressSnapshot } from './types';
 
 const baseJob: Job = {
@@ -58,5 +64,30 @@ describe('batch job progress helpers', () => {
     expect(getCompletedJobRefreshScopes(baseJob)).toEqual(['marketTrends']);
     expect(getCompletedJobRefreshScopes({ ...baseJob, job_type: 'collect-metiers' })).toEqual(['rome', 'marketTrends']);
     expect(getCompletedJobRefreshScopes({ ...baseJob, job_type: 'adapt' })).toEqual(['adaptations', 'resumes', 'missions']);
+  });
+
+  it('derives skipped jobs from processed items without counting them as errors', () => {
+    const job = {
+      ...baseJob,
+      processed_items: 26,
+      success_count: 4,
+      error_count: 2,
+    };
+
+    expect(getSkippedCount(job)).toBe(20);
+  });
+
+  it('shows success, skipped, and errors as separate summary fragments', () => {
+    const t = (key: string, options?: unknown): string => {
+      const count = (options as { count?: number } | undefined)?.count;
+      return `${key}:${count}`;
+    };
+
+    expect(getSummaryText({
+      ...baseJob,
+      processed_items: 26,
+      success_count: 4,
+      error_count: 2,
+    }, t)).toBe('batchJobs.summary.success:4 • batchJobs.summary.skipped:20 • batchJobs.summary.errors:2');
   });
 });

@@ -69,11 +69,11 @@ export function estimateExpectedTotal({ itRomeCodes, regions }) {
     return {
         regionsCount,
         romeCount,
-        expectedTotal: (5 * romeCount * regionsCount) + romeCount + regionsCount
+        expectedTotal: (4 * romeCount * regionsCount) + (2 * romeCount) + regionsCount
     };
 }
 
-export function createCollectionAccumulator({ onTrendCollected, collectionDate, quarter, romeLabelsMap }) {
+export function createCollectionAccumulator({ onTrendCollected, onItemProcessed, collectionDate, quarter, romeLabelsMap }) {
     const trends = onTrendCollected ? null : [];
     let savedCount = 0;
     let criticalError = null;
@@ -96,15 +96,68 @@ export function createCollectionAccumulator({ onTrendCollected, collectionDate, 
             await onTrendCollected(trend);
             savedCount++;
             trackMemoryCheckpoint();
+            await notifyItemProcessed({
+                status: 'collected',
+                type: trend.type,
+                regionCode: trend.regionCode,
+                codeRome: trend.codeRome
+            });
             return;
         }
 
         trends.push(trend);
+        await notifyItemProcessed({
+            status: 'collected',
+            type: trend.type,
+            regionCode: trend.regionCode,
+            codeRome: trend.codeRome
+        });
+    }
+
+    async function notifyItemProcessed(event) {
+        if (!onItemProcessed) return;
+
+        try {
+            await onItemProcessed(event);
+        } catch {
+            // Progress callbacks must never stop the collection.
+        }
+    }
+
+    async function recordSkipped(event) {
+        await notifyItemProcessed({
+            ...event,
+            status: 'skipped'
+        });
+    }
+
+    async function recordFailure(event) {
+        await notifyItemProcessed({
+            ...event,
+            status: 'failed'
+        });
     }
 
     function recordCriticalError(error) {
+        if (error?.isFranceTravailTokenError) {
+            const status = error.response?.status || error.code || 'unknown';
+            const providerCode = error.response?.data?.error;
+            criticalError = providerCode
+                ? `France Travail token unavailable (${status}: ${providerCode})`
+                : `France Travail token unavailable (${status})`;
+            return true;
+        }
+
         if (error?.response?.status === 403 || error?.response?.status === 401) {
             criticalError = `API access denied (${error.response.status})`;
+            return true;
+        }
+
+        if (
+            error?.response?.status === 400
+            && ['invalid_client', 'invalid_scope'].includes(error.response?.data?.error)
+        ) {
+            criticalError = `API credentials rejected (${error.response.data.error})`;
             return true;
         }
 
@@ -124,6 +177,8 @@ export function createCollectionAccumulator({ onTrendCollected, collectionDate, 
         getRomeLabel,
         prepareMetadata,
         saveTrend,
+        recordSkipped,
+        recordFailure,
         recordCriticalError
     };
 }
@@ -153,6 +208,17 @@ export async function collectTrendsByRomeAndRegion({
                     codeTerritoire: region.code,
                     ...extraParams
                 });
+                const value = extractRawValue(data);
+
+                if (value === null) {
+                    await runtime.recordSkipped({
+                        type: trendType,
+                        regionCode: region.code,
+                        codeRome: rome,
+                        reason: data ? 'no_value' : 'no_data'
+                    });
+                    continue;
+                }
 
                 await runtime.saveTrend({
                     date: runtime.collectionDate,
@@ -161,13 +227,19 @@ export async function collectTrendsByRomeAndRegion({
                     romeLabel: runtime.getRomeLabel(rome),
                     region: region.name,
                     regionCode: region.code,
-                    value: extractRawValue(data),
+                    value,
                     valueLabel: extractValueLabel(data),
                     metadata: runtime.prepareMetadata(data, rome),
                     apiEndpoint,
                     quarterPeriod: runtime.quarter
                 });
             } catch (error) {
+                await runtime.recordFailure({
+                    type: trendType,
+                    regionCode: region.code,
+                    codeRome: rome,
+                    error: error.message
+                });
                 if (runtime.recordCriticalError(error)) break;
                 safeLog('warn', `MarketTrends: Failed to collect ${trendType}`, {
                     rome,
@@ -195,19 +267,34 @@ export async function collectTrendsByRome({
         try {
             await delay(350);
             const data = await apiCallFn({ codeRome: rome });
+            const value = extractRawValue(data);
+
+            if (value === null) {
+                await runtime.recordSkipped({
+                    type: trendType,
+                    codeRome: rome,
+                    reason: data ? 'no_value' : 'no_data'
+                });
+                continue;
+            }
 
             await runtime.saveTrend({
                 date: runtime.collectionDate,
                 type: trendType,
                 codeRome: rome,
                 romeLabel: runtime.getRomeLabel(rome),
-                value: extractRawValue(data),
+                value,
                 valueLabel: extractValueLabel(data),
                 metadata: runtime.prepareMetadata(data, rome),
                 apiEndpoint,
                 quarterPeriod: runtime.quarter
             });
         } catch (error) {
+            await runtime.recordFailure({
+                type: trendType,
+                codeRome: rome,
+                error: error.message
+            });
             if (runtime.recordCriticalError(error)) break;
             safeLog('warn', `MarketTrends: Failed to collect ${trendType}`, {
                 rome,
@@ -246,9 +333,25 @@ export async function collectDynamiqueEmploi({
 
             if (!data) {
                 dynSkippedCount++;
+                await runtime.recordSkipped({
+                    type: 'dynamique_emploi',
+                    regionCode: region.code,
+                    reason: 'no_data'
+                });
                 safeLog('debug', 'MarketTrends: DYN_1 no data for region', {
                     region: region.name,
                     regionCode: region.code
+                });
+                continue;
+            }
+            const value = extractRawValue(data);
+
+            if (value === null) {
+                dynSkippedCount++;
+                await runtime.recordSkipped({
+                    type: 'dynamique_emploi',
+                    regionCode: region.code,
+                    reason: 'no_value'
                 });
                 continue;
             }
@@ -258,7 +361,7 @@ export async function collectDynamiqueEmploi({
                 type: 'dynamique_emploi',
                 region: region.name,
                 regionCode: region.code,
-                value: extractRawValue(data),
+                value,
                 valueLabel: extractDynamiqueLabel(data),
                 metadata: runtime.prepareMetadata(data, null),
                 apiEndpoint: 'stat-dynamique-emploi',
@@ -268,6 +371,11 @@ export async function collectDynamiqueEmploi({
             data = null;
             dynSuccessCount++;
         } catch (error) {
+            await runtime.recordFailure({
+                type: 'dynamique_emploi',
+                regionCode: region.code,
+                error: error.message
+            });
             if (runtime.recordCriticalError(error)) break;
             safeLog('warn', 'MarketTrends: Failed to collect dynamique', {
                 region: region.name,

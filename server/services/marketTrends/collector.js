@@ -71,12 +71,14 @@ function getLastCompleteQuarter() {
  */
 export async function collectMarketTrends(options = {}) {
     const onTrendCollected = options.onTrendCollected || null;
+    const onItemProcessed = options.onItemProcessed || null;
     const onTotalEstimated = options.onTotalEstimated || null;
     const collectionDate = new Date().toISOString().split('T')[0];
     const { dateDeb, dateFin, quarter } = getLastCompleteQuarter();
     const { itRomeCodes, romeLabelsMap, regions } = await loadCollectionContext();
     const runtime = createCollectionAccumulator({
         onTrendCollected,
+        onItemProcessed,
         collectionDate,
         quarter,
         romeLabelsMap
@@ -100,13 +102,12 @@ export async function collectMarketTrends(options = {}) {
         }
     }
 
-    await collectTrendsByRomeAndRegion({
+    await collectTrendsByRome({
         typeName: 'tensions (PERSP_2)',
         apiCallFn: getStatTensions,
         trendType: 'tension',
-        apiEndpoint: 'stat-perspective-employeur',
+        apiEndpoint: 'dataemploi-tensions-nationales',
         itRomeCodes,
-        regions,
         runtime
     });
 

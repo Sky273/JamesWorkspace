@@ -45,5 +45,16 @@ describe('Market Trends - Extractors', () => {
                 valeurPrincipaleDecimale: '4,75'
             })).toBe(4.75);
         });
+
+        it('extracts Data Emploi tension decimals from nested perspective fields', () => {
+            expect(extractRawValue({
+                statsDemandeurOffre: {
+                    persp2: {
+                        valPrincPersp: '4',
+                        valPrincDec: '0,57'
+                    }
+                }
+            })).toBe(0.57);
+        });
     });
 });

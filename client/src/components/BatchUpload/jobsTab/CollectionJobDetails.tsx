@@ -1,4 +1,5 @@
 import type { Job, TranslateFn } from './types';
+import { getSkippedCount } from './helpers';
 
 interface CollectionJobDetailsProps {
   job: Job;
@@ -7,6 +8,8 @@ interface CollectionJobDetailsProps {
 }
 
 export default function CollectionJobDetails({ job, formatDate, t }: CollectionJobDetailsProps): JSX.Element {
+  const skippedCount = getSkippedCount(job);
+
   return (
     <div className="p-4 bg-gray-50 dark:bg-gray-900/50">
       <div className="grid grid-cols-2 gap-3 text-sm">
@@ -17,6 +20,10 @@ export default function CollectionJobDetails({ job, formatDate, t }: CollectionJ
         <div className="flex justify-between px-3 py-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
           <span className="text-gray-500 dark:text-gray-400">{t('batchJobs.collection.success')}</span>
           <span className="font-medium text-green-600 dark:text-green-400">{job.success_count}</span>
+        </div>
+        <div className="flex justify-between px-3 py-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+          <span className="text-gray-500 dark:text-gray-400">{t('batchJobs.collection.skipped')}</span>
+          <span className={`font-medium ${skippedCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-gray-100'}`}>{skippedCount}</span>
         </div>
         <div className="flex justify-between px-3 py-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
           <span className="text-gray-500 dark:text-gray-400">{t('batchJobs.collection.errors')}</span>

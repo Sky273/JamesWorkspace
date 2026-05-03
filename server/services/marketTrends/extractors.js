@@ -59,6 +59,10 @@ export function extractRawValue(data) {
         ?? toNumber(data.valeurPrincipaleDecimale)
         ?? toNumber(data.valeurPrincipaleMontant)
         ?? toNumber(data.valeurPrincipaleTaux)
+        ?? toNumber(data.statsDemandeurOffre?.persp2?.valPrincDec)
+        ?? toNumber(data.statsDemandeurOffre?.persp2?.valPrincPersp)
+        ?? toNumber(data.evolutionPersp2?.persp2?.valPrincDec)
+        ?? toNumber(data.evolutionPersp2?.persp2?.valPrincPersp)
         ?? toNumber(data.valeur)
         ?? toNumber(data.indicateur);
 

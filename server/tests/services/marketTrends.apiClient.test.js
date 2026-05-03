@@ -55,7 +55,7 @@ describe('Market Trends API Client', () => {
                 .mockResolvedValueOnce({ data: { r: 1 } })
                 .mockResolvedValueOnce({ data: { r: 2 } });
 
-            await getStatTensions(params);
+            await getStatOffres(params);
             await getStatOffres(params);
 
             // Token fetch should happen only once (first post call)
@@ -66,7 +66,7 @@ describe('Market Trends API Client', () => {
 
         it('clearTokenCache should force new token fetch', async () => {
             mockTokenThenPost({ r: 1 });
-            await getStatTensions(params);
+            await getStatOffres(params);
 
             clearTokenCache();
 
@@ -79,16 +79,71 @@ describe('Market Trends API Client', () => {
             const tokenCalls = axios.post.mock.calls.filter(c => c[0].includes('access_token'));
             expect(tokenCalls).toHaveLength(2);
         });
+
+        it('should share an in-flight token request across concurrent API calls', async () => {
+            let resolveToken;
+            const tokenPromise = new Promise(resolve => {
+                resolveToken = resolve;
+            });
+            axios.post
+                .mockReturnValueOnce(tokenPromise)
+                .mockResolvedValueOnce({ data: { offres: 100 } })
+                .mockResolvedValueOnce({ data: { demandeurs: 50 } });
+
+            const firstCall = getStatOffres(params);
+            const secondCall = getStatDemandeurs(params);
+            resolveToken({ data: { access_token: 'tok-shared', expires_in: 1500 } });
+
+            await expect(firstCall).resolves.toEqual({ offres: 100 });
+            await expect(secondCall).resolves.toEqual({ demandeurs: 50 });
+
+            const tokenCalls = axios.post.mock.calls.filter(c => c[0].includes('access_token'));
+            expect(tokenCalls).toHaveLength(1);
+        });
+
+        it('should tag token acquisition failures as critical token errors even when response data is null', async () => {
+            const tokenError = new Error('Request failed with status code 400');
+            tokenError.response = {
+                status: 400,
+                data: null
+            };
+            axios.post.mockRejectedValueOnce(tokenError);
+
+            await expect(getStatOffres(params)).rejects.toMatchObject({
+                isFranceTravailTokenError: true,
+                response: {
+                    status: 400,
+                    data: null
+                }
+            });
+        });
     });
 
     describe('Authenticated endpoints', () => {
-        it('getStatTensions should POST to stat-perspective-employeur', async () => {
-            mockTokenThenPost({ tensions: 42 });
+        it('getStatTensions should read Data Emploi national tension decimals by ROME code', async () => {
+            axios.get
+                .mockResolvedValueOnce({ data: { access_token: 'dataemploi-token', expires_in: 1500 } })
+                .mockResolvedValueOnce({
+                    data: {
+                        topActivite: [{
+                            activite: { codeActivite: 'M1805', libelleActivite: 'Dev' },
+                            statsDemandeurOffre: {
+                                persp2: {
+                                    libelleNomenclature: 'Indicateur principal tension',
+                                    valPrincPersp: '4',
+                                    valPrincDec: '0.57'
+                                }
+                            },
+                            indicateurRetour: { datMaj: '2026-04-15T14:29:30.000+02:00' }
+                        }]
+                    }
+                });
 
             const result = await getStatTensions(params);
 
-            expect(result).toEqual({ tensions: 42 });
-            expect(axios.post.mock.calls[1][0]).toContain('stat-perspective-employeur');
+            expect(result.valeurPrincipaleDecimale).toBe('0.57');
+            expect(result.statsDemandeurOffre.persp2.valPrincPersp).toBe('4');
+            expect(axios.get.mock.calls[1][0]).toContain('top/activite/demandeurs-offres-flux/PERSP_2/ROME/NAT/FR');
         });
 
         it('getStatSalaires should GET salaire-rome-fap', async () => {
@@ -138,8 +193,8 @@ describe('Market Trends API Client', () => {
         });
 
         it('should throw on API error', async () => {
-            axios.post
-                .mockResolvedValueOnce({ data: { access_token: 'tok', expires_in: 1500 } })
+            axios.get
+                .mockResolvedValueOnce({ data: { access_token: 'dataemploi-token', expires_in: 1500 } })
                 .mockRejectedValueOnce(new Error('API timeout'));
 
             await expect(getStatTensions(params)).rejects.toThrow('API timeout');

@@ -29,6 +29,11 @@
       "failed": "Échoué",
       "cancelled": "Annulé"
     },
+    "summary": {
+      "success": "{{count}} succès",
+      "skipped": "{{count}} ignoré(s)",
+      "errors": "{{count}} erreur(s)"
+    },
     "type": {
       "import": "Import",
       "improve": "Amélioration",
@@ -47,6 +52,7 @@
     "collection": {
       "processed": "Traités",
       "success": "Succès",
+      "skipped": "Ignorés",
       "errors": "Erreurs",
       "startedAt": "Démarré"
     }

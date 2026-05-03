@@ -11,6 +11,8 @@ import { safeLog } from '../../utils/logger.backend.js';
 
 // API Base URL
 const MARKET_API_BASE = 'https://api.francetravail.io/partenaire/stats-offres-demandes-emploi/v1';
+const DATAEMPLOI_API_BASE = 'https://dataemploi.francetravail.fr/emploi/api-statemploi/v1';
+const DATAEMPLOI_TOKEN_URL = 'https://dataemploi.francetravail.fr/emploi/token';
 
 // Token management
 const FRANCE_TRAVAIL_CLIENT_ID = process.env.FRANCE_TRAVAIL_CLIENT_ID;
@@ -19,9 +21,22 @@ const FRANCE_TRAVAIL_TOKEN_URL = 'https://entreprise.francetravail.fr/connexion/
 
 let marketToken = null;
 let marketTokenExpiresAt = 0;
+let marketTokenRequestPromise = null;
+let dataEmploiToken = null;
+let dataEmploiTokenExpiresAt = 0;
+let nationalTensionByRomeCache = null;
 
 // Required scopes per OpenAPI spec
 const MARKET_SCOPE = 'offresetdemandesemploi api_stats-offres-demandes-emploiv1';
+
+function createTokenAcquisitionError(error) {
+    const wrapped = new Error(`France Travail access token unavailable: ${error.message}`);
+    wrapped.cause = error;
+    wrapped.response = error.response;
+    wrapped.code = error.code;
+    wrapped.isFranceTravailTokenError = true;
+    return wrapped;
+}
 
 /**
  * Get access token for Market Trends API (Stats Offres Demandes Emploi)
@@ -33,9 +48,25 @@ async function getMarketAccessToken() {
     }
 
     if (!FRANCE_TRAVAIL_CLIENT_ID || !FRANCE_TRAVAIL_CLIENT_SECRET) {
-        throw new Error('France Travail API credentials not configured.');
+        const error = new Error('France Travail API credentials not configured.');
+        error.isFranceTravailTokenError = true;
+        throw error;
     }
 
+    if (marketTokenRequestPromise) {
+        return marketTokenRequestPromise;
+    }
+
+    marketTokenRequestPromise = requestMarketAccessToken();
+
+    try {
+        return await marketTokenRequestPromise;
+    } finally {
+        marketTokenRequestPromise = null;
+    }
+}
+
+async function requestMarketAccessToken() {
     try {
         safeLog('info', 'MarketTrends: Requesting access token', { scope: MARKET_SCOPE });
         
@@ -65,8 +96,21 @@ async function getMarketAccessToken() {
             status: error.response?.status,
             data: error.response?.data
         });
-        throw error;
+        throw createTokenAcquisitionError(error);
     }
+}
+
+async function getDataEmploiAccessToken() {
+    if (dataEmploiToken && Date.now() < dataEmploiTokenExpiresAt - 60000) {
+        return dataEmploiToken;
+    }
+
+    const response = await axios.get(DATAEMPLOI_TOKEN_URL, { timeout: 30000 });
+    dataEmploiToken = response.data.access_token;
+    const expiresIn = response.data.expires_in || 1500;
+    dataEmploiTokenExpiresAt = Date.now() + (expiresIn * 1000);
+    nationalTensionByRomeCache = null;
+    return dataEmploiToken;
 }
 
 /**
@@ -75,6 +119,10 @@ async function getMarketAccessToken() {
 export function clearTokenCache() {
     marketToken = null;
     marketTokenExpiresAt = 0;
+    marketTokenRequestPromise = null;
+    dataEmploiToken = null;
+    dataEmploiTokenExpiresAt = 0;
+    nationalTensionByRomeCache = null;
 }
 
 // ============================================
@@ -129,8 +177,6 @@ export async function getStatEmbauches(params) {
  */
 export async function getStatDynamiqueEmploi(params) {
     // Use the public dataemploi API (no authentication required)
-    const DATAEMPLOI_API_BASE = 'https://dataemploi.francetravail.fr/emploi/api-statemploi/v1';
-    
     // Build request body matching the working payload format
     const body = {
         codeTypeTerritoire: params.codeTypeTerritoire || 'REG',
@@ -182,35 +228,65 @@ export async function getStatDynamiqueEmploi(params) {
  * Stats sur les difficultés de recrutement (indicateur de tension)
  */
 export async function getStatTensions(params) {
-    const token = await getMarketAccessToken();
-    
-    const body = {
-        codeTypeTerritoire: params.codeTypeTerritoire || 'REG',
-        codeTerritoire: params.codeTerritoire,
-        codeTypeActivite: 'ROME',
-        codeActivite: params.codeRome,
-        codeTypePeriode: 'ANNEE',
-        codeTypeNomenclature: 'TYPE_TENSION',
-        dernierePeriode: true
-    };
-    
     try {
-        const response = await axios.post(`${MARKET_API_BASE}/indicateur/stat-perspective-employeur`, body, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            timeout: 30000
-        });
-        return response.data;
+        const tensionByRome = await getNationalTensionsByRome();
+        const match = tensionByRome.get(params.codeRome);
+
+        if (!match) {
+            return null;
+        }
+
+        const principal = match.statsDemandeurOffre?.persp2;
+        return {
+            datMaj: match.indicateurRetour?.datMaj,
+            codeIndicateur: 'PERSP_2',
+            codeFamille: 'PERSPECTIVES',
+            libIndicateur: principal?.libelleNomenclature || 'Indicateur principal tension',
+            codeTypeTerritoire: 'NAT',
+            codeTerritoire: 'FR',
+            libTerritoire: 'France',
+            activite: match.activite,
+            statsDemandeurOffre: match.statsDemandeurOffre,
+            valeurPrincipaleDecimale: principal?.valPrincDec,
+            valeurPrincipaleNombre: principal?.valPrincDec === undefined ? principal?.valPrincPersp : undefined,
+            valueLabel: principal?.libelleNomenclature || 'Indicateur principal tension'
+        };
     } catch (error) {
-        safeLog('error', 'MarketTrends: Failed to get stat-perspective-employeur', {
+        safeLog('error', 'MarketTrends: Failed to get Data Emploi tensions', {
             error: error.message,
             status: error.response?.status
         });
         throw error;
     }
+}
+
+async function getNationalTensionsByRome() {
+    if (nationalTensionByRomeCache) {
+        return nationalTensionByRomeCache;
+    }
+
+    const token = await getDataEmploiAccessToken();
+    const url = `${DATAEMPLOI_API_BASE}/top/activite/demandeurs-offres-flux/PERSP_2/ROME/NAT/FR?maxResult=5000&tri=DESC`;
+
+    const response = await axios.get(url, {
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+        },
+        timeout: 30000
+    });
+
+    nationalTensionByRomeCache = new Map(
+        (response.data?.topActivite || [])
+            .filter((item) => item?.activite?.codeActivite)
+            .map((item) => [item.activite.codeActivite, item])
+    );
+
+    safeLog('info', 'MarketTrends: Loaded Data Emploi national tensions', {
+        count: nationalTensionByRomeCache.size
+    });
+
+    return nationalTensionByRomeCache;
 }
 
 /**

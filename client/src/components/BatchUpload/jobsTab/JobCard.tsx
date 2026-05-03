@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
+import type { KeyboardEvent } from 'react';
 import {
   ArrowDownTrayIcon,
   ChevronDownIcon,
@@ -58,10 +59,24 @@ export default function JobCard({
     progressPercentage,
   } = getDisplayProgress(job, progressSnapshot, now);
   const isCollection = isCollectionJob(job.job_type);
+  const handleHeaderKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+
+    event.preventDefault();
+    onToggleExpand(job.id);
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <div className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" onClick={() => onToggleExpand(job.id)}>
+      <div
+        className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+        onClick={() => onToggleExpand(job.id)}
+        onKeyDown={handleHeaderKeyDown}
+        role="button"
+        tabIndex={0}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {getStatusIcon(job.status)}
@@ -81,7 +96,7 @@ export default function JobCard({
           <div className="flex items-center gap-4">
             <div className="text-right min-w-[80px]">
               <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{displayProcessedItems} / {job.total_items}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">{getSummaryText(job)}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{getSummaryText(job, t)}</div>
             </div>
 
             <div className="flex flex-col items-center gap-1">
