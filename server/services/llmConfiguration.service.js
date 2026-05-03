@@ -5,7 +5,7 @@ export const LLM_PROVIDER_DEFAULT_MODELS = {
     anthropic: 'claude-3-5-sonnet-20241022',
     huggingface: 'MiniMaxAI/MiniMax-M2.7',
     gemma: 'gemma-4-31b-it',
-    deepseek: 'deepseek-chat',
+    deepseek: 'deepseek-v4-flash',
     glm: 'glm-5.1',
     minimax: 'MiniMax-M2.7',
     ollama: null
@@ -69,7 +69,9 @@ export function inferProviderFallbackModel(provider, model = '') {
     }
 
     if (normalizedProvider === 'deepseek') {
-        if (normalizedModel === 'deepseek-reasoner') return 'deepseek-chat';
+        if (normalizedModel === 'deepseek-v4-pro') return 'deepseek-v4-flash';
+        if (normalizedModel === 'deepseek-reasoner') return 'deepseek-v4-flash';
+        if (normalizedModel === 'deepseek-chat') return 'deepseek-v4-flash';
         return null;
     }
 

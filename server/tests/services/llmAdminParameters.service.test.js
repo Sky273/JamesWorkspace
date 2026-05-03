@@ -158,8 +158,34 @@ describe('llmAdminParameters.service', () => {
                 ]),
                 defaultValue: 'none'
             }),
-            max_completion_tokens: expect.objectContaining({
-                max: 128000
+                max_completion_tokens: expect.objectContaining({
+                    max: 128000
+                })
+            }));
+    });
+
+    it('exposes DeepSeek v4 models while keeping legacy aliases', () => {
+        const metadata = buildLlmAdminMetadata();
+
+        expect(metadata.llmModelCatalog.deepseek).toEqual(
+            expect.arrayContaining([
+                { value: 'deepseek-v4-flash', label: 'DeepSeek-V4-Flash (API: deepseek-v4-flash)' },
+                { value: 'deepseek-v4-pro', label: 'DeepSeek-V4-Pro (API: deepseek-v4-pro)' },
+                { value: 'deepseek-chat', label: 'DeepSeek legacy alias - standard mode (API: deepseek-chat)' },
+                { value: 'deepseek-reasoner', label: 'DeepSeek legacy alias - reasoning mode (API: deepseek-reasoner)' }
+            ])
+        );
+        expect(metadata.llmParameterDefinitions.deepseek['deepseek-v4-flash']).toEqual(expect.objectContaining({
+            max_tokens: expect.objectContaining({
+                max: 384000
+            }),
+            thinking: expect.objectContaining({
+                type: 'object'
+            })
+        }));
+        expect(metadata.llmParameterDefinitions.deepseek['deepseek-v4-pro']).toEqual(expect.objectContaining({
+            max_tokens: expect.objectContaining({
+                max: 384000
             })
         }));
     });

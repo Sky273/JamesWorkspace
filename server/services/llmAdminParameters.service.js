@@ -47,8 +47,10 @@ const PROVIDER_MODEL_CATALOG = Object.freeze({
         { value: 'gemma-3n-e4b-it', label: 'Gemma 3n E4B Instruct (gemma-3n-e4b-it)' }
     ],
     deepseek: [
-        { value: 'deepseek-chat', label: 'DeepSeek-V3.2 - Standard (API: deepseek-chat)' },
-        { value: 'deepseek-reasoner', label: 'DeepSeek-V3.2 - Raisonnement (API: deepseek-reasoner)' }
+        { value: 'deepseek-v4-flash', label: 'DeepSeek-V4-Flash (API: deepseek-v4-flash)' },
+        { value: 'deepseek-v4-pro', label: 'DeepSeek-V4-Pro (API: deepseek-v4-pro)' },
+        { value: 'deepseek-chat', label: 'DeepSeek legacy alias - standard mode (API: deepseek-chat)' },
+        { value: 'deepseek-reasoner', label: 'DeepSeek legacy alias - reasoning mode (API: deepseek-reasoner)' }
     ],
     glm: [
         { value: 'glm-5.1', label: 'GLM-5.1' },

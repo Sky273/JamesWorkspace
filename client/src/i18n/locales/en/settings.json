@@ -191,7 +191,7 @@
       "webglEnabled": "Enable WebGL backgrounds",
       "webglEnabledDescription": "Displays animated visual backgrounds when the browser and device support them.",
       "minimaxDescription": "Select a MiniMax model. The application will use the server-side MiniMax API.",
-      "deepseekDescription": "Select the DeepSeek API mode to use. The callable IDs remain deepseek-chat and deepseek-reasoner, both currently mapped to DeepSeek-V3.2 on the API side.",
+      "deepseekDescription": "Select the DeepSeek model to use. Prefer deepseek-v4-flash or deepseek-v4-pro. The legacy deepseek-chat and deepseek-reasoner aliases remain available temporarily and currently map to DeepSeek-V4-Flash non-thinking and thinking modes.",
       "minimaxHighspeedDisabled": "MiniMax highspeed models are hidden because this instance does not enable the Highspeed plan.",
       "minimaxRuntimeUnavailable": "Some MiniMax models are temporarily hidden because the upstream refused them for this instance.",
       "runtimeUnavailable": "Some models for this provider are temporarily hidden because the upstream refused them for this instance.",

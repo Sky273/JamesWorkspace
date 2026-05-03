@@ -273,7 +273,7 @@ export const getDefaultModelForProvider = (provider?: LLMProvider): string => {
   if (provider === 'anthropic') return 'claude-sonnet-4-20250514';
   if (provider === 'huggingface') return 'MiniMaxAI/MiniMax-M2.7';
   if (provider === 'gemma') return 'gemma-4-31b-it';
-  if (provider === 'deepseek') return 'deepseek-chat';
+  if (provider === 'deepseek') return 'deepseek-v4-flash';
   if (provider === 'glm') return 'glm-5.1';
   if (provider === 'minimax') return 'MiniMax-M2.7';
   if (provider === 'ollama') return '';

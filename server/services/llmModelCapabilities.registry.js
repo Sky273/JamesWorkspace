@@ -149,6 +149,8 @@ export const PROVIDER_CAPABILITIES = {
         { match: /^(?:MiniMaxAI\/MiniMax-M2\.7|minimax-m2\.7:cloud)$/i, maxOutputTokens: 4096, tokenParameter: 'max_tokens', supportsResponseFormat: false, temperatureRange: { min: 0, maxExclusive: 1 }, topPRange: { min: 0, maxInclusive: 1 }, unsupportedParameters: ['presence_penalty', 'frequency_penalty', 'logit_bias', 'n'] }
     ],
     deepseek: [
+        { match: /^deepseek-v4-flash$/i, maxOutputTokens: 384000, tokenParameter: 'max_tokens' },
+        { match: /^deepseek-v4-pro$/i, maxOutputTokens: 384000, tokenParameter: 'max_tokens' },
         { match: /^deepseek-chat$/i, maxOutputTokens: 8192, tokenParameter: 'max_tokens' },
         { match: /^deepseek-reasoner$/i, maxOutputTokens: 64000, tokenParameter: 'max_tokens', unsupportedParameters: ['temperature', 'top_p', 'presence_penalty', 'frequency_penalty', 'logprobs', 'top_logprobs'] }
     ],

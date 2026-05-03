@@ -72,6 +72,6 @@ describe('deepseek.service', () => {
             messages: [{ role: 'user', content: 'hello' }]
         })).rejects.toThrow('You do not have permission to access this model');
 
-        expect(mockMarkModelUnavailable).toHaveBeenCalledWith('deepseek', 'deepseek-reasoner', 'provider_model_access_denied', 'deepseek-chat');
+        expect(mockMarkModelUnavailable).toHaveBeenCalledWith('deepseek', 'deepseek-reasoner', 'provider_model_access_denied', 'deepseek-v4-flash');
     });
 });

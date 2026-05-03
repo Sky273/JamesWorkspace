@@ -179,7 +179,7 @@ async function resolveProviderConnectivityChecks(deepCheck, initialOverallStatus
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: 'deepseek-chat',
+                        model: 'deepseek-v4-flash',
                         messages: [{ role: 'user', content: 'ping' }],
                         max_tokens: 1
                     })

@@ -12,7 +12,7 @@ describe('SettingsPage helpers', () => {
   it('derives the default model for each supported provider', () => {
     expect(getDefaultModelForProvider('anthropic')).toBe('claude-sonnet-4-20250514');
     expect(getDefaultModelForProvider('gemma')).toBe('gemma-4-31b-it');
-    expect(getDefaultModelForProvider('deepseek')).toBe('deepseek-chat');
+    expect(getDefaultModelForProvider('deepseek')).toBe('deepseek-v4-flash');
     expect(getDefaultModelForProvider('glm')).toBe('glm-5.1');
     expect(getDefaultModelForProvider('minimax')).toBe('MiniMax-M2.7');
     expect(getDefaultModelForProvider('ollama')).toBe('');

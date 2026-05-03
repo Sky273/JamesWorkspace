@@ -191,7 +191,7 @@
       "webglEnabled": "Activer les arrière-plans WebGL",
       "webglEnabledDescription": "Affiche les fonds visuels animés de l'application quand le navigateur et l'appareil le permettent.",
       "minimaxDescription": "Sélectionnez un modèle MiniMax. L'application utilisera l'API MiniMax côté serveur.",
-      "deepseekDescription": "Sélectionnez le mode API DeepSeek à utiliser. Les identifiants appelés restent deepseek-chat et deepseek-reasoner, tous deux mappés sur DeepSeek-V3.2 côté API.",
+      "deepseekDescription": "Sélectionnez le modèle DeepSeek à utiliser. Préférez deepseek-v4-flash ou deepseek-v4-pro. Les alias legacy deepseek-chat et deepseek-reasoner restent disponibles temporairement et pointent actuellement vers les modes non-thinking et thinking de DeepSeek-V4-Flash.",
       "minimaxHighspeedDisabled": "Les modèles MiniMax highspeed sont masqués car cette instance n’active pas le plan Highspeed.",
       "minimaxRuntimeUnavailable": "Certains modèles MiniMax sont temporairement masqués car l’upstream les a refusés pour cette instance.",
       "runtimeUnavailable": "Certains modèles de ce provider sont temporairement masqués car l’upstream les a refusés pour cette instance.",
