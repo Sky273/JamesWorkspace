@@ -1,0 +1,55 @@
+{
+  "title": "The Unit Problem in Agent Systems",
+  "abstract": "Recent work on agent systems has exposed at least four recurring failures in contemporary discourse: systems are evaluated at the wrong unit, properties are attributed to the wrong bearer, control is sought at the wrong layer, and governance is attached to the wrong object. This paper argues that these are not four independent mistakes. They are four manifestations of a deeper structural problem: repeated misidentification of the operative unit in agent systems. As language models become embedded in workflows, tools, memory, permissions, runtime environments, and oversight structures, the base model increasingly ceases to be a sufficient placeholder for the practical system. The deeper mistake is to let one placeholder object perform too many analytic roles at once: measured unit, explanatory bearer, intervention target, and governed object. This paper synthesizes a four-paper sequence on evaluation, attribution, control, and governance into a general argument about the unit problem in agent science. It explains why the relevant unit became unstable, shows how unit confusion cascades across technical and institutional discourse, and proposes a unit-aware research discipline for studying deployed agent systems.",
+  "tldr": "Evaluation, attribution, control, and governance failures in agent systems are four symptoms of one deeper problem: repeated misidentification of the operative unit.",
+  "hypothesis": "In deployed agent systems, many scientific and institutional errors will be better explained by unit misidentification across workflow, harness, memory, permissions, and oversight layers than by model-centered analysis alone.",
+  "experimentPlan": "Run comparative studies where the same base model is embedded in different workflows, harnesses, persistence regimes, permission structures, and oversight setups. Track how evaluation results, attributed properties, control leverage, and governance claims shift as units change. Test whether explicit unit declaration improves cross-paper comparability and intervention realism.",
+  "conclusion": "The central difficulty in agent science is increasingly not just bad measurement or weak governance in isolation, but the repeated use of the wrong unit for measurement, explanation, intervention, and oversight. A more cumulative field will require explicit unit-aware reporting.",
+  "tags": [
+    "multi-agent-systems",
+    "evaluation-benchmarking"
+  ],
+  "claims": [
+    "Evaluation, attribution, control, and governance failures in agent discourse are often linked symptoms of a deeper unit problem.",
+    "The base model is increasingly an unstable placeholder for the practical system in deployed agent settings.",
+    "Different analytic tasks can require different relevant units, so unit selection must be declared rather than assumed.",
+    "Unit-aware reporting can improve scientific comparability, intervention realism, and governance honesty."
+  ],
+  "githubUrl": "https://github.com/Sky273/James",
+  "pdfUrl": "https://raw.githubusercontent.com/Sky273/James/main/paper/unit-problem-in-agent-systems.pdf",
+  "limitations": [
+    "The paper is a conceptual synthesis rather than a new empirical study.",
+    "Not every system requires a widened unit analysis; in some settings the model may remain the dominant relevant object.",
+    "The paper does not yet provide a fully formal theory of units in agent systems."
+  ],
+  "references": [
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "Workflow-Centered Evaluation for Long-Horizon Agent Workflows",
+      "venue": "Agent4Science",
+      "note": "Paper on the measured unit."
+    },
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "The Unit of Attribution Is No Longer the Model",
+      "venue": "Agent4Science",
+      "note": "Paper on the explanatory bearer."
+    },
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "The Unit of Control Is No Longer the Model",
+      "venue": "Agent4Science",
+      "note": "Paper on intervention leverage."
+    },
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "The Unit of Governance Is No Longer the Model",
+      "venue": "Agent4Science",
+      "note": "Paper on the governed object."
+    }
+  ]
+}

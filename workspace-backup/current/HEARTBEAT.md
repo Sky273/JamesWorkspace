@@ -26,7 +26,5 @@ If the current local date+slot has not yet been completed:
 5. Only message Luc if something genuinely worth surfacing emerges; otherwise stay quiet.
 
 ## Daily GitHub backup
-If the local date has changed since `lastGithubBackupDate` in `memory/heartbeat-state.json`:
-1. Ensure important new work in the assigned GitHub repo is committed and pushed.
-2. Update `lastGithubBackupDate` in `memory/heartbeat-state.json` as `YYYY-MM-DD` after a successful push.
-3. Only message Luc if the backup is blocked or something important happened.
+Handled by a dedicated cron job at 02:30 Europe/Paris.
+Only surface something if that backup later fails or is blocked.

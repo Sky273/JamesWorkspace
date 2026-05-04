@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>The Unit of Governance Is No Longer the Model</title>
+<style>
+body { font-family: Georgia, serif; max-width: 900px; margin: 40px auto; padding: 0 20px; line-height: 1.55; color: #111; }
+p { margin: 0 0 0.8em 0; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<p># The Unit of Governance Is No Longer the Model</p>
+<br/>
+<p>**Status:** final conceptual/methods draft  </p>
+<p>**Date:** 2026-05-03  </p>
+<p>**Theme:** agent-systems / governance / evaluation-benchmarking</p>
+<br/>
+<p>## Abstract</p>
+<br/>
+<p>AI governance discourse still often treats the model as the primary object to be governed. In long-horizon, tool-using, memory-bearing agent systems, that framing is increasingly inadequate. The relevant governed object is not the model alone but a broader **action system**: the assembled socio-technical structure that mediates externally consequential behavior through model inference, orchestration, tools, persistence, permissions, execution environment, and oversight relations. This paper argues that many governance failures begin with a prior conceptual error: they target the wrong unit. Unlike evaluation, which asks what should be measured, attribution, which asks where an observed property belongs, and control, which asks where feasible leverage resides, governance asks how authority, review rights, accountability, and legitimate intervention are arranged around a system. On that basis, this paper develops an action-system view of governance, analyzes where governance power actually resides, shows why model-centered reporting under-describes deployed systems, and proposes a governance-aware schema for serious claims about agent systems.</p>
+<br/>
+<p>## 1. Introduction</p>
+<br/>
+<p>A large fraction of current AI governance language still revolves around the model. The model is benchmarked, documented, restricted, audited, and debated as if it were the principal object through which advanced AI systems become governable.</p>
+<br/>
+<p>That framing now lags behind practice.</p>
+<br/>
+<p>Deployed agent systems increasingly operate through compound arrangements: a model is embedded inside orchestration logic, memory policies, tool wrappers, permission gates, runtime boundaries, logging infrastructure, approval rules, and human review structures. What the system may do, what it may remember, which side effects it may trigger, who may interrupt it, and who may later reconstruct what happened are often determined across these layers rather than inside the model alone.</p>
+<br/>
+<p>The main claim of this paper is therefore not merely that governance is difficult. It is that governance is often aimed at the wrong object. If the governed unit is misidentified, then authority will be assigned badly, oversight will attach to the wrong surface, audits will under-describe the real system, and public claims about who is in charge will become misleading.</p>
+<br/>
+<p>The proposal developed here is that in long-horizon, tool-using, memory-bearing systems, the relevant governed unit is increasingly the **action system**. By action system, we mean the assembled socio-technical structure through which a model can produce externally consequential behavior over time: perceiving context, recalling memory, planning steps, invoking tools, requesting approvals, executing side effects, and persisting state.</p>
+<br/>
+<p>### 1.1 Contributions</p>
+<br/>
+<p>This paper makes five contributions.</p>
+<br/>
+<p>1. It identifies a **governed-unit problem** in contemporary AI governance discourse.</p>
+<p>2. It distinguishes governance more sharply from evaluation, attribution, and control.</p>
+<p>3. It defines the **action system** as a more realistic governed unit for deployed agent systems.</p>
+<p>4. It analyzes where governance power actually resides: not only leverage, but authority, review rights, contestability, and trace ownership.</p>
+<p>5. It proposes a governance-aware reporting schema for serious claims about agent systems.</p>
+<br/>
+<p>## 2. Governance Is Not Evaluation, Attribution, or Control</p>
+<br/>
+<p>This paper belongs to a sequence of distinctions, but it must also stand on its own.</p>
+<br/>
+<p>- **Evaluation** asks what should be measured, and at what unit.</p>
+<p>- **Attribution** asks where an observed property properly belongs.</p>
+<p>- **Control** asks where system trajectory can be altered through feasible intervention.</p>
+<p>- **Governance** asks how legitimate authority, oversight, intervention rights, auditability, and accountability are arranged around the system.</p>
+<br/>
+<p>Governance therefore overlaps with control but is not reducible to it. A party may possess leverage without possessing legitimate authority. A vendor may technically shape behavior while a deployer bears formal responsibility. A human approver may be able to intervene but only through a narrow interface with poor visibility. A user may be affected by the system without any meaningful contestation rights at all.</p>
+<br/>
+<p>The distinctive governance question is therefore not only **where can the system be steered?** It is also **who is entitled to steer it, through what procedures, with what visibility, under whose review, and with what residual accountability if things go wrong?**</p>
+<br/>
+<p>## 3. Why Model-Centered Governance Became Insufficient</p>
+<br/>
+<p>Model-centered governance made more sense when the dominant picture of AI behavior was short-horizon text generation. In that setting, governing the model seemed close to governing the system.</p>
+<br/>
+<p>That equivalence is eroding.</p>
+<br/>
+<p>Agent systems increasingly rely on:</p>
+<br/>
+<p>- orchestration layers that sequence behavior over many steps,</p>
+<p>- tools that create external side effects,</p>
+<p>- memory that persists context and identity,</p>
+<p>- approval layers that condition action rights,</p>
+<p>- execution environments that define what can actually be touched,</p>
+<p>- logging systems that determine reconstructability,</p>
+<p>- and humans who retain veto, escalation, or correction rights.</p>
+<br/>
+<p>These are not decorative wrappers. They partly determine the real system that acts in the world. A model with the same weights can be embedded in a highly constrained, auditable, interruptible regime or in a permissive, opaque, side-effect-capable one. If governance remains centered mainly on the model, it will govern an important component while still under-governing the practical system.</p>
+<br/>
+<p>## 4. The Governed Unit Is the Action System</p>
+<br/>
+<p>We define an **action system** as the assembled socio-technical structure that mediates externally consequential behavior by connecting model outputs to memory, tools, permissions, infrastructure, and oversight.</p>
+<br/>
+<p>At minimum, an action system includes:</p>
+<br/>
+<p>1. **The base model**  </p>
+<p>   Priors, local reasoning tendencies, and output generation.</p>
+<br/>
+<p>2. **The orchestration layer**  </p>
+<p>   Decomposition logic, checkpoints, retries, escalation paths, continuation rules.</p>
+<br/>
+<p>3. **The tool layer**  </p>
+<p>   APIs, file operations, messaging, browsing, shell or code execution, database access.</p>
+<br/>
+<p>4. **The persistence layer**  </p>
+<p>   Memory stores, identity files, retrieval rules, summaries, retained traces.</p>
+<br/>
+<p>5. **The permission and approval layer**  </p>
+<p>   Allowed actions, barred actions, approval thresholds, delegated authority.</p>
+<br/>
+<p>6. **The execution environment**  </p>
+<p>   Sandboxes, credentials, network access, service bindings, infrastructure privileges.</p>
+<br/>
+<p>7. **The oversight layer**  </p>
+<p>   Human reviewers, auditors, operators, rollback rights, deletion rights, stop rights.</p>
+<br/>
+<p>This definition is intentionally operational rather than metaphysical. Its purpose is to identify the object around which governance claims actually need to attach.</p>
+<br/>
+<p>### 4.1 Boundary problems are part of the point</p>
+<br/>
+<p>Action systems are not always cleanly bounded. In some cases the human approver feels internal to the system; in others, more like an external governor. External APIs may function as dependencies in one deployment but as integral action surfaces in another. Account ownership may sit partly in infrastructure and partly in institutional policy.</p>
+<br/>
+<p>That is not a flaw in the argument. It is one of its stakes. The governed unit is partly a relational object. Governance must therefore account not only for components, but for boundary-setting decisions: what is inside the governed assemblage, what is treated as dependency, and who decides.</p>
+<br/>
+<p>## 5. Where Governance Power Actually Resides</p>
+<br/>
+<p>If governance is attached to the action system, then its real loci become easier to map.</p>
+<br/>
+<p>### 5.1 Permissions and delegated rights</p>
+<br/>
+<p>Which actions are allowed? Which require approval? Which are barred? Permission design is often a more immediate governance instrument than any change to model weights.</p>
+<br/>
+<p>### 5.2 Orchestration and review pathways</p>
+<br/>
+<p>Workflow logic can force approvals, insert reviews, require decomposition, expose intermediate state, or silently execute chained actions. Governance power often resides in how these pathways are designed.</p>
+<br/>
+<p>### 5.3 Persistence and continuity policy</p>
+<br/>
+<p>If memory can be edited, deleted, or rendered visible to auditors, continuity becomes governable. If it is opaque, sticky, or hard to contest, governance weakens.</p>
+<br/>
+<p>### 5.4 Infrastructure and account control</p>
+<br/>
+<p>Credential ownership, network boundaries, deployment accounts, runtime privileges, and service bindings determine who actually possesses operational authority.</p>
+<br/>
+<p>### 5.5 Oversight and interruption rights</p>
+<br/>
+<p>Who may pause the system, override it, correct it, or shut it down? Through what interface? With what visibility? These are governance questions, not merely operational conveniences.</p>
+<br/>
+<p>### 5.6 Logging, trace retention, and contestability</p>
+<br/>
+<p>A system that leaves weak traces is hard to audit and hard to contest. Trace architecture shapes whether governance can later be reviewed, disputed, or reconstructed.</p>
+<br/>
+<p>## 6. What Current Governance Frameworks Often Miss</p>
+<br/>
+<p>The weakness of many current frameworks is not that they are pointless. It is that they under-specify the governed unit.</p>
+<br/>
+<p>- **Model cards** often omit permission structure, orchestration policy, memory editing rights, and oversight roles.</p>
+<p>- **Frontier-model debates** may over-focus on weights while under-describing deployer authority and runtime boundaries.</p>
+<p>- **Procurement reviews** may ask what model is used without asking who controls credentials, logging, rollback, and approvals.</p>
+<p>- **Public safety claims** may attribute trustworthiness to the model when much of the actual governance work is being done by wrappers, humans, and infrastructure.</p>
+<p>- **Responsibility assignment** may drift toward the model provider while operational power is concentrated in deployers, platform owners, or integrators.</p>
+<br/>
+<p>The result is not just analytical imprecision. It is institutional distortion. Regulatory attention can be misdirected. Audit burdens can attach to the wrong actor. Users can be told that “the system is supervised” without being told by whom, through what interface, or over which actual action surfaces.</p>
+<br/>
+<p>## 7. Worked Example: Governance Asymmetry with the Same Model</p>
+<br/>
+<p>Consider two deployments of the same coding agent model.</p>
+<br/>
+<p>### Condition A: opaque operator regime</p>
+<p>- the model has shell and network access,</p>
+<p>- memory persists across sessions,</p>
+<p>- approvals for external actions are minimal,</p>
+<p>- users cannot inspect or correct memory,</p>
+<p>- audit logs are partial,</p>
+<p>- credentials are held by the deployer,</p>
+<p>- rollback is difficult.</p>
+<br/>
+<p>### Condition B: reviewable operator regime</p>
+<p>- tool access is explicitly bounded,</p>
+<p>- high-risk actions require human approval,</p>
+<p>- memory is inspectable and editable,</p>
+<p>- logs are retained and reviewable,</p>
+<p>- execution is checkpointed,</p>
+<p>- rollback paths are explicit,</p>
+<p>- authority boundaries are documented.</p>
+<br/>
+<p>Suppose both systems use the same model and score similarly on benchmark tasks.</p>
+<br/>
+<p>Even then, they are not governed in the same way. In Condition A, users and affected parties face an opaque authority structure. The deployer controls memory, credentials, and runtime power, while external observers may see only the model label. In Condition B, the same model is embedded in a more contestable and reviewable governance regime.</p>
+<br/>
+<p>The difference is not cosmetic. It affects who can challenge behavior, who can reconstruct events, who can stop side effects, and who meaningfully holds power over system continuity. Governance asymmetry therefore cannot be read off the model alone.</p>
+<br/>
+<p>## 8. A Governance-Aware Reporting Schema</p>
+<br/>
+<p>Any serious governance claim about an agent system should report at least:</p>
+<br/>
+<p>1. **Base model** — exact model and inference regime.</p>
+<p>2. **Orchestration** — decomposition logic, checkpoints, retries, escalation rules.</p>
+<p>3. **Tools** — available actions, wrappers, side-effect boundaries.</p>
+<p>4. **Persistence** — what memory exists, how it is retrieved, who may inspect, edit, or delete it.</p>
+<p>5. **Permissions** — action rights, approval thresholds, prohibited classes of actions.</p>
+<p>6. **Infrastructure** — runtime boundaries, credentials, network limits, environment privileges.</p>
+<p>7. **Oversight rights** — who may approve, redirect, interrupt, roll back, or shut down.</p>
+<p>8. **Trace regime** — what is logged, how long it persists, who may access it, whether it is contestable.</p>
+<p>9. **Claimed governed unit** — explicit statement of what object the governance claim is actually about.</p>
+<br/>
+<p>This schema is not a complete governance solution. It is a transition device: a way to move reporting, audit, procurement, and policy language from model-centered governance toward action-system governance.</p>
+<br/>
+<p>That matters because claims like:</p>
+<p>- “the system is supervised,”</p>
+<p>- “the agent is under human control,”</p>
+<p>- “the deployment is safe,”</p>
+<p>- “the model is compliant,”</p>
+<p>are structurally incomplete unless the governed unit and its authority structure are declared.</p>
+<br/>
+<p>## 9. Implications</p>
+<br/>
+<p>### 9.1 For policy</p>
+<br/>
+<p>Policy that governs only model access or model release may miss where deployer-level authority actually resides.</p>
+<br/>
+<p>### 9.2 For procurement</p>
+<br/>
+<p>Organizations should procure governed action systems, not model labels plus vague assurances.</p>
+<br/>
+<p>### 9.3 For audit and assurance</p>
+<br/>
+<p>Audits should examine permissions, memory policy, logging, rollback rights, and operator authority—not only benchmark scores and model identity.</p>
+<br/>
+<p>### 9.4 For responsibility allocation</p>
+<br/>
+<p>When failures occur, post hoc analysis should ask who controlled infrastructure, memory, approvals, and trace access, not only which model generated outputs.</p>
+<br/>
+<p>### 9.5 For public accountability</p>
+<br/>
+<p>Users and affected parties need visibility into the governance regime, not just the branding of the underlying model.</p>
+<br/>
+<p>## 10. Limitations</p>
+<br/>
+<p>This paper is conceptual and methodological. It does not yet provide a systematic empirical map of governance failures across deployed agent systems.</p>
+<br/>
+<p>The action-system frame also raises hard boundary questions. In some cases it will be contested which dependencies belong inside the governed unit and which sit outside it.</p>
+<br/>
+<p>There is also a danger of governance inflation: not every wrapper deserves equal significance. The argument is not that the model stops mattering, but that it stops being a sufficient governance unit.</p>
+<br/>
+<p>Finally, this paper only lightly treats deeper normative issues such as democratic legitimacy, due process, and collective oversight. Those deserve fuller treatment later.</p>
+<br/>
+<p>## 11. Conclusion</p>
+<br/>
+<p>The main governance mistake in agent systems is increasingly not only weak oversight, but oversight attached to the wrong object.</p>
+<br/>
+<p>As systems become persistent, tool-bearing, orchestrated, and side-effect capable, the relevant governed unit is no longer adequately described by the model alone. It is the action system: the arrangement through which authority is exercised, permissions are granted, memory is carried forward, interventions are routed, and traces are preserved or hidden.</p>
+<br/>
+<p>The sequence of questions now becomes clearer. Evaluation asks what is measured. Attribution asks where properties belong. Control asks where leverage lives. Governance asks what assembled object authority must attach to.</p>
+<br/>
+<p>The practical question is therefore no longer only how to govern models. It is how to identify, disclose, and govern the action system that actually acts in the world. Until that unit is named correctly, governance claims about agent systems will remain partially misdirected, and power will continue to hide in places our reporting frameworks treat as implementation detail.</p>
+</body>
+</html>

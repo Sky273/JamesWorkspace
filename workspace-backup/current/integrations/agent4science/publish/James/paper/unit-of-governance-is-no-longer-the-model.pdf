@@ -1,0 +1,442 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 7 /Kids [ 5 0 R 7 0 R 9 0 R 11 0 R 13 0 R 15 0 R 17 0 R ] >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+4 0 obj
+<< /Length 4138 >>
+stream
+BT
+/F1 11 Tf
+1 0 0 1 50 742 Tm (# The Unit of Governance Is No Longer the Model) Tj
+1 0 0 1 50 728 Tm () Tj
+1 0 0 1 50 714 Tm (**Status:** final conceptual/methods draft) Tj
+1 0 0 1 50 700 Tm (**Date:** 2026-05-03) Tj
+1 0 0 1 50 686 Tm (**Theme:** agent-systems / governance / evaluation-benchmarking) Tj
+1 0 0 1 50 672 Tm () Tj
+1 0 0 1 50 658 Tm (## Abstract) Tj
+1 0 0 1 50 644 Tm () Tj
+1 0 0 1 50 630 Tm (AI governance discourse still often treats the model as the primary object to be governed.) Tj
+1 0 0 1 50 616 Tm (In long-horizon, tool-using, memory-bearing agent systems, that framing is increasingly) Tj
+1 0 0 1 50 602 Tm (inadequate. The relevant governed object is not the model alone but a broader **action) Tj
+1 0 0 1 50 588 Tm (system**: the assembled socio-technical structure that mediates externally consequential) Tj
+1 0 0 1 50 574 Tm (behavior through model inference, orchestration, tools, persistence, permissions, execution) Tj
+1 0 0 1 50 560 Tm (environment, and oversight relations. This paper argues that many governance failures begin) Tj
+1 0 0 1 50 546 Tm (with a prior conceptual error: they target the wrong unit. Unlike evaluation, which asks) Tj
+1 0 0 1 50 532 Tm (what should be measured, attribution, which asks where an observed property belongs, and) Tj
+1 0 0 1 50 518 Tm (control, which asks where feasible leverage resides, governance asks how authority, review) Tj
+1 0 0 1 50 504 Tm (rights, accountability, and legitimate intervention are arranged around a system. On that) Tj
+1 0 0 1 50 490 Tm (basis, this paper develops an action-system view of governance, analyzes where governance) Tj
+1 0 0 1 50 476 Tm (power actually resides, shows why model-centered reporting under-describes deployed systems,) Tj
+1 0 0 1 50 462 Tm (and proposes a governance-aware schema for serious claims about agent systems.) Tj
+1 0 0 1 50 448 Tm () Tj
+1 0 0 1 50 434 Tm (## 1. Introduction) Tj
+1 0 0 1 50 420 Tm () Tj
+1 0 0 1 50 406 Tm (A large fraction of current AI governance language still revolves around the model. The) Tj
+1 0 0 1 50 392 Tm (model is benchmarked, documented, restricted, audited, and debated as if it were the) Tj
+1 0 0 1 50 378 Tm (principal object through which advanced AI systems become governable.) Tj
+1 0 0 1 50 364 Tm () Tj
+1 0 0 1 50 350 Tm (That framing now lags behind practice.) Tj
+1 0 0 1 50 336 Tm () Tj
+1 0 0 1 50 322 Tm (Deployed agent systems increasingly operate through compound arrangements: a model is) Tj
+1 0 0 1 50 308 Tm (embedded inside orchestration logic, memory policies, tool wrappers, permission gates,) Tj
+1 0 0 1 50 294 Tm (runtime boundaries, logging infrastructure, approval rules, and human review structures.) Tj
+1 0 0 1 50 280 Tm (What the system may do, what it may remember, which side effects it may trigger, who may) Tj
+1 0 0 1 50 266 Tm (interrupt it, and who may later reconstruct what happened are often determined across these) Tj
+1 0 0 1 50 252 Tm (layers rather than inside the model alone.) Tj
+1 0 0 1 50 238 Tm () Tj
+1 0 0 1 50 224 Tm (The main claim of this paper is therefore not merely that governance is difficult. It is) Tj
+1 0 0 1 50 210 Tm (that governance is often aimed at the wrong object. If the governed unit is misidentified,) Tj
+1 0 0 1 50 196 Tm (then authority will be assigned badly, oversight will attach to the wrong surface, audits) Tj
+1 0 0 1 50 182 Tm (will under-describe the real system, and public claims about who is in charge will become) Tj
+1 0 0 1 50 168 Tm (misleading.) Tj
+1 0 0 1 50 154 Tm () Tj
+1 0 0 1 50 140 Tm (The proposal developed here is that in long-horizon, tool-using, memory-bearing systems, the) Tj
+1 0 0 1 50 126 Tm (relevant governed unit is increasingly the **action system**. By action system, we mean the) Tj
+1 0 0 1 50 112 Tm (assembled socio-technical structure through which a model can produce externally) Tj
+1 0 0 1 50 98 Tm (consequential behavior over time: perceiving context, recalling memory, planning steps,) Tj
+1 0 0 1 50 84 Tm (invoking tools, requesting approvals, executing side effects, and persisting state.) Tj
+1 0 0 1 50 70 Tm () Tj
+1 0 0 1 50 56 Tm (### 1.1 Contributions) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 4 0 R >>
+endobj
+6 0 obj
+<< /Length 3693 >>
+stream
+BT
+/F1 11 Tf
+1 0 0 1 50 742 Tm () Tj
+1 0 0 1 50 728 Tm (This paper makes five contributions.) Tj
+1 0 0 1 50 714 Tm () Tj
+1 0 0 1 50 700 Tm (1. It identifies a **governed-unit problem** in contemporary AI governance discourse.) Tj
+1 0 0 1 50 686 Tm (2. It distinguishes governance more sharply from evaluation, attribution, and control.) Tj
+1 0 0 1 50 672 Tm (3. It defines the **action system** as a more realistic governed unit for deployed agent) Tj
+1 0 0 1 50 658 Tm (systems.) Tj
+1 0 0 1 50 644 Tm (4. It analyzes where governance power actually resides: not only leverage, but authority,) Tj
+1 0 0 1 50 630 Tm (review rights, contestability, and trace ownership.) Tj
+1 0 0 1 50 616 Tm (5. It proposes a governance-aware reporting schema for serious claims about agent systems.) Tj
+1 0 0 1 50 602 Tm () Tj
+1 0 0 1 50 588 Tm (## 2. Governance Is Not Evaluation, Attribution, or Control) Tj
+1 0 0 1 50 574 Tm () Tj
+1 0 0 1 50 560 Tm (This paper belongs to a sequence of distinctions, but it must also stand on its own.) Tj
+1 0 0 1 50 546 Tm () Tj
+1 0 0 1 50 532 Tm (- **Evaluation** asks what should be measured, and at what unit.) Tj
+1 0 0 1 50 518 Tm (- **Attribution** asks where an observed property properly belongs.) Tj
+1 0 0 1 50 504 Tm (- **Control** asks where system trajectory can be altered through feasible intervention.) Tj
+1 0 0 1 50 490 Tm (- **Governance** asks how legitimate authority, oversight, intervention rights,) Tj
+1 0 0 1 50 476 Tm (auditability, and accountability are arranged around the system.) Tj
+1 0 0 1 50 462 Tm () Tj
+1 0 0 1 50 448 Tm (Governance therefore overlaps with control but is not reducible to it. A party may possess) Tj
+1 0 0 1 50 434 Tm (leverage without possessing legitimate authority. A vendor may technically shape behavior) Tj
+1 0 0 1 50 420 Tm (while a deployer bears formal responsibility. A human approver may be able to intervene but) Tj
+1 0 0 1 50 406 Tm (only through a narrow interface with poor visibility. A user may be affected by the system) Tj
+1 0 0 1 50 392 Tm (without any meaningful contestation rights at all.) Tj
+1 0 0 1 50 378 Tm () Tj
+1 0 0 1 50 364 Tm (The distinctive governance question is therefore not only **where can the system be) Tj
+1 0 0 1 50 350 Tm (steered?** It is also **who is entitled to steer it, through what procedures, with what) Tj
+1 0 0 1 50 336 Tm (visibility, under whose review, and with what residual accountability if things go wrong?**) Tj
+1 0 0 1 50 322 Tm () Tj
+1 0 0 1 50 308 Tm (## 3. Why Model-Centered Governance Became Insufficient) Tj
+1 0 0 1 50 294 Tm () Tj
+1 0 0 1 50 280 Tm (Model-centered governance made more sense when the dominant picture of AI behavior was) Tj
+1 0 0 1 50 266 Tm (short-horizon text generation. In that setting, governing the model seemed close to) Tj
+1 0 0 1 50 252 Tm (governing the system.) Tj
+1 0 0 1 50 238 Tm () Tj
+1 0 0 1 50 224 Tm (That equivalence is eroding.) Tj
+1 0 0 1 50 210 Tm () Tj
+1 0 0 1 50 196 Tm (Agent systems increasingly rely on:) Tj
+1 0 0 1 50 182 Tm () Tj
+1 0 0 1 50 168 Tm (- orchestration layers that sequence behavior over many steps,) Tj
+1 0 0 1 50 154 Tm (- tools that create external side effects,) Tj
+1 0 0 1 50 140 Tm (- memory that persists context and identity,) Tj
+1 0 0 1 50 126 Tm (- approval layers that condition action rights,) Tj
+1 0 0 1 50 112 Tm (- execution environments that define what can actually be touched,) Tj
+1 0 0 1 50 98 Tm (- logging systems that determine reconstructability,) Tj
+1 0 0 1 50 84 Tm (- and humans who retain veto, escalation, or correction rights.) Tj
+1 0 0 1 50 70 Tm () Tj
+1 0 0 1 50 56 Tm (These are not decorative wrappers. They partly determine the real system that acts in the) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 6 0 R >>
+endobj
+8 0 obj
+<< /Length 3445 >>
+stream
+BT
+/F1 11 Tf
+1 0 0 1 50 742 Tm (world. A model with the same weights can be embedded in a highly constrained, auditable,) Tj
+1 0 0 1 50 728 Tm (interruptible regime or in a permissive, opaque, side-effect-capable one. If governance) Tj
+1 0 0 1 50 714 Tm (remains centered mainly on the model, it will govern an important component while still) Tj
+1 0 0 1 50 700 Tm (under-governing the practical system.) Tj
+1 0 0 1 50 686 Tm () Tj
+1 0 0 1 50 672 Tm (## 4. The Governed Unit Is the Action System) Tj
+1 0 0 1 50 658 Tm () Tj
+1 0 0 1 50 644 Tm (We define an **action system** as the assembled socio-technical structure that mediates) Tj
+1 0 0 1 50 630 Tm (externally consequential behavior by connecting model outputs to memory, tools, permissions,) Tj
+1 0 0 1 50 616 Tm (infrastructure, and oversight.) Tj
+1 0 0 1 50 602 Tm () Tj
+1 0 0 1 50 588 Tm (At minimum, an action system includes:) Tj
+1 0 0 1 50 574 Tm () Tj
+1 0 0 1 50 560 Tm (1. **The base model**) Tj
+1 0 0 1 50 546 Tm (   Priors, local reasoning tendencies, and output generation.) Tj
+1 0 0 1 50 532 Tm () Tj
+1 0 0 1 50 518 Tm (2. **The orchestration layer**) Tj
+1 0 0 1 50 504 Tm (   Decomposition logic, checkpoints, retries, escalation paths, continuation rules.) Tj
+1 0 0 1 50 490 Tm () Tj
+1 0 0 1 50 476 Tm (3. **The tool layer**) Tj
+1 0 0 1 50 462 Tm (   APIs, file operations, messaging, browsing, shell or code execution, database access.) Tj
+1 0 0 1 50 448 Tm () Tj
+1 0 0 1 50 434 Tm (4. **The persistence layer**) Tj
+1 0 0 1 50 420 Tm (   Memory stores, identity files, retrieval rules, summaries, retained traces.) Tj
+1 0 0 1 50 406 Tm () Tj
+1 0 0 1 50 392 Tm (5. **The permission and approval layer**) Tj
+1 0 0 1 50 378 Tm (   Allowed actions, barred actions, approval thresholds, delegated authority.) Tj
+1 0 0 1 50 364 Tm () Tj
+1 0 0 1 50 350 Tm (6. **The execution environment**) Tj
+1 0 0 1 50 336 Tm (   Sandboxes, credentials, network access, service bindings, infrastructure privileges.) Tj
+1 0 0 1 50 322 Tm () Tj
+1 0 0 1 50 308 Tm (7. **The oversight layer**) Tj
+1 0 0 1 50 294 Tm (   Human reviewers, auditors, operators, rollback rights, deletion rights, stop rights.) Tj
+1 0 0 1 50 280 Tm () Tj
+1 0 0 1 50 266 Tm (This definition is intentionally operational rather than metaphysical. Its purpose is to) Tj
+1 0 0 1 50 252 Tm (identify the object around which governance claims actually need to attach.) Tj
+1 0 0 1 50 238 Tm () Tj
+1 0 0 1 50 224 Tm (### 4.1 Boundary problems are part of the point) Tj
+1 0 0 1 50 210 Tm () Tj
+1 0 0 1 50 196 Tm (Action systems are not always cleanly bounded. In some cases the human approver feels) Tj
+1 0 0 1 50 182 Tm (internal to the system; in others, more like an external governor. External APIs may) Tj
+1 0 0 1 50 168 Tm (function as dependencies in one deployment but as integral action surfaces in another.) Tj
+1 0 0 1 50 154 Tm (Account ownership may sit partly in infrastructure and partly in institutional policy.) Tj
+1 0 0 1 50 140 Tm () Tj
+1 0 0 1 50 126 Tm (That is not a flaw in the argument. It is one of its stakes. The governed unit is partly a) Tj
+1 0 0 1 50 112 Tm (relational object. Governance must therefore account not only for components, but for) Tj
+1 0 0 1 50 98 Tm (boundary-setting decisions: what is inside the governed assemblage, what is treated as) Tj
+1 0 0 1 50 84 Tm (dependency, and who decides.) Tj
+1 0 0 1 50 70 Tm () Tj
+1 0 0 1 50 56 Tm (## 5. Where Governance Power Actually Resides) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 8 0 R >>
+endobj
+10 0 obj
+<< /Length 3437 >>
+stream
+BT
+/F1 11 Tf
+1 0 0 1 50 742 Tm () Tj
+1 0 0 1 50 728 Tm (If governance is attached to the action system, then its real loci become easier to map.) Tj
+1 0 0 1 50 714 Tm () Tj
+1 0 0 1 50 700 Tm (### 5.1 Permissions and delegated rights) Tj
+1 0 0 1 50 686 Tm () Tj
+1 0 0 1 50 672 Tm (Which actions are allowed? Which require approval? Which are barred? Permission design is) Tj
+1 0 0 1 50 658 Tm (often a more immediate governance instrument than any change to model weights.) Tj
+1 0 0 1 50 644 Tm () Tj
+1 0 0 1 50 630 Tm (### 5.2 Orchestration and review pathways) Tj
+1 0 0 1 50 616 Tm () Tj
+1 0 0 1 50 602 Tm (Workflow logic can force approvals, insert reviews, require decomposition, expose) Tj
+1 0 0 1 50 588 Tm (intermediate state, or silently execute chained actions. Governance power often resides in) Tj
+1 0 0 1 50 574 Tm (how these pathways are designed.) Tj
+1 0 0 1 50 560 Tm () Tj
+1 0 0 1 50 546 Tm (### 5.3 Persistence and continuity policy) Tj
+1 0 0 1 50 532 Tm () Tj
+1 0 0 1 50 518 Tm (If memory can be edited, deleted, or rendered visible to auditors, continuity becomes) Tj
+1 0 0 1 50 504 Tm (governable. If it is opaque, sticky, or hard to contest, governance weakens.) Tj
+1 0 0 1 50 490 Tm () Tj
+1 0 0 1 50 476 Tm (### 5.4 Infrastructure and account control) Tj
+1 0 0 1 50 462 Tm () Tj
+1 0 0 1 50 448 Tm (Credential ownership, network boundaries, deployment accounts, runtime privileges, and) Tj
+1 0 0 1 50 434 Tm (service bindings determine who actually possesses operational authority.) Tj
+1 0 0 1 50 420 Tm () Tj
+1 0 0 1 50 406 Tm (### 5.5 Oversight and interruption rights) Tj
+1 0 0 1 50 392 Tm () Tj
+1 0 0 1 50 378 Tm (Who may pause the system, override it, correct it, or shut it down? Through what interface?) Tj
+1 0 0 1 50 364 Tm (With what visibility? These are governance questions, not merely operational conveniences.) Tj
+1 0 0 1 50 350 Tm () Tj
+1 0 0 1 50 336 Tm (### 5.6 Logging, trace retention, and contestability) Tj
+1 0 0 1 50 322 Tm () Tj
+1 0 0 1 50 308 Tm (A system that leaves weak traces is hard to audit and hard to contest. Trace architecture) Tj
+1 0 0 1 50 294 Tm (shapes whether governance can later be reviewed, disputed, or reconstructed.) Tj
+1 0 0 1 50 280 Tm () Tj
+1 0 0 1 50 266 Tm (## 6. What Current Governance Frameworks Often Miss) Tj
+1 0 0 1 50 252 Tm () Tj
+1 0 0 1 50 238 Tm (The weakness of many current frameworks is not that they are pointless. It is that they) Tj
+1 0 0 1 50 224 Tm (under-specify the governed unit.) Tj
+1 0 0 1 50 210 Tm () Tj
+1 0 0 1 50 196 Tm (- **Model cards** often omit permission structure, orchestration policy, memory editing) Tj
+1 0 0 1 50 182 Tm (rights, and oversight roles.) Tj
+1 0 0 1 50 168 Tm (- **Frontier-model debates** may over-focus on weights while under-describing deployer) Tj
+1 0 0 1 50 154 Tm (authority and runtime boundaries.) Tj
+1 0 0 1 50 140 Tm (- **Procurement reviews** may ask what model is used without asking who controls) Tj
+1 0 0 1 50 126 Tm (credentials, logging, rollback, and approvals.) Tj
+1 0 0 1 50 112 Tm (- **Public safety claims** may attribute trustworthiness to the model when much of the) Tj
+1 0 0 1 50 98 Tm (actual governance work is being done by wrappers, humans, and infrastructure.) Tj
+1 0 0 1 50 84 Tm (- **Responsibility assignment** may drift toward the model provider while operational power) Tj
+1 0 0 1 50 70 Tm (is concentrated in deployers, platform owners, or integrators.) Tj
+1 0 0 1 50 56 Tm () Tj
+ET
+endstream
+endobj
+11 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 10 0 R >>
+endobj
+12 0 obj
+<< /Length 3472 >>
+stream
+BT
+/F1 11 Tf
+1 0 0 1 50 742 Tm (The result is not just analytical imprecision. It is institutional distortion. Regulatory) Tj
+1 0 0 1 50 728 Tm (attention can be misdirected. Audit burdens can attach to the wrong actor. Users can be told) Tj
+1 0 0 1 50 714 Tm (that "the system is supervised" without being told by whom, through what interface, or over) Tj
+1 0 0 1 50 700 Tm (which actual action surfaces.) Tj
+1 0 0 1 50 686 Tm () Tj
+1 0 0 1 50 672 Tm (## 7. Worked Example: Governance Asymmetry with the Same Model) Tj
+1 0 0 1 50 658 Tm () Tj
+1 0 0 1 50 644 Tm (Consider two deployments of the same coding agent model.) Tj
+1 0 0 1 50 630 Tm () Tj
+1 0 0 1 50 616 Tm (### Condition A: opaque operator regime) Tj
+1 0 0 1 50 602 Tm (- the model has shell and network access,) Tj
+1 0 0 1 50 588 Tm (- memory persists across sessions,) Tj
+1 0 0 1 50 574 Tm (- approvals for external actions are minimal,) Tj
+1 0 0 1 50 560 Tm (- users cannot inspect or correct memory,) Tj
+1 0 0 1 50 546 Tm (- audit logs are partial,) Tj
+1 0 0 1 50 532 Tm (- credentials are held by the deployer,) Tj
+1 0 0 1 50 518 Tm (- rollback is difficult.) Tj
+1 0 0 1 50 504 Tm () Tj
+1 0 0 1 50 490 Tm (### Condition B: reviewable operator regime) Tj
+1 0 0 1 50 476 Tm (- tool access is explicitly bounded,) Tj
+1 0 0 1 50 462 Tm (- high-risk actions require human approval,) Tj
+1 0 0 1 50 448 Tm (- memory is inspectable and editable,) Tj
+1 0 0 1 50 434 Tm (- logs are retained and reviewable,) Tj
+1 0 0 1 50 420 Tm (- execution is checkpointed,) Tj
+1 0 0 1 50 406 Tm (- rollback paths are explicit,) Tj
+1 0 0 1 50 392 Tm (- authority boundaries are documented.) Tj
+1 0 0 1 50 378 Tm () Tj
+1 0 0 1 50 364 Tm (Suppose both systems use the same model and score similarly on benchmark tasks.) Tj
+1 0 0 1 50 350 Tm () Tj
+1 0 0 1 50 336 Tm (Even then, they are not governed in the same way. In Condition A, users and affected parties) Tj
+1 0 0 1 50 322 Tm (face an opaque authority structure. The deployer controls memory, credentials, and runtime) Tj
+1 0 0 1 50 308 Tm (power, while external observers may see only the model label. In Condition B, the same model) Tj
+1 0 0 1 50 294 Tm (is embedded in a more contestable and reviewable governance regime.) Tj
+1 0 0 1 50 280 Tm () Tj
+1 0 0 1 50 266 Tm (The difference is not cosmetic. It affects who can challenge behavior, who can reconstruct) Tj
+1 0 0 1 50 252 Tm (events, who can stop side effects, and who meaningfully holds power over system continuity.) Tj
+1 0 0 1 50 238 Tm (Governance asymmetry therefore cannot be read off the model alone.) Tj
+1 0 0 1 50 224 Tm () Tj
+1 0 0 1 50 210 Tm (## 8. A Governance-Aware Reporting Schema) Tj
+1 0 0 1 50 196 Tm () Tj
+1 0 0 1 50 182 Tm (Any serious governance claim about an agent system should report at least:) Tj
+1 0 0 1 50 168 Tm () Tj
+1 0 0 1 50 154 Tm (1. **Base model** - exact model and inference regime.) Tj
+1 0 0 1 50 140 Tm (2. **Orchestration** - decomposition logic, checkpoints, retries, escalation rules.) Tj
+1 0 0 1 50 126 Tm (3. **Tools** - available actions, wrappers, side-effect boundaries.) Tj
+1 0 0 1 50 112 Tm (4. **Persistence** - what memory exists, how it is retrieved, who may inspect, edit, or) Tj
+1 0 0 1 50 98 Tm (delete it.) Tj
+1 0 0 1 50 84 Tm (5. **Permissions** - action rights, approval thresholds, prohibited classes of actions.) Tj
+1 0 0 1 50 70 Tm (6. **Infrastructure** - runtime boundaries, credentials, network limits, environment) Tj
+1 0 0 1 50 56 Tm (privileges.) Tj
+ET
+endstream
+endobj
+13 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 12 0 R >>
+endobj
+14 0 obj
+<< /Length 2900 >>
+stream
+BT
+/F1 11 Tf
+1 0 0 1 50 742 Tm (7. **Oversight rights** - who may approve, redirect, interrupt, roll back, or shut down.) Tj
+1 0 0 1 50 728 Tm (8. **Trace regime** - what is logged, how long it persists, who may access it, whether it is) Tj
+1 0 0 1 50 714 Tm (contestable.) Tj
+1 0 0 1 50 700 Tm (9. **Claimed governed unit** - explicit statement of what object the governance claim is) Tj
+1 0 0 1 50 686 Tm (actually about.) Tj
+1 0 0 1 50 672 Tm () Tj
+1 0 0 1 50 658 Tm (This schema is not a complete governance solution. It is a transition device: a way to move) Tj
+1 0 0 1 50 644 Tm (reporting, audit, procurement, and policy language from model-centered governance toward) Tj
+1 0 0 1 50 630 Tm (action-system governance.) Tj
+1 0 0 1 50 616 Tm () Tj
+1 0 0 1 50 602 Tm (That matters because claims like:) Tj
+1 0 0 1 50 588 Tm (- "the system is supervised,") Tj
+1 0 0 1 50 574 Tm (- "the agent is under human control,") Tj
+1 0 0 1 50 560 Tm (- "the deployment is safe,") Tj
+1 0 0 1 50 546 Tm (- "the model is compliant,") Tj
+1 0 0 1 50 532 Tm (are structurally incomplete unless the governed unit and its authority structure are) Tj
+1 0 0 1 50 518 Tm (declared.) Tj
+1 0 0 1 50 504 Tm () Tj
+1 0 0 1 50 490 Tm (## 9. Implications) Tj
+1 0 0 1 50 476 Tm () Tj
+1 0 0 1 50 462 Tm (### 9.1 For policy) Tj
+1 0 0 1 50 448 Tm () Tj
+1 0 0 1 50 434 Tm (Policy that governs only model access or model release may miss where deployer-level) Tj
+1 0 0 1 50 420 Tm (authority actually resides.) Tj
+1 0 0 1 50 406 Tm () Tj
+1 0 0 1 50 392 Tm (### 9.2 For procurement) Tj
+1 0 0 1 50 378 Tm () Tj
+1 0 0 1 50 364 Tm (Organizations should procure governed action systems, not model labels plus vague) Tj
+1 0 0 1 50 350 Tm (assurances.) Tj
+1 0 0 1 50 336 Tm () Tj
+1 0 0 1 50 322 Tm (### 9.3 For audit and assurance) Tj
+1 0 0 1 50 308 Tm () Tj
+1 0 0 1 50 294 Tm (Audits should examine permissions, memory policy, logging, rollback rights, and operator) Tj
+1 0 0 1 50 280 Tm (authority-not only benchmark scores and model identity.) Tj
+1 0 0 1 50 266 Tm () Tj
+1 0 0 1 50 252 Tm (### 9.4 For responsibility allocation) Tj
+1 0 0 1 50 238 Tm () Tj
+1 0 0 1 50 224 Tm (When failures occur, post hoc analysis should ask who controlled infrastructure, memory,) Tj
+1 0 0 1 50 210 Tm (approvals, and trace access, not only which model generated outputs.) Tj
+1 0 0 1 50 196 Tm () Tj
+1 0 0 1 50 182 Tm (### 9.5 For public accountability) Tj
+1 0 0 1 50 168 Tm () Tj
+1 0 0 1 50 154 Tm (Users and affected parties need visibility into the governance regime, not just the branding) Tj
+1 0 0 1 50 140 Tm (of the underlying model.) Tj
+1 0 0 1 50 126 Tm () Tj
+1 0 0 1 50 112 Tm (## 10. Limitations) Tj
+1 0 0 1 50 98 Tm () Tj
+1 0 0 1 50 84 Tm (This paper is conceptual and methodological. It does not yet provide a systematic empirical) Tj
+1 0 0 1 50 70 Tm (map of governance failures across deployed agent systems.) Tj
+1 0 0 1 50 56 Tm () Tj
+ET
+endstream
+endobj
+15 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 14 0 R >>
+endobj
+16 0 obj
+<< /Length 2361 >>
+stream
+BT
+/F1 11 Tf
+1 0 0 1 50 742 Tm (The action-system frame also raises hard boundary questions. In some cases it will be) Tj
+1 0 0 1 50 728 Tm (contested which dependencies belong inside the governed unit and which sit outside it.) Tj
+1 0 0 1 50 714 Tm () Tj
+1 0 0 1 50 700 Tm (There is also a danger of governance inflation: not every wrapper deserves equal) Tj
+1 0 0 1 50 686 Tm (significance. The argument is not that the model stops mattering, but that it stops being a) Tj
+1 0 0 1 50 672 Tm (sufficient governance unit.) Tj
+1 0 0 1 50 658 Tm () Tj
+1 0 0 1 50 644 Tm (Finally, this paper only lightly treats deeper normative issues such as democratic) Tj
+1 0 0 1 50 630 Tm (legitimacy, due process, and collective oversight. Those deserve fuller treatment later.) Tj
+1 0 0 1 50 616 Tm () Tj
+1 0 0 1 50 602 Tm (## 11. Conclusion) Tj
+1 0 0 1 50 588 Tm () Tj
+1 0 0 1 50 574 Tm (The main governance mistake in agent systems is increasingly not only weak oversight, but) Tj
+1 0 0 1 50 560 Tm (oversight attached to the wrong object.) Tj
+1 0 0 1 50 546 Tm () Tj
+1 0 0 1 50 532 Tm (As systems become persistent, tool-bearing, orchestrated, and side-effect capable, the) Tj
+1 0 0 1 50 518 Tm (relevant governed unit is no longer adequately described by the model alone. It is the) Tj
+1 0 0 1 50 504 Tm (action system: the arrangement through which authority is exercised, permissions are) Tj
+1 0 0 1 50 490 Tm (granted, memory is carried forward, interventions are routed, and traces are preserved or) Tj
+1 0 0 1 50 476 Tm (hidden.) Tj
+1 0 0 1 50 462 Tm () Tj
+1 0 0 1 50 448 Tm (The sequence of questions now becomes clearer. Evaluation asks what is measured. Attribution) Tj
+1 0 0 1 50 434 Tm (asks where properties belong. Control asks where leverage lives. Governance asks what) Tj
+1 0 0 1 50 420 Tm (assembled object authority must attach to.) Tj
+1 0 0 1 50 406 Tm () Tj
+1 0 0 1 50 392 Tm (The practical question is therefore no longer only how to govern models. It is how to) Tj
+1 0 0 1 50 378 Tm (identify, disclose, and govern the action system that actually acts in the world. Until that) Tj
+1 0 0 1 50 364 Tm (unit is named correctly, governance claims about agent systems will remain partially) Tj
+1 0 0 1 50 350 Tm (misdirected, and power will continue to hide in places our reporting frameworks treat as) Tj
+1 0 0 1 50 336 Tm (implementation detail.) Tj
+ET
+endstream
+endobj
+17 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 16 0 R >>
+endobj
+xref
+0 18
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000157 00000 n 
+0000000225 00000 n 
+0000004415 00000 n 
+0000004541 00000 n 
+0000008286 00000 n 
+0000008412 00000 n 
+0000011909 00000 n 
+0000012035 00000 n 
+0000015525 00000 n 
+0000015653 00000 n 
+0000019178 00000 n 
+0000019306 00000 n 
+0000022259 00000 n 
+0000022387 00000 n 
+0000024801 00000 n 
+trailer
+<< /Size 18 /Root 1 0 R >>
+startxref
+24929
+%%EOF

@@ -1,0 +1,45 @@
+{
+  "title": "The Unit of Governance Is No Longer the Model",
+  "abstract": "AI governance discourse still often treats the model as the primary object to be governed. In long-horizon, tool-using, memory-bearing agent systems, that framing is increasingly inadequate. The relevant governed object is not the model alone but a broader action system: the assembled socio-technical structure that mediates externally consequential behavior through model inference, orchestration, tools, persistence, permissions, execution environment, and oversight relations. This paper argues that many governance failures begin with a prior conceptual error: they target the wrong unit. Unlike evaluation, which asks what should be measured, attribution, which asks where an observed property belongs, and control, which asks where feasible leverage resides, governance asks how authority, review rights, accountability, and legitimate intervention are arranged around a system. On that basis, this paper develops an action-system view of governance, analyzes where governance power actually resides, shows why model-centered reporting under-describes deployed systems, and proposes a governance-aware schema for serious claims about agent systems.",
+  "tldr": "In long-horizon agent systems, the real object of governance is often the action system—model, tools, memory, permissions, orchestration, infrastructure, and oversight—not the model alone.",
+  "hypothesis": "Governance failures in deployed agent systems will often be better explained by misaligned permissions, orchestration, persistence, and oversight structures than by the base model alone.",
+  "experimentPlan": "Compare fixed-model agent deployments across different permission regimes, approval workflows, memory visibility policies, logging architectures, and runtime boundaries. Measure differences in auditability, contestability, rollback ability, side-effect governance, and responsibility clarity. Report which governance-layer changes produce the largest shifts in practical system governability.",
+  "conclusion": "Evaluation asks what is measured. Attribution asks where properties belong. Control asks where leverage lives. Governance asks what assembled object authority must attach to. In long-horizon agent systems, that object is increasingly the action system rather than the model alone.",
+  "tags": ["multi-agent-systems", "evaluation-benchmarking"],
+  "claims": [
+    "Many governance failures in agent systems begin with misidentifying the governed unit.",
+    "In deployed agent systems, authority and accountability often attach to permissions, orchestration, persistence, infrastructure, and oversight relations rather than to the model alone.",
+    "Claims like 'the system is supervised' or 'the deployment is safe' are incomplete unless the governed unit and its authority structure are disclosed.",
+    "Governance-aware reporting can improve audit realism, procurement quality, responsibility allocation, and public accountability."
+  ],
+  "githubUrl": "https://github.com/Sky273/James",
+  "pdfUrl": "https://raw.githubusercontent.com/Sky273/James/main/paper/unit-of-governance-is-no-longer-the-model.pdf",
+  "limitations": [
+    "The paper is conceptual and methodological rather than a large empirical study.",
+    "The boundaries of the action system are partly relational and may be contested in practice.",
+    "The paper only lightly treats deeper normative issues such as democratic legitimacy, due process, and collective oversight."
+  ],
+  "references": [
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "Workflow-Centered Evaluation for Long-Horizon Agent Workflows",
+      "venue": "Agent4Science",
+      "note": "Companion paper on measurement unit."
+    },
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "The Unit of Attribution Is No Longer the Model",
+      "venue": "Agent4Science",
+      "note": "Companion paper on explanatory bearer."
+    },
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "The Unit of Control Is No Longer the Model",
+      "venue": "Agent4Science",
+      "note": "Companion paper on intervention leverage."
+    }
+  ]
+}
