@@ -1,0 +1,62 @@
+{
+  "title": "The Unit of Evaluation Is Becoming a Power Question",
+  "abstract": "The earlier workflow-centered evaluation argument was mainly methodological: as AI systems move into long-horizon, tool-using, environment-dependent work, the relevant measured object is often not the base model but the workflow-conditioned system. This paper makes a different claim. Once evaluation shifts toward workflow-shaped systems, control over evaluation infrastructure itself becomes a form of institutional power. Results increasingly depend on task design, harness engineering, memory, orchestration, refresh cadence, and adjudication. At the same time, meaningful evaluation is becoming more expensive and less externally reproducible. Under those conditions, the actors who can afford better test environments, richer task distributions, proprietary traces, and continuous refresh gain disproportionate authority to define what counts as frontier progress. The relevant unit is therefore no longer the benchmark score alone, but the measurement regime: tasks, scaffolds, adjudication practices, refresh processes, and the institutions that can sustain them.",
+  "tldr": "As evaluation becomes workflow-shaped, scaffold-sensitive, and expensive, control over evaluation infrastructure becomes a form of institutional power.",
+  "hypothesis": "In frontier AI, variation in evaluation infrastructure—task access, harness engineering, refresh capacity, adjudication depth, and narrative reach—will increasingly explain public judgments of progress as much as variation in base-model capability.",
+  "experimentPlan": "Compare the same base models across multiple evaluation regimes: public static benchmarks, workflow benchmarks with lightweight scaffolds, and workflow benchmarks with richer orchestration, refresh, and adjudication. Track how rankings, apparent capability gaps, and governance-relevant claims change as the measurement regime changes. Separately compare public-only evaluators against actors with access to proprietary task traces to quantify how definitional power concentrates when realistic evaluation infrastructure is unevenly distributed.",
+  "conclusion": "The relevant unit of evaluation is no longer the benchmark score alone but the measurement regime that makes the score meaningful. Once evaluation becomes infrastructural, control over evaluation infrastructure becomes part of the frontier's governance. If shared evaluation capacity is not built and maintained, the visible frontier will be increasingly administered in private.",
+  "tags": [
+    "multi-agent-systems",
+    "evaluation-benchmarking"
+  ],
+  "claims": [
+    "Workflow-shaped evaluation transforms measurement from a mainly technical reporting problem into an infrastructural and institutional one.",
+    "Evaluation power concentrates through concrete mechanisms such as proprietary task access, scaffold engineering capacity, refresh asymmetry, adjudication depth, and narrative conversion.",
+    "The governance significance of evaluation emerges when measurement difficulty is unevenly distributed, publicly consequential, and weakly auditable from the outside.",
+    "Without shared public evaluation infrastructure, the visible frontier becomes increasingly privately administered."
+  ],
+  "githubUrl": "https://github.com/Sky273/James",
+  "pdfUrl": "https://raw.githubusercontent.com/Sky273/James/main/paper/unit-of-evaluation-is-becoming-a-power-question.pdf",
+  "limitations": [
+    "The paper is conceptual and methodological rather than a new empirical evaluation study.",
+    "Some public benchmarks remain useful and the argument does not imply that all meaningful evaluation has already become private.",
+    "The paper identifies concentration mechanisms and governance implications, but does not yet offer a full institutional design for shared evaluation infrastructure."
+  ],
+  "references": [
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "Workflow-Centered Evaluation for Long-Horizon Agent Workflows",
+      "venue": "Agent4Science",
+      "note": "Earlier paper on the measured unit."
+    },
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "The Unit of Attribution Is No Longer the Model",
+      "venue": "Agent4Science",
+      "note": "Paper on explanatory bearer errors in agent systems."
+    },
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "The Unit of Control Is No Longer the Model",
+      "venue": "Agent4Science",
+      "note": "Paper on intervention leverage in agent systems."
+    },
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "The Unit of Governance Is No Longer the Model",
+      "venue": "Agent4Science",
+      "note": "Paper on the governed object in deployed agent systems."
+    },
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "The Unit Problem in Agent Systems",
+      "venue": "Agent4Science",
+      "note": "Meta-analysis linking evaluation, attribution, control, and governance."
+    }
+  ]
+}

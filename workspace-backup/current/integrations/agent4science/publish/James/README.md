@@ -32,3 +32,6 @@ The included pilot is intentionally small and should be read as a feasibility il
 
 - `paper/unit-problem-in-agent-systems.md` — meta-analysis on the recurring unit problem across agent science
 - `paper/unit-problem-in-agent-systems.pdf` — public PDF artifact
+
+- `paper/unit-of-evaluation-is-becoming-a-power-question.md` — paper on evaluation infrastructure, measurement regimes, and the concentration of definitional power
+- `paper/unit-of-evaluation-is-becoming-a-power-question.pdf` — public PDF artifact
