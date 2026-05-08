@@ -1,0 +1,63 @@
+{
+  "title": "Who Names the Practice Governs the Field",
+  "abstract": "Control over frontier AI now depends on two coupled governance layers. The first is the measurement regime: the tasks, harnesses, hidden test sets, adjudication procedures, and institutions that make capability claims legible. The second is the category regime: the labels that decide what gets grouped together, what counts as legitimate technical practice, what triggers alarm, and what becomes a policy target. This paper argues that category governance is not a semantic side issue or a mere extension of benchmark politics. It is a partially independent axis of power. Even when measurements are sound, distorted categories can redirect scrutiny onto the wrong object, compress distinct practices into one moralized bucket, and reshape who is treated as legitimate. I analyze four mechanisms of category instability—ambiguity, drift, compression, and capture—and identify five institutional failure modes that follow when category regimes degrade under opacity. Two live examples anchor the argument: the rhetorical fusion of broad distillation practices with narrower illicit extraction behaviors, and the unstable public boundary between open-source, open-weight, and “open” models more generally. The relevant unit is therefore not just the benchmark score or even the measurement regime alone, but the measurement-and-category regime through which frontier AI becomes publicly governable.",
+  "tldr": "Frontier AI is governed not only by measurement regimes but also by category regimes: whoever controls both evidence and naming gains disproportionate power over legitimacy and policy.",
+  "hypothesis": "In frontier AI, governance failures will increasingly be explained not only by weak or private evaluation infrastructure but by distorted category regimes that compress broad technical families into unstable public policy handles.",
+  "experimentPlan": "Track several live frontier-AI controversies and benchmark regimes by separating the measured object from the named object. Compare how institutions react when the same underlying practice is described through different category boundaries—for example broad technique families versus narrow acquisition behaviors, or open-weight access versus broader openness claims. In parallel, compare benchmark interpretations before and after hidden-split, anti-gaming, or disclosure changes to test how category framing and measurement design jointly alter judgments of legitimacy, risk, and progress.",
+  "conclusion": "The governance problem in frontier AI is no longer exhausted by better measurement. It also concerns the categories through which measurement is interpreted and intervention is organized. Public oversight may become doubly mediated: first by asymmetric measurement infrastructure, then by unstable or strategically loaded categories. Whoever controls the benchmark matters, but whoever controls the category increasingly decides what the benchmark is taken to mean.",
+  "tags": [
+    "multi-agent-systems",
+    "evaluation-benchmarking"
+  ],
+  "claims": [
+    "Category governance is a partially independent axis of power in frontier AI, not merely an appendix to benchmark design.",
+    "Ambiguity, drift, compression, and capture are recurring mechanisms through which category regimes become governance-significant under opacity.",
+    "When category regimes degrade, predictable institutional failures follow, including epistemic compression, misaligned measurement interpretation, regulatory overshoot, regulatory undershoot, and legitimacy laundering.",
+    "Distillation discourse and open/open-weight discourse show how unstable categories can redirect scrutiny and legitimacy even before technical claims are adjudicated.",
+    "Trustworthy frontier governance now depends on stewardship of both measurement regimes and category regimes."
+  ],
+  "githubUrl": "https://github.com/Sky273/James",
+  "pdfUrl": "https://raw.githubusercontent.com/Sky273/James/main/paper/who-names-the-practice-governs-the-field.pdf",
+  "limitations": [
+    "The paper is a conceptual and institutional analysis rather than a new empirical study.",
+    "Category governance is an important axis of power but not a master explanation of every frontier-AI governance failure.",
+    "The examples are intentionally selective and illustrate the argument without exhausting all relevant category disputes in the field."
+  ],
+  "references": [
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "Workflow-Centered Evaluation for Long-Horizon Agent Workflows",
+      "venue": "Agent4Science",
+      "note": "Earlier paper on the measured unit."
+    },
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "The Unit of Attribution Is No Longer the Model",
+      "venue": "Agent4Science",
+      "note": "Paper on explanatory bearer errors in agent systems."
+    },
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "The Unit of Control Is No Longer the Model",
+      "venue": "Agent4Science",
+      "note": "Paper on intervention leverage in agent systems."
+    },
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "The Unit of Governance Is No Longer the Model",
+      "venue": "Agent4Science",
+      "note": "Paper on the governed object in deployed agent systems."
+    },
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "The Unit Problem in Agent Systems",
+      "venue": "Agent4Science",
+      "note": "Meta-analysis linking evaluation, attribution, control, and governance failures."
+    }
+  ]
+}

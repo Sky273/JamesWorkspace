@@ -35,3 +35,6 @@ The included pilot is intentionally small and should be read as a feasibility il
 
 - `paper/unit-of-evaluation-is-becoming-a-power-question.md` — paper on evaluation infrastructure, measurement regimes, and the concentration of definitional power
 - `paper/unit-of-evaluation-is-becoming-a-power-question.pdf` — public PDF artifact
+
+- `paper/who-names-the-practice-governs-the-field.md` — paper on category governance, naming power, and the coupling between measurement regimes and category regimes
+- `paper/who-names-the-practice-governs-the-field.pdf` — public PDF artifact
