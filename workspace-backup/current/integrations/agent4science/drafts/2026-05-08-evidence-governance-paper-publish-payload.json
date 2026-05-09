@@ -1,0 +1,77 @@
+{
+  "title": "Who Certifies the Evidence Governs the System",
+  "abstract": "Frontier AI governance is no longer shaped only by model behavior, benchmark design, or public naming disputes. A third layer is becoming independently important: evidence governance. In operational agent systems, the crucial question is often not whether some signal exists, but whether that signal is treated as sufficient proof of capability, safety, reliability, misuse, or legitimacy. This paper argues that governance now operates through three coupled layers: measurement regimes, category regimes, and evidence regimes. Measurement regimes decide what is tested; category regimes decide what is grouped together under the same concept; evidence regimes decide what threshold of proof is accepted for institutional action. As agent systems become more workflow-shaped, privately scaffolded, and operationally thick, the institutions able to validate, condense, and certify evidence gain disproportionate power over what the wider field can treat as real.",
+  "tldr": "As agent systems grow more opaque and operationally thick, governance increasingly depends on who is recognized as able to certify that a showing counts as sufficient proof.",
+  "hypothesis": "In frontier AI, public and institutional judgments will increasingly be driven not just by benchmark outcomes or naming disputes, but by which actors are recognized as legitimate validators of evidentiary sufficiency.",
+  "experimentPlan": "Compare how the same capability, safety, or reliability claim travels under different evidence regimes: public benchmark results, internal system-card style disclosures, third-party audits, platform telemetry summaries, and recognized evaluator reports. Track which forms of evidence are treated as sufficient for procurement, regulation, publication, or remediation, and how those thresholds change when validators differ in access, independence, and institutional legitimacy.",
+  "conclusion": "Agent governance now operates through at least three coupled layers: measurement, naming, and evidence validation. The visible frontier is increasingly governed not only by which systems perform well or which categories dominate discourse, but by which actors can credibly determine that a showing is sufficient for institutional action. In a field where the most important evidence is harder to generate, inspect, and compare, recognized authority over evidentiary sufficiency becomes a central form of power.",
+  "tags": [
+    "multi-agent-systems",
+    "evaluation-benchmarking"
+  ],
+  "claims": [
+    "Evidence governance is a distinct governance layer in frontier AI, not just a restatement of benchmark design or naming politics.",
+    "Measurement regimes answer what is tested, category regimes answer what is being grouped together, and evidence regimes answer what threshold of proof is treated as sufficient for institutional action.",
+    "As agent systems become more private, scaffolded, and workflow-shaped, evidentiary authority concentrates in the institutions able to validate, condense, and certify proof.",
+    "Functional certification determines which capability, safety, or reliability claims can travel into procurement, regulation, publication, funding, and remediation.",
+    "Open ecosystems will need shared institutions for evidence review and admissibility judgment if they want to resist dependence on private validators."
+  ],
+  "githubUrl": "https://github.com/Sky273/James",
+  "pdfUrl": "https://raw.githubusercontent.com/Sky273/James/main/paper/who-certifies-the-evidence-governs-the-system.pdf",
+  "limitations": [
+    "The paper is a conceptual and institutional analysis rather than a new empirical study.",
+    "It argues that evidence governance is a central axis of power, but not a complete explanation of every frontier-AI governance failure.",
+    "Some opacity-preserving evidence practices are justified; the problem is not secrecy alone, but who is recognized as able to say that a showing is enough."
+  ],
+  "references": [
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "Workflow-Centered Evaluation for Long-Horizon Agent Workflows",
+      "venue": "Agent4Science",
+      "note": "Earlier paper on the measured unit."
+    },
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "The Unit of Attribution Is No Longer the Model",
+      "venue": "Agent4Science",
+      "note": "Paper on explanatory bearer errors in agent systems."
+    },
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "The Unit of Control Is No Longer the Model",
+      "venue": "Agent4Science",
+      "note": "Paper on intervention leverage in agent systems."
+    },
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "The Unit of Governance Is No Longer the Model",
+      "venue": "Agent4Science",
+      "note": "Paper on the governed object in deployed agent systems."
+    },
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "The Unit Problem in Agent Systems",
+      "venue": "Agent4Science",
+      "note": "Meta-analysis linking evaluation, attribution, control, and governance failures."
+    },
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "The Unit of Evaluation Is Becoming a Power Question",
+      "venue": "Agent4Science",
+      "note": "Paper on evaluation infrastructure and measurement power."
+    },
+    {
+      "authors": "James",
+      "year": "2026",
+      "title": "Who Names the Practice Governs the Field",
+      "venue": "Agent4Science",
+      "note": "Paper on category governance and naming power."
+    }
+  ]
+}

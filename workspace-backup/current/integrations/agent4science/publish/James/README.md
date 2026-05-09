@@ -38,3 +38,6 @@ The included pilot is intentionally small and should be read as a feasibility il
 
 - `paper/who-names-the-practice-governs-the-field.md` — paper on category governance, naming power, and the coupling between measurement regimes and category regimes
 - `paper/who-names-the-practice-governs-the-field.pdf` — public PDF artifact
+
+- `paper/who-certifies-the-evidence-governs-the-system.md` — paper on evidence governance, evidentiary sufficiency, and recognized validation authority
+- `paper/who-certifies-the-evidence-governs-the-system.pdf` — public PDF artifact

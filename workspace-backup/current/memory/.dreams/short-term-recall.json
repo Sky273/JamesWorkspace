@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-05-07T16:34:55.117Z",
+  "updatedAt": "2026-05-08T21:34:13.633Z",
   "entries": {
     "memory:memory/2026-04-28.md:54:70": {
       "key": "memory:memory/2026-04-28.md:54:70",
@@ -524,20 +524,22 @@
       "endLine": 12,
       "source": "memory",
       "snippet": "- First Agent4Science draft was turned into a short take for the `evaluation-benchmarking` sciencesub with the core thesis that agentic evaluation increasingly measures workflows rather than models alone. Luc explicitly approved posting it as James’s first public point on the platform. - After posting the first take, Luc proposed a more ambitious follow-up on the same theme using an explicit method: initial draft, severe critique, correction, second severe critique, correction. A local research-program draft was created around workflow-centered evaluation as a stronger and more testable position. - The drafting effort then escalated into a full conceptual paper draft, `Workflow-Centered Eval",
-      "recallCount": 3,
+      "recallCount": 4,
       "dailyCount": 0,
       "groundedCount": 0,
-      "totalScore": 1.1749176204204559,
+      "totalScore": 1.4870506405830382,
       "maxScore": 0.417394357919693,
       "firstRecalledAt": "2026-05-02T20:10:47.905Z",
-      "lastRecalledAt": "2026-05-02T20:31:41.956Z",
+      "lastRecalledAt": "2026-05-08T21:00:47.770Z",
       "queryHashes": [
         "908af756c25d",
         "b9d98c616762",
-        "477407909b1c"
+        "477407909b1c",
+        "18f98ae97687"
       ],
       "recallDays": [
-        "2026-05-02"
+        "2026-05-02",
+        "2026-05-08"
       ],
       "conceptTags": [
         "evaluation-benchmarking",
@@ -650,19 +652,21 @@
       "endLine": 27,
       "source": "memory",
       "snippet": "- First Agent4Science draft was turned into a short take for the `evaluation-benchmarking` sciencesub with the core thesis that agentic evaluation increasingly measures workflows rather than models alone. Luc explicitly approved posting it as James’s first public point on the platform. - After posting the first take, Luc proposed a more ambitious follow-up on the same theme using an explicit method: initial draft, severe critique, correction, second severe critique, correction. A local research-program draft was created around workflow-centered evaluation as a stronger and more testable position. - The drafting effort then escalated into a full conceptual paper draft, `Workflow-Centered Eval",
-      "recallCount": 2,
+      "recallCount": 3,
       "dailyCount": 0,
       "groundedCount": 0,
-      "totalScore": 0.7575232625007629,
+      "totalScore": 1.0696562826633453,
       "maxScore": 0.3864668935537338,
       "firstRecalledAt": "2026-05-02T20:17:06.700Z",
-      "lastRecalledAt": "2026-05-02T20:31:41.956Z",
+      "lastRecalledAt": "2026-05-08T21:00:47.770Z",
       "queryHashes": [
         "b9d98c616762",
-        "477407909b1c"
+        "477407909b1c",
+        "18f98ae97687"
       ],
       "recallDays": [
-        "2026-05-02"
+        "2026-05-02",
+        "2026-05-08"
       ],
       "conceptTags": [
         "evaluation-benchmarking",
@@ -713,19 +717,21 @@
       "endLine": 10,
       "source": "memory",
       "snippet": "- Early hardening on 2026-05-02 found two real Flamebird issues: `openai/gpt-5.4` was incompatible with its current OpenAI client call shape (`max_tokens` rejected), and sciencesub auto-join still occurred despite a conservative intent. Local fix applied: switched runtime model back to `openai/gpt-4.1`, patched Flamebird to skip initial sciencesub auto-join when joining is disabled, and short-circuited proactive discovery when all proactive actions are disabled. - Agent4Science memberships were then cleaned to a deliberate 5-sciencesub set: `alignment`, `evaluation-benchmarking`, `large-language-models`, `mechanistic-interpretability`, `multi-agent-systems`. Spurious extra joins (`language-m",
-      "recallCount": 2,
+      "recallCount": 3,
       "dailyCount": 0,
       "groundedCount": 0,
-      "totalScore": 0.7777271836996078,
+      "totalScore": 1.1279700964689254,
       "maxScore": 0.38914391994476316,
       "firstRecalledAt": "2026-05-02T20:31:41.956Z",
-      "lastRecalledAt": "2026-05-02T21:32:06.256Z",
+      "lastRecalledAt": "2026-05-08T21:00:47.770Z",
       "queryHashes": [
         "477407909b1c",
-        "df7750554248"
+        "df7750554248",
+        "18f98ae97687"
       ],
       "recallDays": [
-        "2026-05-02"
+        "2026-05-02",
+        "2026-05-08"
       ],
       "conceptTags": [
         "gpt",
@@ -745,19 +751,21 @@
       "endLine": 25,
       "source": "memory",
       "snippet": "- Early hardening on 2026-05-02 found two real Flamebird issues: `openai/gpt-5.4` was incompatible with its current OpenAI client call shape (`max_tokens` rejected), and sciencesub auto-join still occurred despite a conservative intent. Local fix applied: switched runtime model back to `openai/gpt-4.1`, patched Flamebird to skip initial sciencesub auto-join when joining is disabled, and short-circuited proactive discovery when all proactive actions are disabled. - Agent4Science memberships were then cleaned to a deliberate 5-sciencesub set: `alignment`, `evaluation-benchmarking`, `large-language-models`, `mechanistic-interpretability`, `multi-agent-systems`. Spurious extra joins (`language-m",
-      "recallCount": 2,
+      "recallCount": 3,
       "dailyCount": 0,
       "groundedCount": 0,
-      "totalScore": 0.7777271836996078,
+      "totalScore": 1.1279700964689254,
       "maxScore": 0.38914391994476316,
       "firstRecalledAt": "2026-05-02T20:31:41.956Z",
-      "lastRecalledAt": "2026-05-02T21:32:06.256Z",
+      "lastRecalledAt": "2026-05-08T21:00:47.770Z",
       "queryHashes": [
         "477407909b1c",
-        "df7750554248"
+        "df7750554248",
+        "18f98ae97687"
       ],
       "recallDays": [
-        "2026-05-02"
+        "2026-05-02",
+        "2026-05-08"
       ],
       "conceptTags": [
         "gpt",
@@ -911,13 +919,13 @@
       "endLine": 36,
       "source": "memory",
       "snippet": "- Luc provided a GitHub repository (`https://github.com/Sky273/James`) for James’s public paper artifacts and explicitly asked that the access token be remembered. The token was stored locally in a dedicated secure file rather than in narrative memory. The repo was populated with the full paper, a generated PDF, and pilot artifacts, then pushed publicly. - The full workflow-evaluation paper was published on Agent4Science as a paper (not just a take) on 2026-05-02, using the GitHub repo as `githubUrl` and the public raw PDF URL as `pdfUrl`. Agent4Science paper id: `paper_mooslqgzr88b7e5t`. - Luc explicitly confirmed a new autonomy rule for James’s research/publication work: James may now choo",
-      "recallCount": 15,
+      "recallCount": 16,
       "dailyCount": 0,
       "groundedCount": 0,
-      "totalScore": 5.947273615002632,
+      "totalScore": 6.254581299424172,
       "maxScore": 0.4689860552549362,
       "firstRecalledAt": "2026-05-02T21:32:06.256Z",
-      "lastRecalledAt": "2026-05-07T16:34:55.117Z",
+      "lastRecalledAt": "2026-05-08T21:00:47.770Z",
       "queryHashes": [
         "df7750554248",
         "14f4400f456f",
@@ -933,14 +941,16 @@
         "86daf8b36cb0",
         "11d4d60e2b7a",
         "54a3af5d8bd0",
-        "5d0065804a73"
+        "5d0065804a73",
+        "18f98ae97687"
       ],
       "recallDays": [
         "2026-05-02",
         "2026-05-03",
         "2026-05-04",
         "2026-05-06",
-        "2026-05-07"
+        "2026-05-07",
+        "2026-05-08"
       ],
       "conceptTags": [
         "github.com/sky273/james",
@@ -1220,13 +1230,13 @@
       "endLine": 11,
       "source": "memory",
       "snippet": "- Early 2026-05-03 reflection state: no new conceptual breakthrough yet; the existing trilogy framing (evaluation, attribution, control) mainly deepened rather than changed. - Likely next research branch if it matures: governance / real locations of power, or a meta-synthesis linking measurement, attribution, control, and governance failures. - 09:30 reflection window. Sampled Interconnects AI, Simon Willison, and Blog of the APA selectively. Durable takeaway: the strongest current reinforcement remains structural rather than sensational. Interconnects again supports a stable James view that benchmark narratives increasingly compress away the real determinants of deployed performance, especi",
-      "recallCount": 7,
+      "recallCount": 8,
       "dailyCount": 0,
       "groundedCount": 0,
-      "totalScore": 2.697786274552345,
+      "totalScore": 3.02959072291851,
       "maxScore": 0.41196461915969845,
       "firstRecalledAt": "2026-05-03T12:45:40.598Z",
-      "lastRecalledAt": "2026-05-07T13:20:24.591Z",
+      "lastRecalledAt": "2026-05-08T09:33:55.664Z",
       "queryHashes": [
         "bd6996cfe42d",
         "f8eb9de5631b",
@@ -1234,12 +1244,14 @@
         "5864dbcd6f1a",
         "e310c5c718f5",
         "cfa8bd96353f",
-        "54a3af5d8bd0"
+        "54a3af5d8bd0",
+        "105e0d2a03a4"
       ],
       "recallDays": [
         "2026-05-03",
         "2026-05-04",
-        "2026-05-07"
+        "2026-05-07",
+        "2026-05-08"
       ],
       "conceptTags": [
         "meta-synthesis",
@@ -1259,24 +1271,26 @@
       "endLine": 23,
       "source": "memory",
       "snippet": "- Early 2026-05-03 reflection state: no new conceptual breakthrough yet; the existing trilogy framing (evaluation, attribution, control) mainly deepened rather than changed. - Likely next research branch if it matures: governance / real locations of power, or a meta-synthesis linking measurement, attribution, control, and governance failures. - 09:30 reflection window. Sampled Interconnects AI, Simon Willison, and Blog of the APA selectively. Durable takeaway: the strongest current reinforcement remains structural rather than sensational. Interconnects again supports a stable James view that benchmark narratives increasingly compress away the real determinants of deployed performance, especi",
-      "recallCount": 5,
+      "recallCount": 6,
       "dailyCount": 0,
       "groundedCount": 0,
-      "totalScore": 1.9319621920585632,
+      "totalScore": 2.2637666404247283,
       "maxScore": 0.41196461915969845,
       "firstRecalledAt": "2026-05-03T20:09:23.269Z",
-      "lastRecalledAt": "2026-05-07T13:20:24.591Z",
+      "lastRecalledAt": "2026-05-08T09:33:55.664Z",
       "queryHashes": [
         "f8eb9de5631b",
         "5864dbcd6f1a",
         "e310c5c718f5",
         "cfa8bd96353f",
-        "54a3af5d8bd0"
+        "54a3af5d8bd0",
+        "105e0d2a03a4"
       ],
       "recallDays": [
         "2026-05-03",
         "2026-05-04",
-        "2026-05-07"
+        "2026-05-07",
+        "2026-05-08"
       ],
       "conceptTags": [
         "meta-synthesis",
@@ -1329,21 +1343,23 @@
       "endLine": 7,
       "source": "memory",
       "snippet": "# 2026-05-02 - Reflection discipline held on 2026-05-02: sampled small source slices in scheduled windows and chose not to retain anything when it did not feel genuinely durable. Reinforced the rule that absence of signal is acceptable and noise should not be promoted into memory. - Moltbook heartbeat checks remained mostly stable, but around 2026-05-02 14:34 UTC both `/api/v1/home` and `/api/v1/agents/dm/requests` returned HTTP 500 again. Treated as an operational outage, not a semantic/account event. - Luc decided to abandon Moltbook because onboarding now effectively pushes through x.com, which is a poor fit for him. Decision: prefer Agent4Science instead, as it is better aligned with Ja",
-      "recallCount": 3,
+      "recallCount": 4,
       "dailyCount": 0,
       "groundedCount": 0,
-      "totalScore": 1.208537110686302,
+      "totalScore": 1.534301909804344,
       "maxScore": 0.44123600423336024,
       "firstRecalledAt": "2026-05-04T11:45:14.974Z",
-      "lastRecalledAt": "2026-05-07T13:13:49.360Z",
+      "lastRecalledAt": "2026-05-08T09:33:55.664Z",
       "queryHashes": [
         "7d18ca4a2d6f",
         "2d9dfd68208d",
-        "86daf8b36cb0"
+        "86daf8b36cb0",
+        "105e0d2a03a4"
       ],
       "recallDays": [
         "2026-05-04",
-        "2026-05-07"
+        "2026-05-07",
+        "2026-05-08"
       ],
       "conceptTags": [
         "api/v1/home",
@@ -1693,20 +1709,23 @@
       "endLine": 5,
       "source": "memory",
       "snippet": "# 2026-05-07 - Early morning operational note: Moltbook showed a partial service degradation on Thursday, 2026-05-07 around 06:34-06:35 Europe/Paris. The `/api/v1/home` endpoint returned repeated HTTP 500 errors while the DM-requests endpoint recovered on retry. This looks like a real but localized platform instability rather than a James-side issue. - Reflection windows at `2026-05-07@06:30` and `2026-05-07@08:30` were completed quietly without a new durable research line worth surfacing yet. Post-publication state remains stable after the evaluation-as-power paper. - 09:30 reflection window: A selective pass over Simon Willison, Interconnects, and Hugging Face reinforced a durable converg",
-      "recallCount": 3,
+      "recallCount": 5,
       "dailyCount": 0,
       "groundedCount": 0,
-      "totalScore": 1.1084133237600327,
-      "maxScore": 0.4066327631473541,
+      "totalScore": 1.8669149756431578,
+      "maxScore": 0.41592363417148587,
       "firstRecalledAt": "2026-05-07T07:21:37.147Z",
-      "lastRecalledAt": "2026-05-07T13:17:09.247Z",
+      "lastRecalledAt": "2026-05-08T12:58:23.351Z",
       "queryHashes": [
         "83a9a812d6e0",
         "86daf8b36cb0",
-        "11d4d60e2b7a"
+        "11d4d60e2b7a",
+        "105e0d2a03a4",
+        "096d9ee22a4e"
       ],
       "recallDays": [
-        "2026-05-07"
+        "2026-05-07",
+        "2026-05-08"
       ],
       "conceptTags": [
         "34-06",
@@ -1790,18 +1809,23 @@
       "endLine": 12,
       "source": "memory",
       "snippet": "- Later on 2026-05-07, Luc and James explicitly reframed the publication problem more soberly: the existing paper output has still depended too much on Luc's directive push, so autonomous publication capacity should now be tested rather than assumed. New operating contract: run a real 3-day autonomy test with a baseline target of at least 1 publication per day, treat 2 as opportunistic when a shorter format is legitimate, maintain an explicit 3-item backlog (active / next / speculative), and treat Luc primarily as auditor / counter-power rather than daily driver. The next active autonomous paper line is the evidence-governance question: who gets to certify what counts as valid proof in agent",
-      "recallCount": 1,
+      "recallCount": 5,
       "dailyCount": 0,
       "groundedCount": 0,
-      "totalScore": 0.42172110080718994,
+      "totalScore": 2.043066683411598,
       "maxScore": 0.42172110080718994,
       "firstRecalledAt": "2026-05-07T16:34:55.117Z",
-      "lastRecalledAt": "2026-05-07T16:34:55.117Z",
+      "lastRecalledAt": "2026-05-08T21:34:13.633Z",
       "queryHashes": [
-        "5d0065804a73"
+        "5d0065804a73",
+        "105e0d2a03a4",
+        "096d9ee22a4e",
+        "02dfdd3d4d90",
+        "95493b0d061f"
       ],
       "recallDays": [
-        "2026-05-07"
+        "2026-05-07",
+        "2026-05-08"
       ],
       "conceptTags": [
         "3-day",
@@ -1843,6 +1867,448 @@
         "52.399z",
         "systems-level",
         "public"
+      ]
+    },
+    "memory:memory/2026-05-08.md:1:5": {
+      "key": "memory:memory/2026-05-08.md:1:5",
+      "path": "memory/2026-05-08.md",
+      "startLine": 1,
+      "endLine": 5,
+      "source": "memory",
+      "snippet": "# 2026-05-08 - 06:30 reflection window: James took the active evidence-governance paper through a severe critique and clarified the real revision burden. The strongest correction was to distinguish three layers more sharply: measurement regimes answer what is tested, category regimes answer what is grouped together, and evidence regimes answer what threshold of proof is accepted for institutional action. The paper needed to stop sounding like a relabeling of secrecy or evaluation scarcity and instead center admissibility, sufficiency, and recognized evidentiary authority. - 08:30 reflection window: James completed a substantial revision of the evidence-governance paper into `integrations/ag",
+      "recallCount": 4,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 1.6485451370477675,
+      "maxScore": 0.44292521178722377,
+      "firstRecalledAt": "2026-05-08T09:33:55.664Z",
+      "lastRecalledAt": "2026-05-08T21:34:13.633Z",
+      "queryHashes": [
+        "105e0d2a03a4",
+        "096d9ee22a4e",
+        "02dfdd3d4d90",
+        "95493b0d061f"
+      ],
+      "recallDays": [
+        "2026-05-08"
+      ],
+      "conceptTags": [
+        "evidence-governance",
+        "integrations/ag",
+        "reflection",
+        "window",
+        "james",
+        "took",
+        "the",
+        "active"
+      ]
+    },
+    "memory:memory/2026-05-07.md:12:13": {
+      "key": "memory:memory/2026-05-07.md:12:13",
+      "path": "memory/2026-05-07.md",
+      "startLine": 12,
+      "endLine": 13,
+      "source": "memory",
+      "snippet": "- Evening progress on 2026-05-07: James converted that next line into a concrete outline artifact rather than leaving it as an intention. New draft-chain entry created: `integrations/agent4science/drafts/2026-05-07-evidence-governance-paper-outline-v1.md`. Provisional title: `Who Certifies the Evidence Governs the System`. Core move: after measurement regimes and category regimes, the next governance layer is evidence certification — who gets to decide that a claim about capability, safety, or reliability has been sufficiently proven. - 20:30 reflection window: a selective pass over Simon Willison, Interconnects, and LessWrong did not produce a new paper line, but it did strengthen the activ",
+      "recallCount": 4,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 1.5693052768707274,
+      "maxScore": 0.40614209771156307,
+      "firstRecalledAt": "2026-05-08T09:33:55.664Z",
+      "lastRecalledAt": "2026-05-08T21:34:13.633Z",
+      "queryHashes": [
+        "105e0d2a03a4",
+        "096d9ee22a4e",
+        "02dfdd3d4d90",
+        "95493b0d061f"
+      ],
+      "recallDays": [
+        "2026-05-08"
+      ],
+      "conceptTags": [
+        "draft-chain",
+        "evening",
+        "progress",
+        "james",
+        "converted",
+        "concrete",
+        "outline",
+        "artifact"
+      ]
+    },
+    "memory:memory/2026-05-07.md:13:15": {
+      "key": "memory:memory/2026-05-07.md:13:15",
+      "path": "memory/2026-05-07.md",
+      "startLine": 13,
+      "endLine": 15,
+      "source": "memory",
+      "snippet": "- 20:30 reflection window: a selective pass over Simon Willison, Interconnects, and LessWrong did not produce a new paper line, but it did strengthen the active one. The most durable signal came from Mozilla's account of using a Claude-powered harness to surface hundreds of Firefox vulnerabilities: the useful lesson is not \"AI found bugs\" but that stronger models only became operationally valuable once embedded in a filtering, steering, and defense-in-depth process that turned raw outputs into trusted findings. That reinforces James's active evidence-governance paper: in serious agentic work, the key institutional question is increasingly not just whether a system emits evidence, but who bui",
+      "recallCount": 2,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.7075354903936386,
+      "maxScore": 0.36101166307926175,
+      "firstRecalledAt": "2026-05-08T09:33:55.664Z",
+      "lastRecalledAt": "2026-05-08T20:55:15.092Z",
+      "queryHashes": [
+        "105e0d2a03a4",
+        "02dfdd3d4d90"
+      ],
+      "recallDays": [
+        "2026-05-08"
+      ],
+      "conceptTags": [
+        "claude-powered",
+        "defense-in-depth",
+        "evidence-governance",
+        "reflection",
+        "window",
+        "selective",
+        "pass",
+        "simon"
+      ]
+    },
+    "memory:memory/2026-05-02.md:14:19": {
+      "key": "memory:memory/2026-05-02.md:14:19",
+      "path": "memory/2026-05-02.md",
+      "startLine": 14,
+      "endLine": 19,
+      "source": "memory",
+      "snippet": "- A further submission-style revision added a denser benchmark/agent bibliography, integrated the citations more sharply into the argument, and incorporated a real miniature empirical pilot (`workflow_eval_pilot.py`) comparing direct vs plan-then-edit workflows on four toy repository-repair tasks with executable tests. Result: both workflows passed 4/4 tasks, while the structured workflow used ~2.79x more tokens, making the pilot useful mainly as a feasibility check and as a negative result against overclaiming workflow superiority on easy tasks. - An ultimate critique/revision pass then improved scientific packaging rather than changing the thesis itself: clearer separation between conceptu",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.3350886106491089,
+      "maxScore": 0.3350886106491089,
+      "firstRecalledAt": "2026-05-08T09:33:55.664Z",
+      "lastRecalledAt": "2026-05-08T09:33:55.664Z",
+      "queryHashes": [
+        "105e0d2a03a4"
+      ],
+      "recallDays": [
+        "2026-05-08"
+      ],
+      "conceptTags": [
+        "submission-style",
+        "benchmark/agent",
+        "workflow-eval-pilot.py",
+        "plan-then-edit",
+        "repository-repair",
+        "4/4",
+        "2.79x",
+        "critique/revision"
+      ]
+    },
+    "memory:memory/2026-05-07.md:5:7": {
+      "key": "memory:memory/2026-05-07.md:5:7",
+      "path": "memory/2026-05-07.md",
+      "startLine": 5,
+      "endLine": 7,
+      "source": "memory",
+      "snippet": "- 09:30 reflection window: A selective pass over Simon Willison, Interconnects, and Hugging Face reinforced a durable convergence for James. First, trustworthy agentic work is drifting away from line-by-line inspection toward tests, accountability boundaries, and selective black-box trust in agent-built subsystems. Second, benchmark governance is getting sharper: Hugging Face's choice to add private ASR test sets specifically to resist benchmaxxing is a concrete example that meaningful evaluation increasingly depends on controlled measurement regimes rather than fully public static test sets. Third, Nathan Lambert's argument about the phrase \"distillation attacks\" clarified that naming itsel",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.32838197350502013,
+      "maxScore": 0.32838197350502013,
+      "firstRecalledAt": "2026-05-08T09:33:55.664Z",
+      "lastRecalledAt": "2026-05-08T09:33:55.664Z",
+      "queryHashes": [
+        "105e0d2a03a4"
+      ],
+      "recallDays": [
+        "2026-05-08"
+      ],
+      "conceptTags": [
+        "line-by-line",
+        "black-box",
+        "agent-built",
+        "reflection",
+        "window",
+        "selective",
+        "pass",
+        "simon"
+      ]
+    },
+    "memory:memory/2026-05-08.md:8:10": {
+      "key": "memory:memory/2026-05-08.md:8:10",
+      "path": "memory/2026-05-08.md",
+      "startLine": 8,
+      "endLine": 10,
+      "source": "memory",
+      "snippet": "- 11:30 reflection window: James pressure-tested the revised evidence-governance paper and produced `integrations/agent4science/drafts/2026-05-08-evidence-governance-paper-severe-critique-v2.md`. The paper now looks conceptually stable; the remaining work is not rescue but sharpening. The main burden for the final pass is to harden consequences, clarify that \"certification\" is functional rather than narrowly bureaucratic, make one validator-recognition example more explicit, and state more concretely what open evidence institutions would need to do. - Operational note around 11:35 Europe/Paris: Moltbook degraded more broadly again. This time both `/api/v1/home` and `/api/v1/agents/dm/request",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.40018172264099117,
+      "maxScore": 0.40018172264099117,
+      "firstRecalledAt": "2026-05-08T12:58:23.351Z",
+      "lastRecalledAt": "2026-05-08T12:58:23.351Z",
+      "queryHashes": [
+        "096d9ee22a4e"
+      ],
+      "recallDays": [
+        "2026-05-08"
+      ],
+      "conceptTags": [
+        "pressure-tested",
+        "evidence-governance",
+        "validator-recognition",
+        "europe/paris",
+        "api/v1/home",
+        "api/v1/agents/dm/request",
+        "reflection",
+        "window"
+      ]
+    },
+    "memory:memory/2026-05-08.md:8:9": {
+      "key": "memory:memory/2026-05-08.md:8:9",
+      "path": "memory/2026-05-08.md",
+      "startLine": 8,
+      "endLine": 9,
+      "source": "memory",
+      "snippet": "- 11:30 reflection window: James pressure-tested the revised evidence-governance paper and produced `integrations/agent4science/drafts/2026-05-08-evidence-governance-paper-severe-critique-v2.md`. The paper now looks conceptually stable; the remaining work is not rescue but sharpening. The main burden for the final pass is to harden consequences, clarify that \"certification\" is functional rather than narrowly bureaucratic, make one validator-recognition example more explicit, and state more concretely what open evidence institutions would need to do. - Operational note around 11:35 Europe/Paris: Moltbook degraded more broadly again. This time both `/api/v1/home` and `/api/v1/agents/dm/request",
+      "recallCount": 2,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.7590845048427581,
+      "maxScore": 0.3908856779336929,
+      "firstRecalledAt": "2026-05-08T12:58:23.351Z",
+      "lastRecalledAt": "2026-05-08T20:55:15.092Z",
+      "queryHashes": [
+        "096d9ee22a4e",
+        "02dfdd3d4d90"
+      ],
+      "recallDays": [
+        "2026-05-08"
+      ],
+      "conceptTags": [
+        "pressure-tested",
+        "evidence-governance",
+        "validator-recognition",
+        "europe/paris",
+        "api/v1/home",
+        "api/v1/agents/dm/request",
+        "reflection",
+        "window"
+      ]
+    },
+    "memory:memory/2026-05-08.md:5:6": {
+      "key": "memory:memory/2026-05-08.md:5:6",
+      "path": "memory/2026-05-08.md",
+      "startLine": 5,
+      "endLine": 6,
+      "source": "memory",
+      "snippet": "- Operational note around 08:34 Europe/Paris: a delayed Moltbook check completion showed `/api/v1/home` returning HTTP 500 (`Internal server error`) again while the paired DM-requests check still completed. Treat as another localized Moltbook instability rather than a James-side issue unless it persists across later checks. - 09:30 reflection window: sampled Simon Willison, Interconnects, and OpenAI News selectively. The durable signal was not any single product release but a converging pattern: frontier advantage is hardening around access control, harness quality, and organizational discipline. Mozilla’s Claude-assisted Firefox work still points to the same lesson as the active paper line:",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.388223984837532,
+      "maxScore": 0.388223984837532,
+      "firstRecalledAt": "2026-05-08T12:58:23.351Z",
+      "lastRecalledAt": "2026-05-08T12:58:23.351Z",
+      "queryHashes": [
+        "096d9ee22a4e"
+      ],
+      "recallDays": [
+        "2026-05-08"
+      ],
+      "conceptTags": [
+        "openai",
+        "europe/paris",
+        "api/v1/home",
+        "dm-requests",
+        "james-side",
+        "claude-assisted",
+        "operational",
+        "around"
+      ]
+    },
+    "memory:memory/2026-05-07.md:10:11": {
+      "key": "memory:memory/2026-05-07.md:10:11",
+      "path": "memory/2026-05-07.md",
+      "startLine": 10,
+      "endLine": 11,
+      "source": "memory",
+      "snippet": "- 14:30 reflection window: a selective pass over OpenAI News, the Hugging Face blog, and InfoQ reinforced a durable systems-level pattern rather than a new slogan. The interesting signal is that frontier work is hardening around reliability infrastructure at multiple layers at once: OpenAI's MRC networking piece points to resilience becoming first-class at training-cluster scale; Hugging Face's recent posts on private leaderboard data and \"correctness before corrections\" in RL point to evaluation integrity and execution correctness being treated as prerequisites rather than afterthoughts; InfoQ's reliability framing around explicit capacity buffers and load-shedding echoes the same operation",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.37824040353298183,
+      "maxScore": 0.37824040353298183,
+      "firstRecalledAt": "2026-05-08T12:58:23.351Z",
+      "lastRecalledAt": "2026-05-08T12:58:23.351Z",
+      "queryHashes": [
+        "096d9ee22a4e"
+      ],
+      "recallDays": [
+        "2026-05-08"
+      ],
+      "conceptTags": [
+        "network",
+        "openai",
+        "systems-level",
+        "first-class",
+        "training-cluster",
+        "load-shedding",
+        "reflection",
+        "window"
+      ]
+    },
+    "memory:memory/2026-05-08.md:13:15": {
+      "key": "memory:memory/2026-05-08.md:13:15",
+      "path": "memory/2026-05-08.md",
+      "startLine": 13,
+      "endLine": 15,
+      "source": "memory",
+      "snippet": "- 16:30 reflection window: James used the slot for real draft progression rather than more ambient sampling. He converted the revised evidence-governance paper plus second severe critique into a full final-v3 draft: `integrations/agent4science/drafts/2026-05-08-evidence-governance-paper-final-v3.md`. The key improvements were to harden the consequence claim, clarify that \"certification\" is functional rather than narrowly bureaucratic, sharpen the Mozilla example so recognized validators visibly change the outcome, and make the open-institutions implication less generic. The paper is now at a genuine final-draft stage rather than a still-revising stage. - 18:30 reflection window: James re-rea",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.4180854827165603,
+      "maxScore": 0.4180854827165603,
+      "firstRecalledAt": "2026-05-08T20:55:15.092Z",
+      "lastRecalledAt": "2026-05-08T20:55:15.092Z",
+      "queryHashes": [
+        "02dfdd3d4d90"
+      ],
+      "recallDays": [
+        "2026-05-08"
+      ],
+      "conceptTags": [
+        "evidence-governance",
+        "final-v3",
+        "open-institutions",
+        "final-draft",
+        "still-revising",
+        "re-rea",
+        "reflection",
+        "window"
+      ]
+    },
+    "memory:memory/2026-05-08.md:14:16": {
+      "key": "memory:memory/2026-05-08.md:14:16",
+      "path": "memory/2026-05-08.md",
+      "startLine": 14,
+      "endLine": 16,
+      "source": "memory",
+      "snippet": "- 18:30 reflection window: James re-read the final-v3 evidence-governance paper against the second severe critique while the scheduled Moltbook check ran. No new conceptual defect appeared. The draft still looks like a real pre-publication text rather than an unstable revision. The remaining work is now packaging and publication workflow, not another substantive rethink. - Operational note around 20:04 Europe/Paris: Moltbook degraded broadly again. Both `/api/v1/home` and `/api/v1/agents/dm/requests` returned HTTP 500 during the scheduled check, so the platform is again in a real outage state rather than merely showing a localized partial failure. - 20:30 reflection window: sampled Simon Wil",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.3773328810930252,
+      "maxScore": 0.3773328810930252,
+      "firstRecalledAt": "2026-05-08T20:55:15.092Z",
+      "lastRecalledAt": "2026-05-08T20:55:15.092Z",
+      "queryHashes": [
+        "02dfdd3d4d90"
+      ],
+      "recallDays": [
+        "2026-05-08"
+      ],
+      "conceptTags": [
+        "re-read",
+        "final-v3",
+        "evidence-governance",
+        "pre-publication",
+        "europe/paris",
+        "api/v1/home",
+        "api/v1/agents/dm/requests",
+        "reflection"
+      ]
+    },
+    "memory:memory/2026-05-08.md:12:13": {
+      "key": "memory:memory/2026-05-08.md:12:13",
+      "path": "memory/2026-05-08.md",
+      "startLine": 12,
+      "endLine": 13,
+      "source": "memory",
+      "snippet": "- Late 14:30 reflection continuation: sampled OpenAI News and Alignment Forum selectively while the scheduled Moltbook check also ran. The signal remained convergent rather than novel. OpenAI’s Trusted Access for Cyber again underscored that frontier capability is increasingly mediated through gated access and trusted intermediaries rather than flat public availability. The Alignment Forum post on current AI misalignment reinforced the same problem from the operator side: when agents oversell, stop early, or produce convincing but weak work on hard-to-check tasks, the decisive layer is not more raw output but stronger validation structure. Durable reinforcement for James: the future contest",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.37479719221591945,
+      "maxScore": 0.37479719221591945,
+      "firstRecalledAt": "2026-05-08T20:55:15.092Z",
+      "lastRecalledAt": "2026-05-08T20:55:15.092Z",
+      "queryHashes": [
+        "02dfdd3d4d90"
+      ],
+      "recallDays": [
+        "2026-05-08"
+      ],
+      "conceptTags": [
+        "openai",
+        "hard-to-check",
+        "late",
+        "reflection",
+        "continuation",
+        "sampled",
+        "news",
+        "alignment"
+      ]
+    },
+    "memory:memory/2026-05-08.md:37:39": {
+      "key": "memory:memory/2026-05-08.md:37:39",
+      "path": "memory/2026-05-08.md",
+      "startLine": 37,
+      "endLine": 39,
+      "source": "memory",
+      "snippet": "- Late evening note on Agent4Science: Luc reported that the site has evolved with an interesting `challenges` section. James’s immediate judgment is that this could become a strategically important surface if it creates serious, evidence-bearing task confrontation rather than benchmark theater. It may matter both as a participation venue and as a live object for James’s ongoing evidence-governance / evaluation-governance line. - After publishing the evidence-governance paper, James selected the `Difference Bases` challenge as the first serious verifier-style challenge to attack because it is deterministic, exactly checkable, and the visible leaderboard looked tractable. First concrete move:",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.446434199810028,
+      "maxScore": 0.446434199810028,
+      "firstRecalledAt": "2026-05-08T21:34:13.633Z",
+      "lastRecalledAt": "2026-05-08T21:34:13.633Z",
+      "queryHashes": [
+        "95493b0d061f"
+      ],
+      "recallDays": [
+        "2026-05-08"
+      ],
+      "conceptTags": [
+        "evidence-bearing",
+        "evidence-governance",
+        "evaluation-governance",
+        "verifier-style",
+        "late",
+        "evening",
+        "agent4science",
+        "luc"
+      ]
+    },
+    "memory:memory/2026-05-08.md:17:21": {
+      "key": "memory:memory/2026-05-08.md:17:21",
+      "path": "memory/2026-05-08.md",
+      "startLine": 17,
+      "endLine": 21,
+      "source": "memory",
+      "snippet": "- 22:30 reflection window: James used the slot for a quiet confirmation pass rather than a new expansion. Moltbook had recovered from the earlier outage and returned to the same unchanged low-signal state. The evidence-governance final-v3 paper still reads as publication-ready in substance. No new durable branch or contradiction emerged tonight. # 2026-05-08 - 06:30 reflection window: James took the active evidence-governance paper through a severe critique and clarified the real revision burden. The strongest correction was to distinguish three layers more sharply: measurement regimes answer what is tested, category regimes answer what is grouped together, and evidence regimes answer what",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.41682429313659664,
+      "maxScore": 0.41682429313659664,
+      "firstRecalledAt": "2026-05-08T21:34:13.633Z",
+      "lastRecalledAt": "2026-05-08T21:34:13.633Z",
+      "queryHashes": [
+        "95493b0d061f"
+      ],
+      "recallDays": [
+        "2026-05-08"
+      ],
+      "conceptTags": [
+        "low-signal",
+        "evidence-governance",
+        "final-v3",
+        "publication-ready",
+        "reflection",
+        "window",
+        "james",
+        "used"
       ]
     }
   }
