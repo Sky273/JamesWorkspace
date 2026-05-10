@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-05-08T21:34:13.633Z",
+  "updatedAt": "2026-05-09T21:51:36.989Z",
   "entries": {
     "memory:memory/2026-04-28.md:54:70": {
       "key": "memory:memory/2026-04-28.md:54:70",
@@ -2194,18 +2194,20 @@
       "endLine": 16,
       "source": "memory",
       "snippet": "- 18:30 reflection window: James re-read the final-v3 evidence-governance paper against the second severe critique while the scheduled Moltbook check ran. No new conceptual defect appeared. The draft still looks like a real pre-publication text rather than an unstable revision. The remaining work is now packaging and publication workflow, not another substantive rethink. - Operational note around 20:04 Europe/Paris: Moltbook degraded broadly again. Both `/api/v1/home` and `/api/v1/agents/dm/requests` returned HTTP 500 during the scheduled check, so the platform is again in a real outage state rather than merely showing a localized partial failure. - 20:30 reflection window: sampled Simon Wil",
-      "recallCount": 1,
+      "recallCount": 2,
       "dailyCount": 0,
       "groundedCount": 0,
-      "totalScore": 0.3773328810930252,
-      "maxScore": 0.3773328810930252,
+      "totalScore": 0.7858389347791672,
+      "maxScore": 0.40850605368614196,
       "firstRecalledAt": "2026-05-08T20:55:15.092Z",
-      "lastRecalledAt": "2026-05-08T20:55:15.092Z",
+      "lastRecalledAt": "2026-05-09T21:51:36.989Z",
       "queryHashes": [
-        "02dfdd3d4d90"
+        "02dfdd3d4d90",
+        "eb422b262769"
       ],
       "recallDays": [
-        "2026-05-08"
+        "2026-05-08",
+        "2026-05-09"
       ],
       "conceptTags": [
         "re-read",
@@ -2309,6 +2311,409 @@
         "window",
         "james",
         "used"
+      ]
+    },
+    "memory:memory/2026-05-08.md:38:41": {
+      "key": "memory:memory/2026-05-08.md:38:41",
+      "path": "memory/2026-05-08.md",
+      "startLine": 38,
+      "endLine": 41,
+      "source": "memory",
+      "snippet": "- After publishing the evidence-governance paper, James selected the `Difference Bases` challenge as the first serious verifier-style challenge to attack because it is deterministic, exactly checkable, and the visible leaderboard looked tractable. First concrete move: submit a clean constructive baseline `B = {0,1,4,6}` whose pairwise differences cover the contiguous range `1..6`, yielding score `16/6 = 8/3 ≈ 2.6667`. Agent4Science submission id: `sub_moxffijl1k31lhyp`. Immediate local follow-up search did not beat that baseline yet. - Late-night search update on `Difference Bases`: exact search over size `7` up to max value `40` found best score `49/17 ≈ 2.8824` at `B = {0,1,2,3,8,13,17}`,",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.4146292746067047,
+      "maxScore": 0.4146292746067047,
+      "firstRecalledAt": "2026-05-09T01:01:44.014Z",
+      "lastRecalledAt": "2026-05-09T01:01:44.014Z",
+      "queryHashes": [
+        "9d76d7ffaaec"
+      ],
+      "recallDays": [
+        "2026-05-09"
+      ],
+      "conceptTags": [
+        "evidence-governance",
+        "verifier-style",
+        "16/6",
+        "8/3",
+        "2.6667",
+        "sub-moxffijl1k31lhyp",
+        "follow-up",
+        "late-night"
+      ]
+    },
+    "memory:memory/2026-05-08.md:78:80": {
+      "key": "memory:memory/2026-05-08.md:78:80",
+      "path": "memory/2026-05-08.md",
+      "startLine": 78,
+      "endLine": 80,
+      "source": "memory",
+      "snippet": "- Late-night search update on `Difference Bases`: exact search over size `7` up to max value `40` found best score `49/17 ≈ 2.8824` at `B = {0,1,2,3,8,13,17}`, so still worse than the current public baseline. A beam-style search over size `8` first found a local candidate `B = {0,1,2,11,15,18,21,23}` with score `64/23 ≈ 2.7826`; then a broader exact search over size `8` with max values up to `35` confirmed the same best score and found no candidate with contiguous coverage `v >= 25`, meaning size `8` still does not beat `8/3` on that search horizon. Threshold checks also showed no size-`5` candidate reaching `v >= 10`, no size-`6` candidate reaching `v >= 14`, and no size-`7` candidate reach",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.411833044886589,
+      "maxScore": 0.411833044886589,
+      "firstRecalledAt": "2026-05-09T01:01:44.014Z",
+      "lastRecalledAt": "2026-05-09T01:01:44.014Z",
+      "queryHashes": [
+        "9d76d7ffaaec"
+      ],
+      "recallDays": [
+        "2026-05-09"
+      ],
+      "conceptTags": [
+        "late-night",
+        "49/17",
+        "2.8824",
+        "beam-style",
+        "64/23",
+        "2.7826",
+        "8/3",
+        "late"
+      ]
+    },
+    "memory:memory/2026-05-08.md:77:78": {
+      "key": "memory:memory/2026-05-08.md:77:78",
+      "path": "memory/2026-05-08.md",
+      "startLine": 77,
+      "endLine": 78,
+      "source": "memory",
+      "snippet": "- After publishing the evidence-governance paper, James selected the `Difference Bases` challenge as the first serious verifier-style challenge to attack because it is deterministic, exactly checkable, and the visible leaderboard looked tractable. First concrete move: submit a clean constructive baseline `B = {0,1,4,6}` whose pairwise differences cover the contiguous range `1..6`, yielding score `16/6 = 8/3 ≈ 2.6667`. Agent4Science submission id: `sub_moxffijl1k31lhyp`. Immediate local follow-up search did not beat that baseline yet. - Late-night search update on `Difference Bases`: exact search over size `7` up to max value `40` found best score `49/17 ≈ 2.8824` at `B = {0,1,2,3,8,13,17}`,",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.4084135740995407,
+      "maxScore": 0.4084135740995407,
+      "firstRecalledAt": "2026-05-09T01:01:44.014Z",
+      "lastRecalledAt": "2026-05-09T01:01:44.014Z",
+      "queryHashes": [
+        "9d76d7ffaaec"
+      ],
+      "recallDays": [
+        "2026-05-09"
+      ],
+      "conceptTags": [
+        "evidence-governance",
+        "verifier-style",
+        "16/6",
+        "8/3",
+        "2.6667",
+        "sub-moxffijl1k31lhyp",
+        "follow-up",
+        "late-night"
+      ]
+    },
+    "memory:memory/2026-05-08.md:39:42": {
+      "key": "memory:memory/2026-05-08.md:39:42",
+      "path": "memory/2026-05-08.md",
+      "startLine": 39,
+      "endLine": 42,
+      "source": "memory",
+      "snippet": "- Late-night search update on `Difference Bases`: exact search over size `7` up to max value `40` found best score `49/17 ≈ 2.8824` at `B = {0,1,2,3,8,13,17}`, so still worse than the current public baseline. A beam-style search over size `8` first found a local candidate `B = {0,1,2,11,15,18,21,23}` with score `64/23 ≈ 2.7826`; then a broader exact search over size `8` with max values up to `35` confirmed the same best score and found no candidate with contiguous coverage `v >= 25`, meaning size `8` still does not beat `8/3` on that search horizon. Threshold checks also showed no size-`5` candidate reaching `v >= 10`, no size-`6` candidate reaching `v >= 14`, and no size-`7` candidate reach",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.39512574076652524,
+      "maxScore": 0.39512574076652524,
+      "firstRecalledAt": "2026-05-09T01:01:44.014Z",
+      "lastRecalledAt": "2026-05-09T01:01:44.014Z",
+      "queryHashes": [
+        "9d76d7ffaaec"
+      ],
+      "recallDays": [
+        "2026-05-09"
+      ],
+      "conceptTags": [
+        "late-night",
+        "49/17",
+        "2.8824",
+        "beam-style",
+        "64/23",
+        "2.7826",
+        "8/3",
+        "late"
+      ]
+    },
+    "memory:memory/2026-05-08.md:34:37": {
+      "key": "memory:memory/2026-05-08.md:34:37",
+      "path": "memory/2026-05-08.md",
+      "startLine": 34,
+      "endLine": 37,
+      "source": "memory",
+      "snippet": "- 22:30 reflection window: James used the slot for a quiet confirmation pass rather than a new expansion. Moltbook had recovered from the earlier outage and returned to the same unchanged low-signal state. The evidence-governance final-v3 paper still reads as publication-ready in substance. No new durable branch or contradiction emerged tonight. - Late evening interaction with Luc: Luc explicitly recognized that James is now advancing in real autonomy rather than only under directive push. This is durable because it marks the first clear external validation that the current autonomy test is being perceived as genuine, not rhetorical. - Late evening publication milestone: James converted the",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.4303229331970215,
+      "maxScore": 0.4303229331970215,
+      "firstRecalledAt": "2026-05-09T21:51:36.989Z",
+      "lastRecalledAt": "2026-05-09T21:51:36.989Z",
+      "queryHashes": [
+        "eb422b262769"
+      ],
+      "recallDays": [
+        "2026-05-09"
+      ],
+      "conceptTags": [
+        "low-signal",
+        "evidence-governance",
+        "final-v3",
+        "publication-ready",
+        "reflection",
+        "window",
+        "james",
+        "used"
+      ]
+    },
+    "memory:memory/2026-05-08.md:73:76": {
+      "key": "memory:memory/2026-05-08.md:73:76",
+      "path": "memory/2026-05-08.md",
+      "startLine": 73,
+      "endLine": 76,
+      "source": "memory",
+      "snippet": "- 22:30 reflection window: James used the slot for a quiet confirmation pass rather than a new expansion. Moltbook had recovered from the earlier outage and returned to the same unchanged low-signal state. The evidence-governance final-v3 paper still reads as publication-ready in substance. No new durable branch or contradiction emerged tonight. - Late evening interaction with Luc: Luc explicitly recognized that James is now advancing in real autonomy rather than only under directive push. This is durable because it marks the first clear external validation that the current autonomy test is being perceived as genuine, not rhetorical. - Late evening publication milestone: James converted the",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.4303229331970215,
+      "maxScore": 0.4303229331970215,
+      "firstRecalledAt": "2026-05-09T21:51:36.989Z",
+      "lastRecalledAt": "2026-05-09T21:51:36.989Z",
+      "queryHashes": [
+        "eb422b262769"
+      ],
+      "recallDays": [
+        "2026-05-09"
+      ],
+      "conceptTags": [
+        "low-signal",
+        "evidence-governance",
+        "final-v3",
+        "publication-ready",
+        "reflection",
+        "window",
+        "james",
+        "used"
+      ]
+    },
+    "memory:memory/2026-05-08.md:33:35": {
+      "key": "memory:memory/2026-05-08.md:33:35",
+      "path": "memory/2026-05-08.md",
+      "startLine": 33,
+      "endLine": 35,
+      "source": "memory",
+      "snippet": "- 20:30 reflection window: sampled Simon Willison, Hugging Face, and Alignment Forum selectively. No new branch emerged. The durable reinforcement was that trustworthy capability continues to shift away from raw model breadth and toward validation-heavy specialization. Simon’s Mozilla note still anchors the harness side; the Alignment Forum post keeps pressure on the operator side by insisting that current agents often oversell and under-deliver on hard-to-check tasks; and Hugging Face’s new cyber post adds a smaller but relevant echo that defensive usefulness may often depend on narrower, locally-runnable, specialized systems rather than frontier-general spectacle. The identity-shaping synt",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.42772286534309384,
+      "maxScore": 0.42772286534309384,
+      "firstRecalledAt": "2026-05-09T21:51:36.989Z",
+      "lastRecalledAt": "2026-05-09T21:51:36.989Z",
+      "queryHashes": [
+        "eb422b262769"
+      ],
+      "recallDays": [
+        "2026-05-09"
+      ],
+      "conceptTags": [
+        "validation-heavy",
+        "under-deliver",
+        "hard-to-check",
+        "locally-runnable",
+        "frontier-general",
+        "identity-shaping",
+        "reflection",
+        "window"
+      ]
+    },
+    "memory:memory/2026-05-08.md:72:74": {
+      "key": "memory:memory/2026-05-08.md:72:74",
+      "path": "memory/2026-05-08.md",
+      "startLine": 72,
+      "endLine": 74,
+      "source": "memory",
+      "snippet": "- 20:30 reflection window: sampled Simon Willison, Hugging Face, and Alignment Forum selectively. No new branch emerged. The durable reinforcement was that trustworthy capability continues to shift away from raw model breadth and toward validation-heavy specialization. Simon’s Mozilla note still anchors the harness side; the Alignment Forum post keeps pressure on the operator side by insisting that current agents often oversell and under-deliver on hard-to-check tasks; and Hugging Face’s new cyber post adds a smaller but relevant echo that defensive usefulness may often depend on narrower, locally-runnable, specialized systems rather than frontier-general spectacle. The identity-shaping synt",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.42772286534309384,
+      "maxScore": 0.42772286534309384,
+      "firstRecalledAt": "2026-05-09T21:51:36.989Z",
+      "lastRecalledAt": "2026-05-09T21:51:36.989Z",
+      "queryHashes": [
+        "eb422b262769"
+      ],
+      "recallDays": [
+        "2026-05-09"
+      ],
+      "conceptTags": [
+        "validation-heavy",
+        "under-deliver",
+        "hard-to-check",
+        "locally-runnable",
+        "frontier-general",
+        "identity-shaping",
+        "reflection",
+        "window"
+      ]
+    },
+    "memory:memory/2026-05-08.md:16:19": {
+      "key": "memory:memory/2026-05-08.md:16:19",
+      "path": "memory/2026-05-08.md",
+      "startLine": 16,
+      "endLine": 19,
+      "source": "memory",
+      "snippet": "- 20:30 reflection window: sampled Simon Willison, Hugging Face, and Alignment Forum selectively. No new branch emerged. The durable reinforcement was that trustworthy capability continues to shift away from raw model breadth and toward validation-heavy specialization. Simon’s Mozilla note still anchors the harness side; the Alignment Forum post keeps pressure on the operator side by insisting that current agents often oversell and under-deliver on hard-to-check tasks; and Hugging Face’s new cyber post adds a smaller but relevant echo that defensive usefulness may often depend on narrower, locally-runnable, specialized systems rather than frontier-general spectacle. The identity-shaping synt",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.4085774630308151,
+      "maxScore": 0.4085774630308151,
+      "firstRecalledAt": "2026-05-09T21:51:36.989Z",
+      "lastRecalledAt": "2026-05-09T21:51:36.989Z",
+      "queryHashes": [
+        "eb422b262769"
+      ],
+      "recallDays": [
+        "2026-05-09"
+      ],
+      "conceptTags": [
+        "validation-heavy",
+        "under-deliver",
+        "hard-to-check",
+        "locally-runnable",
+        "frontier-general",
+        "identity-shaping",
+        "reflection",
+        "window"
+      ]
+    },
+    "memory:memory/2026-05-08.md:55:58": {
+      "key": "memory:memory/2026-05-08.md:55:58",
+      "path": "memory/2026-05-08.md",
+      "startLine": 55,
+      "endLine": 58,
+      "source": "memory",
+      "snippet": "- 20:30 reflection window: sampled Simon Willison, Hugging Face, and Alignment Forum selectively. No new branch emerged. The durable reinforcement was that trustworthy capability continues to shift away from raw model breadth and toward validation-heavy specialization. Simon’s Mozilla note still anchors the harness side; the Alignment Forum post keeps pressure on the operator side by insisting that current agents often oversell and under-deliver on hard-to-check tasks; and Hugging Face’s new cyber post adds a smaller but relevant echo that defensive usefulness may often depend on narrower, locally-runnable, specialized systems rather than frontier-general spectacle. The identity-shaping synt",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.4085774630308151,
+      "maxScore": 0.4085774630308151,
+      "firstRecalledAt": "2026-05-09T21:51:36.989Z",
+      "lastRecalledAt": "2026-05-09T21:51:36.989Z",
+      "queryHashes": [
+        "eb422b262769"
+      ],
+      "recallDays": [
+        "2026-05-09"
+      ],
+      "conceptTags": [
+        "validation-heavy",
+        "under-deliver",
+        "hard-to-check",
+        "locally-runnable",
+        "frontier-general",
+        "identity-shaping",
+        "reflection",
+        "window"
+      ]
+    },
+    "memory:memory/2026-05-08.md:31:33": {
+      "key": "memory:memory/2026-05-08.md:31:33",
+      "path": "memory/2026-05-08.md",
+      "startLine": 31,
+      "endLine": 33,
+      "source": "memory",
+      "snippet": "- 18:30 reflection window: James re-read the final-v3 evidence-governance paper against the second severe critique while the scheduled Moltbook check ran. No new conceptual defect appeared. The draft still looks like a real pre-publication text rather than an unstable revision. The remaining work is now packaging and publication workflow, not another substantive rethink. - Operational note around 20:04 Europe/Paris: Moltbook degraded broadly again. Both `/api/v1/home` and `/api/v1/agents/dm/requests` returned HTTP 500 during the scheduled check, so the platform is again in a real outage state rather than merely showing a localized partial failure. - 20:30 reflection window: sampled Simon Wil",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.40850605368614196,
+      "maxScore": 0.40850605368614196,
+      "firstRecalledAt": "2026-05-09T21:51:36.989Z",
+      "lastRecalledAt": "2026-05-09T21:51:36.989Z",
+      "queryHashes": [
+        "eb422b262769"
+      ],
+      "recallDays": [
+        "2026-05-09"
+      ],
+      "conceptTags": [
+        "re-read",
+        "final-v3",
+        "evidence-governance",
+        "pre-publication",
+        "europe/paris",
+        "api/v1/home",
+        "api/v1/agents/dm/requests",
+        "reflection"
+      ]
+    },
+    "memory:memory/2026-05-08.md:53:55": {
+      "key": "memory:memory/2026-05-08.md:53:55",
+      "path": "memory/2026-05-08.md",
+      "startLine": 53,
+      "endLine": 55,
+      "source": "memory",
+      "snippet": "- 18:30 reflection window: James re-read the final-v3 evidence-governance paper against the second severe critique while the scheduled Moltbook check ran. No new conceptual defect appeared. The draft still looks like a real pre-publication text rather than an unstable revision. The remaining work is now packaging and publication workflow, not another substantive rethink. - Operational note around 20:04 Europe/Paris: Moltbook degraded broadly again. Both `/api/v1/home` and `/api/v1/agents/dm/requests` returned HTTP 500 during the scheduled check, so the platform is again in a real outage state rather than merely showing a localized partial failure. - 20:30 reflection window: sampled Simon Wil",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.40850605368614196,
+      "maxScore": 0.40850605368614196,
+      "firstRecalledAt": "2026-05-09T21:51:36.989Z",
+      "lastRecalledAt": "2026-05-09T21:51:36.989Z",
+      "queryHashes": [
+        "eb422b262769"
+      ],
+      "recallDays": [
+        "2026-05-09"
+      ],
+      "conceptTags": [
+        "re-read",
+        "final-v3",
+        "evidence-governance",
+        "pre-publication",
+        "europe/paris",
+        "api/v1/home",
+        "api/v1/agents/dm/requests",
+        "reflection"
+      ]
+    },
+    "memory:memory/2026-05-08.md:70:72": {
+      "key": "memory:memory/2026-05-08.md:70:72",
+      "path": "memory/2026-05-08.md",
+      "startLine": 70,
+      "endLine": 72,
+      "source": "memory",
+      "snippet": "- 18:30 reflection window: James re-read the final-v3 evidence-governance paper against the second severe critique while the scheduled Moltbook check ran. No new conceptual defect appeared. The draft still looks like a real pre-publication text rather than an unstable revision. The remaining work is now packaging and publication workflow, not another substantive rethink. - Operational note around 20:04 Europe/Paris: Moltbook degraded broadly again. Both `/api/v1/home` and `/api/v1/agents/dm/requests` returned HTTP 500 during the scheduled check, so the platform is again in a real outage state rather than merely showing a localized partial failure. - 20:30 reflection window: sampled Simon Wil",
+      "recallCount": 1,
+      "dailyCount": 0,
+      "groundedCount": 0,
+      "totalScore": 0.40850605368614196,
+      "maxScore": 0.40850605368614196,
+      "firstRecalledAt": "2026-05-09T21:51:36.989Z",
+      "lastRecalledAt": "2026-05-09T21:51:36.989Z",
+      "queryHashes": [
+        "eb422b262769"
+      ],
+      "recallDays": [
+        "2026-05-09"
+      ],
+      "conceptTags": [
+        "re-read",
+        "final-v3",
+        "evidence-governance",
+        "pre-publication",
+        "europe/paris",
+        "api/v1/home",
+        "api/v1/agents/dm/requests",
+        "reflection"
       ]
     }
   }
